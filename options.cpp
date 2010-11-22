@@ -32,6 +32,7 @@ static struct option long_options[] = {
     { L"raw-format", required_argument, 0,  Raw::kFormat },
     { L"adts", no_argument, 0, 'E' },
     { L"ignorelength", no_argument, 0, 'i' },
+    { L"fname-format", required_argument, 0, 'F' },
     { L"title", required_argument, 0, Tag::kTitle },
     { L"artist", required_argument, 0, Tag::kArtist },
     { L"band", required_argument, 0, Tag::kAlbumArtist },
@@ -98,8 +99,11 @@ void usage()
 "-R, --raw              Raw PCM input\n"
 "-S, --stat             Save bitrate statistics into file\n"
 "\n"
-"Options for single input mode only:\n"
+"Option for single input mode only:\n"
 "-o <filename>          Output filename\n"
+"\n"
+"Option for cue sheet input:\n"
+"--fname-format <string>   Format string for output filename\n"
 "\n"
 "Options for Raw PCM input only:\n"
 "--raw-channels <n>     Number of channels, default 2\n"
@@ -171,6 +175,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->is_adts = true;
 	else if (ch == 'P')
 	    this->no_optimize = true;
+	else if (ch == 'F')
+	    this->fname_format = optarg;
 	else if (ch == 'D') {
 	    if (!std::wcscmp(optarg, L"mono"))
 		this->downmix = 1;

@@ -2,6 +2,7 @@
 #include <cstdarg>
 #include <clocale>
 #include <algorithm>
+#include <functional>
 #include <QTML.h>
 #include "strcnv.h"
 #include "win32util.h"
@@ -19,6 +20,7 @@
 #include "composite.h"
 #include "nullsource.h"
 #include "wavsource.h"
+#include "expand.h"
 
 class PeriodicDisplay {
     FILE *m_fp;
@@ -439,6 +441,26 @@ struct FNConverter {
     }
 };
 
+struct TagLookup {
+    typedef std::map<uint32_t, std::wstring> meta_t;
+    const CueTrack &track;
+    const meta_t &tracktags;
+
+    TagLookup(const CueTrack &track_, const meta_t &tags)
+	: track(track_), tracktags(tags) {}
+
+    std::wstring operator()(const std::wstring &name) {
+	std::wstring namex = wslower(name);
+	if (namex == L"tracknumber")
+	    return widen(format("%02d", track.m_number));
+	std::string skey = format("%ls", namex.c_str());
+	uint32_t id = GetIDFromTagName(skey.c_str());
+	if (id == 0) return L"";
+	meta_t::const_iterator iter = tracktags.find(id);
+	return iter == tracktags.end() ? L"" : iter->second;
+    }
+};
+
 static
 void handle_cue_sheet(Options &opts)
 {
@@ -495,13 +517,11 @@ void handle_cue_sheet(Options &opts)
 	    src->setRange(begin, end);
 	    source.addSource(src);
 	}
-	std::wstring ofilename = widen(format("%02d", track.m_number));
-	if (track_tags.find(Tag::kTitle) != track_tags.end()) {
-	    ofilename += L" ";
-	    ofilename += strtransform(track_tags[Tag::kTitle],
-		    FNConverter());
-	    ofilename += L".stub";
-	}
+	std::wstring formatstr = opts.fname_format
+	    ? opts.fname_format : L"${tracknumber}${title& }${title}";
+	std::wstring ofilename =
+	    process_template(formatstr, TagLookup(track, track_tags));
+	ofilename = strtransform(ofilename, FNConverter()) + L".stub";
 	ofilename = get_output_filename(ofilename.c_str(), opts);
 	if (opts.verbose)
 	    std::fprintf(stderr, "\n%ls\n",
