@@ -41,6 +41,12 @@ struct Options {
     {
 	return output_format == 'lpcm';
     }
+    void reset()
+    {
+	this->encoder_name = this->encoder_name_;
+	this->sample_rate_table.clear();
+	this->used_settings.clear();
+    }
 
     uint32_t output_format;
     int32_t method;
@@ -55,7 +61,7 @@ struct Options {
     std::vector<std::string> used_settings;
     std::vector<int> sample_rate_table;
     std::map<uint32_t, std::wstring> tagopts;
-    std::wstring encoder_name;
+    std::wstring encoder_name, encoder_name_;
 
     LibSndfileModule libsndfile;
     FLACModule libflac;

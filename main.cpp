@@ -478,6 +478,7 @@ void handle_cue_sheet(Options &opts)
     meta_t album_tags;
     ConvertToItunesTags(cue.m_meta, &album_tags, true);
     for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
+	opts.reset();
 	CueTrack &track = cue.m_tracks[i];
 	if (!track.m_segments.size())
 	    continue;
@@ -598,6 +599,7 @@ int wmain(int argc, wchar_t **argv)
 	std::string encoder_name = format("qaac %s, QuickTime %d.%d.%d",
 		get_qaac_version(),
 		qtver >> 8, (qtver >> 4) & 0xf, qtver & 0xf);
+	opts.encoder_name = opts.encoder_name_ = widen(encoder_name);
 	if (opts.verbose)
 	    std::fprintf(stderr, "%s\n", encoder_name.c_str());
 
@@ -606,9 +608,7 @@ int wmain(int argc, wchar_t **argv)
 	load_modules(opts);
 
 	while (opts.ifilename = *argv++) {
-	    opts.encoder_name = widen(encoder_name);
-	    opts.used_settings.clear();
-	    opts.sample_rate_table.clear();
+	    opts.reset();
 
 	    std::wstring iname;
 	    if (std::wcscmp(opts.ifilename, L"-")) {
