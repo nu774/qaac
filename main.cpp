@@ -169,7 +169,8 @@ void set_codec_options(AACEncoder &encoder, Options &opts)
 		index = get_bitrate_index(menu, opts.bitrate);
 		encoder.setEncoderParameter(Param::kBitRate, index);
 		std::wstring s = CF2W(menu.at(index));
-		opts.used_settings.push_back(format("Bitrate: %ls", s.c_str()));
+		opts.used_settings.push_back(
+			format("Bitrate: %ls", s.c_str()));
 		opts.encoder_name += format(L" Bitrate %s", s.c_str());
 	    }
 	}
@@ -182,7 +183,8 @@ void set_codec_options(AACEncoder &encoder, Options &opts)
 	else {
 	    encoder.setEncoderParameter(Param::kQuality, opts.quality);
 	    opts.used_settings.push_back(
-		format("Quality: %ls", CF2W(menu.at(opts.quality)).c_str()));
+		format("Quality: %ls",
+		    CF2W(menu.at(opts.quality)).c_str()));
 	}
     }
 #if 0
@@ -579,13 +581,15 @@ int wmain(int argc, wchar_t **argv)
 	if (opts.verbose)
 	    std::fprintf(stderr, "%s\n", encoder_name.c_str());
 
-	opts.encoder_name = widen(encoder_name);
-
 	if (opts.isSBR())
 	    install_aach_codec();
 	load_modules(opts);
 
 	while (opts.ifilename = *argv++) {
+	    opts.encoder_name = widen(encoder_name);
+	    opts.used_settings.clear();
+	    opts.sample_rate_table.clear();
+
 	    std::wstring iname;
 	    if (std::wcscmp(opts.ifilename, L"-")) {
 		iname = GetFullPathNameX(opts.ifilename);
