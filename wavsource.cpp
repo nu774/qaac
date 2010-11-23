@@ -140,8 +140,11 @@ void WaveSource::setRange(int64_t start, int64_t length)
     int64_t dur = static_cast<int64_t>(m_duration);
     if (length >= 0 && (dur == -1 || length < dur))
 	m_duration = length;
-    if (start > 0 && seek_forwardx(start) != start)
-	throw std::runtime_error("seek_forward failed");
+    if (start > 0) {
+	int64_t bytes = start * m_format.bytesPerFrame();
+	if (seek_forwardx(bytes) != bytes)
+	    throw std::runtime_error("seek_forward failed");
+    }
     if (start > 0 && dur > 0 && length == -1)
 	m_duration -= start;
 }

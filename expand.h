@@ -6,9 +6,11 @@
 #include <iterator>
 
 /*
- * ${VAR} expands to variable VAR
- * ${VAR&word} expands to VAR if VAR is empty, else word
- * ${VAR|word} expands to VAR if VAR is not empty, else word
+ * - ${VAR} evaluates to variable VAR's value
+ * - ${VAR&word} evaluates to ${VAR} if ${VAR} is empty,
+ *   otherwise literal word
+ * - ${VAR|word} evaluates to ${VAR} if ${VAR} is not empty,
+ *   otherwise literal word
  */
 
 template <typename CharT, typename Func>
@@ -16,7 +18,8 @@ std::basic_string<CharT>
 expand(const std::basic_string<CharT> &name, Func lookup)
 {
     static CharT meta[] = { '&', '|', 0 };
-    std::basic_string<CharT>::size_type pos = name.find_first_of(meta);
+    typename std::basic_string<CharT>::size_type
+	pos = name.find_first_of(meta);
     if (pos == std::basic_string<CharT>::npos)
 	return lookup(name);
     std::basic_string<CharT> value = lookup(name.substr(0, pos));
@@ -35,7 +38,7 @@ process_template(const std::basic_string<CharT> &s, Func lookup)
 
     std::basic_stringbuf<CharT> src(s);
     std::basic_string<CharT> acc, name;
-    std::char_traits<CharT>::int_type c;
+    typename std::char_traits<CharT>::int_type c;
     State state = INIT;
 
     while (traits_type::not_eof(c = src.sbumpc())) {
@@ -59,8 +62,9 @@ process_template(const std::basic_string<CharT> &s, Func lookup)
 	} else
 	    name.push_back(c);
     }
-    if (state == OPEN) {
+    if (state != INIT)
 	acc.push_back('$');
+    if (state == OPEN) {
 	acc.push_back('{');
 	acc += name;
     }

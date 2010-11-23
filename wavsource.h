@@ -27,7 +27,9 @@ public:
 		std::min(static_cast<uint64_t>(nsamples), rest));
 	if (!nsamples) return 0;
 	size_t nblocks = m_format.bytesPerFrame();
-	return readx(buffer, nsamples * nblocks) / nblocks;
+	nsamples = readx(buffer, nsamples * nblocks) / nblocks;
+	m_samples_read += nsamples;
+	return nsamples;
     }
 private:
     size_t readx(void *buffer, size_t count)
