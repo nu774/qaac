@@ -268,7 +268,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 static
 ISource *open_source(const Options &opts)
 {
-    InputStream stream(Win32Channel(opts.ifilename));
+    InputStream stream(StdioChannel(opts.ifilename));
 
     if (opts.ignore_length)
 	return new WaveSource(stream, true);
@@ -284,6 +284,7 @@ ISource *open_source(const Options &opts)
 	    return new LibSndfileSource(opts.libsndfile, opts.ifilename);
 	} catch (const std::runtime_error&) {
 	    if (!stream.seekable()) throw;
+	    stream.rewind();
 	}
     } else {
 	try {
@@ -335,7 +336,7 @@ void write_tags(const std::wstring &ofilename,
 
     if (!opts.is_raw && opts.libid3tag.loaded()) {
 	try {
-	    Win32Channel channel(opts.ifilename);
+	    StdioChannel channel(opts.ifilename);
 	    if (channel.seekable()) {
 		InputStream stream(channel);
 		char magic[12];
@@ -408,7 +409,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts)
 
 std::wstring load_cue_sheet(const wchar_t *name)
 {
-    Win32Channel channel(name);
+    StdioChannel channel(name);
     InputStream stream(channel);
     int64_t size = stream.size();
     if (size > 0x100000)

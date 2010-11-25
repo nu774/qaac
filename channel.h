@@ -1,6 +1,8 @@
 #ifndef _CHANNEL_H
 #define _CHANNEL_H
 #include <cstdio>
+#include <io.h>
+#include <fcntl.h>
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -26,6 +28,41 @@ struct ISeekable: public IChannel {
     virtual ~ISeekable() {}
     virtual bool seekable() = 0;
     virtual int64_t seek(int64_t offset, int whence) = 0;
+};
+
+typedef void *HANDLE;
+
+/*
+ * This class use stdio for buffered I/O, not for portability.
+ * Unicode filename handling, 64bit seeking, and testing seekability
+ * is not portable, and therefore is VC++ specific.
+ */
+class StdioChannel : public ISeekable {
+    typedef std::tr1::shared_ptr<FILE> fileptr_t;
+    fileptr_t m_fp;
+    std::string m_name;
+    bool m_is_seekable;
+public:
+    explicit StdioChannel(FILE *handle)
+	: m_name("<stdin>"),
+	  m_fp(handle, no_close)
+    {
+	_setmode(0, _O_BINARY);
+	test_seekable();
+    }
+    StdioChannel(const wchar_t *name);
+    virtual StdioChannel *copy() { return new StdioChannel(*this); }
+    const char *name() { return m_name.c_str(); }
+    bool seekable() { return m_is_seekable; }
+    ssize_t read(void *buf, size_t count);
+    int64_t seek(int64_t offset, int whence);
+    int64_t tell();
+private:
+    HANDLE raw_handle() {
+	return reinterpret_cast<HANDLE>(_get_osfhandle(fileno(m_fp.get())));
+    }
+    static void no_close(FILE *handle) {}
+    void test_seekable();
 };
 
 class Win32Channel : public ISeekable {
