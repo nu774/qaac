@@ -40,7 +40,7 @@ ConvertFromBasicDescription(const AudioStreamBasicDescription &asbd)
 }
 
 QTMovieSource::QTMovieSource(const std::wstring &path, bool alac_only)
-    : m_extraction_complete(false), m_samples_read(0)
+    : m_extraction_complete(false)
 {
     try {
 	M4ATagParser parser(path);
@@ -89,35 +89,22 @@ QTMovieSource::QTMovieSource(const std::wstring &path, bool alac_only)
     for (size_t i = 0; i < m_layout->mNumberChannelDescriptions; ++i)
 	m_chanmap.push_back(m_layout->mChannelDescriptions[i].mChannelLabel);
 
-    /*
-    TimeRecord tr;
-    m_session.getRemainingAudioDuration(&tr);
-    m_duration = (static_cast<uint64_t>(tr.value.hi) << 32) | tr.value.lo;
-    */
-    m_duration = static_cast<uint64_t>(GetMediaDuration(media))
-       	* m_description.mSampleRate / GetMediaTimeScale(media);
+    setRange(0, static_cast<uint64_t>(GetMediaDuration(media))
+       	* m_description.mSampleRate / GetMediaTimeScale(media));
 }
 
-void QTMovieSource::setRange(int64_t start, int64_t length)
+void QTMovieSource::skipSamples(int64_t count)
 {
-    if (start > 0) {
-	TimeRecord tr;
-	m_session.getCurrentTime(&tr);
-	tr.value.hi = static_cast<SInt32>(start >> 32);
-	tr.value.lo = static_cast<SInt32>(start);
-	m_session.setCurrentTime(tr);
-    }
-    if (length >= 0 && length > 0 && length < static_cast<int64_t>(m_duration))
-	m_duration = length;
-    if (start > 0 && length == -1)
-	m_duration -= start;
+    TimeRecord tr;
+    m_session.getCurrentTime(&tr);
+    tr.value.hi += static_cast<SInt32>(count >> 32);
+    tr.value.lo += static_cast<SInt32>(count);
+    m_session.setCurrentTime(tr);
 }
 
 size_t QTMovieSource::readSamples(void *buffer, size_t nsamples)
 {
-    uint64_t rest = m_duration - m_samples_read;
-    nsamples = static_cast<size_t>(
-	    std::min(static_cast<uint64_t>(nsamples), rest));
+    nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples || m_extraction_complete)
 	return 0;
 
@@ -137,6 +124,6 @@ size_t QTMovieSource::readSamples(void *buffer, size_t nsamples)
     TRYE(MovieAudioExtractionFillBuffer(m_session, &npackets, &abl, &flags));
     if (flags & kQTMovieAudioExtractionComplete)
 	m_extraction_complete = true;
-    m_samples_read += npackets;
+    addSamplesRead(npackets);
     return npackets;
 }

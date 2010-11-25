@@ -515,7 +515,13 @@ void handle_cue_sheet(Options &opts)
 	    int64_t end = -1;
 	    if (seg.m_end != -1)
 		end = static_cast<int64_t>(seg.m_end) * 588 - begin;
-	    src->setRange(begin, end);
+	    IPartialSource *psrc = dynamic_cast<IPartialSource*>(src);
+	    if (!psrc) {
+		delete src;
+		throw std::runtime_error(
+		    "Can't process partial input with this file type");
+	    }
+	    psrc->setRange(begin, end);
 	    source.addSource(src);
 	}
 	std::wstring formatstr = opts.fname_format

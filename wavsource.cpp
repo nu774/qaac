@@ -15,7 +15,7 @@ struct myGUID {
     }
 };
 
-namespace __wave {
+namespace wav {
     enum {
 	kFormatPCM = 1,
 	kFormatFloat = 3,
@@ -49,7 +49,7 @@ namespace __wave {
 }
 
 WaveSource::WaveSource(InputStream &stream, bool ignorelength)
-    : RIFFParser(stream), m_samples_read(0), m_ignore_length(ignorelength)
+    : RIFFParser(stream), m_ignore_length(ignorelength)
 {
     parse();
     if (format_id() != 'WAVE')
@@ -59,14 +59,12 @@ WaveSource::WaveSource(InputStream &stream, bool ignorelength)
 	    fetchWaveFormat();
     }
     if (!m_format.m_bitsPerSample)
-	__wave::want(false);
+	wav::want(false);
 
-    m_samples_read = 0;
     if (ignorelength || chunk_size() == 0xffffffff)
-	/* streaming? */
-	m_duration = -1;
+	setRange(0, -1);
     else
-	m_duration = chunk_size() / m_format.bytesPerFrame();
+	setRange(chunk_size() / m_format.bytesPerFrame());
 }
 
 void WaveSource::fetchWaveFormat()
@@ -80,18 +78,18 @@ void WaveSource::fetchWaveFormat()
     uint32_t y;
     // wFormatTag
     check_eof(read16le(&wformat));
-    __wave::want(wformat == __wave::kFormatPCM
-	      || wformat == __wave::kFormatFloat
-	      || wformat == __wave::kFormatExtensible);
-    if (wformat == __wave::kFormatFloat)
+    wav::want(wformat == wav::kFormatPCM
+	      || wformat == wav::kFormatFloat
+	      || wformat == wav::kFormatExtensible);
+    if (wformat == wav::kFormatFloat)
 	m_format.m_type = SampleFormat::kIsFloat;
     // nChannels
     check_eof(read16le(&nchannels));
-    __wave::want(nchannels > 0 && nchannels < 9);
+    wav::want(nchannels > 0 && nchannels < 9);
     m_format.m_nchannels = nchannels;
     // nSamplesPerSec
     check_eof(read32le(&y));
-    __wave::want(y > 0);
+    wav::want(y > 0);
     m_format.m_rate = y;
     // nAvgBytesPerSec
     check_eof(read32le(&y));
@@ -99,23 +97,23 @@ void WaveSource::fetchWaveFormat()
     check_eof(read16le(&x));
     // wBitsPerSample
     check_eof(read16le(&x));
-    __wave::want(x > 0 && (x & 0x7) == 0);
+    wav::want(x > 0 && (x & 0x7) == 0);
     m_format.m_bitsPerSample = x;
-    if (wformat == __wave::kFormatPCM)
+    if (wformat == wav::kFormatPCM)
 	m_format.m_type = x > 8 ? SampleFormat::kIsSignedInteger
 	    			: SampleFormat::kIsUnsignedInteger;
 
-    if (wformat == __wave::kFormatExtensible) {
+    if (wformat == wav::kFormatExtensible) {
 	if (chunk_size() < 40)
 	    throw std::runtime_error("Invalid fmt chunk");
 	// cbSize
 	check_eof(read16le(&x));
 	// wValidBitsPerSample
 	check_eof(read16le(&x));
-	__wave::want(x == m_format.m_bitsPerSample);
+	wav::want(x == m_format.m_bitsPerSample);
 	// dwChannelMask
 	check_eof(read32le(&y));
-	__wave::want(bitcount(y) == nchannels);
+	wav::want(bitcount(y) == nchannels);
 	for (size_t i = 0; i < 32; ++i, y >>= 1)
 	    if (y & 1) m_chanmap.push_back(i + 1);
 
@@ -125,27 +123,12 @@ void WaveSource::fetchWaveFormat()
 	check_eof(read16le(&subFormat.Data2));
 	check_eof(read16le(&subFormat.Data3));
 	check_eof(read(&subFormat.Data4, 8) == 8);
-	if (subFormat == __wave::ksFormatSubTypePCM)
+	if (subFormat == wav::ksFormatSubTypePCM)
 	    m_format.m_type = x > 8 ? SampleFormat::kIsSignedInteger
 				    : SampleFormat::kIsUnsignedInteger;
-	else if (subFormat == __wave::ksFormatSubTypeFloat)
+	else if (subFormat == wav::ksFormatSubTypeFloat)
 	    m_format.m_type = SampleFormat::kIsFloat;
 	else
-	    __wave::want(false);
+	    wav::want(false);
     }
 }
-
-void WaveSource::setRange(int64_t start, int64_t length)
-{
-    int64_t dur = static_cast<int64_t>(m_duration);
-    if (length >= 0 && (dur == -1 || length < dur))
-	m_duration = length;
-    if (start > 0) {
-	int64_t bytes = start * m_format.bytesPerFrame();
-	if (seek_forwardx(bytes) != bytes)
-	    throw std::runtime_error("seek_forward failed");
-    }
-    if (start > 0 && dur > 0 && length == -1)
-	m_duration -= start;
-}
-

@@ -65,7 +65,7 @@ LibSndfileModule::LibSndfileModule(const std::wstring &path)
 
 LibSndfileSource::LibSndfileSource(
 	const LibSndfileModule &module, const wchar_t *path)
-    : m_module(module), m_samples_read(0)
+    : m_module(module)
 {
     SF_INFO info;
     SNDFILE *fp;
@@ -76,7 +76,7 @@ LibSndfileSource::LibSndfileSource(
     if (!fp)
 	throw std::runtime_error(m_module.strerror(0));
     m_handle.swap(handle_t(fp, m_module.close));
-    m_duration = info.frames;
+    setRange(0, info.frames);
 
     const char *fmtstr;
     static const char *fmtmap[] = {
@@ -113,15 +113,10 @@ LibSndfileSource::LibSndfileSource(
 		m_chanmap.begin(), convert_chanmap);
 }
 
-void LibSndfileSource::setRange(int64_t start, int64_t length)
+void LibSndfileSource::skipSamples(int64_t count)
 {
-    int64_t dur = m_duration;
-    if (length >= 0 && (dur == -1 || length < dur))
-	m_duration = length;
-    if (start > 0 && m_module.seek(m_handle.get(), start, SEEK_SET) == -1)
+    if (m_module.seek(m_handle.get(), count, SEEK_CUR) == -1)
 	throw std::runtime_error("sf_seek failed");
-    if (start > 0 && dur > 0 && length == -1)
-	m_duration -= start;
 }
 
 #define SF_READ(type, handle, buffer, nsamples) \
@@ -129,9 +124,7 @@ void LibSndfileSource::setRange(int64_t start, int64_t length)
 
 size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
 {
-    uint64_t rest = m_duration - m_samples_read;
-    nsamples = static_cast<size_t>(
-	    std::min(static_cast<uint64_t>(nsamples), rest));
+    nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
     nsamples *= m_format.m_nchannels;
     sf_count_t rc;
@@ -144,6 +137,6 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
     else
 	rc = SF_READ(float, m_handle.get(), buffer, nsamples);
     nsamples = static_cast<size_t>(rc / m_format.m_nchannels);
-    m_samples_read += nsamples;
+    addSamplesRead(nsamples);
     return nsamples;
 }

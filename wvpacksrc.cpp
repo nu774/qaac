@@ -41,7 +41,7 @@ WavpackModule::WavpackModule(const std::wstring &path)
 }
 
 WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream)
-    : m_module(module), m_stream(stream), m_samples_read(0)
+    : m_module(module), m_stream(stream)
 {
     static WavpackStreamReader reader = {
 	f_read, f_tell, f_seek_abs, f_seek,
@@ -65,9 +65,9 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream)
     m_format.m_nchannels = m_module.GetNumChannels(wpc);
     m_format.m_rate = m_module.GetSampleRate(wpc);
     m_format.m_bitsPerSample = m_module.GetBitsPerSample(wpc);
-    m_duration = m_module.GetNumSamples(wpc);
-    if (m_duration == 0xffffffff)
-	m_duration = -1LL;
+    uint64_t duration = m_module.GetNumSamples(wpc);
+    if (duration == 0xffffffff) duration = -1LL;
+    setRange(0, duration);
 
     unsigned mask = m_module.GetChannelMask(wpc);
     for (size_t i = 0; i < 32; ++i, mask >>= 1)
@@ -76,24 +76,18 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream)
     fetchTags();
 }
 
-void WavpackSource::setRange(int64_t start, int64_t length)
+void WavpackSource::skipSamples(int64_t count)
 {
-    int64_t dur = static_cast<int64_t>(m_duration);
-    if (length >= 0 && (dur == -1 || length < dur))
-	m_duration = length;
-    if (start > 0 &&
-	    !m_module.SeekSample(m_wpc.get(), static_cast<int32_t>(start)))
-	throw std::runtime_error("WavpackSeekSample failed");
-    if (start > 0 && dur > 0 && length == -1)
-	m_duration -= start;
+    if (!m_module.SeekSample(m_wpc.get(),
+		static_cast<int32_t>(getSamplesRead() + count)))
+	throw std::runtime_error("WavpackSeekSample");
+
 }
 
 template <class MemorySink>
 size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 {
-    uint64_t rest = m_duration - m_samples_read;
-    nsamples = static_cast<size_t>(
-	    std::min(static_cast<uint64_t>(nsamples), rest));
+    nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
     std::vector<int32_t> vbuf(nsamples * m_format.m_nchannels);
     MemorySink sink(buffer);
@@ -107,7 +101,7 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 	    sink.put(vbuf[i]);
 	total += rc;
     }
-    m_samples_read += total;
+    addSamplesRead(total);
     return total;
 }
 
@@ -143,7 +137,7 @@ void WavpackSource::fetchTags()
 	else if (!strcasecmp(&name[0], "cuesheet")) {
 	    try {
 		CueSheetToChapters(wvalue, m_format.m_rate,
-			m_duration, &m_chapters);
+			getDuration(), &m_chapters);
 	    } catch (...) {}
 	}
     }

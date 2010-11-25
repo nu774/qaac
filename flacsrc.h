@@ -55,27 +55,27 @@ public:
 	    FLAC__StreamDecoder *, FLAC__uint64);
 };
 
-class FLACSource : public ISource, public ITagParser {
+class FLACSource :
+    public ISource, public ITagParser, public PartialSource<FLACSource>
+{
     typedef std::tr1::shared_ptr<FLAC__StreamDecoder> decoder_t;
     FLACModule m_module;
     InputStream m_stream;
     decoder_t m_decoder;
     SampleFormat m_format;
     std::vector<std::deque<int32_t> > m_buffer;
-    uint64_t m_duration;
-    uint64_t m_samples_read;
     std::map<uint32_t, std::wstring> m_tags;
     std::wstring m_cuesheet;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
     bool m_giveup;
 public:
     FLACSource(const FLACModule &module, InputStream &stream);
-    void setRange(int64_t start=0, int64_t length=-1);
-    uint64_t length() const { return m_duration; }
+    uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannelMap() const { return 0; }
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     size_t readSamples(void *buffer, size_t nsamples);
+    void skipSamples(int64_t count);
     const std::vector<std::pair<std::wstring, int64_t> >
 	*getChapters() const
     {

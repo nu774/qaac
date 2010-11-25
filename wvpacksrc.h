@@ -37,23 +37,23 @@ public:
     uint32_t (*UnpackSamples)(WavpackContext *, int32_t *, uint32_t);
 };
 
-class WavpackSource: public ISource, public ITagParser {
+class WavpackSource:
+    public ISource, public ITagParser, public PartialSource<WavpackSource>
+{
     WavpackModule m_module;
     InputStream m_stream;
     SampleFormat m_format;
     std::tr1::shared_ptr<void> m_wpc;
-    uint64_t m_duration;
-    uint64_t m_samples_read;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
 public:
     WavpackSource(const WavpackModule &module, InputStream &stream);
-    void setRange(int64_t start=0, int64_t length=-1);
-    uint64_t length() const { return m_duration; }
+    uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannelMap() const { return &m_chanmap; }
     size_t readSamples(void *buffer, size_t nsamples);
+    void skipSamples(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<std::pair<std::wstring, int64_t> >
 	*getChapters() const

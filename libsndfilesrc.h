@@ -33,19 +33,18 @@ public:
     sf_count_t (*read_double)(SNDFILE *, double *, sf_count_t);
 };
 
-class LibSndfileSource: public ISource {
+class LibSndfileSource:
+    public ISource, public PartialSource<LibSndfileSource>
+{
     typedef std::tr1::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
     LibSndfileModule m_module;
     SampleFormat m_format;
     std::vector<uint32_t> m_chanmap;
-    uint64_t m_duration;
-    uint64_t m_samples_read;
     std::string m_format_name;
 public:
     LibSndfileSource(const LibSndfileModule &module, const wchar_t *path);
-    void setRange(int64_t start=0, int64_t length=-1);
-    uint64_t length() const { return m_duration; }
+    uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::string &getFormatName() const { return m_format_name; }
     const std::vector<uint32_t> *getChannelMap() const
@@ -53,6 +52,7 @@ public:
 	return m_chanmap.size() ? &m_chanmap: 0;
     }
     size_t readSamples(void *buffer, size_t nsamples);
+    void skipSamples(int64_t count);
 };
 
 #endif

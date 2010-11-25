@@ -67,9 +67,7 @@ FLACModule::FLACModule(const std::wstring &path)
 FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
     m_module(module),
     m_stream(stream),
-    m_giveup(false),
-    m_samples_read(0),
-    m_duration(-1)
+    m_giveup(false)
 {
     char buffer[33];
     check_eof(m_stream.read(buffer, 33) == 33);
@@ -104,28 +102,21 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
     if (m_cuesheet.size()) {
 	try {
 	    CueSheetToChapters(m_cuesheet, m_format.m_rate,
-		    m_duration, &m_chapters);
+		    getDuration(), &m_chapters);
 	} catch (...) {}
     }
 }
 
-void FLACSource::setRange(int64_t start, int64_t length)
+void FLACSource::skipSamples(int64_t count)
 {
-    int64_t dur = static_cast<int64_t>(m_duration);
-    if (length >= 0 && (dur == -1 || length < dur))
-	m_duration = length;
-    if (start)
-	TRYFL(m_module.stream_decoder_seek_absolute(m_decoder.get(), start));
-    if (start > 0 && dur > 0 && length == -1)
-	m_duration -= start;
+    TRYFL(m_module.stream_decoder_seek_absolute(m_decoder.get(),
+		getSamplesRead() + count));
 }
 
 template <class MemorySink>
 size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
 {
-    uint64_t rest = m_duration - m_samples_read;
-    nsamples = static_cast<size_t>(
-	    std::min(static_cast<uint64_t>(nsamples), rest));
+    nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
     MemorySink sink(buffer);
     size_t processed = 0;
@@ -146,7 +137,7 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
 	    TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
 	}
     }
-    m_samples_read += processed;
+    addSamplesRead(processed);
     return processed;
 }
 
@@ -247,7 +238,7 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 	m_giveup = true;
 	return;
     }
-    m_duration = si.total_samples;
+    setRange(0, si.total_samples);
     m_format.m_type = SampleFormat::kIsSignedInteger;
     m_format.m_bitsPerSample = si.bits_per_sample;
     m_format.m_endian = SampleFormat::kIsLittleEndian;
