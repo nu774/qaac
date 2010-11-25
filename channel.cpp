@@ -13,7 +13,8 @@ StdioChannel::StdioChannel(const wchar_t *name)
     } else {
 	m_name = format("%ls", name);
 	FILE *fp = _wfopen(name, L"rb");
-	if (!fp) throw std::runtime_error(m_name + std::strerror(errno));
+	if (!fp) throw std::runtime_error(format("%ls: %s",
+		    name, std::strerror(errno)));
 	m_fp.swap(fileptr_t(fp, fclose));
     }
     test_seekable();
