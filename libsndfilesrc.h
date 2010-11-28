@@ -53,6 +53,9 @@ public:
     }
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);
+private:
+    size_t readSamples8(void *buffer, size_t nsamples);
+    size_t readSamples24(void *buffer, size_t nsamples);
 };
 
 #endif

@@ -80,15 +80,13 @@ LibSndfileSource::LibSndfileSource(
 
     const char *fmtstr;
     static const char *fmtmap[] = {
-	"", "S16LE", "S16LE", "S32LE", "S32LE", "S16LE", "F32LE", "F64LE"
+	"", "S8LE", "S16LE", "S24LE", "S32LE", "S8LE", "F32LE", "F64LE"
     };
     uint32_t subformat = info.format & SF_FORMAT_SUBMASK;
     if (subformat < array_size(fmtmap))
 	fmtstr = fmtmap[subformat];
-    else if (subformat == SF_FORMAT_VORBIS)
-	fmtstr = "F32LE";
     else
-	fmtstr = "S16LE";
+	throw std::runtime_error("Can't handle this kind of subformat");
 
     SF_FORMAT_INFO finfo;
     std::memset(&finfo, 0, sizeof finfo);
@@ -128,8 +126,12 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
     if (!nsamples) return 0;
     nsamples *= m_format.m_nchannels;
     sf_count_t rc;
-    if (m_format.m_bitsPerSample == 16)
+    if (m_format.m_bitsPerSample == 8)
+	rc = readSamples8(buffer, nsamples);
+    else if (m_format.m_bitsPerSample == 16)
 	rc = SF_READ(short, m_handle.get(), buffer, nsamples);
+    else if (m_format.m_bitsPerSample == 24)
+	rc = readSamples24(buffer, nsamples);
     else if (m_format.m_bitsPerSample == 64)
 	rc = SF_READ(double, m_handle.get(), buffer, nsamples);
     else if (m_format.m_type == SampleFormat::kIsSignedInteger)
@@ -139,4 +141,24 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
     nsamples = static_cast<size_t>(rc / m_format.m_nchannels);
     addSamplesRead(nsamples);
     return nsamples;
+}
+
+size_t LibSndfileSource::readSamples8(void *buffer, size_t nsamples)
+{
+    std::vector<short> v(m_format.m_nchannels * nsamples);
+    sf_count_t rc = SF_READ(short, m_handle.get(), &v[0], nsamples);
+    char *bp = reinterpret_cast<char*>(buffer);
+    for (size_t i = 0; i < rc; ++i)
+	*bp++ = static_cast<char>(v[i] / 256);
+    return static_cast<size_t>(rc);
+}
+
+size_t LibSndfileSource::readSamples24(void *buffer, size_t nsamples)
+{
+    std::vector<int32_t> v(m_format.m_nchannels * nsamples);
+    sf_count_t rc = SF_READ(int, m_handle.get(), &v[0], nsamples);
+    MemorySink24LE sink(buffer);
+    for (size_t i = 0; i < rc; ++i)
+	sink.put(v[i] / 256);
+    return static_cast<size_t>(rc);
 }
