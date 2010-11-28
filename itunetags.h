@@ -36,6 +36,7 @@ namespace Tag {
 }
 
 uint32_t GetIDFromTagName(const char *name);
+const char *GetNameFromTagID(uint32_t fcc);
 
 const char * const iTunSMPB_template = " 00000000 %08X %08X %08X%08X "
 "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000";

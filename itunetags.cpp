@@ -312,11 +312,16 @@ namespace __freeform {
 	{ "comment", Tag::kComment },
 	{ 0, 0 }
     };
-    inline
     uint32_t GetIDFromName(const char *name, const Tag::NameIDMap *map) {
 	for (; map->name; ++map)
 	    if (!strcasecmp(map->name, name))
 		return map->id;
+	return 0;
+    }
+    const char *GetNameFromID(uint32_t fcc, const Tag::NameIDMap *map) {
+	for (; map->name; ++map)
+	    if (map->id == fcc)
+		return map->name;
 	return 0;
     }
 }
@@ -324,6 +329,11 @@ namespace __freeform {
 uint32_t GetIDFromTagName(const char *name)
 {
     return __freeform::GetIDFromName(name, __freeform::tagNameMap);
+}
+
+const char *GetNameFromTagID(uint32_t fcc)
+{
+    return __freeform::GetNameFromID(fcc, __freeform::tagNameMap);
 }
 
 bool

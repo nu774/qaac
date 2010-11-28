@@ -115,6 +115,9 @@
 				RelativePath="..\..\channel.cpp">
 			</File>
 			<File
+				RelativePath="..\..\flacmodule.cpp">
+			</File>
+			<File
 				RelativePath="..\..\getopt.c">
 			</File>
 			<File

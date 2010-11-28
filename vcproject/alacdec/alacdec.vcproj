@@ -134,6 +134,9 @@
 				RelativePath="..\..\alacdec.cpp">
 			</File>
 			<File
+				RelativePath="..\..\flacsink.cpp">
+			</File>
+			<File
 				RelativePath="..\..\wavsink.cpp">
 			</File>
 		</Filter>

@@ -5,55 +5,7 @@
 #include <FLAC/all.h>
 #include "iointer.h"
 #include "channel.h"
-
-struct HINSTANCE__;
-
-class FLACModule {
-    typedef std::tr1::shared_ptr<HINSTANCE__> module_t;
-    module_t m_module;
-    bool m_loaded;
-public:
-    FLACModule(): m_loaded(false) {}
-    explicit FLACModule(const std::wstring &path);
-    bool loaded() const { return m_loaded; }
-
-    FLAC__StreamDecoder *(*stream_decoder_new)();
-    FLAC__bool (*stream_decoder_finish)(FLAC__StreamDecoder *);
-    void (*stream_decoder_delete)(FLAC__StreamDecoder *);
-    FLAC__StreamDecoderInitStatus (*stream_decoder_init_stream)(
-	    FLAC__StreamDecoder *,
-	    FLAC__StreamDecoderReadCallback,
-	    FLAC__StreamDecoderSeekCallback,
-	    FLAC__StreamDecoderTellCallback,
-	    FLAC__StreamDecoderLengthCallback,
-	    FLAC__StreamDecoderEofCallback,
-	    FLAC__StreamDecoderWriteCallback,
-	    FLAC__StreamDecoderMetadataCallback,
-	    FLAC__StreamDecoderErrorCallback,
-	    void *
-    );
-    FLAC__StreamDecoderInitStatus (*stream_decoder_init_ogg_stream)(
-	    FLAC__StreamDecoder *,
-	    FLAC__StreamDecoderReadCallback,
-	    FLAC__StreamDecoderSeekCallback,
-	    FLAC__StreamDecoderTellCallback,
-	    FLAC__StreamDecoderLengthCallback,
-	    FLAC__StreamDecoderEofCallback,
-	    FLAC__StreamDecoderWriteCallback,
-	    FLAC__StreamDecoderMetadataCallback,
-	    FLAC__StreamDecoderErrorCallback,
-	    void *
-    );
-    FLAC__bool (*stream_decoder_set_metadata_respond)(
-	    FLAC__StreamDecoder *, FLAC__MetadataType);
-    FLAC__bool (*stream_decoder_process_until_end_of_metadata)(
-	    FLAC__StreamDecoder *);
-    FLAC__StreamDecoderState (*stream_decoder_get_state)(
-	    const FLAC__StreamDecoder *);
-    FLAC__bool (*stream_decoder_process_single)(FLAC__StreamDecoder *);
-    FLAC__bool (*stream_decoder_seek_absolute)(
-	    FLAC__StreamDecoder *, FLAC__uint64);
-};
+#include "flacmodule.h"
 
 class FLACSource :
     public ISource, public ITagParser, public PartialSource<FLACSource>

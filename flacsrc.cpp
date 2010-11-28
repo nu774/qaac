@@ -27,43 +27,6 @@ namespace flac {
 }
 #define TRYFL(expr) (void)(flac::try__((expr), #expr))
 
-FLACModule::FLACModule(const std::wstring &path)
-{
-    HMODULE hDll;
-    hDll = LoadLibraryW(path.c_str());
-    m_loaded = (hDll != NULL);
-    if (!m_loaded)
-	return;
-    try {
-	TRYFL(stream_decoder_new =
-		ProcAddress(hDll, "FLAC__stream_decoder_new"));
-	TRYFL(stream_decoder_finish =
-		ProcAddress(hDll, "FLAC__stream_decoder_finish"));
-	TRYFL(stream_decoder_delete =
-		ProcAddress(hDll, "FLAC__stream_decoder_delete"));
-	TRYFL(stream_decoder_init_stream =
-		ProcAddress(hDll, "FLAC__stream_decoder_init_stream"));
-	TRYFL(stream_decoder_init_ogg_stream =
-		ProcAddress(hDll, "FLAC__stream_decoder_init_ogg_stream"));
-	TRYFL(stream_decoder_set_metadata_respond = ProcAddress(hDll,
-		    "FLAC__stream_decoder_set_metadata_respond"));
-	TRYFL(stream_decoder_process_until_end_of_metadata = ProcAddress(hDll,
-		    "FLAC__stream_decoder_process_until_end_of_metadata"));
-	TRYFL(stream_decoder_get_state =
-		ProcAddress(hDll, "FLAC__stream_decoder_get_state"));
-	TRYFL(stream_decoder_process_single =
-		ProcAddress(hDll, "FLAC__stream_decoder_process_single"));
-	TRYFL(stream_decoder_seek_absolute =
-		ProcAddress(hDll, "FLAC__stream_decoder_seek_absolute"));
-    } catch (...) {
-	FreeLibrary(hDll);
-	m_loaded = false;
-	return;
-    }
-    m_module.swap(module_t(hDll, FreeLibrary));
-}
-
-
 FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
     m_module(module),
     m_stream(stream),
