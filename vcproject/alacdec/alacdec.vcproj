@@ -36,11 +36,11 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="QTMLClient.lib shlwapi.lib wsetargv.obj"
-				OutputFile="$(OutDir)/qaac.exe"
+				OutputFile="$(OutDir)/alacdec.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;C:\Program Files\QuickTime SDK\Libraries&quot;"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile="$(OutDir)/qaac.pdb"
+				ProgramDatabaseFile="$(OutDir)/alacdec.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>
 			<Tool

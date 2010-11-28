@@ -33,10 +33,15 @@ FLACSink::FLACSink(FILE *fp, uint64_t duration, const SampleFormat &fmt,
     TRYFL(m_module.stream_encoder_set_compression_level(
 		m_encoder.get(), 5));
 
-    m_meta[0] =
+    FLAC__StreamMetadata *meta[2];
+    meta[0] =
 	m_module.metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
-    m_meta[1] = m_module.metadata_object_new(FLAC__METADATA_TYPE_PADDING);
-    m_meta[1]->length = 0x1000;
+    meta[1] = m_module.metadata_object_new(FLAC__METADATA_TYPE_PADDING);
+    meta[1]->length = 0x1000;
+    m_metadata_holder[0].swap(
+	    metadata_t(meta[0], m_module.metadata_object_delete));
+    m_metadata_holder[1].swap(
+	    metadata_t(meta[1], m_module.metadata_object_delete));
     {
 	FLAC__StreamMetadata_VorbisComment_Entry entry;
 	std::map<uint32_t, std::wstring>::const_iterator ii;
@@ -48,10 +53,10 @@ FLACSink::FLACSink(FILE *fp, uint64_t duration, const SampleFormat &fmt,
 	    m_module.metadata_object_vorbiscomment_entry_from_name_value_pair(
 		    &entry, key, value.c_str());
 	    m_module.metadata_object_vorbiscomment_append_comment(
-		    m_meta[0], entry, false);
+		    meta[0], entry, false);
 	}
     }
-    m_module.stream_encoder_set_metadata(m_encoder.get(), m_meta, 2);
+    m_module.stream_encoder_set_metadata(m_encoder.get(), meta, 2);
     
     TRYFL(m_module.stream_encoder_init_stream(m_encoder.get(),
 		staticWriteCallback, 0, 0, 0, this)
@@ -79,8 +84,11 @@ void FLACSink::writeSamples(const void *data, size_t length, size_t nsamples)
     case 24:
 	{
 	    const uint8_t *src = reinterpret_cast<const uint8_t*>(data);
-	    for (size_t i = 0; i < length / 3; ++i)
-		buff.push_back(src[i*3]|(src[i*3+1] << 8)|(src[i*3+2] << 16));
+	    for (size_t i = 0; i < length / 3; ++i) {
+		int32_t hv = static_cast<int8_t>(src[i*3+2]);
+		int32_t v = (src[i*3] | (src[i*3+1] << 8) | (hv << 16));
+		buff.push_back(v);
+	    }
 	}
 	break;
     case 32:

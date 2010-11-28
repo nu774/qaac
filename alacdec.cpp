@@ -72,6 +72,10 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
 
 int wmain(int argc, wchar_t **argv)
 {
+#ifdef DEBUG_ATTACH
+    std::getchar();
+#endif
+
     std::setbuf(stderr, 0);
 
     const wchar_t *ofile = 0;

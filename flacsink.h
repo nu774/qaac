@@ -7,10 +7,11 @@
 
 class FLACSink: public ISink {
     typedef std::tr1::shared_ptr<FLAC__StreamEncoder> encoder_t;
+    typedef std::tr1::shared_ptr<FLAC__StreamMetadata> metadata_t;
     FILE *m_fp;
     FLACModule m_module;
     encoder_t m_encoder;
-    FLAC__StreamMetadata *m_meta[2];
+    metadata_t m_metadata_holder[2];
     SampleFormat m_format;
 public:
     FLACSink(FILE *fp, uint64_t duration, const SampleFormat &format,
