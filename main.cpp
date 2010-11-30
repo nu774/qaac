@@ -435,7 +435,7 @@ std::wstring load_cue_sheet(const wchar_t *name)
 
 struct FNConverter {
     wchar_t operator()(wchar_t ch) {
-	if (std::wcschr(L":/?\\\"", ch))
+	if (std::wcschr(L":/\\?|<>*\"", ch))
 	    return L'_';
 	else
 	    return ch;
