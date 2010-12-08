@@ -25,7 +25,6 @@ static struct option long_options[] = {
     { L"nice", no_argument, 0, 'n' },
     { L"downmix", required_argument, 0, 'D' },
     { L"no-optimize", no_argument, 0, 'P' },
-    { L"sleep", required_argument, 0, 'L' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  Raw::kChannels },
     { L"raw-rate", required_argument, 0,  Raw::kSampleRate },
@@ -33,6 +32,7 @@ static struct option long_options[] = {
     { L"adts", no_argument, 0, 'E' },
     { L"ignorelength", no_argument, 0, 'i' },
     { L"fname-format", required_argument, 0, 'F' },
+    { L"log", required_argument, 0, 'L' },
     { L"title", required_argument, 0, Tag::kTitle },
     { L"artist", required_argument, 0, Tag::kArtist },
     { L"band", required_argument, 0, Tag::kAlbumArtist },
@@ -93,11 +93,11 @@ void usage()
 "-n, --nice             Give lower process priority\n"
 "--downmix <mono|stereo>    Downmix to mono/stereo\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
-//"--sleep <n>            Sleep n secs before termination [DEBUGGING]\n"
 "--adts                 ADTS(raw AAC)output, instead of m4a(AAC only)\n"
 "--ignorelength         Assume WAV input and ignore the data chunk length\n"
 "-R, --raw              Raw PCM input\n"
 "-S, --stat             Save bitrate statistics into file\n"
+"--log <filename>       Output message to file\n"
 "\n"
 "Option for single input mode only:\n"
 "-o <filename>          Output filename\n"
@@ -143,6 +143,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->ofilename = optarg;
 	else if (ch == 'd')
 	    this->outdir = optarg;
+	else if (ch == 'L')
+	    this->logfilename = optarg;
 	else if (ch == 'A') {
 	    if ((this->output_format && !isALAC()) || this->method != -1)
 		return usage(), false;
@@ -195,12 +197,6 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		this->rate = -1;
 	    else if (std::swscanf(optarg, L"%u", &this->rate) != 1) {
 		std::fputs("Invalid rate value\n", stderr);
-		return false;
-	    }
-	}
-	else if (ch == 'L') {
-	    if (std::swscanf(optarg, L"%u", &this->sleep) != 1) {
-		std::fputs("Integer value needed for sleep option\n", stderr);
 		return false;
 	    }
 	}

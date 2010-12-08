@@ -16,12 +16,12 @@ struct Options {
 	output_format(0),
 	method(-1), bitrate(-1), quality(2), rate(-1), downmix(-1),
 	ifilename(0), ofilename(0), outdir(0), fname_format(0),
+	logfilename(0),
 	verbose(true), is_raw(false), is_first_file(true),
 	save_stat(false), is_adts(false), nice(false),
 	ignore_length(false), no_optimize(false),
 	raw_channels(2), raw_sample_rate(44100),
-	raw_format(L"S16LE"),
-	sleep(0)
+	raw_format(L"S16LE")
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -52,10 +52,10 @@ struct Options {
     int32_t method;
     uint32_t bitrate, quality;
     uint32_t raw_channels, raw_sample_rate;
-    uint32_t sleep;
     int rate; /* -1: keep, 0: auto, others: literal value */
     int downmix; /* -1: none, 1: mono, 2: stereo */
     wchar_t *ifilename, *ofilename, *outdir, *raw_format, *fname_format;
+    wchar_t *logfilename;
     bool verbose, is_raw, is_first_file, is_adts, save_stat,
 	 nice, ignore_length, no_optimize;
     std::vector<std::string> used_settings;

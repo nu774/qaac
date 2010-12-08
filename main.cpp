@@ -596,6 +596,9 @@ int wmain(int argc, wchar_t **argv)
 	if (!opts.parse(argc, argv))
 	    return 1;
 
+	if (opts.logfilename)
+	    _wfreopen(opts.logfilename, L"w", stderr);
+
 	if (opts.nice)
 	    SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
 	QTInitializer __quicktime__(opts.verbose);
