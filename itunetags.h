@@ -68,9 +68,9 @@ public:
     }
     void setTag(const std::map<uint32_t, std::wstring> &tags)
     {
-	std::copy(tags.begin(), tags.end(),
-		std::insert_iterator<std::map<uint32_t, std::wstring> >(
-		    m_tags, m_tags.begin()));
+	std::map<uint32_t, std::wstring>::const_iterator ii;
+	for (ii = tags.begin(); ii != tags.end(); ++ii)
+	    m_tags[ii->first] = ii->second;
     }
     void setChapters(const std::vector<std::pair<std::wstring, int64_t> >
 	    &chapters)
