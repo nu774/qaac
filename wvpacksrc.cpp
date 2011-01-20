@@ -53,7 +53,7 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream)
     if (!wpc)
 	throw std::runtime_error(format("WavpackOpenFileInputEx: %s",
 		    error));
-    m_wpc.swap(std::tr1::shared_ptr<WavpackContext>(wpc, m_module.CloseFile));
+    m_wpc.swap(boost::shared_ptr<WavpackContext>(wpc, m_module.CloseFile));
 
     int mode = m_module.GetMode(wpc);
     if (mode & MODE_FLOAT)

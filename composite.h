@@ -1,15 +1,11 @@
 #ifndef _COMPOSITE_H
 #define _COMPOSITE_H
 
-#if _MSC_VER >= 1500
-# include <memory>
-#else
-# include <boost/tr1/memory.hpp>
-#endif
+#include <boost/shared_ptr.hpp>
 #include "iointer.h"
 
 class CompositeSource: public ISource {
-    typedef std::tr1::shared_ptr<ISource> source_t;
+    typedef boost::shared_ptr<ISource> source_t;
     std::vector<source_t> m_sources;
     SampleFormat m_format;
     size_t m_curpos;

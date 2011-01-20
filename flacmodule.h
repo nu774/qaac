@@ -2,17 +2,13 @@
 #define _FLACMODULE_H
 
 #include <string>
-#if _MSC_VER >= 1500
-# include <memory>
-#else
-# include <boost/tr1/memory.hpp>
-#endif
+#include <boost/shared_ptr.hpp>
 #include <FLAC/all.h>
 
 struct HINSTANCE__;
 
 class FLACModule {
-    typedef std::tr1::shared_ptr<HINSTANCE__> module_t;
+    typedef boost::shared_ptr<HINSTANCE__> module_t;
     module_t m_module;
     bool m_loaded;
 public:

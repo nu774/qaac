@@ -1,11 +1,7 @@
 #ifndef _SINK_H
 #define _SINK_H
 
-#if _MSC_VER >= 1500
-#include <memory>
-#else
-#include <boost/tr1/memory.hpp>
-#endif
+#include <boost/shared_ptr.hpp>
 #include <CoreAudioTypes.h>
 #include <stdint.h>
 #include "mp4v2wrapper.h"
@@ -32,7 +28,7 @@ public:
 };
 
 class ADTSSink: public ISink {
-    typedef std::tr1::shared_ptr<FILE> file_ptr_t;
+    typedef boost::shared_ptr<FILE> file_ptr_t;
     file_ptr_t m_fp;
     uint32_t m_sample_rate_index;
     uint32_t m_channel_config;

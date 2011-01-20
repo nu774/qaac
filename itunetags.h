@@ -83,7 +83,7 @@ public:
 struct HINSTANCE__;
 
 class LibID3TagModule {
-    typedef std::tr1::shared_ptr<HINSTANCE__> module_t;
+    typedef boost::shared_ptr<HINSTANCE__> module_t;
     module_t m_module;
     bool m_loaded;
 public:

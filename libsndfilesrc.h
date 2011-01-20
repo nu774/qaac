@@ -2,18 +2,14 @@
 #define _LIBSNDFILESRC_H
 
 #include <vector>
-#if _MSC_VER >= 1500
-# include <memory>
-#else
-# include <boost/tr1/memory.hpp>
-#endif
+#include <boost/shared_ptr.hpp>
 #include <sndfile.h>
 #include "iointer.h"
 
 struct HINSTANCE__;
 
 class LibSndfileModule {
-    typedef std::tr1::shared_ptr<HINSTANCE__> module_t;
+    typedef boost::shared_ptr<HINSTANCE__> module_t;
     module_t m_module;
     bool m_loaded;
 public:
@@ -36,7 +32,7 @@ public:
 class LibSndfileSource:
     public ISource, public PartialSource<LibSndfileSource>
 {
-    typedef std::tr1::shared_ptr<SNDFILE_tag> handle_t;
+    typedef boost::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
     LibSndfileModule m_module;
     SampleFormat m_format;

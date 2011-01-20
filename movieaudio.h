@@ -5,7 +5,7 @@
 
 class MovieAudioExtractionX : public PropertySupport<MovieAudioExtractionX> {
     MovieX m_movie;
-    std::tr1::shared_ptr<MovieAudioExtractionRefRecord> m_instance;
+    boost::shared_ptr<MovieAudioExtractionRefRecord> m_instance;
     enum {
 	kMovie = kQTPropertyClass_MovieAudioExtraction_Movie,
 	kAudio = kQTPropertyClass_MovieAudioExtraction_Audio

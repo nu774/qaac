@@ -180,7 +180,7 @@ void AIFFTagParser::parseTags()
     id3_tag *tag = m_module.tag_parse(&buffer[0], size);
     if (!tag)
 	throw std::runtime_error("id3_tag_parse: can't parse as ID3 tag");
-    std::tr1::shared_ptr<id3_tag> __delete_later__(tag, m_module.tag_delete);
+    boost::shared_ptr<id3_tag> __delete_later__(tag, m_module.tag_delete);
     fetch(tag);
 }
 
@@ -269,7 +269,7 @@ M4ATagParser::M4ATagParser(const std::wstring &filename)
 	MP4ItmfItemList *itemlist = mp4v2::impl::itmf::genericGetItems(file);
 	if (!itemlist)
 	    return;
-	std::tr1::shared_ptr<MP4ItmfItemList> __delete_later__(
+	boost::shared_ptr<MP4ItmfItemList> __delete_later__(
 		itemlist, mp4v2::impl::itmf::genericItemListFree);
 	for (size_t i = 0; i < itemlist->size; ++i) {
 	    MP4ItmfItem &item = itemlist->elements[i];

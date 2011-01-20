@@ -243,7 +243,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
     std::auto_ptr<ISink> __delete_later__(sink);
     encoder.setSink(*sink);
 
-    typedef std::tr1::shared_ptr<std::FILE> file_t;
+    typedef boost::shared_ptr<std::FILE> file_t;
     file_t statfp;
     if (opts.isAAC() && opts.save_stat) {
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
@@ -576,10 +576,10 @@ void load_modules(Options &opts)
     std::wstring selfpath = GetModuleFileNameX();
     const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
     std::wstring selfdir = selfpath.substr(0, fpos - selfpath.c_str());
-    opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile_vc71.dll");
-    opts.libflac = FLACModule(selfdir + L"libFLAC_vc71.dll");
-    opts.libwavpack = WavpackModule(selfdir + L"wavpackdll_vc71.dll");
-    opts.libid3tag = LibID3TagModule(selfdir + L"libid3tag_vc71.dll");
+    opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile_vc10.dll");
+    opts.libflac = FLACModule(selfdir + L"libFLAC_vc10.dll");
+    opts.libwavpack = WavpackModule(selfdir + L"wavpackdll_vc10.dll");
+    opts.libid3tag = LibID3TagModule(selfdir + L"libid3tag_vc10.dll");
 }
 
 int wmain(int argc, wchar_t **argv)

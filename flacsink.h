@@ -6,8 +6,8 @@
 #include "flacmodule.h"
 
 class FLACSink: public ISink {
-    typedef std::tr1::shared_ptr<FLAC__StreamEncoder> encoder_t;
-    typedef std::tr1::shared_ptr<FLAC__StreamMetadata> metadata_t;
+    typedef boost::shared_ptr<FLAC__StreamEncoder> encoder_t;
+    typedef boost::shared_ptr<FLAC__StreamMetadata> metadata_t;
     FILE *m_fp;
     FLACModule m_module;
     encoder_t m_encoder;

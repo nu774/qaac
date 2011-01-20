@@ -6,11 +6,7 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
-#if _MSC_VER >= 1500
-# include <memory>
-#else
-# include <boost/tr1/memory.hpp>
-#endif
+#include <boost/shared_ptr.hpp>
 #ifdef _MSC_VER
 #include <intsafe.h>
   typedef SSIZE_T ssize_t;
@@ -38,7 +34,7 @@ typedef void *HANDLE;
  * is not portable, and therefore is VC++ specific.
  */
 class StdioChannel : public ISeekable {
-    typedef std::tr1::shared_ptr<FILE> fileptr_t;
+    typedef boost::shared_ptr<FILE> fileptr_t;
     fileptr_t m_fp;
     std::string m_name;
     bool m_is_seekable;
@@ -59,14 +55,14 @@ public:
     int64_t tell();
 private:
     HANDLE raw_handle() {
-	return reinterpret_cast<HANDLE>(_get_osfhandle(fileno(m_fp.get())));
+	return reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(m_fp.get())));
     }
     static void no_close(FILE *handle) {}
     void test_seekable();
 };
 
 class Win32Channel : public ISeekable {
-    typedef std::tr1::shared_ptr<void> fileptr_t;
+    typedef boost::shared_ptr<void> fileptr_t;
     fileptr_t m_fp;
     std::string m_name;
     bool m_is_seekable;
@@ -137,7 +133,7 @@ namespace __InputStreamImpl {
     };
 
     class Seekable: public Impl {
-	typedef std::tr1::shared_ptr<ISeekable> channel_t;
+	typedef boost::shared_ptr<ISeekable> channel_t;
 	channel_t m_channel;
     public:
 	Seekable(ISeekable &channel):
@@ -169,7 +165,7 @@ namespace __InputStreamImpl {
     };
 
     class NonSeekable: public Impl {
-	typedef std::tr1::shared_ptr<IChannel> channel_t;
+	typedef boost::shared_ptr<IChannel> channel_t;
 	channel_t m_channel;
 	std::vector<char> m_pushback_buffer;
 	uint64_t m_pos;
@@ -195,7 +191,7 @@ namespace __InputStreamImpl {
 }
 
 class InputStream: public BinaryRead<InputStream> {
-    typedef std::tr1::shared_ptr<__InputStreamImpl::Impl> impl_t;
+    typedef boost::shared_ptr<__InputStreamImpl::Impl> impl_t;
     impl_t m_impl;
     bool m_seekable;
 public:

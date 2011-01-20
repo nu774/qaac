@@ -6,6 +6,7 @@
 #include <cwchar>
 #include <string>
 #include <algorithm>
+#include <iterator>
 #include <stdexcept>
 
 #if (defined(_MSC_VER) && _MSC_VER < 1400) || defined(__MINGW32__)

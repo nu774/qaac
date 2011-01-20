@@ -4,11 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <vector>
-#if _MSC_VER >= 1500
-#include <memory>
-#else
-#include <boost/tr1/memory.hpp>
-#endif
+#include <boost/shared_ptr.hpp>
 #include <stdexcept>
 #include <MacErrors.h>
 #include <MacMemory.h>
@@ -75,7 +71,7 @@ inline T DynamicCast_CFType(CFTypeRef v)
 }
 
 class CFStringX {
-    std::tr1::shared_ptr<const __CFString> m_instance;
+    boost::shared_ptr<const __CFString> m_instance;
 public:
     CFStringX() {}
     CFStringX(CFStringRef s) : m_instance(s, CFRelease) {}
@@ -100,7 +96,7 @@ inline CFStringX W2CF(const std::wstring &str)
 }
 
 class CFNumberX {
-    std::tr1::shared_ptr<const __CFNumber> m_instance;
+    boost::shared_ptr<const __CFNumber> m_instance;
 public:
     CFNumberX(CFNumberRef n) : m_instance(n, CFRelease) {}
     operator CFNumberRef() const { return m_instance.get(); }
@@ -125,7 +121,7 @@ inline T CFDictionaryGetValueT(CFDictionaryRef dict, CFStringRef key)
 }
 
 class HandleX {
-    std::tr1::shared_ptr<Ptr> m_instance;
+    boost::shared_ptr<Ptr> m_instance;
 public:
     HandleX() {}
     HandleX(Handle n) : m_instance(n, DisposeHandle) {}
@@ -141,7 +137,7 @@ CFDictionaryRef
 SearchCFDictArray(CFArrayRef ref, CFStringRef key, CFStringRef value);
 
 template <typename T> class CFArrayT {
-    std::tr1::shared_ptr<const __CFArray> m_self;
+    boost::shared_ptr<const __CFArray> m_self;
     size_t m_size;
 public:
     typedef T value_type;

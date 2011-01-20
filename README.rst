@@ -4,6 +4,8 @@ qaac - CLI QuickTime AAC/ALAC encoder
 
 How to build
 ------------
-Just open vcproject/qaac.sln with Visual Studio, then build.
-MSVC 7.1(Visual Studio 2003) or later will work.
-Released version of qaac is compiled with Visual Studio 2003.
+You need QuickTime SDK 7.3 for Windows to build qaac. You can download QuickTime SDK from http://developer.apple.com/quicktime/ (registration is required).
+
+SDK is installed under C:\Program Files\QuickTime SDK (or C:\Program Files (x86)\QuickTime SDK, if you are using 64bit OS).
+
+You have to modify project files(vcxproj), if your SDK install directory is different from the project settings.
