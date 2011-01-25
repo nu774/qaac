@@ -136,6 +136,8 @@ inline void DisposeHandleX(void *handle)
 CFDictionaryRef
 SearchCFDictArray(CFArrayRef ref, CFStringRef key, CFStringRef value);
 
+CFTypeRef CloneCFObject(CFTypeRef value);
+
 template <typename T> class CFArrayT {
     boost::shared_ptr<const __CFArray> m_self;
     size_t m_size;

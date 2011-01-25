@@ -23,3 +23,31 @@ SearchCFDictArray(CFArrayRef vec, CFStringRef key, CFStringRef value)
     }
     return 0;
 }
+
+CFTypeRef CloneCFObject(CFTypeRef value)
+{
+    CFTypeID typeID = CFGetTypeID(value);
+    if (typeID == CFDictionaryGetTypeID()) {
+	CFDictionaryRef dictRef = reinterpret_cast<CFDictionaryRef>(value);
+	CFMutableDictionaryRef dict = 
+	    CFDictionaryCreateMutableCopy(0, 0, dictRef);
+	std::vector<CFTypeRef> keys(CFDictionaryGetCount(dict));
+	CFDictionaryGetKeysAndValues(dict, &keys[0], 0);
+	for (size_t i = 0; i < keys.size(); ++i) {
+	    CFDictionaryReplaceValue(dict, keys[i], 
+		    CloneCFObject(CFDictionaryGetValue(dict, keys[i])));
+	}
+	return dict;
+    } else if (typeID == CFArrayGetTypeID()) {
+	CFArrayRef arrayRef = reinterpret_cast<CFArrayRef>(value);
+	CFMutableArrayRef array = CFArrayCreateMutableCopy(0, 0, arrayRef);
+	CFIndex count = CFArrayGetCount(array);
+	for (CFIndex i = 0; i < count; ++i) {
+	    CFArraySetValueAtIndex(array, i, 
+		    CloneCFObject(CFArrayGetValueAtIndex(array, i)));
+	}
+	return array;
+    } else {
+	return CFRetain(value);
+    }
+}
