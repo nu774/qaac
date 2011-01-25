@@ -22,6 +22,8 @@
 #include "wavsource.h"
 #include "expand.h"
 
+#include <crtdbg.h>
+
 class PeriodicDisplay {
     FILE *m_fp;
     uint32_t m_interval;
@@ -245,7 +247,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 
     typedef boost::shared_ptr<std::FILE> file_t;
     file_t statfp;
-    if (opts.isAAC() && opts.save_stat) {
+    if (opts.save_stat) {
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
 	FILE *fp = _wfopen(statname.c_str(), L"w");
 	if (fp) statfp = file_t(fp, std::fclose);
@@ -584,6 +586,9 @@ void load_modules(Options &opts)
 
 int wmain(int argc, wchar_t **argv)
 {
+#ifdef _DEBUG
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF);
+#endif
     Options opts;
 
     std::setlocale(LC_CTYPE, "");

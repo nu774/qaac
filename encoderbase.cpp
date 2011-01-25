@@ -1,4 +1,5 @@
 #include "encoderbase.h"
+#include <crtdbg.h>
 
 static 
 AudioStreamBasicDescription BuildBasicDescription(const SampleFormat &format)
@@ -67,8 +68,15 @@ bool EncoderBase::encodeChunk(UInt32 nframes)
     ab.mData = &m_output_buffer[0];
     ab.mDataByteSize = m_output_buffer.size();
 
+#ifdef _DEBUG
+    _CrtCheckMemory();
+#endif
     TRYE(SCAudioFillBuffer(
 		*this, staticInputDataProc, this, &nframes, &abl, aspd));
+#ifdef _DEBUG
+    _CrtCheckMemory();
+#endif
+
     if (nframes == 0 && ab.mDataByteSize == 0)
 	return false;
 
@@ -100,11 +108,17 @@ long EncoderBase::inputDataProc(UInt32 *nframes, AudioBufferList *abl)
      * therefore abl->mNumberBuffers will be always equal to 1.
      */
     prepareInputBuffer(abl, *nframes);
+#ifdef _DEBUG
+    _CrtCheckMemory();
+#endif
     try {
 	*nframes = m_src->readSamples(abl->mBuffers[0].mData, *nframes);
     } catch (...) {
 	return eofErr;
     }
+#ifdef _DEBUG
+    _CrtCheckMemory();
+#endif
     if (*nframes == 0) {
 	// Tell SCAudioFillBuffer() that we are done.
 	abl->mBuffers[0].mData = 0;
@@ -124,7 +138,14 @@ void EncoderBase::prepareOutputBuffer(size_t nframes)
 	uint32_t bpp = m_output_desc.mBytesPerPacket;
 	if (!bpp)
 	    bpp = getMaximumOutputPacketSize();
-	m_output_buffer.resize(nframes * bpp);
+//	m_output_buffer.resize(nframes * bpp);
+	/*
+	 * XXX
+	 * ScAudioFillBuffer() randomly causes heap corruption
+	 * when ALAC encoding, for some sources.
+	 * Making bigger buffer seems to work.
+	 */
+	m_output_buffer.resize(nframes * bpp * 2);
     }
 }
 
