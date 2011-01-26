@@ -64,7 +64,7 @@ WaveSource::WaveSource(InputStream &stream, bool ignorelength)
     if (ignorelength || chunk_size() == 0xffffffff)
 	setRange(0, -1);
     else
-	setRange(chunk_size() / m_format.bytesPerFrame());
+	setRange(0, chunk_size() / m_format.bytesPerFrame());
 }
 
 void WaveSource::fetchWaveFormat()
