@@ -51,7 +51,7 @@ EncoderBase::EncoderBase(ISource *src, uint32_t formatID) :
     setInputChannelLayout(layout);
 
     AudioStreamBasicDescription oasbd = { 0 };
-    oasbd.mChannelsPerFrame = nchannels;
+    oasbd.mChannelsPerFrame = (nchannels == 3) ? 2 : nchannels;
     oasbd.mFormatID = formatID;
     setBasicDescription(oasbd);
     getBasicDescription(&m_output_desc);

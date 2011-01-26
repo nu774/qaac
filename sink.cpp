@@ -26,6 +26,8 @@ uint32_t getChannelConfig(const AudioChannelLayout *layout)
     switch (layout->mChannelLayoutTag) {
 	case kAudioChannelLayoutTag_Mono: return 1;
 	case kAudioChannelLayoutTag_Stereo: return 2;
+	case kAudioChannelLayoutTag_AAC_3_0: return 3;
+	case kAudioChannelLayoutTag_AAC_Quadraphonic: return 4;
 	case kAudioChannelLayoutTag_AAC_4_0: return 4;
 	case kAudioChannelLayoutTag_AAC_5_0: return 5;
 	case kAudioChannelLayoutTag_AAC_5_1: return 6;

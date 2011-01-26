@@ -391,6 +391,8 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts)
 	AudioStreamBasicDescription iasbd, oasbd;
 	iasbd = encoder.getInputBasicDescription();
 	oasbd = encoder.getOutputBasicDescription();
+	if (iasbd.mChannelsPerFrame == 3)
+	    std::fprintf(stderr, "WARNING: Downmixed to 2ch\n");
 	if (opts.rate > 0) {
 	    if (opts.rate != oasbd.mSampleRate)
 		std::fprintf(stderr, "WARNING: Sample rate will be %gHz\n",
