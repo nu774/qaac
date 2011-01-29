@@ -265,6 +265,9 @@ protected:
     MP4SampleId m_cachedSttsSid;
     MP4Timestamp    m_cachedSttsElapsed;
 
+    uint32_t    m_cachedCttsIndex;
+    MP4SampleId m_cachedCttsSid;
+
     MP4Integer32Property* m_pCttsCountProperty;
     MP4Integer32Property* m_pCttsSampleCountProperty;
     MP4Integer32Property* m_pCttsSampleOffsetProperty;

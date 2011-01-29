@@ -233,18 +233,12 @@ bool MP4File::Modify( const char* fileName )
 
 void MP4File::Optimize( const char* srcFileName, const char* dstFileName )
 {
-    // first load meta-info into memory
-    Open( srcFileName, File::MODE_READ, NULL );
-    ReadFromFile();
-    CacheProperties(); // of moov atom
-
-    File* const src = m_file;
-    m_file = NULL;
+    File* src = NULL;
+    File* dst = NULL;
 
     // compute destination filename
     string dname;
-    if( dstFileName )
-    {
+    if( dstFileName ) {
         dname = dstFileName;
     } else {
         // No destination given, so let's kludge together a temporary file.
@@ -254,8 +248,7 @@ void MP4File::Optimize( const char* srcFileName, const char* dstFileName )
         string s(srcFileName);
         size_t pos = s.find_last_of("\\/");
         const char *d;
-        if (pos == string::npos)
-        {
+        if (pos == string::npos) {
             d = ".";
         } else {
             s = s.substr(0, pos);
@@ -264,20 +257,38 @@ void MP4File::Optimize( const char* srcFileName, const char* dstFileName )
         FileSystem::pathnameTemp( dname, d, "tmp", ".mp4" );
     }
 
+    try {
+        // file source to optimize
+        Open( srcFileName, File::MODE_READ, NULL );
+        ReadFromFile();
+        CacheProperties(); // of moov atom
 
-    Open( dname.c_str(), File::MODE_CREATE, NULL );
-    File* const dst = m_file;
+        src = m_file;
+        m_file = NULL;
 
-    SetIntegerProperty( "moov.mvhd.modificationTime", MP4GetAbsTimestamp() );
+        // optimized file destination
+        Open( dname.c_str(), File::MODE_CREATE, NULL );
+        dst = m_file;
 
-    // writing meta info in the optimal order
-    ((MP4RootAtom*)m_pRootAtom)->BeginOptimalWrite();
+        SetIntegerProperty( "moov.mvhd.modificationTime", MP4GetAbsTimestamp() );
 
-    // write data in optimal order
-    RewriteMdat( *src, *dst );
+        // writing meta info in the optimal order
+        ((MP4RootAtom*)m_pRootAtom)->BeginOptimalWrite();
 
-    // finish writing
-    ((MP4RootAtom*)m_pRootAtom)->FinishOptimalWrite();
+        // write data in optimal order
+        RewriteMdat( *src, *dst );
+
+        // finish writing
+        ((MP4RootAtom*)m_pRootAtom)->FinishOptimalWrite();
+
+    }
+    catch (MP4Error*) {
+        // cleanup and rethrow.  Without this, we'd leak memory and an open file handle(s).
+        delete dst;
+        delete src;
+        m_file = NULL;
+        throw;
+    }
 
     // cleanup
     delete dst;

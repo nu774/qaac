@@ -65,6 +65,7 @@ MP4Track::MP4Track(MP4File* pFile, MP4Atom* pTrakAtom)
     m_curMode = 0;
 
     m_cachedSttsSid = MP4_INVALID_SAMPLE_ID;
+    m_cachedCttsSid = MP4_INVALID_SAMPLE_ID;
 
     bool success = true;
 
@@ -1167,17 +1168,27 @@ uint32_t MP4Track::GetSampleCttsIndex(MP4SampleId sampleId,
                                       MP4SampleId* pFirstSampleId)
 {
     uint32_t numCtts = m_pCttsCountProperty->GetValue();
+    MP4SampleId sid;
 
-    MP4SampleId sid = 1;
+    if (m_cachedCttsSid != MP4_INVALID_SAMPLE_ID && sampleId >= m_cachedCttsSid) {
+        sid   = m_cachedCttsSid;
+    } else {
+        m_cachedCttsIndex = 0;
+        sid = 1;
+    }
 
-    for (uint32_t cttsIndex = 0; cttsIndex < numCtts; cttsIndex++) {
+    for (uint32_t cttsIndex = m_cachedCttsIndex; cttsIndex < numCtts; cttsIndex++) {
         uint32_t sampleCount =
             m_pCttsSampleCountProperty->GetValue(cttsIndex);
-
+        
         if (sampleId <= sid + sampleCount - 1) {
             if (pFirstSampleId) {
                 *pFirstSampleId = sid;
             }
+
+            m_cachedCttsIndex = cttsIndex;
+            m_cachedCttsSid = sid;
+
             return cttsIndex;
         }
         sid += sampleCount;

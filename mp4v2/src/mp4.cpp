@@ -58,9 +58,10 @@ MP4FileHandle MP4Read( const char* fileName, uint32_t verbosity )
     catch ( MP4Error* e ) {
         VERBOSE_ERROR( verbosity, e->Print() );
         delete e;
-        delete pFile;
-        return MP4_INVALID_FILE_HANDLE;
     }
+
+    delete pFile;
+    return MP4_INVALID_FILE_HANDLE;
 }
 
 MP4FileHandle MP4ReadProvider( const char* fileName, uint32_t verbosity, const MP4FileProvider* fileProvider )
@@ -74,9 +75,10 @@ MP4FileHandle MP4ReadProvider( const char* fileName, uint32_t verbosity, const M
     catch ( MP4Error* e ) {
         VERBOSE_ERROR( verbosity, e->Print() );
         delete e;
-        delete pFile;
-        return MP4_INVALID_FILE_HANDLE;
     }
+
+    delete pFile;
+    return MP4_INVALID_FILE_HANDLE;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -110,9 +112,10 @@ MP4FileHandle MP4ReadProvider( const char* fileName, uint32_t verbosity, const M
         catch (MP4Error* e) {
             VERBOSE_ERROR(verbosity, e->Print());
             delete e;
-            delete pFile;
-            return MP4_INVALID_FILE_HANDLE;
         }
+
+        delete pFile;
+        return MP4_INVALID_FILE_HANDLE;
     }
 
     MP4FileHandle MP4Modify(const char* fileName,
@@ -130,7 +133,7 @@ MP4FileHandle MP4ReadProvider( const char* fileName, uint32_t verbosity, const M
             delete e;
         }
 
-        if (pFile) delete pFile;
+        delete pFile;
         return MP4_INVALID_FILE_HANDLE;
     }
 
@@ -138,8 +141,9 @@ MP4FileHandle MP4ReadProvider( const char* fileName, uint32_t verbosity, const M
                      const char* newFileName,
                      uint32_t verbosity)
     {
+        MP4File* pFile = NULL;
         try {
-            MP4File* pFile = new MP4File(verbosity);
+            pFile = new MP4File(verbosity);
             pFile->Optimize(existingFileName, newFileName);
             delete pFile;
             return true;
@@ -148,6 +152,8 @@ MP4FileHandle MP4ReadProvider( const char* fileName, uint32_t verbosity, const M
             VERBOSE_ERROR(verbosity, e->Print());
             delete e;
         }
+
+        delete pFile;
         return false;
     }
 
@@ -3369,8 +3375,7 @@ MP4FileHandle MP4ReadProvider( const char* fileName, uint32_t verbosity, const M
         uint32_t supportedBrandsCount,
         bool deleteIodsAtom)
     {
-        MP4File* pFile;
-        pFile = NULL;
+        MP4File* pFile = NULL;
 
         try {
             pFile = new MP4File(verbosity);
@@ -3395,8 +3400,7 @@ MP4FileHandle MP4ReadProvider( const char* fileName, uint32_t verbosity, const M
         uint32_t verbosity,
         bool addIsmaComplianceSdp)
     {
-        MP4File* pFile;
-        pFile = NULL;
+        MP4File* pFile = NULL;
 
         try {
             pFile = new MP4File(verbosity);

@@ -91,7 +91,9 @@ StandardFileProvider::write( const void* buffer, Size size, Size& nout, Size max
 bool
 StandardFileProvider::close()
 {
-    return CloseHandle( _handle ) == 0;
+    bool success = ( CloseHandle( _handle ) == 0 );
+    _handle = INVALID_HANDLE_VALUE;
+    return success;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

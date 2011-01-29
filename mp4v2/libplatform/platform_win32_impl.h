@@ -1,6 +1,7 @@
-#ifndef MP4V2_PLATFORM_WIN32_IMPL_H
-#define MP4V2_PLATFORM_WIN32_IMPL_H
-
+// Note that we have a separate platform_win32_impl.h to deal with the fact that windows.h defines a macro
+// called FindAtom, which mp4v2 also defines.  In older versions of visual studio, this actually causes
+// some pretty seriously issues with naming collisions and the defined macros (think infamous min/max macro
+// of windows.h vs stdc++'s min/max template functions)
 #include <windows.h>
 
 namespace mp4v2 { namespace platform { namespace win32 {
@@ -47,6 +48,4 @@ private:
     int _cchWideCharString;
 };
 
-}}}
-
-#endif
+}}} // namespace mp4v2::platform::win32
