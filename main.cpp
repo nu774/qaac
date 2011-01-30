@@ -207,7 +207,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, Options &opts)
     if (opts.ofilename)
 	return opts.ofilename;
 
-    const wchar_t *ext = opts.is_adts ? L"aac" : L"m4a";
+    const wchar_t *ext = opts.isMP4() ? L"m4a" : L"aac";
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
     if (!std::wcscmp(ifilename, L"-"))
 	return std::wstring(L"stdin.") + ext;
@@ -381,7 +381,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts)
     AACEncoder encoder(src, opts.output_format);
 
     if (opts.isAAC()) {
-	set_codec_options(encoder, opts);
+        set_codec_options(encoder, opts);
 	if (opts.is_first_file && opts.verbose) {
 	    for (size_t i = 0; i < opts.used_settings.size(); ++i)
 		std::fprintf(stderr, "%s\n", opts.used_settings[i].c_str());
@@ -406,7 +406,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts)
 	if (opts.verbose)
 	    std::fprintf(stderr, "\nOverall bitrate: %gkbps\n",
 		    encoder.overallBitrate());
-	if (!opts.is_adts)
+	if (opts.isMP4())
 	    write_tags(ofilename, opts, encoder);
     }
 }
@@ -566,8 +566,7 @@ void install_aach_codec()
 	throw_win32_error(format("LoadLibraryW: %ls", path.c_str()),
 	       GetLastError());	
     ComponentRoutineProcPtr proc
-	= reinterpret_cast<ComponentRoutineProcPtr>(
-		GetProcAddress(hModule, "ACMP4AACHighEfficiencyEncoderEntry")); 
+	= ProcAddress(hModule, "ACMP4AACHighEfficiencyEncoderEntry"); 
     ComponentDescription desc = { 'aenc', 'aach', 'appl', 0 };
     RegisterComponent(&desc, proc, 0, 0, 0, 0);
 }

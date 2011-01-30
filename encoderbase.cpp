@@ -82,16 +82,18 @@ bool EncoderBase::encodeChunk(UInt32 nframes)
 
     uint64_t wbytes = 0, wsamples = 0;
     for (uint32_t i = 0; i < nframes; ++i) {
-	uint32_t nsamples = aspd[i].mVariableFramesInPacket
+	uint32_t nsamples = (m_output_desc.mFormatID == 'alac')
 	    ? aspd[i].mVariableFramesInPacket
 	    : m_output_desc.mFramesPerPacket;
-	m_sink->writeSamples(
+	if (nsamples) {
+	    m_sink->writeSamples(
 		reinterpret_cast<char*>(ab.mData) + aspd[i].mStartOffset,
 		aspd[i].mDataByteSize,
 		m_output_desc.mFormatID == 'aach' ? nsamples / 2 : nsamples);
-	double rate = calcBitrate(aspd[i].mDataByteSize, nsamples);
-	if (rate > m_max_bitrate)
-	    m_max_bitrate = rate;
+	    double rate = calcBitrate(aspd[i].mDataByteSize, nsamples);
+	    if (rate > m_max_bitrate)
+		m_max_bitrate = rate;
+	}
 	wbytes += aspd[i].mDataByteSize;
 	wsamples += nsamples;
     }

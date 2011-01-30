@@ -25,6 +25,10 @@ struct Options {
     {}
     bool parse(int &argc, wchar_t **&argv);
 
+    bool isMP4() const
+    {
+	return (isAAC() && !is_adts) || isALAC();
+    }
     bool isAAC() const
     {
 	return output_format == 'aac ' || output_format == 'aach';
