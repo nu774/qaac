@@ -96,17 +96,18 @@ static
 void setup_sample_rate(AACEncoder &encoder, const Options &opts)
 {
     int rate = opts.rate;
-    if (rate == 0)
-	return;
-    int srcrate = static_cast<int>(
-	    encoder.getInputBasicDescription().mSampleRate);
-    if (rate < 0)
-	rate = srcrate;
-    std::vector<int>::const_iterator it
-	= std::min_element(opts.sample_rate_table.begin(),
-		opts.sample_rate_table.end(), CloserTo<int>(rate));
+    if (rate != 0) {
+	int srcrate = static_cast<int>(
+		encoder.getInputBasicDescription().mSampleRate);
+	if (rate < 0)
+	    rate = srcrate;
+	std::vector<int>::const_iterator it
+	    = std::min_element(opts.sample_rate_table.begin(),
+		    opts.sample_rate_table.end(), CloserTo<int>(rate));
+	rate = *it;
+    }
     AudioStreamBasicDescription oasbd = encoder.getOutputBasicDescription();
-    oasbd.mSampleRate = *it;
+    oasbd.mSampleRate = rate;
     encoder.setOutputBasicDescription(oasbd);
 }
 
