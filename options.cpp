@@ -25,6 +25,8 @@ static struct option long_options[] = {
     { L"nice", no_argument, 0, 'n' },
     { L"downmix", required_argument, 0, 'D' },
     { L"no-optimize", no_argument, 0, 'P' },
+    { L"native-resampler", no_argument, 0, 'N' },
+    { L"src-mode", required_argument, 0, 'M' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  Raw::kChannels },
     { L"raw-rate", required_argument, 0,  Raw::kSampleRate },
@@ -93,6 +95,9 @@ void usage()
 "-n, --nice             Give lower process priority\n"
 "--downmix <mono|stereo>    Downmix to mono/stereo\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
+"--native-resampler     Always use QuickTime built-in resampler\n"
+"--src-mode n           libsamplerate mode [0-4]\n"
+"                       0 is best, 4 is fastest, default 0\n"
 "--adts                 ADTS(raw AAC)output, instead of m4a(AAC only)\n"
 "--ignorelength         Assume WAV input and ignore the data chunk length\n"
 "-R, --raw              Raw PCM input\n"
@@ -160,6 +165,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return usage(), false;
 	    if (std::swscanf(optarg, L"%u", &this->quality) != 1) {
 		std::fputs("Quality value must be an integer\n", stderr);
+		return false;
+	    }
+	}
+	else if (ch == 'N')
+	    this->native_resampler = true;
+	else if (ch == 'M') {
+	    if (std::swscanf(optarg, L"%d", &this->src_mode) != 1) {
+		std::fputs("SRC mode must be an integer\n", stderr);
 		return false;
 	    }
 	}

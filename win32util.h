@@ -79,6 +79,15 @@ std::wstring GetModuleFileNameX()
     return std::wstring(&buffer[0], &buffer[cclen]);
 }
 
+inline
+std::wstring GetTempPathX()
+{
+    DWORD len = GetTempPathW(0, 0);
+    std::vector<wchar_t> buffer(len + 1);
+    len = GetTempPathW(buffer.size(), &buffer[0]);
+    return std::wstring(&buffer[0], &buffer[len]);
+}
+
 class DirectorySaver {
     std::wstring m_pwd;
 public:

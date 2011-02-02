@@ -40,7 +40,9 @@ EncoderBase::EncoderBase(ISource *src, uint32_t formatID) :
 	    throw std::runtime_error(
 		"Multi-channel ALAC encoding is currently not supported");
 	else if (m_input_desc.mBitsPerChannel != 16 &&
-		 m_input_desc.mBitsPerChannel != 24)
+		 m_input_desc.mBitsPerChannel != 24 &&
+		 !(m_input_desc.mBitsPerChannel == 32 &&
+		   (m_input_desc.mFormatFlags & kAudioFormatFlagIsFloat)))
 	    throw std::runtime_error(
 		"Only 16/24bit format is supported for ALAC encoding");
     }

@@ -21,6 +21,7 @@
 #include "nullsource.h"
 #include "wavsource.h"
 #include "expand.h"
+#include "srcsource.h"
 
 #include <crtdbg.h>
 
@@ -377,28 +378,25 @@ void write_tags(const std::wstring &ofilename,
 }
 
 static
-void encode_file(ISource *src, const std::wstring &ofilename, Options &opts)
+void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
+	bool resample=false)
 {
+    opts.reset();
     AACEncoder encoder(src, opts.output_format);
 
-    if (opts.isAAC()) {
+    if (opts.isAAC())
         set_codec_options(encoder, opts);
-	if (opts.is_first_file && opts.verbose) {
-	    for (size_t i = 0; i < opts.used_settings.size(); ++i)
-		std::fprintf(stderr, "%s\n", opts.used_settings[i].c_str());
-	}
-    } else if (opts.rate > 0) {
-	AudioStreamBasicDescription oasbd
-	    = encoder.getOutputBasicDescription();
+
+    AudioStreamBasicDescription iasbd, oasbd;
+    iasbd = encoder.getInputBasicDescription();
+    oasbd = encoder.getOutputBasicDescription();
+
+    if (!opts.isAAC() && opts.rate > 0) {
 	oasbd.mSampleRate = opts.rate;
 	encoder.setOutputBasicDescription(oasbd);
-    }
-    if (opts.verbose) {
-	AudioStreamBasicDescription iasbd, oasbd;
-	iasbd = encoder.getInputBasicDescription();
 	oasbd = encoder.getOutputBasicDescription();
-	if (iasbd.mChannelsPerFrame == 3)
-	    std::fprintf(stderr, "WARNING: Downmixed to 2ch\n");
+    }
+    if (opts.verbose && !resample) {
 	if (opts.rate > 0) {
 	    if (opts.rate != oasbd.mSampleRate)
 		std::fprintf(stderr, "WARNING: Sample rate will be %gHz\n",
@@ -406,7 +404,42 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts)
 	} else if (iasbd.mSampleRate != oasbd.mSampleRate)
 	    std::fprintf(stderr, "WARNING: Resampled to %gHz\n",
 		    oasbd.mSampleRate);
+	if (opts.isAAC()) {
+	    if (iasbd.mChannelsPerFrame == 3)
+		std::fprintf(stderr, "WARNING: Downmixed to 2ch\n");
+	    if (opts.is_first_file)
+		for (size_t i = 0; i < opts.used_settings.size(); ++i)
+		    std::fprintf(stderr, "%s\n", opts.used_settings[i].c_str());
+	}
     }
+    if (iasbd.mSampleRate != oasbd.mSampleRate &&
+	    opts.libsamplerate.loaded() && !opts.native_resampler) {
+	if (opts.verbose)
+	    std::fprintf(stderr,
+		"Resampling with SRC, mode %d\n", opts.src_mode);
+	SRCSource *resampler = new SRCSource(opts.libsamplerate, src,
+		oasbd.mSampleRate, opts.src_mode);
+	std::auto_ptr<ISource> srcx(resampler);
+	uint64_t n = 0, rc;
+        PeriodicDisplay disp(stderr, 100);
+	while ((rc = resampler->convertSamples(4096)) > 0) {
+	    n += rc;
+	    if (opts.verbose)
+		disp.put(format("\r" LL "d samples processed", n));
+	}
+	if (opts.verbose) {
+	    disp.flush();
+	    std::fprintf(stderr, "\nDone rate conversion.\n");
+	    if (resampler->getPeak() > 1.0) {
+		std::fprintf(stderr,
+			"Peak value %g > 1.0, gain compressed.\n",
+			resampler->getPeak());
+	    }
+	}
+	encode_file(srcx.get(), ofilename, opts, true);
+	return;
+    }
+
     do_encode(encoder, ofilename, opts);
     if (encoder.framesWritten()) {
 	if (opts.verbose)
@@ -589,6 +622,7 @@ void load_modules(Options &opts)
     opts.libflac = FLACModule(selfdir + L"libFLAC_vc10.dll");
     opts.libwavpack = WavpackModule(selfdir + L"wavpackdll_vc10.dll");
     opts.libid3tag = LibID3TagModule(selfdir + L"libid3tag_vc10.dll");
+    opts.libsamplerate = SRCModule(selfdir + L"libsamplerate_vc10.dll");
 }
 
 int wmain(int argc, wchar_t **argv)

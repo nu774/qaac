@@ -118,6 +118,7 @@
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\riff.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
+    <ClCompile Include="..\..\srcsource.cpp" />
     <ClCompile Include="..\..\version.cpp" />
     <ClCompile Include="..\..\wavsource.cpp" />
     <ClCompile Include="..\..\wvpacksrc.cpp" />
