@@ -387,6 +387,11 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts)
 	    for (size_t i = 0; i < opts.used_settings.size(); ++i)
 		std::fprintf(stderr, "%s\n", opts.used_settings[i].c_str());
 	}
+    } else if (opts.rate > 0) {
+	AudioStreamBasicDescription oasbd
+	    = encoder.getOutputBasicDescription();
+	oasbd.mSampleRate = opts.rate;
+	encoder.setOutputBasicDescription(oasbd);
     }
     if (opts.verbose) {
 	AudioStreamBasicDescription iasbd, oasbd;
