@@ -96,7 +96,7 @@ void usage()
 "--downmix <mono|stereo>    Downmix to mono/stereo\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "--native-resampler     Always use QuickTime built-in resampler\n"
-"--src-mode n           libsamplerate mode [0-4]\n"
+"--src-mode <n>         libsamplerate mode [0-4]\n"
 "                       0 is best, 4 is fastest, default 0\n"
 "--adts                 ADTS(raw AAC)output, instead of m4a(AAC only)\n"
 "--ignorelength         Assume WAV input and ignore the data chunk length\n"
