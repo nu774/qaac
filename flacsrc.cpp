@@ -93,7 +93,7 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
 	}
 	if (processed < nsamples) {
 	    if (m_giveup)
-		break;
+		throw std::runtime_error("FLAC decoder error");
 	    if (m_module.stream_decoder_get_state(m_decoder.get()) ==
 		    FLAC__STREAM_DECODER_END_OF_STREAM)
 		break;
