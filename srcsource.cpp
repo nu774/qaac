@@ -138,7 +138,7 @@ void SRCSource::underflow(size_t nsamples)
     nsamples = std::min(nsamples, m_src_buffer.size() / m_format.m_nchannels);
 
     if (srcFormat.m_type == SampleFormat::kIsFloat &&
-	    srcFormat.m_bitsPerSample == 24) {
+	    srcFormat.m_bitsPerSample == 32) {
 	m_conversion_data.input_frames =
 	    m_src->readSamples(&m_src_buffer[0], nsamples);
 	return;
