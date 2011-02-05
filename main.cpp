@@ -71,7 +71,7 @@ namespace Param {
 static
 int get_bitrate_index(const CFArrayT<CFStringRef> &menu, int rate)
 {
-    for (size_t i = 0; i < menu.size(); ++i) {
+    for (int i = menu.size() - 1; i >= 0; --i) {
 	std::wstring s = CF2W(menu.at(i));
 	int low, high;
 	int rc = std::swscanf(s.c_str(), L"%d - %d", &low, &high);
