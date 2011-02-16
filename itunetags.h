@@ -35,6 +35,8 @@ namespace Tag {
     };
 }
 
+uint32_t GetIDFromID3TagName(const char *name);
+
 uint32_t GetIDFromTagName(const char *name);
 const char *GetNameFromTagID(uint32_t fcc);
 
@@ -78,40 +80,6 @@ public:
 	m_chapters = chapters;
     }
     void save();
-};
-
-struct HINSTANCE__;
-
-class LibID3TagModule {
-    typedef boost::shared_ptr<HINSTANCE__> module_t;
-    module_t m_module;
-    bool m_loaded;
-public:
-    LibID3TagModule(): m_loaded(false) {}
-    LibID3TagModule(const std::wstring &path);
-    bool loaded() const { return m_loaded; }
-
-    struct id3_tag *(*tag_parse)(id3_byte_t const *, id3_length_t);
-    void (*tag_delete)(struct id3_tag *);
-    id3_length_t (*ucs4_utf16size)(id3_ucs4_t const *);
-    void (*utf16_encode)(id3_utf16_t *, id3_ucs4_t const *);
-    id3_ucs4_t const *(*field_getfullstring)(union id3_field const *);
-    id3_ucs4_t const *(*field_getstrings)(union id3_field const *, unsigned);
-};
-
-class AIFFTagParser: public ITagParser, private IFFParser {
-    enum { MAX_ID3_LEN = 0x100000 }; /* 1MB limit is enough? */
-    LibID3TagModule m_module;
-    std::map<uint32_t, std::wstring> m_tags;
-public:
-    AIFFTagParser(const LibID3TagModule &module, InputStream &stream);
-    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
-    const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const { return 0; }
-private:
-    void parseTags();
-    void fetch(id3_tag *parser);
-    std::wstring ucs4_to_wstring(const id3_ucs4_t *us);
 };
 
 class M4ATagParser : public ITagParser {

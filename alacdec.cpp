@@ -3,6 +3,8 @@
 #include <clocale>
 #include <io.h>
 #include <fcntl.h>
+#include <stdint.h>
+#include "impl.h"
 #include "getopt.h"
 #include "qtmoviesource.h"
 #include "wavsink.h"
@@ -64,7 +66,7 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
     while ((len = source.readSamples(&buffer[0], nsamples)) > 0) {
 	sink->writeSamples(&buffer[0], len * fmt.bytesPerFrame(), len);
 	processed += len;
-	std::cerr << format("\r" LL "d/" LL "d samples processed",
+	std::cerr << format("\r%" PRId64 "/%" PRId64 " samples processed",
 		processed, source.length());
     }
     std::cerr << std::endl;

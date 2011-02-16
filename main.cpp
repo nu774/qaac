@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 #include <QTML.h>
+#include <aifffile.h>
 #include "strcnv.h"
 #include "win32util.h"
 #include "aacencoder.h"
@@ -258,7 +259,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
     try {
 	while (encoder.encodeChunk(1)) {
 	    if (opts.verbose)
-		disp.put(format("\r" LL "d/" LL "d samples processed",
+		disp.put(format("\r%" PRId64 "/%" PRId64 " samples processed",
 		    encoder.samplesRead(), encoder.src()->length()));
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
@@ -338,21 +339,19 @@ void write_tags(const std::wstring &ofilename,
 	    editor.setChapters(*chapters);
     }
 
-    if (!opts.is_raw && opts.libid3tag.loaded()) {
+    if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-")) {
 	try {
-	    StdioChannel channel(opts.ifilename);
-	    if (channel.seekable()) {
-		InputStream stream(channel);
-		char magic[12];
-		stream.rewind();
-		stream.read(magic, 12);
-		stream.rewind();
-
-		if (!std::memcmp(magic, "FORM", 4) &&
-			!std::memcmp(magic + 8, "AIFF", 4)) {
-		    AIFFTagParser parser(opts.libid3tag, stream);
-		    editor.setTag(parser.getTags());
-		}
+	    using namespace TagLib;
+	    RIFF::AIFF::File file(opts.ifilename);
+	    ID3v2::Tag *tag = file.tag();
+	    const ID3v2::FrameList &frameList = tag->frameList();
+	    ID3v2::FrameList::ConstIterator it;
+	    for (it = frameList.begin(); it != frameList.end(); ++it) {
+		ByteVector vID = (*it)->frameID();
+		std::string sID(vID.data(), vID.data() + vID.size());
+		std::wstring value = (*it)->toString().toWString();
+		uint32_t id = GetIDFromID3TagName(sID.c_str());
+		if (id) editor.setTag(id, value);
 	    }
 	} catch (...) {}
     }
@@ -425,7 +424,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 	while ((rc = resampler->convertSamples(4096)) > 0) {
 	    n += rc;
 	    if (opts.verbose)
-		disp.put(format("\r" LL "d samples processed", n));
+		disp.put(format("\r%" PRId64 " samples processed", n));
 	}
 	if (opts.verbose) {
 	    disp.flush();
@@ -621,7 +620,6 @@ void load_modules(Options &opts)
     opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile_vc10.dll");
     opts.libflac = FLACModule(selfdir + L"libFLAC_vc10.dll");
     opts.libwavpack = WavpackModule(selfdir + L"wavpackdll_vc10.dll");
-    opts.libid3tag = LibID3TagModule(selfdir + L"libid3tag_vc10.dll");
     opts.libsamplerate = SRCModule(selfdir + L"libsamplerate_vc10.dll");
 }
 

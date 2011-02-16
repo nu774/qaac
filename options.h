@@ -73,7 +73,6 @@ struct Options {
     LibSndfileModule libsndfile;
     FLACModule libflac;
     WavpackModule libwavpack;
-    LibID3TagModule libid3tag;
     SRCModule libsamplerate;
 };
 

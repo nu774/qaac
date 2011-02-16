@@ -9,12 +9,6 @@
 #include <iterator>
 #include <stdexcept>
 
-#if (defined(_MSC_VER) && _MSC_VER < 1400) || defined(__MINGW32__)
-#define LL "%I64"
-#else
-#define LL "%ll"
-#endif
-
 #if defined _MSC_VER
 #ifndef strcasecmp
 #define strcasecmp _stricmp

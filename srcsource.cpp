@@ -89,7 +89,7 @@ size_t SRCSource::readSamples(void *buffer, size_t nsamples)
     float *fp = reinterpret_cast<float*>(buffer);
     if (m_peak > 1.0) {
 	for (size_t i = 0; i < nc; ++i)
-	    *fp++ = *fp / m_peak;
+	    *fp++ = static_cast<float>(*fp / m_peak);
     }
     return nc / m_format.m_nchannels;
 }
@@ -153,14 +153,14 @@ void SRCSource::underflow(size_t nsamples)
 	{
 	    const char *src = reinterpret_cast<const char *>(&m_ibuffer[0]);
 	    for (size_t i = 0; i < blen; ++i)
-		*fp++ = static_cast<double>(src[i]) / 0x80;
+		*fp++ = static_cast<float>(src[i]) / 0x80;
 	}
 	break;
     case 16:
 	{
 	    const short *src = reinterpret_cast<const short *>(&m_ibuffer[0]);
 	    for (size_t i = 0; i < blen / 2; ++i)
-		*fp++ = static_cast<double>(src[i]) / 0x8000;
+		*fp++ = static_cast<float>(src[i]) / 0x8000;
 	}
 	break;
     case 24:
@@ -170,8 +170,7 @@ void SRCSource::underflow(size_t nsamples)
 	    for (size_t i = 0; i < blen / 3; ++i) {
 		int32_t hv = static_cast<int8_t>(src[i*3+2]);
 		int32_t v = ((src[i*3] << 8)| (src[i*3+1] << 16) | (hv << 24));
-		float f = static_cast<double>(v) / 0x80000000U;
-		*fp++ = f;
+		*fp++ = static_cast<float>(v) / 0x80000000U;
 	    }
 	}
 	break;
@@ -179,7 +178,7 @@ void SRCSource::underflow(size_t nsamples)
 	{
 	    const int *src = reinterpret_cast<const int *>(&m_ibuffer[0]);
 	    for (size_t i = 0; i < blen / 4; ++i)
-		*fp++ = static_cast<double>(src[i]) / 0x80000000U;
+		*fp++ = static_cast<float>(src[i]) / 0x80000000U;
 	}
 	break;
     }

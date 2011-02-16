@@ -108,32 +108,6 @@ void TagEditor::save()
     }
 }
 
-#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
-    while (0)
-
-LibID3TagModule::LibID3TagModule(const std::wstring &path)
-{
-    HMODULE hDll;
-    hDll = LoadLibraryW(path.c_str());
-    m_loaded = (hDll != NULL);
-    if (!m_loaded)
-	return;
-    try {
-	CHECK(tag_parse = ProcAddress(hDll, "id3_tag_parse"));
-	CHECK(tag_delete = ProcAddress(hDll, "id3_tag_delete"));
-	CHECK(ucs4_utf16size = ProcAddress(hDll, "id3_ucs4_utf16size"));
-	CHECK(utf16_encode = ProcAddress(hDll, "id3_utf16_encode"));
-	CHECK(field_getfullstring =
-		ProcAddress(hDll, "id3_field_getfullstring"));
-	CHECK(field_getstrings = ProcAddress(hDll, "id3_field_getstrings"));
-    } catch (...) {
-	FreeLibrary(hDll);
-	m_loaded = false;
-	return;
-    }
-    m_module.swap(module_t(hDll, FreeLibrary));
-}
-
 namespace id3 {
     const Tag::NameIDMap tagNameMap[] = {
 	{ ID3_FRAME_TITLE, Tag::kTitle },
@@ -159,63 +133,9 @@ namespace id3 {
     }
 }
 
-AIFFTagParser::AIFFTagParser(
-	const LibID3TagModule &module, InputStream &stream)
-    : m_module(module), IFFParser(stream)
+uint32_t GetIDFromID3TagName(const char *name)
 {
-    parse();
-    if (format_id() != 'AIFF')
-	throw std::runtime_error("AIFFTagParser: Not an AIFF file");
-    while (next() && chunk_id() != 'ID3 ')
-	;
-    if (chunk_id() == 'ID3 ' && chunk_size() < MAX_ID3_LEN)
-	parseTags();
-}
-
-void AIFFTagParser::parseTags()
-{
-    size_t size = static_cast<size_t>(chunk_size());
-    std::vector<id3_byte_t> buffer(size);
-    read(&buffer[0], size);
-    id3_tag *tag = m_module.tag_parse(&buffer[0], size);
-    if (!tag)
-	throw std::runtime_error("id3_tag_parse: can't parse as ID3 tag");
-    boost::shared_ptr<id3_tag> __delete_later__(tag, m_module.tag_delete);
-    fetch(tag);
-}
-
-void AIFFTagParser::fetch(id3_tag *tag)
-{
-    for (size_t i = 0; i < tag->nframes; ++i) {
-	id3_frame *frame = tag->frames[i];
-	uint32_t id = id3::GetIDFromName(frame->id, id3::tagNameMap);
-	if (!id || frame->nfields != 2)
-	    continue;
-	id3_field *field = &frame->fields[1];
-	const id3_ucs4_t *us = m_module.field_getfullstring(field);
-	if (!us)
-	    us = m_module.field_getstrings(field, 0);
-	if (!us) continue;
-	std::wstring ws = ucs4_to_wstring(us);
-	if (id == Tag::kGenre) {
-	    /* check if it is a genre number */
-	    wchar_t *endp;
-	    long n = std::wcstol(ws.c_str(), &endp, 10);
-	    if (*endp == 0 && n >= 0 && n < 126) {
-		/* iTune M4A's genre number begins from 1 */
-		id = Tag::kGenreID3;
-		ws = widen(format("%d", n + 1));
-	    }
-	}
-	m_tags.insert(std::make_pair(id, ws));
-    }
-}
-
-std::wstring AIFFTagParser::ucs4_to_wstring(const id3_ucs4_t *ustr)
-{
-    std::vector<id3_utf16_t> u16(m_module.ucs4_utf16size(ustr));
-    m_module.utf16_encode(&u16[0], ustr);
-    return std::wstring(u16.begin(), u16.end());
+    return id3::GetIDFromName(name, id3::tagNameMap);
 }
 
 namespace __m4a {

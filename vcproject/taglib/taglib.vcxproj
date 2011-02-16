@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\taglib\audioproperties.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v1\id3v1genres.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\attachedpictureframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\commentsframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\generalencapsulatedobjectframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\popularimeterframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\privateframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\relativevolumeframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\textidentificationframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\uniquefileidentifierframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\unknownframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\unsynchronizedlyricsframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\urllinkframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2extendedheader.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2footer.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2frame.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2framefactory.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2header.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2synchdata.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2tag.cpp" />
+    <ClCompile Include="..\..\taglib\riff\aiff\aifffile.cpp" />
+    <ClCompile Include="..\..\taglib\riff\aiff\aiffproperties.cpp" />
+    <ClCompile Include="..\..\taglib\riff\rifffile.cpp" />
+    <ClCompile Include="..\..\taglib\tag.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tbytevector.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tbytevectorlist.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tdebug.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tfile.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tstring.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tstringlist.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\unicode.cpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{33D0F51E-2D54-4C00-A448-380AF43BC782}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>taglib</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>TAGLIB_STATIC;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff</AdditionalIncludeDirectories>
+      <StringPooling>true</StringPooling>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>TAGLIB_STATIC;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff</AdditionalIncludeDirectories>
+      <StringPooling>true</StringPooling>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
