@@ -2,7 +2,6 @@
 #define ITUNES_TAGS_H
 
 #include <iterator>
-#include <id3tag.h>
 #include "utf8_codecvt_facet.hpp"
 #include "iointer.h"
 #include "iff.h"

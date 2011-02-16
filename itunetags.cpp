@@ -110,15 +110,15 @@ void TagEditor::save()
 
 namespace id3 {
     const Tag::NameIDMap tagNameMap[] = {
-	{ ID3_FRAME_TITLE, Tag::kTitle },
-	{ ID3_FRAME_ARTIST, Tag::kArtist },
+	{ "TIT2", Tag::kTitle },
+	{ "TPE1", Tag::kArtist },
 	{ "TPE2", Tag::kAlbumArtist },
-	{ ID3_FRAME_ALBUM, Tag::kAlbum },
+	{ "TALB", Tag::kAlbum },
 	{ "TIT1", Tag::kGrouping },
 	{ "TCOM", Tag::kComposer },
-	{ ID3_FRAME_GENRE, Tag::kGenre },
-	{ ID3_FRAME_YEAR, Tag::kDate },
-	{ ID3_FRAME_TRACK, Tag::kTrack },
+	{ "TCON", Tag::kGenre },
+	{ "TDRC", Tag::kDate },
+	{ "TRCK", Tag::kTrack },
 	{ "TPOS", Tag::kDisk },
 	{ "TBPM", Tag::kTempo },
 	{ "TCOP", Tag::kCopyright },
