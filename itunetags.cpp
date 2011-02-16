@@ -34,9 +34,12 @@ public:
 	} else if (key == Tag::kCompilation) {
 	    if (std::sscanf(vp, "%d", &n) == 1)
 		m_file.SetMetadataUint8(fourcc(key).svalue, n);
-	} else if (key == Tag::kGenreID3 || key == Tag::kTempo) {
+	} else if (key == Tag::kTempo) {
 	    if (std::sscanf(vp, "%d", &n) == 1)
 		m_file.SetMetadataUint16(fourcc(key).svalue, n);
+	} else if (key == Tag::kGenreID3) {
+	    if (std::sscanf(vp, "%d", &n) == 1)
+		m_file.SetMetadataGenre(fourcc(key).svalue, n);
 	} else
 	    m_file.SetMetadataString(fourcc(key).svalue, vp);
     }

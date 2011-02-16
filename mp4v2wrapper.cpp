@@ -151,6 +151,18 @@ bool MP4FileX::SetMetadataUint16(const char *atom, uint16_t value)
     return pAtom != 0;
 }
 
+bool MP4FileX::SetMetadataGenre(const char *atom, uint16_t value)
+{
+    MP4DataAtom *pAtom = FindOrCreateMetadataAtom(atom, itmf::BT_IMPLICIT);
+    if (pAtom) {
+	uint8_t v[2];
+	v[0] = value >> 8;
+	v[1] = value & 0xff;
+	pAtom->metadata.SetValue(v, 2);
+    }
+    return pAtom != 0;
+}
+
 bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
       const uint8_t* pValue, uint32_t valueSize, itmf::BasicType typeCode)
 {

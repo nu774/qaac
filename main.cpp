@@ -341,17 +341,26 @@ void write_tags(const std::wstring &ofilename,
 
     if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-")) {
 	try {
-	    using namespace TagLib;
-	    RIFF::AIFF::File file(opts.ifilename);
-	    ID3v2::Tag *tag = file.tag();
-	    const ID3v2::FrameList &frameList = tag->frameList();
-	    ID3v2::FrameList::ConstIterator it;
+	    TagLib::RIFF::AIFF::File file(opts.ifilename);
+	    TagLib::ID3v2::Tag *tag = file.tag();
+	    const TagLib::ID3v2::FrameList &frameList = tag->frameList();
+	    TagLib::ID3v2::FrameList::ConstIterator it;
 	    for (it = frameList.begin(); it != frameList.end(); ++it) {
-		ByteVector vID = (*it)->frameID();
+		TagLib::ByteVector vID = (*it)->frameID();
 		std::string sID(vID.data(), vID.data() + vID.size());
 		std::wstring value = (*it)->toString().toWString();
 		uint32_t id = GetIDFromID3TagName(sID.c_str());
-		if (id) editor.setTag(id, value);
+		if (id) {
+		    if (id == Tag::kGenre) {
+			wchar_t *endp;
+			long n = std::wcstol(value.c_str(), &endp, 10);
+			if (!*endp) {
+			    id = Tag::kGenreID3;
+			    value = widen(format("%d", n + 1));
+			}
+		    }
+		    editor.setTag(id, value);
+		}
 	    }
 	} catch (...) {}
     }

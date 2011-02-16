@@ -27,6 +27,7 @@ public:
     bool SetMetadataDisk(uint16_t disk, uint16_t totalDisks);
     bool SetMetadataUint8(const char *atom, uint8_t value);
     bool SetMetadataUint16(const char *atom, uint16_t value);
+    bool SetMetadataGenre(const char *atom, uint16_t value);
     bool SetMetadataFreeForm(const char *name, const char *mean,
 	      const uint8_t* pValue, uint32_t valueSize,
 	      mp4v2::impl::itmf::BasicType typeCode
