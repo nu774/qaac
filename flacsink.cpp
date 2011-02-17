@@ -43,15 +43,14 @@ FLACSink::FLACSink(FILE *fp, uint64_t duration, const SampleFormat &fmt,
     m_metadata_holder[1].swap(
 	    metadata_t(meta[1], m_module.metadata_object_delete));
     {
+        std::map<std::string, std::string> vc;
+	Vorbis::ConvertFromItunesTags(tags, &vc);
 	FLAC__StreamMetadata_VorbisComment_Entry entry;
-	std::map<uint32_t, std::wstring>::const_iterator ii;
+	std::map<std::string, std::string>::const_iterator it;
 	utf8_codecvt_facet u8codec;
-	for (ii = tags.begin(); ii != tags.end(); ++ii) {
-	    const char *key = GetNameFromTagID(ii->first);
-	    if (!key) continue;
-	    std::string value = w2m(ii->second, u8codec);
+	for (it = vc.begin(); it != vc.end(); ++it) {
 	    m_module.metadata_object_vorbiscomment_entry_from_name_value_pair(
-		    &entry, key, value.c_str());
+		    &entry, it->first.c_str(), it->second.c_str());
 	    m_module.metadata_object_vorbiscomment_append_comment(
 		    meta[0], entry, false);
 	}

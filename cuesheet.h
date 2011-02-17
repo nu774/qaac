@@ -70,9 +70,11 @@ private:
     size_t m_lineno;
 };
 
-void ConvertToItunesTags(const std::map<std::wstring, std::wstring> &from,
+namespace Cue {
+    void ConvertToItunesTags(const std::map<std::wstring, std::wstring> &from,
 	std::map<uint32_t, std::wstring> *to, bool album=false);
 
-void CueSheetToChapters(const std::wstring &cuesheet,
+    void CueSheetToChapters(const std::wstring &cuesheet,
 	unsigned sample_rate, uint64_t duration,
 	std::vector<std::pair<std::wstring, int64_t> > *chapters);
+}

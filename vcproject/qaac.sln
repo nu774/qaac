@@ -10,6 +10,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "qaac", "qaac\qaac.vcxproj",
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "alacdec", "alacdec\alacdec.vcxproj", "{12A1ADF2-21B4-419E-8D32-F48C9DC8CA24}"
+	ProjectSection(ProjectDependencies) = postProject
+		{33D0F51E-2D54-4C00-A448-380AF43BC782} = {33D0F51E-2D54-4C00-A448-380AF43BC782}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "taglib", "taglib\taglib.vcxproj", "{33D0F51E-2D54-4C00-A448-380AF43BC782}"
 EndProject

@@ -349,7 +349,7 @@ void write_tags(const std::wstring &ofilename,
 		TagLib::ByteVector vID = (*it)->frameID();
 		std::string sID(vID.data(), vID.data() + vID.size());
 		std::wstring value = (*it)->toString().toWString();
-		uint32_t id = GetIDFromID3TagName(sID.c_str());
+		uint32_t id = ID3::GetIDFromTagName(sID.c_str());
 		if (id) {
 		    if (id == Tag::kGenre) {
 			wchar_t *endp;
@@ -506,7 +506,7 @@ struct TagLookup {
 	if (namex == L"tracknumber")
 	    return widen(format("%02d", track.m_number));
 	std::string skey = format("%ls", namex.c_str());
-	uint32_t id = GetIDFromTagName(skey.c_str());
+	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
 	if (id == 0) return L"";
 	meta_t::const_iterator iter = tracktags.find(id);
 	return iter == tracktags.end() ? L"" : iter->second;
@@ -528,7 +528,7 @@ void handle_cue_sheet(Options &opts)
     cue.parse(&istream);
     typedef std::map<uint32_t, std::wstring> meta_t;
     meta_t album_tags;
-    ConvertToItunesTags(cue.m_meta, &album_tags, true);
+    Cue::ConvertToItunesTags(cue.m_meta, &album_tags, true);
     for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
 	opts.reset();
 	CueTrack &track = cue.m_tracks[i];
@@ -536,7 +536,7 @@ void handle_cue_sheet(Options &opts)
 	    continue;
 
 	meta_t tmp;
-	ConvertToItunesTags(track.m_meta, &tmp);
+	Cue::ConvertToItunesTags(track.m_meta, &tmp);
 	meta_t track_tags = album_tags;
 	for (meta_t::iterator it = tmp.begin(); it != tmp.end(); ++it)
 	    track_tags[it->first] = it->second;
