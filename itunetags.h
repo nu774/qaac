@@ -34,10 +34,20 @@ namespace Tag {
     };
 }
 
-uint32_t GetIDFromID3TagName(const char *name);
+namespace ID3 {
+    uint32_t GetIDFromTagName(const char *name);
+}
 
-uint32_t GetIDFromTagName(const char *name);
-const char *GetNameFromTagID(uint32_t fcc);
+namespace Vorbis {
+    uint32_t GetIDFromTagName(const char *name);
+    const char *GetNameFromTagID(uint32_t fcc);
+    void ConvertToItunesTags(
+	    const std::map<std::string, std::string> &vorbisComments,
+	    std::map<uint32_t, std::wstring> *itunesTags);
+    void ConvertFromItunesTags(
+	    const std::map<uint32_t, std::wstring> &itunesTags,
+	    std::map<std::string, std::string> *vorbisComments);
+}
 
 const char * const iTunSMPB_template = " 00000000 %08X %08X %08X%08X "
 "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000";
@@ -96,9 +106,5 @@ public:
 	*getChapters() const { return 0; }
     bool isALAC() const { return m_is_alac; }
 };
-
-bool
-TransVorbisComment(const char *kv,
-	std::pair<uint32_t, std::wstring> *result, std::string *key=0);
 
 #endif

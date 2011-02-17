@@ -187,62 +187,64 @@ void CueSheet::parseMeta(const std::wstring *args)
 	m_meta[args[0]] = args[1];
 }
 
-void ConvertToItunesTags(const std::map<std::wstring, std::wstring> &from,
-	std::map<uint32_t, std::wstring> *to, bool album)
-{
-    std::map<std::wstring, std::wstring>::const_iterator it;
-    std::map<uint32_t, std::wstring> result;
-    for (it = from.begin(); it != from.end(); ++it) {
-	std::wstring key = wslower(it->first);
-	uint32_t ikey = 0;
-	if (key == L"title")
-	    ikey = album ? Tag::kAlbum : Tag::kTitle;
-	else if (key == L"performer")
-	    ikey = album ? Tag::kAlbumArtist : Tag::kArtist;
-	else if (key == L"genre")
-	    ikey = Tag::kGenre;
-	else if (key == L"date")
-	    ikey = Tag::kDate;
-	else if (key == L"songwriter")
-	    ikey = Tag::kComposer;
-	if (ikey) result[ikey] = it->second;
-    }
-    to->swap(result);
-}
-
-void CueSheetToChapters(const std::wstring &cuesheet,
-	unsigned sample_rate, uint64_t duration,
-	std::vector<std::pair<std::wstring, int64_t> > *chapters)
-{
-    std::wstringbuf strbuf(cuesheet);
-    CueSheet parser;
-    parser.parse(&strbuf);
-    std::vector<std::pair<std::wstring, int64_t> > chaps;
-
-    int64_t dur_acc = 0;
-    for (size_t i = 0; i < parser.m_tracks.size(); ++i) {
-	CueTrack &track = parser.m_tracks[i];
-	if (track.m_segments.size() != 1)
-	    throw std::runtime_error("Invalid Cuesheet");
-	std::map<std::wstring, std::wstring>::iterator it;
-	it = track.m_meta.find(L"TITLE");
-	if (it == track.m_meta.end())
-	    throw std::runtime_error("Track has no Title");
-	std::wstring title = it->second;
-	unsigned beg = track.m_segments[0].m_begin;
-	unsigned end = track.m_segments[0].m_end;
-	int64_t dur;
-	if (end == -1 && i < parser.m_tracks.size() - 1)
-	    throw std::runtime_error("Invalid Cuesheet");
-	if (end != -1) {
-	    dur = static_cast<int64_t>(end) - beg;
-	    dur = dur * sample_rate * 588 / 44100;
-	    dur_acc += dur;
+namespace Cue {
+    void ConvertToItunesTags(
+	    const std::map<std::wstring, std::wstring> &from,
+	    std::map<uint32_t, std::wstring> *to, bool album)
+    {
+	std::map<std::wstring, std::wstring>::const_iterator it;
+	std::map<uint32_t, std::wstring> result;
+	for (it = from.begin(); it != from.end(); ++it) {
+	    std::wstring key = wslower(it->first);
+	    uint32_t ikey = 0;
+	    if (key == L"title")
+		ikey = album ? Tag::kAlbum : Tag::kTitle;
+	    else if (key == L"performer")
+		ikey = album ? Tag::kAlbumArtist : Tag::kArtist;
+	    else if (key == L"genre")
+		ikey = Tag::kGenre;
+	    else if (key == L"date")
+		ikey = Tag::kDate;
+	    else if (key == L"songwriter")
+		ikey = Tag::kComposer;
+	    if (ikey) result[ikey] = it->second;
 	}
-	else
-	    dur = duration - dur_acc;
-	chaps.push_back(std::make_pair(title, dur));
+	to->swap(result);
     }
-    chapters->swap(chaps);
-}
 
+    void CueSheetToChapters(const std::wstring &cuesheet,
+	    unsigned sample_rate, uint64_t duration,
+	    std::vector<std::pair<std::wstring, int64_t> > *chapters)
+    {
+	std::wstringbuf strbuf(cuesheet);
+	CueSheet parser;
+	parser.parse(&strbuf);
+	std::vector<std::pair<std::wstring, int64_t> > chaps;
+
+	int64_t dur_acc = 0;
+	for (size_t i = 0; i < parser.m_tracks.size(); ++i) {
+	    CueTrack &track = parser.m_tracks[i];
+	    if (track.m_segments.size() != 1)
+		throw std::runtime_error("Invalid Cuesheet");
+	    std::map<std::wstring, std::wstring>::iterator it;
+	    it = track.m_meta.find(L"TITLE");
+	    if (it == track.m_meta.end())
+		throw std::runtime_error("Track has no Title");
+	    std::wstring title = it->second;
+	    unsigned beg = track.m_segments[0].m_begin;
+	    unsigned end = track.m_segments[0].m_end;
+	    int64_t dur;
+	    if (end == -1 && i < parser.m_tracks.size() - 1)
+		throw std::runtime_error("Invalid Cuesheet");
+	    if (end != -1) {
+		dur = static_cast<int64_t>(end) - beg;
+		dur = dur * sample_rate * 588 / 44100;
+		dur_acc += dur;
+	    }
+	    else
+		dur = duration - dur_acc;
+	    chaps.push_back(std::make_pair(title, dur));
+	}
+	chapters->swap(chaps);
+    }
+}

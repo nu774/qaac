@@ -123,6 +123,7 @@ void WavpackSource::fetchTags()
     utf8_codecvt_facet u8codec;
 
     int count = m_module.GetNumTagItems(wpc);
+    std::map<std::string, std::string> vorbisComments;
     for (int i = 0; i < count; ++i) {
 	int size = m_module.GetTagItemIndexed(wpc, i, 0, 0);
 	std::vector<char> name(size + 1);
@@ -130,15 +131,15 @@ void WavpackSource::fetchTags()
 	size = m_module.GetTagItem(wpc, &name[0], 0, 0);
 	std::vector<char> value(size + 1);
 	m_module.GetTagItem(wpc, &name[0], &value[0], value.size());
-	uint32_t id = GetIDFromTagName(&name[0]);
-	std::wstring wvalue = m2w(&value[0], u8codec);
-	if (id)
-	    m_tags[id] = wvalue;
-	else if (!strcasecmp(&name[0], "cuesheet")) {
+	if (!strcasecmp(&name[0], "cuesheet")) {
 	    try {
-		CueSheetToChapters(wvalue, m_format.m_rate,
+		std::wstring wvalue = m2w(&value[0], u8codec);
+		Cue::CueSheetToChapters(wvalue, m_format.m_rate,
 			getDuration(), &m_chapters);
 	    } catch (...) {}
+	} else {
+	    vorbisComments[&name[0]] = &value[0];
 	}
     }
+    Vorbis::ConvertToItunesTags(vorbisComments, &m_tags);
 }

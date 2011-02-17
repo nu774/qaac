@@ -1,4 +1,5 @@
 #include <algorithm>
+#include "id3v1genres.h"
 #include "itunetags.h"
 #include "win32util.h"
 #include "strcnv.h"
@@ -111,7 +112,7 @@ void TagEditor::save()
     }
 }
 
-namespace id3 {
+namespace ID3 {
     const Tag::NameIDMap tagNameMap[] = {
 	{ "TIT2", Tag::kTitle },
 	{ "TPE1", Tag::kArtist },
@@ -128,7 +129,8 @@ namespace id3 {
 	{ "TCMP", Tag::kCompilation },
 	{ 0, 0 }
     };
-    uint32_t GetIDFromName(const char *name, const Tag::NameIDMap *map) {
+    uint32_t GetIDFromTagName(const char *name) {
+	const Tag::NameIDMap *map = tagNameMap;
 	for (; map->name; ++map)
 	    if (!std::strcmp(map->name, name))
 		return map->id;
@@ -136,12 +138,7 @@ namespace id3 {
     }
 }
 
-uint32_t GetIDFromID3TagName(const char *name)
-{
-    return id3::GetIDFromName(name, id3::tagNameMap);
-}
-
-namespace __m4a {
+namespace m4a {
     std::wstring parseValue(uint32_t fcc, const MP4ItmfData &data,
 	    std::codecvt<wchar_t, char, std::mbstate_t> &codec)
     {
@@ -205,10 +202,10 @@ M4ATagParser::M4ATagParser(const std::wstring &filename)
 		const char *np = reinterpret_cast<const char *>(item.name);
 		if (!mp|| !np || std::strcmp(mp, "com.apple.iTunes"))
 		    continue;
-		std::wstring v = __m4a::parseValue(fcc, data, u8codec);
+		std::wstring v = m4a::parseValue(fcc, data, u8codec);
 		if (!v.empty()) m_long_tags[np] = v;
 	    } else {
-		std::wstring v = __m4a::parseValue(fcc, data, u8codec);
+		std::wstring v = m4a::parseValue(fcc, data, u8codec);
 		if (!v.empty()) m_tags[fcc] = v;
 	    }
 	}
@@ -217,7 +214,7 @@ M4ATagParser::M4ATagParser(const std::wstring &filename)
     }
 }
 
-namespace __freeform {
+namespace Vorbis {
     const Tag::NameIDMap tagNameMap[] = {
 	{ "title", Tag::kTitle },
 	{ "artist", Tag::kArtist },
@@ -226,6 +223,7 @@ namespace __freeform {
 	{ "grouping", Tag::kGrouping },
 	{ "composer", Tag::kComposer },
 	{ "genre", Tag::kGenre },
+	{ "genre", Tag::kGenreID3 },
 	{ "date", Tag::kDate },
 	{ "year", Tag::kDate },
 	{ "tracknumber", Tag::kTrack },
@@ -235,40 +233,87 @@ namespace __freeform {
 	{ "comment", Tag::kComment },
 	{ 0, 0 }
     };
-    uint32_t GetIDFromName(const char *name, const Tag::NameIDMap *map) {
+    uint32_t GetIDFromTagName(const char *name)
+    {
+	const Tag::NameIDMap *map = tagNameMap;
 	for (; map->name; ++map)
 	    if (!strcasecmp(map->name, name))
 		return map->id;
 	return 0;
     }
-    const char *GetNameFromID(uint32_t fcc, const Tag::NameIDMap *map) {
+
+    const char *GetNameFromTagID(uint32_t fcc)
+    {
+	const Tag::NameIDMap *map = tagNameMap;
 	for (; map->name; ++map)
 	    if (map->id == fcc)
 		return map->name;
 	return 0;
     }
+    void ConvertToItunesTags(
+	    const std::map<std::string, std::string> &vc,
+	    std::map<uint32_t, std::wstring> *itags)
+    {
+	std::map<std::string, std::string>::const_iterator it;
+	std::map<uint32_t, std::wstring> result;
+	utf8_codecvt_facet u8codec;
+	std::string totaltracks, totaldiscs;
+	uint32_t id;
+	for (it = vc.begin(); it != vc.end(); ++it) {
+	    std::string key = strtransform(it->first, tolower);
+	    if (key == "totaltracks")
+		totaltracks = it->second;
+	    else if (key == "totaldiscs")
+		totaldiscs = it->second;
+	    else if ((id = GetIDFromTagName(it->first.c_str())) > 0)
+		result[id] = m2w(it->second, u8codec);
+	}
+	if (!totaltracks.empty() && result.find(Tag::kTrack) != result.end()) {
+	    result[Tag::kTrack] = widen(format("%d/%d",
+		_wtoi(result[Tag::kTrack].c_str()),
+		atoi(totaltracks.c_str())));
+	}
+	if (!totaldiscs.empty() && result.find(Tag::kDisk) != result.end()) {
+	    result[Tag::kDisk] = widen(format("%d/%d",
+		_wtoi(result[Tag::kDisk].c_str()),
+		atoi(totaldiscs.c_str())));
+	}
+	itags->swap(result);
+    }
+    void ConvertFromItunesTags(
+	    const std::map<uint32_t, std::wstring> &itags,
+	    std::map<std::string, std::string> *vc)
+    {
+	std::map<uint32_t, std::wstring>::const_iterator ii;
+	std::map<std::string, std::string> result;
+	utf8_codecvt_facet u8codec;
+	for (ii = itags.begin(); ii != itags.end(); ++ii) {
+	    const char *name = GetNameFromTagID(ii->first);
+	    if (!name) continue;
+	    if (ii->first == Tag::kTrack) {
+		int n, t = 0;
+		if (swscanf(ii->second.c_str(), L"%d/%d", &n, &t) < 1)
+		    continue;
+		result["tracknumber"] = format("%d", n);
+		if (t > 0) result["totaltracks"] = format("%d", t);
+	    }
+	    else if (ii->first == Tag::kDisk) {
+		int n, t = 0;
+		if (swscanf(ii->second.c_str(), L"%d/%d", &n, &t) < 1)
+		    continue;
+		result["discnumber"] = format("%d", n);
+		if (t > 0) result["totaldiscs"] = format("%d", t);
+	    }
+	    else if (ii->first == Tag::kGenreID3) {
+		int n;
+		if (swscanf(ii->second.c_str(), L"%d", &n) == 1) {
+		    TagLib::String v = TagLib::ID3v1::genre(n-1);
+		    result[name] = v.toCString();
+		}
+	    }
+	    else
+		result[name] = w2m(ii->second, u8codec);
+	}
+	vc->swap(result);
+    }
 }
-
-uint32_t GetIDFromTagName(const char *name)
-{
-    return __freeform::GetIDFromName(name, __freeform::tagNameMap);
-}
-
-const char *GetNameFromTagID(uint32_t fcc)
-{
-    return __freeform::GetNameFromID(fcc, __freeform::tagNameMap);
-}
-
-bool
-TransVorbisComment(const char *kv, std::pair<uint32_t, std::wstring> *result,
-	std::string *key)
-{
-    std::vector<char> buff(kv, kv + std::strlen(kv) + 1);
-    char *value = &buff[0];
-    char *k = strsep(&value, "=");
-    uint32_t id = GetIDFromTagName(k);
-    if (key) *key = k;
-    *result = std::make_pair(id, m2w(value, utf8_codecvt_facet()));
-    return id != 0;
-}
-

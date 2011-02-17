@@ -64,7 +64,7 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
     m_buffer.resize(m_format.m_nchannels);
     if (m_cuesheet.size()) {
 	try {
-	    CueSheetToChapters(m_cuesheet, m_format.m_rate,
+	    Cue::CueSheetToChapters(m_cuesheet, m_format.m_rate,
 		    getDuration(), &m_chapters);
 	} catch (...) {}
     }
@@ -212,13 +212,18 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 void FLACSource::handleVorbisComment(
 	const FLAC__StreamMetadata_VorbisComment &vc)
 {
+    std::map<std::string, std::string> vorbisComments;
     for (size_t i = 0; i < vc.num_comments; ++i) {
 	const char *cs = reinterpret_cast<const char *>(vc.comments[i].entry);
-	std::pair<uint32_t, std::wstring> kv;
-	std::string key;
-	if (TransVorbisComment(cs, &kv, &key))
-	    m_tags.insert(kv);
-	else if (!strcasecmp(key.c_str(), "cuesheet"))
-	    m_cuesheet = kv.second;
+	std::vector<char> kv(std::strlen(cs) + 1);
+	std::strcpy(&kv[0], cs);
+	char *key, *value = &kv[0]; 
+	key = strsep(&value, "=");
+	vorbisComments[key] = value;
+	if (!strcasecmp(key, "cuesheet"))
+	    m_cuesheet = m2w(value, utf8_codecvt_facet());
+	else
+	    vorbisComments[key] = value;
     }
+    Vorbis::ConvertToItunesTags(vorbisComments, &m_tags);
 }

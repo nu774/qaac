@@ -36,8 +36,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>C:\Program Files (x86)\QuickTime SDK\CIncludes;..\..\mp4v2\src;..\..\mp4v2;..\..\mp4v2\include;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\QuickTime SDK\CIncludes;..\..\include;..\..\mp4v2;..\..\mp4v2\include;..\..\mp4v2\src;..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;TAGLIB_STATIC;_DEBUG;_LIB;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -55,8 +55,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Program Files (x86)\QuickTime SDK\CIncludes;..\..\mp4v2\src;..\..\mp4v2;..\..\mp4v2\include;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\QuickTime SDK\CIncludes;..\..\include;..\..\mp4v2;..\..\mp4v2\include;..\..\mp4v2\src;..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;TAGLIB_STATIC;NDEBUG;_LIB;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>

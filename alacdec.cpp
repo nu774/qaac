@@ -50,7 +50,7 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
 	std::wstring selfpath = GetModuleFileNameX();
 	const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
 	std::wstring selfdir = selfpath.substr(0, fpos - selfpath.c_str());
-	FLACModule libflac(selfdir + L"libFLAC_vc71.dll");
+	FLACModule libflac(selfdir + L"libFLAC_vc10.dll");
 	if (!libflac.loaded())
 	    throw std::runtime_error("libflac is not loaded");
 	sink = new FLACSink(ofp.get(), source.length(), fmt,
