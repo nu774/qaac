@@ -16,7 +16,7 @@
 
 #include <sys/types.h>
 
-/*
+#if 0
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include <stdlib.h>
 typedef unsigned __int64 uint64_t;
@@ -31,8 +31,7 @@ typedef float float32_t;
 #else
 #include <inttypes.h>
 #endif
-*/
-#include <inttypes.h>
+#endif
 
 typedef unsigned char   uchar;
 

@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <map>
-#include <stdint.h>
 #include "libsndfilesrc.h"
 #include "flacsrc.h"
 #include "wvpacksrc.h"

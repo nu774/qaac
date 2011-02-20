@@ -1,0 +1,33 @@
+All files are distributed as Public Domain, except for the followings:
+
+Files under mp4v2:
+These are part of mp4v2 (http://code.google.com/p/mp4v2/),
+svn-r443
+
+Files under taglib:
+These are part of TagLib (http://developer.kde.org/~wheeler/taglib.html),
+version 1.6.3
+
+Files under include/boost and utf8_codecvt_facet.[ch]pp:
+These are part of Boost (http://www.boost.org/),
+version 1.45.0
+(utf8_codecvt_facet.[ch]pp is slightly modified with
+ BOOST_UTF8_{BEGIN,END}_NAMESPACE, BOOST_UTF8_DECL)
+
+getopt.[ch]:
+These are from FreeBSD CVS repositry
+(http://www.freebsd.org/cgi/cvsweb.cgi/),
+and modified to use wchar_t instead of char.
+
+Files under include/FLAC:
+These are header files of FLAC (http://flac.sourceforge.net/),
+version 1.2.1
+
+include/sndfile.h:
+This is header file of libsndfile (http://www.mega-nerd.com/libsndfile/),
+version 1.0.23
+
+include/wavpack.h:
+This is header file of WavPack (http://www.wavpack.com/),
+version 4.50.1
+Slightly modified due to incompatibility with QuickTime's stdint.h.

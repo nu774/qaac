@@ -1,13 +1,13 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
-#include <stdint.h>
 #include <cstdlib>
 #include <cwchar>
 #include <string>
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
+#include <GNUCompatibility/stdint.h> // To avoid conflict with QT
 
 #if defined _MSC_VER
 #ifndef strcasecmp

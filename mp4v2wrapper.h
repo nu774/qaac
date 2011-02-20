@@ -1,9 +1,9 @@
 #ifndef MP4V2WRAPPER_H
 #define MP4V2WRAPPER_H
 
-#include <stdint.h>
 #include <string>
 #include <stdexcept>
+#include <GNUCompatibility/stdint.h> // To avoid conflict with QT
 #undef FindAtom
 #include "impl.h"
 

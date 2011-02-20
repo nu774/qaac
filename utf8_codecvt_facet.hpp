@@ -1,4 +1,4 @@
-// Copyright © 2001 Ronald Garcia, Indiana University (garcia@osl.iu.edu)
+// Copyright (c) 2001 Ronald Garcia, Indiana University (garcia@osl.iu.edu)
 // Andrew Lumsdaine, Indiana University (lums@osl.iu.edu).
 // Distributed under the Boost Software License, Version 1.0. (See accompany-
 // ing file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -79,15 +79,35 @@
 // specialized on those types for this to work.
 
 #include <locale>
-// for mbstate_t
-#include <wchar.h>
-// for std::size_t
-#include <cstddef>
+#include <cwchar>   // for mbstate_t
+#include <cstddef>  // for std::size_t
+
+#include <boost/config.hpp>
+#include <boost/detail/workaround.hpp>
+
+#if defined(BOOST_NO_STDC_NAMESPACE)
+namespace std {
+    using ::mbstate_t;
+    using ::size_t;
+}
+#endif
+
+#if !defined(__MSL_CPP__) && !defined(__LIBCOMO__)
+    #define BOOST_CODECVT_DO_LENGTH_CONST const
+#else
+    #define BOOST_CODECVT_DO_LENGTH_CONST
+#endif
 
 // maximum lenght of a multibyte string
 #define MB_LENGTH_MAX 8
 
-struct utf8_codecvt_facet :
+#define BOOST_UTF8_BEGIN_NAMESPACE
+#define BOOST_UTF8_END_NAMESPACE
+#define BOOST_UTF8_DECL
+
+BOOST_UTF8_BEGIN_NAMESPACE
+
+struct BOOST_UTF8_DECL utf8_codecvt_facet :
     public std::codecvt<wchar_t, char, std::mbstate_t>  
 {
 public:
@@ -153,16 +173,22 @@ protected:
     // How many char objects can I process to get <= max_limit
     // wchar_t objects?
     virtual int do_length(
-        std::mbstate_t &,
+        BOOST_CODECVT_DO_LENGTH_CONST std::mbstate_t &,
         const char * from,
         const char * from_end, 
         std::size_t max_limit
+#if BOOST_WORKAROUND(__IBMCPP__, BOOST_TESTED_AT(600))
+        ) const throw();
+#else
         ) const;
+#endif
 
     // Largest possible value do_length(state,from,from_end,1) could return.
     virtual int do_max_length() const throw () {
         return 6; // largest UTF-8 encoding of a UCS-4 character
     }
 };
+
+BOOST_UTF8_END_NAMESPACE
 
 #endif // BOOST_UTF8_CODECVT_FACET_HPP

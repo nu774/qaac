@@ -3,7 +3,6 @@
 
 #include <boost/shared_ptr.hpp>
 #include <CoreAudioTypes.h>
-#include <stdint.h>
 #include "mp4v2wrapper.h"
 #include "encoderbase.h"
 

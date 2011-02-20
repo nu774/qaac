@@ -1,7 +1,7 @@
 /////////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
 // utf8_codecvt_facet.cpp
 
-// Copyright © 2001 Ronald Garcia, Indiana University (garcia@osl.iu.edu)
+// Copyright (c) 2001 Ronald Garcia, Indiana University (garcia@osl.iu.edu)
 // Andrew Lumsdaine, Indiana University (lums@osl.iu.edu). 
 // Use, modification and distribution is subject to the Boost Software
 // License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -10,15 +10,22 @@
 // Please see the comments in <boost/detail/utf8_codecvt_facet.hpp> to
 // learn how this file should be used.
 
+#include "utf8_codecvt_facet.hpp"
+
 #include <cstdlib> // for multi-byte converson routines
 #include <cassert>
-#include "utf8_codecvt_facet.hpp"
+
+#include <boost/limits.hpp>
+#include <boost/config.hpp>
 
 // If we don't have wstring, then Unicode support 
 // is not available anyway, so we don't need to even
 // compiler this file. This also fixes the problem
 // with mingw, which can compile this file, but will
 // generate link error when building DLL.
+#ifndef BOOST_NO_STD_WSTRING
+
+BOOST_UTF8_BEGIN_NAMESPACE
 
 /////////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
 // implementation for wchar_t
@@ -116,7 +123,7 @@ std::codecvt_base::result utf8_codecvt_facet::do_out(
         0x00, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc
     };
 
-    wchar_t max_wchar = WCHAR_MAX;
+    wchar_t max_wchar = (std::numeric_limits<wchar_t>::max)();
     while (from != from_end && to != to_end) {
 
         // Check for invalid UCS-4 character
@@ -132,8 +139,8 @@ std::codecvt_base::result utf8_codecvt_facet::do_out(
         int shift_exponent = (cont_octet_count) *   6;
 
         // Process the first character
-        *to++ = octet1_modifier_table[cont_octet_count] +
-            (unsigned char)(*from / (1 << shift_exponent));
+        *to++ = static_cast<char>(octet1_modifier_table[cont_octet_count] +
+            (unsigned char)(*from / (1 << shift_exponent)));
 
         // Process the continuation characters 
         // Invariants: At   the start of the loop:
@@ -143,7 +150,7 @@ std::codecvt_base::result utf8_codecvt_facet::do_out(
         int i   = 0;
         while   (i != cont_octet_count && to != to_end) {
             shift_exponent -= 6;
-            *to++ = 0x80 + ((*from / (1 << shift_exponent)) % (1 << 6));
+            *to++ = static_cast<char>(0x80 + ((*from / (1 << shift_exponent)) % (1 << 6)));
             ++i;
         }
         // If   we filled up the out buffer before encoding the character
@@ -152,7 +159,7 @@ std::codecvt_base::result utf8_codecvt_facet::do_out(
             to_next = to - (i+1);
             return std::codecvt_base::partial;
         }
-        *from++;
+        ++from;
     }
     from_next = from;
     to_next = to;
@@ -164,11 +171,15 @@ std::codecvt_base::result utf8_codecvt_facet::do_out(
 // How many char objects can I process to get <= max_limit
 // wchar_t objects?
 int utf8_codecvt_facet::do_length(
-    std::mbstate_t &,
+    BOOST_CODECVT_DO_LENGTH_CONST std::mbstate_t &,
     const char * from,
     const char * from_end, 
     std::size_t max_limit
+#if BOOST_WORKAROUND(__IBMCPP__, BOOST_TESTED_AT(600))
+) const throw()
+#else
 ) const
+#endif
 { 
     // RG - this code is confusing!  I need a better way to express it.
     // and test cases.
@@ -188,7 +199,7 @@ int utf8_codecvt_facet::do_length(
         last_octet_count = (get_octet_count(*from_next));
         ++char_count;
     }
-    return from_next-from_end;
+    return static_cast<int>(from_next-from_end);
 }
 
 unsigned int utf8_codecvt_facet::get_octet_count(
@@ -206,6 +217,7 @@ unsigned int utf8_codecvt_facet::get_octet_count(
     else if (0xf8 <= lead_octet && lead_octet <= 0xfb) return 5;
     else return 6;
 }
+BOOST_UTF8_END_NAMESPACE
 
 namespace {
 template<std::size_t s>
@@ -219,9 +231,6 @@ int get_cont_octet_out_count_impl(wchar_t word){
     return 2;
 }
 
-// note the following code will generate on some platforms where
-// wchar_t is defined as UCS2.  The warnings are superfluous as
-// the specialization is never instantitiated with such compilers.
 template<>
 int get_cont_octet_out_count_impl<4>(wchar_t word){
     if (word < 0x80) {
@@ -230,7 +239,22 @@ int get_cont_octet_out_count_impl<4>(wchar_t word){
     if (word < 0x800) {
         return 1;
     }
-    if (word < 0x10000) {
+
+    // Note that the following code will generate warnings on some platforms
+    // where wchar_t is defined as UCS2.  The warnings are superfluous as the
+    // specialization is never instantitiated with such compilers, but this
+    // can cause problems if warnings are being treated as errors, so we guard
+    // against that.  Including <boost/detail/utf8_codecvt_facet.hpp> as we do
+    // should be enough to get WCHAR_MAX defined.
+#if !defined(WCHAR_MAX)
+#   error WCHAR_MAX not defined!
+#endif
+    // cope with VC++ 7.1 or earlier having invalid WCHAR_MAX
+#if defined(_MSC_VER) && _MSC_VER <= 1310 // 7.1 or earlier
+    return 2;
+#elif WCHAR_MAX > 0x10000
+    
+   if (word < 0x10000) {
         return 2;
     }
     if (word < 0x200000) {
@@ -240,10 +264,15 @@ int get_cont_octet_out_count_impl<4>(wchar_t word){
         return 4;
     }
     return 5;
+    
+#else
+    return 2;
+#endif
 }
 
 } // namespace anonymous
 
+BOOST_UTF8_BEGIN_NAMESPACE
 // How many "continuing octets" will be needed for this word
 // ==   total octets - 1.
 int utf8_codecvt_facet::get_cont_octet_out_count(
@@ -251,4 +280,6 @@ int utf8_codecvt_facet::get_cont_octet_out_count(
 ) const {
     return get_cont_octet_out_count_impl<sizeof(wchar_t)>(word);
 }
+BOOST_UTF8_END_NAMESPACE
 
+#endif

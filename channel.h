@@ -5,8 +5,8 @@
 #include <fcntl.h>
 #include <string>
 #include <vector>
-#include <stdint.h>
 #include <boost/shared_ptr.hpp>
+#include <GNUCompatibility/stdint.h> // To avoid conflict with QT
 #ifdef _MSC_VER
 #include <intsafe.h>
   typedef SSIZE_T ssize_t;

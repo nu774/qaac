@@ -3,7 +3,7 @@
 #include <clocale>
 #include <io.h>
 #include <fcntl.h>
-#include <stdint.h>
+#include <GNUCompatibility/stdint.h> // To avoid conflict with QT
 #include "impl.h"
 #include "getopt.h"
 #include "qtmoviesource.h"
