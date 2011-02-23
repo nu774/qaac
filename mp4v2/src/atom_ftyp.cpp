@@ -25,11 +25,11 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4FtypAtom::MP4FtypAtom()
-    : MP4Atom( "ftyp" )
-    , majorBrand       ( *new MP4StringProperty( "majorBrand" ))
-    , minorVersion     ( *new MP4Integer32Property( "minorVersion" ))
-    , compatibleBrands ( *new MP4StringProperty( "compatibleBrands", false, false, true ))
+MP4FtypAtom::MP4FtypAtom(MP4File &file)
+    : MP4Atom( file, "ftyp" )
+    , majorBrand       ( *new MP4StringProperty( *this, "majorBrand" ))
+    , minorVersion     ( *new MP4Integer32Property( *this, "minorVersion" ))
+    , compatibleBrands ( *new MP4StringProperty( *this, "compatibleBrands", false, false, true ))
 {
     majorBrand.SetFixedLength( 4 );
     compatibleBrands.SetFixedLength( 4 );

@@ -26,8 +26,8 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-IPodUUIDAtom::IPodUUIDAtom()
-        : MP4Atom("uuid")
+IPodUUIDAtom::IPodUUIDAtom(MP4File &file)
+        : MP4Atom(file, "uuid")
 {
     //
     // This is a hack, the contents of this atom need to be well defined.
@@ -39,7 +39,7 @@ IPodUUIDAtom::IPodUUIDAtom()
 
     SetExtendedType(ipod_magic);
 
-    MP4Integer32Property* value = new MP4Integer32Property("value");
+    MP4Integer32Property* value = new MP4Integer32Property(*this, "value");
     value->SetValue(1);
     AddProperty(value);
 }

@@ -23,17 +23,17 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4FtabAtom::MP4FtabAtom()
-        : MP4Atom("ftab")
+MP4FtabAtom::MP4FtabAtom(MP4File &file)
+        : MP4Atom(file, "ftab")
 {
-    MP4Integer16Property* pCount = new MP4Integer16Property("entryCount"); /* 0 */
+    MP4Integer16Property* pCount = new MP4Integer16Property(*this, "entryCount"); /* 0 */
     AddProperty(pCount);
 
-    MP4TableProperty* pTable = new MP4TableProperty("fontEntries", pCount);  /* 1 */
+    MP4TableProperty* pTable = new MP4TableProperty(*this, "fontEntries", pCount);  /* 1 */
     AddProperty(pTable);
 
-    pTable->AddProperty(new MP4Integer16Property("fontID"));  /* 0 */
-    pTable->AddProperty(new MP4StringProperty("name", true));  /* 1 */
+    pTable->AddProperty(new MP4Integer16Property(pTable->GetParentAtom(), "fontID"));  /* 0 */
+    pTable->AddProperty(new MP4StringProperty(pTable->GetParentAtom(), "name", true));  /* 1 */
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -67,7 +67,7 @@ public:
         MP4Duration   dstSampleDuration );
 
 public:
-    MP4File( uint32_t verbosity = 0 );
+    MP4File();
     ~MP4File();
 
     ///////////////////////////////////////////////////////////////////////////
@@ -83,21 +83,13 @@ public:
                  char**      supportedBrands = NULL,
                  uint32_t    supportedBrandsCount = 0 );
 
+    const std::string &GetFilename() const;
     void Read( const char* name, const MP4FileProvider* provider );
     bool Modify( const char* fileName );
     void Optimize( const char* srcFileName, const char* dstFileName = NULL );
     bool CopyClose( const string& copyFileName );
-    void Dump( FILE* fout = NULL, bool dumpImplicits = false );
+    void Dump( bool dumpImplicits = false );
     void Close();
-
-    /* library property per file */
-
-    uint32_t GetVerbosity() {
-        return m_verbosity;
-    }
-    void SetVerbosity(uint32_t verbosity) {
-        m_verbosity = verbosity;
-    }
 
     bool Use64Bits(const char *atomName);
     void Check64BitStatus(const char *atomName);
@@ -848,6 +840,7 @@ public:
         const char* childName);
 
 protected:
+    void Init();
     void Open( const char* name, File::Mode mode, const MP4FileProvider* provider );
     void ReadFromFile();
     void GenerateTracks();
@@ -859,7 +852,7 @@ protected:
 
     void Rename(const char* existingFileName, const char* newFileName);
 
-    void ProtectWriteOperation(const char* where);
+    void ProtectWriteOperation(const char* file, int line, const char *func);
 
     void FindIntegerProperty(const char* name,
                              MP4Property** ppProperty, uint32_t* pIndex = NULL);
@@ -953,7 +946,6 @@ protected:
 protected:
     File*    m_file;
     uint64_t m_fileOriginalSize;
-    uint32_t m_verbosity;
     uint32_t m_createFlags;
 
     MP4Atom*          m_pRootAtom;
@@ -978,9 +970,12 @@ protected:
     uint8_t m_numWriteBits;
     uint8_t m_bufWriteBits;
 
-    char m_tempFileName[MP4V2_PATH_MAX];
     char m_trakName[1024];
     char *m_editName;
+
+ private:
+    MP4File ( const MP4File &src );
+    MP4File &operator= ( const MP4File &src );
 };
 
 ///////////////////////////////////////////////////////////////////////////////

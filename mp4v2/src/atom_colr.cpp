@@ -24,18 +24,18 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4ColrAtom::MP4ColrAtom()
-        : MP4Atom("colr")
+MP4ColrAtom::MP4ColrAtom(MP4File &file)
+        : MP4Atom(file, "colr")
 {
-    MP4StringProperty* cpt = new MP4StringProperty("colorParameterType");
+    MP4StringProperty* cpt = new MP4StringProperty(*this,"colorParameterType");
     cpt->SetFixedLength(4);
     AddProperty(cpt); /* 0 */
 
-    AddProperty( /* 1 */ new MP4Integer16Property("primariesIndex"));
+    AddProperty( /* 1 */ new MP4Integer16Property(*this,"primariesIndex"));
 
-    AddProperty( /* 2 */ new MP4Integer16Property("transferFunctionIndex"));
+    AddProperty( /* 2 */ new MP4Integer16Property(*this,"transferFunctionIndex"));
 
-    AddProperty( /* 3 */ new MP4Integer16Property("matrixIndex"));
+    AddProperty( /* 3 */ new MP4Integer16Property(*this,"matrixIndex"));
 }
 
 void MP4ColrAtom::Generate()

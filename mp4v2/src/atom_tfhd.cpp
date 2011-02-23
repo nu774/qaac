@@ -26,12 +26,12 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4TfhdAtom::MP4TfhdAtom()
-        : MP4Atom("tfhd")
+MP4TfhdAtom::MP4TfhdAtom(MP4File &file)
+        : MP4Atom(file, "tfhd")
 {
     AddVersionAndFlags();   /* 0, 1 */
     AddProperty( /* 2 */
-        new MP4Integer32Property("trackId"));
+        new MP4Integer32Property(*this, "trackId"));
 }
 
 void MP4TfhdAtom::AddProperties(uint32_t flags)
@@ -39,23 +39,23 @@ void MP4TfhdAtom::AddProperties(uint32_t flags)
     if (flags & 0x01) {
         // note this property is signed 64!
         AddProperty(
-            new MP4Integer64Property("baseDataOffset"));
+            new MP4Integer64Property(*this, "baseDataOffset"));
     }
     if (flags & 0x02) {
         AddProperty(
-            new MP4Integer32Property("sampleDescriptionIndex"));
+            new MP4Integer32Property(*this, "sampleDescriptionIndex"));
     }
     if (flags & 0x08) {
         AddProperty(
-            new MP4Integer32Property("defaultSampleDuration"));
+            new MP4Integer32Property(*this, "defaultSampleDuration"));
     }
     if (flags & 0x10) {
         AddProperty(
-            new MP4Integer32Property("defaultSampleSize"));
+            new MP4Integer32Property(*this, "defaultSampleSize"));
     }
     if (flags & 0x20) {
         AddProperty(
-            new MP4Integer32Property("defaultSampleFlags"));
+            new MP4Integer32Property(*this, "defaultSampleFlags"));
     }
 }
 

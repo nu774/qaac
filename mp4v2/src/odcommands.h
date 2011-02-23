@@ -38,26 +38,42 @@ const uint8_t MP4ESRemoveRefODCommandTag        = 0x07;
 
 class MP4ODUpdateDescriptor : public MP4Descriptor {
 public:
+    MP4ODUpdateDescriptor(MP4Atom& parentAtom);
+private:
     MP4ODUpdateDescriptor();
+    MP4ODUpdateDescriptor ( const MP4ODUpdateDescriptor &src );
+    MP4ODUpdateDescriptor &operator= ( const MP4ODUpdateDescriptor &src );
 };
 
 class MP4ODRemoveDescriptor : public MP4Descriptor {
 public:
+    MP4ODRemoveDescriptor(MP4Atom& parentAtom);
+    void Read(MP4File& file);
+private:
     MP4ODRemoveDescriptor();
-    void Read(MP4File* pFile);
+    MP4ODRemoveDescriptor ( const MP4ODRemoveDescriptor &src );
+    MP4ODRemoveDescriptor &operator= ( const MP4ODRemoveDescriptor &src );
 };
 
 class MP4ESUpdateDescriptor : public MP4Descriptor {
 public:
+    MP4ESUpdateDescriptor(MP4Atom& parentAtom);
+private:
     MP4ESUpdateDescriptor();
+    MP4ESUpdateDescriptor ( const MP4ESUpdateDescriptor &src );
+    MP4ESUpdateDescriptor &operator= ( const MP4ESUpdateDescriptor &src );
 };
 
 class MP4ESRemoveDescriptor : public MP4Descriptor {
 public:
+    MP4ESRemoveDescriptor(MP4Atom& parentAtom);
+private:
     MP4ESRemoveDescriptor();
+    MP4ESRemoveDescriptor ( const MP4ESRemoveDescriptor &src );
+    MP4ESRemoveDescriptor &operator= ( const MP4ESRemoveDescriptor &src );
 };
 
-MP4Descriptor* CreateODCommand(uint8_t tag);
+MP4Descriptor* CreateODCommand(MP4Atom& parentAtom, uint8_t tag);
 
 ///////////////////////////////////////////////////////////////////////////////
 

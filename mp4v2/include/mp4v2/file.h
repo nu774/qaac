@@ -8,18 +8,6 @@
  *
  *****************************************************************************/
 
-#define MP4_DETAILS_ALL     0xFFFFFFFF  /**< Verbosity bitmask: all possible details. */
-#define MP4_DETAILS_ERROR   0x00000001  /**< Verbosity bit: reasons for errors. */
-#define MP4_DETAILS_WARNING 0x00000002  /**< Verbosity bit: warnings. */
-#define MP4_DETAILS_READ    0x00000004  /**< Verbosity bit: read operations. */
-#define MP4_DETAILS_WRITE   0x00000008  /**< Verbosity bit: write operations. */
-#define MP4_DETAILS_FIND    0x00000010  /**< Verbosity bit: find property operations. */
-#define MP4_DETAILS_TABLE   0x00000020  /**< Verbosity bit: per table entry details. */
-#define MP4_DETAILS_SAMPLE  0x00000040  /**< Verbosity bit: per sample details. */
-#define MP4_DETAILS_HINT    0x00000080  /**< Verbosity bit: per RTP hint details. */
-#define MP4_DETAILS_ISMA    0x00000100  /**< Verbosity bit: ISMA details. */
-#define MP4_DETAILS_EDIT    0x00000200  /**< Verbosity bit: edit details. */
-
 /** Bit: enable 64-bit data-atoms. */
 #define MP4_CREATE_64BIT_DATA 0x01
 /** Bit: enable 64-bit time-atoms. @note Incompatible with QuickTime. */
@@ -52,43 +40,6 @@ typedef struct MP4FileProvider_s
     int   ( *close )( void* handle );
 } MP4FileProvider;
 
-/** Get verbosity level for diagnostic information.
- *
- *  @param hFile handle of file for operation.
- *
- *  @return bitmask of flags of diagnostic information.
- *
- *  @see MP4SetVerbosity() for further details.
- */
-MP4V2_EXPORT
-uint32_t MP4GetVerbosity( MP4FileHandle hFile );
-
-/** Set verbosity level for diagnostic information.
- *
- * MP4SetVerbosity allows control over the level of diagnostic information
- * printed out by the library. It can be called at any time. Since much is
- * done  by  the library when opening an mp4 file, functions such as
- * MP4Create(), MP4Modify(), and MP4Read() include a parameter for the.
- *
- *  @param hFile handle of file for operation.
- *  @param verbosity bitmask of the following bits or <b>0</b> for none:
- *      @li #MP4_DETAILS_ALL
- *      @li #MP4_DETAILS_ERROR
- *      @li #MP4_DETAILS_WARNING
- *      @li #MP4_DETAILS_READ
- *      @li #MP4_DETAILS_WRITE
- *      @li #MP4_DETAILS_FIND
- *      @li #MP4_DETAILS_TABLE
- *      @li #MP4_DETAILS_SAMPLE
- *      @li #MP4_DETAILS_HINT
- *      @li #MP4_DETAILS_ISMA
- *      @li #MP4_DETAILS_EDIT
- *
- *  @see MP4GetVerbosity().
- */
-MP4V2_EXPORT
-void MP4SetVerbosity( MP4FileHandle hFile, uint32_t verbosity );
-
 /** Close an mp4 file.
  *  MP4Close closes a previously opened mp4 file. If the file was opened
  *  writable with MP4Create() or MP4Modify(), then MP4Close() will write
@@ -113,8 +64,6 @@ void MP4Close(
  *      On other platforms, it should be an 8-bit encoding that is
  *      appropriate for the platform, locale, file system, etc.
  *      (prefer to use UTF-8 when possible).
- *  @param verbosity bitmask of diagnostic details the library
- *      should print to stdout during its functioning.
  *  @param flags bitmask that allows the user to set 64-bit values for
  *      data or time atoms. Valid bits may be any combination of:
  *          @li #MP4_CREATE_64BIT_DATA
@@ -123,13 +72,10 @@ void MP4Close(
  *  @return On success a handle of the newly created file for use in
  *      subsequent calls to the library.
  *      On error, #MP4_INVALID_FILE_HANDLE.
- *
- *  @see MP4SetVerbosity() for <b>verbosity</b> values.
  */
 MP4V2_EXPORT
 MP4FileHandle MP4Create(
     const char* fileName,
-    uint32_t    verbosity DEFAULT(0),
     uint32_t    flags DEFAULT(0) );
 
 /** Create a new mp4 file with extended options.
@@ -141,8 +87,6 @@ MP4FileHandle MP4Create(
  *      On other platforms, it should be an 8-bit encoding that is
  *      appropriate for the platform, locale, file system, etc.
  *      (prefer to use UTF-8 when possible).
- *  @param verbosity bitmask of diagnostic details the library
- *      should print to stdout during its functioning.
  *  @param flags bitmask that allows the user to set 64-bit values for
  *      data or time atoms. Valid bits may be any combination of:
  *          @li #MP4_CREATE_64BIT_DATA
@@ -159,13 +103,10 @@ MP4FileHandle MP4Create(
  *  @return On success a handle of the newly created file for use in
  *      subsequent calls to the library.
  *      On error, #MP4_INVALID_FILE_HANDLE.
- *
- *  @see MP4SetVerbosity() for <b>verbosity</b> values.
  */
 MP4V2_EXPORT
 MP4FileHandle MP4CreateEx(
     const char* fileName,
-    uint32_t    verbosity DEFAULT(0),
     uint32_t    flags DEFAULT(0),
     int         add_ftyp DEFAULT(1),
     int         add_iods DEFAULT(1),
@@ -174,33 +115,30 @@ MP4FileHandle MP4CreateEx(
     char**      compatibleBrands DEFAULT(0),
     uint32_t    compatibleBrandsCount DEFAULT(0) );
 
-/** Dump mp4 file contents as ASCII.
+/** Dump mp4 file contents as ASCII either to stdout or the
+ *  log callback (@p see MP4SetLogCallback)
  *
  *  Dump is an invaluable debugging tool in that in can reveal all the details
  *  of the mp4 control structures. However, the output will not make much sense
  *  until you familiarize yourself with the mp4 specification (or the Quicktime
  *  File Format specification).
  *
+
  *  Note that MP4Dump() will not print the individual values of control tables,
- *  such as the size of each sample, unless the current verbosity value
- *  includes the flag #MP4_DETAILS_TABLE.
- *  See MP4SetVerbosity() for how to set this flag.
+ *  such as the size of each sample, unless the current log level is at least
+ *  #MP4_LOG_VERBOSE2.  @p see MP4LogSetLevel() for how to set this.
  *
  *  @param hFile handle of file to dump.
- *  @param pDumpFile dump destination. If NULL stdout will be used.
  *  @param dumpImplicits prints properties which would not actually be
  *      written to the mp4 file, but still exist in mp4 control structures.
  *      ie. they are implicit given the current values of other controlling
  *      properties.
  *
  *  @return <b>true</b> on success, <b>false</b> on failure.
- *
- *  @see MP4SetVerbosity().
  */
 MP4V2_EXPORT
 bool MP4Dump(
     MP4FileHandle hFile,
-    FILE*         pDumpFile DEFAULT(NULL),
     bool          dumpImplicits DEFAULT(0) );
 
 /** Return a textual summary of an mp4 file.
@@ -243,6 +181,17 @@ MP4V2_EXPORT
 char* MP4FileInfo(
     const char* fileName,
     MP4TrackId  trackId DEFAULT(MP4_INVALID_TRACK_ID) );
+
+/** Accessor for the filename associated with a file handle
+ *
+ * @param hFile a file handle
+ *
+ * @return the NUL-terminated, UTF-8 encoded filename
+ * associated with @p hFile
+ */
+MP4V2_EXPORT
+const char* MP4GetFilename(
+    MP4FileHandle hFile );
 
 /** Return a textual summary of an mp4 file.
  *
@@ -296,20 +245,15 @@ char* MP4Info(
  *      On other platforms, it should be an 8-bit encoding that is
  *      appropriate for the platform, locale, file system, etc.
  *      (prefer to use UTF-8 when possible).
- *  @param verbosity bitmask of diagnostic details the library
- *      should print to stdout during its functioning.
  *  @param flags currently ignored.
  *
  *  @return On success a handle of the target file for use in subsequent calls
  *      to the library.
  *      On error, #MP4_INVALID_FILE_HANDLE.
- *
- *  @see MP4SetVerbosity() for <b>verbosity</b> values.
  */
 MP4V2_EXPORT
 MP4FileHandle MP4Modify(
     const char* fileName,
-    uint32_t    verbosity DEFAULT(0),
     uint32_t    flags DEFAULT(0) );
 
 /** Optimize the layout of an mp4 file.
@@ -350,18 +294,14 @@ MP4FileHandle MP4Modify(
  *      If NULL a temporary file in the same directory as the
  *      <b>fileName</b> will be used and <b>fileName</b>
  *      will be over-written upon successful completion.
- *  @param verbosity bitmask of diagnostic details the library
- *      should print to stdout during its functioning.
  *
  *  @return <b>true</b> on success, <b>false</b> on failure.
- *
- *  @see MP4SetVerbosity() for <b>verbosity</b> values.
  */
 MP4V2_EXPORT
 bool MP4Optimize(
     const char* fileName,
-    const char* newFileName DEFAULT(NULL),
-    uint32_t    verbosity DEFAULT(0) );
+    const char* newFileName DEFAULT(NULL) );
+
 
 /** Read an existing mp4 file.
  *
@@ -376,19 +316,14 @@ bool MP4Optimize(
  *      On other platforms, it should be an 8-bit encoding that is
  *      appropriate for the platform, locale, file system, etc.
  *      (prefer to use UTF-8 when possible).
- *  @param verbosity bitmask of diagnostic details the library
- *      should print to stdout during its functioning.
- *
+(
  *  @return On success a handle of the file for use in subsequent calls to
  *      the library.
  *      On error, #MP4_INVALID_FILE_HANDLE.
- *
- *  @see MP4SetVerbosity() for <b>verbosity</b> values.
  */
 MP4V2_EXPORT
 MP4FileHandle MP4Read(
-    const char* fileName,
-    uint32_t    verbosity DEFAULT(0) );
+    const char* fileName );
 
 /** Read an existing mp4 file.
  *
@@ -403,8 +338,6 @@ MP4FileHandle MP4Read(
  *      On other platforms, it should be an 8-bit encoding that is
  *      appropriate for the platform, locale, file system, etc.
  *      (prefer to use UTF-8 when possible).
- *  @param verbosity bitmask of diagnostic details the library
- *      should print to stdout during its functioning.
  *  @param fileProvider custom implementation of file I/O operations.
  *      All functions in structure must be implemented.
  *      The structure is immediately copied internally.
@@ -412,13 +345,10 @@ MP4FileHandle MP4Read(
  *  @return On success a handle of the file for use in subsequent calls to
  *      the library.
  *      On error, #MP4_INVALID_FILE_HANDLE.
- *
- *  @see MP4SetVerbosity() for <b>verbosity</b> values.
  */
 MP4V2_EXPORT
 MP4FileHandle MP4ReadProvider(
     const char*            fileName,
-    uint32_t               verbosity DEFAULT(0),
     const MP4FileProvider* fileProvider DEFAULT(NULL) );
 
 /** @} ***********************************************************************/

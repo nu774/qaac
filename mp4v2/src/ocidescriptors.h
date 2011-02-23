@@ -43,65 +43,105 @@ const uint8_t MP4OCIDescrTagsEnd            = 0x5F;
 
 class MP4ContentClassDescriptor : public MP4Descriptor {
 public:
+    MP4ContentClassDescriptor(MP4Atom& parentAtom);
+    void Read(MP4File& file);
+private:
     MP4ContentClassDescriptor();
-    void Read(MP4File* pFile);
+    MP4ContentClassDescriptor ( const MP4ContentClassDescriptor &src );
+    MP4ContentClassDescriptor &operator= ( const MP4ContentClassDescriptor &src );
 };
 
 class MP4KeywordDescriptor : public MP4Descriptor {
 public:
-    MP4KeywordDescriptor();
+    MP4KeywordDescriptor(MP4Atom& parentAtom);
 protected:
     void Mutate();
+private:
+    MP4KeywordDescriptor();
+    MP4KeywordDescriptor ( const MP4KeywordDescriptor &src );
+    MP4KeywordDescriptor &operator= ( const MP4KeywordDescriptor &src );
 };
 
 class MP4RatingDescriptor : public MP4Descriptor {
 public:
+    MP4RatingDescriptor(MP4Atom& parentAtom);
+    void Read(MP4File& file);
+private:
     MP4RatingDescriptor();
-    void Read(MP4File* pFile);
+    MP4RatingDescriptor ( const MP4RatingDescriptor &src );
+    MP4RatingDescriptor &operator= ( const MP4RatingDescriptor &src );
 };
 
 class MP4LanguageDescriptor : public MP4Descriptor {
 public:
+    MP4LanguageDescriptor(MP4Atom& parentAtom);
+private:
     MP4LanguageDescriptor();
+    MP4LanguageDescriptor ( const MP4LanguageDescriptor &src );
+    MP4LanguageDescriptor &operator= ( const MP4LanguageDescriptor &src );
 };
 
 class MP4ShortTextDescriptor : public MP4Descriptor {
 public:
-    MP4ShortTextDescriptor();
+    MP4ShortTextDescriptor(MP4Atom& parentAtom);
 protected:
     void Mutate();
+private:
+    MP4ShortTextDescriptor();
+    MP4ShortTextDescriptor ( const MP4ShortTextDescriptor &src );
+    MP4ShortTextDescriptor &operator= ( const MP4ShortTextDescriptor &src );
 };
 
 class MP4ExpandedTextDescriptor : public MP4Descriptor {
 public:
-    MP4ExpandedTextDescriptor();
+    MP4ExpandedTextDescriptor(MP4Atom& parentAtom);
 protected:
     void Mutate();
+private:
+    MP4ExpandedTextDescriptor();
+    MP4ExpandedTextDescriptor ( const MP4ExpandedTextDescriptor &src );
+    MP4ExpandedTextDescriptor &operator= ( const MP4ExpandedTextDescriptor &src );
 };
 
 class MP4CreatorDescriptor : public MP4Descriptor {
 public:
-    MP4CreatorDescriptor(uint8_t tag);
+    MP4CreatorDescriptor(MP4Atom& parentAtom, uint8_t tag);
+private:
+    MP4CreatorDescriptor();
+    MP4CreatorDescriptor ( const MP4CreatorDescriptor &src );
+    MP4CreatorDescriptor &operator= ( const MP4CreatorDescriptor &src );
 };
 
 class MP4CreationDescriptor : public MP4Descriptor {
 public:
-    MP4CreationDescriptor(uint8_t tag);
+    MP4CreationDescriptor(MP4Atom& parentAtom, uint8_t tag);
+private:
+    MP4CreationDescriptor();
+    MP4CreationDescriptor ( const MP4CreationDescriptor &src );
+    MP4CreationDescriptor &operator= ( const MP4CreationDescriptor &src );
 };
 
 class MP4SmpteCameraDescriptor : public MP4Descriptor {
 public:
+    MP4SmpteCameraDescriptor(MP4Atom& parentAtom);
+private:
     MP4SmpteCameraDescriptor();
+    MP4SmpteCameraDescriptor ( const MP4SmpteCameraDescriptor &src );
+    MP4SmpteCameraDescriptor &operator= ( const MP4SmpteCameraDescriptor &src );
 };
 
 class MP4UnknownOCIDescriptor : public MP4Descriptor {
 public:
+    MP4UnknownOCIDescriptor(MP4Atom& parentAtom);
+    void Read(MP4File& file);
+private:
     MP4UnknownOCIDescriptor();
-    void Read(MP4File* pFile);
+    MP4UnknownOCIDescriptor ( const MP4UnknownOCIDescriptor &src );
+    MP4UnknownOCIDescriptor &operator= ( const MP4UnknownOCIDescriptor &src );
 };
 
 
-extern MP4Descriptor *CreateOCIDescriptor(uint8_t tag);
+extern MP4Descriptor *CreateOCIDescriptor(MP4Atom& parentAtom, uint8_t tag);
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -27,13 +27,13 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4DataAtom::MP4DataAtom()
-    : MP4Atom ( "data" )
-    , typeReserved      ( *new MP4Integer16Property( "typeReserved" ))
-    , typeSetIdentifier ( *new MP4Integer8Property( "typeSetIdentifier" ))
-    , typeCode          ( *new MP4BasicTypeProperty( "typeCode" ))
-    , locale            ( *new MP4Integer32Property( "locale" ))
-    , metadata          ( *new MP4BytesProperty( "metadata" ))
+MP4DataAtom::MP4DataAtom(MP4File &file)
+    : MP4Atom ( file, "data" )
+    , typeReserved      ( *new MP4Integer16Property( *this, "typeReserved" ))
+    , typeSetIdentifier ( *new MP4Integer8Property( *this, "typeSetIdentifier" ))
+    , typeCode          ( *new MP4BasicTypeProperty( *this, "typeCode" ))
+    , locale            ( *new MP4Integer32Property( *this, "locale" ))
+    , metadata          ( *new MP4BytesProperty( *this, "metadata" ))
 {
     AddProperty( &typeReserved );
     AddProperty( &typeSetIdentifier );
@@ -52,10 +52,10 @@ MP4DataAtom::Read()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4FullAtom::MP4FullAtom( const char* type )
-    : MP4Atom ( type )
-    , version ( *new MP4Integer8Property( "version" ))
-    , flags   ( *new MP4Integer24Property( "flags" ))
+MP4FullAtom::MP4FullAtom( MP4File &file, const char* type )
+    : MP4Atom ( file, type )
+    , version ( *new MP4Integer8Property( *this, "version" ))
+    , flags   ( *new MP4Integer24Property( *this, "flags" ))
 {
     AddProperty( &version );
     AddProperty( &flags );
@@ -63,8 +63,8 @@ MP4FullAtom::MP4FullAtom( const char* type )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4ItemAtom::MP4ItemAtom( const char* type )
-    : MP4Atom( type )
+MP4ItemAtom::MP4ItemAtom( MP4File &file, const char* type )
+    : MP4Atom( file, type )
 {
     ExpectChildAtom( "mean", Optional, OnlyOne );
     ExpectChildAtom( "name", Optional, OnlyOne );
@@ -73,12 +73,12 @@ MP4ItemAtom::MP4ItemAtom( const char* type )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4ItmfHdlrAtom::MP4ItmfHdlrAtom()
-    : MP4FullAtom ( "hdlr" )
-    , reserved1   ( *new MP4Integer32Property( "reserved1" ))
-    , handlerType ( *new MP4BytesProperty( "handlerType", 4 ))
-    , reserved2   ( *new MP4BytesProperty( "reserved2", 12 ))
-    , name        ( *new MP4BytesProperty( "name", 1 ))
+MP4ItmfHdlrAtom::MP4ItmfHdlrAtom(MP4File &file)
+    : MP4FullAtom ( file, "hdlr" )
+    , reserved1   ( *new MP4Integer32Property( *this, "reserved1" ))
+    , handlerType ( *new MP4BytesProperty( *this, "handlerType", 4 ))
+    , reserved2   ( *new MP4BytesProperty( *this, "reserved2", 12 ))
+    , name        ( *new MP4BytesProperty( *this, "name", 1 ))
 {
     AddProperty( &reserved1 );
     AddProperty( &handlerType );
@@ -101,9 +101,9 @@ MP4ItmfHdlrAtom::Read()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4MeanAtom::MP4MeanAtom()
-    : MP4FullAtom ( "mean" )
-    , value       ( *new MP4BytesProperty( "value" ))
+MP4MeanAtom::MP4MeanAtom(MP4File &file)
+    : MP4FullAtom ( file, "mean" )
+    , value       ( *new MP4BytesProperty( *this, "value" ))
 {
     AddProperty( &value );
 }
@@ -117,9 +117,9 @@ MP4MeanAtom::Read()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4NameAtom::MP4NameAtom()
-    : MP4FullAtom ( "name" )
-    , value       ( *new MP4BytesProperty( "value" ))
+MP4NameAtom::MP4NameAtom(MP4File &file)
+    : MP4FullAtom ( file, "name" )
+    , value       ( *new MP4BytesProperty( *this, "value" ))
 {
     AddProperty( &value );
 }
@@ -133,9 +133,9 @@ MP4NameAtom::Read()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4UdtaElementAtom::MP4UdtaElementAtom( const char* type )
-    : MP4Atom ( type )
-    , value   ( *new MP4BytesProperty( "value" ))
+MP4UdtaElementAtom::MP4UdtaElementAtom( MP4File &file, const char* type )
+    : MP4Atom ( file, type )
+    , value   ( *new MP4BytesProperty( *this, "value" ))
 {
     AddProperty( &value );
 }

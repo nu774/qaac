@@ -23,38 +23,38 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4Tx3gAtom::MP4Tx3gAtom()
-        : MP4Atom("tx3g")
+MP4Tx3gAtom::MP4Tx3gAtom(MP4File &file)
+        : MP4Atom(file, "tx3g")
 {
-    AddReserved("reserved1", 4); /* 0 */
-    AddReserved("reserved2", 2); /* 1 */
+    AddReserved(*this, "reserved1", 4); /* 0 */
+    AddReserved(*this, "reserved2", 2); /* 1 */
 
-    AddProperty(new MP4Integer16Property("dataReferenceIndex"));/* 2 */
+    AddProperty(new MP4Integer16Property(*this, "dataReferenceIndex"));/* 2 */
 
-    AddProperty(new MP4Integer32Property("displayFlags")); /* 3 */
-    AddProperty(new MP4Integer8Property("horizontalJustification")); /* 4 */
-    AddProperty(new MP4Integer8Property("verticalJustification")); /* 5 */
+    AddProperty(new MP4Integer32Property(*this, "displayFlags")); /* 3 */
+    AddProperty(new MP4Integer8Property(*this, "horizontalJustification")); /* 4 */
+    AddProperty(new MP4Integer8Property(*this, "verticalJustification")); /* 5 */
 
-    AddProperty(new MP4Integer8Property("bgColorRed")); /* 6 */
-    AddProperty(new MP4Integer8Property("bgColorGreen")); /* 7 */
-    AddProperty(new MP4Integer8Property("bgColorBlue")); /* 8 */
-    AddProperty(new MP4Integer8Property("bgColorAlpha")); /* 9 */
+    AddProperty(new MP4Integer8Property(*this, "bgColorRed")); /* 6 */
+    AddProperty(new MP4Integer8Property(*this, "bgColorGreen")); /* 7 */
+    AddProperty(new MP4Integer8Property(*this, "bgColorBlue")); /* 8 */
+    AddProperty(new MP4Integer8Property(*this, "bgColorAlpha")); /* 9 */
 
-    AddProperty(new MP4Integer16Property("defTextBoxTop")); /* 10 */
-    AddProperty(new MP4Integer16Property("defTextBoxLeft")); /* 11 */
-    AddProperty(new MP4Integer16Property("defTextBoxBottom")); /* 12 */
-    AddProperty(new MP4Integer16Property("defTextBoxRight")); /* 13 */
+    AddProperty(new MP4Integer16Property(*this, "defTextBoxTop")); /* 10 */
+    AddProperty(new MP4Integer16Property(*this, "defTextBoxLeft")); /* 11 */
+    AddProperty(new MP4Integer16Property(*this, "defTextBoxBottom")); /* 12 */
+    AddProperty(new MP4Integer16Property(*this, "defTextBoxRight")); /* 13 */
 
-    AddProperty(new MP4Integer16Property("startChar")); /* 14 */
-    AddProperty(new MP4Integer16Property("endChar")); /* 15 */
-    AddProperty(new MP4Integer16Property("fontID")); /* 16 */
-    AddProperty(new MP4Integer8Property("fontFace")); /* 17 */
-    AddProperty(new MP4Integer8Property("fontSize")); /* 18 */
+    AddProperty(new MP4Integer16Property(*this, "startChar")); /* 14 */
+    AddProperty(new MP4Integer16Property(*this, "endChar")); /* 15 */
+    AddProperty(new MP4Integer16Property(*this, "fontID")); /* 16 */
+    AddProperty(new MP4Integer8Property(*this, "fontFace")); /* 17 */
+    AddProperty(new MP4Integer8Property(*this, "fontSize")); /* 18 */
 
-    AddProperty(new MP4Integer8Property("fontColorRed")); /* 19 */
-    AddProperty(new MP4Integer8Property("fontColorGreen")); /* 20 */
-    AddProperty(new MP4Integer8Property("fontColorBlue")); /* 21 */
-    AddProperty(new MP4Integer8Property("fontColorAlpha")); /* 22 */
+    AddProperty(new MP4Integer8Property(*this, "fontColorRed")); /* 19 */
+    AddProperty(new MP4Integer8Property(*this, "fontColorGreen")); /* 20 */
+    AddProperty(new MP4Integer8Property(*this, "fontColorBlue")); /* 21 */
+    AddProperty(new MP4Integer8Property(*this, "fontColorAlpha")); /* 22 */
 
     ExpectChildAtom("ftab", Optional, Many);
 }

@@ -26,140 +26,142 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4BaseDescriptor::MP4BaseDescriptor (uint8_t tag) : MP4Descriptor(tag)
+MP4BaseDescriptor::MP4BaseDescriptor (MP4Atom& parentAtom, uint8_t tag) : MP4Descriptor(parentAtom, tag)
 {
     switch (tag) {
     case MP4ESIDIncDescrTag:
         AddProperty( /* 0 */
-            new MP4Integer32Property("id"));
+            new MP4Integer32Property(parentAtom, "id"));
         break;
     case MP4ESIDRefDescrTag:
         AddProperty( /* 0 */
-            new MP4Integer16Property("refIndex"));
+            new MP4Integer16Property(parentAtom, "refIndex"));
         break;
     case MP4IPIPtrDescrTag:
         AddProperty( /* 0 */
-            new MP4Integer16Property("IPIESId"));
+            new MP4Integer16Property(parentAtom, "IPIESId"));
         break;
     case MP4SupplContentIdDescrTag:
         AddProperty( /* 0 */
-            new MP4BytesProperty("languageCode", 3));
+            new MP4BytesProperty(parentAtom, "languageCode", 3));
         AddProperty( /* 1 */
-            new MP4StringProperty("title", Counted));
+            new MP4StringProperty(parentAtom, "title", Counted));
         AddProperty( /* 2 */
-            new MP4StringProperty("value", Counted));
+            new MP4StringProperty(parentAtom, "value", Counted));
         break;
     case MP4IPMPPtrDescrTag:
         AddProperty( /* 0 */
-            new MP4Integer8Property("IPMPDescriptorId"));
+            new MP4Integer8Property(parentAtom, "IPMPDescriptorId"));
         break;
     case MP4ExtProfileLevelDescrTag:
         AddProperty( /* 0 */
-            new MP4Integer8Property("profileLevelIndicationIndex"));
+            new MP4Integer8Property(parentAtom, "profileLevelIndicationIndex"));
         AddProperty( /* 1 */
-            new MP4Integer8Property("ODProfileLevelIndication"));
+            new MP4Integer8Property(parentAtom, "ODProfileLevelIndication"));
         AddProperty( /* 2 */
-            new MP4Integer8Property("sceneProfileLevelIndication"));
+            new MP4Integer8Property(parentAtom, "sceneProfileLevelIndication"));
         AddProperty( /* 3 */
-            new MP4Integer8Property("audioProfileLevelIndication"));
+            new MP4Integer8Property(parentAtom, "audioProfileLevelIndication"));
         AddProperty( /* 4 */
-            new MP4Integer8Property("visualProfileLevelIndication"));
+            new MP4Integer8Property(parentAtom, "visualProfileLevelIndication"));
         AddProperty( /* 5 */
-            new MP4Integer8Property("graphicsProfileLevelIndication"));
+            new MP4Integer8Property(parentAtom, "graphicsProfileLevelIndication"));
         AddProperty( /* 6 */
-            new MP4Integer8Property("MPEGJProfileLevelIndication"));
+            new MP4Integer8Property(parentAtom, "MPEGJProfileLevelIndication"));
         break;
     default:
-        MP4Printf("error in base descriptor - tag %u", tag);
+        log.errorf("%s: \"%s\": error in base descriptor - tag %u", __FUNCTION__,
+                   m_parentAtom.GetFile().GetFilename().c_str(), tag);
         break;
 
     }
 }
 
-MP4BytesDescriptor::MP4BytesDescriptor (uint8_t tag) : MP4Descriptor(tag)
+MP4BytesDescriptor::MP4BytesDescriptor (MP4Atom& parentAtom, uint8_t tag) : MP4Descriptor(parentAtom, tag)
 {
     m_size_offset = 0;
     m_bytes_index = 0;
     if (tag >= MP4ExtDescrTagsStart && tag <= MP4ExtDescrTagsEnd) {
         AddProperty( /* 0 */
-            new MP4BytesProperty("data"));
+            new MP4BytesProperty(parentAtom, "data"));
     } else {
         switch (tag) {
         case MP4DecSpecificDescrTag:
             AddProperty( /* 0 */
-                new MP4BytesProperty("info"));
+                new MP4BytesProperty(parentAtom, "info"));
             // no change to m_size
             break;
         case MP4IPMPDescrTag:
             AddProperty( /* 0 */
-                new MP4Integer8Property("IPMPDescriptorId"));
+                new MP4Integer8Property(parentAtom, "IPMPDescriptorId"));
             AddProperty( /* 1 */
-                new MP4Integer16Property("IPMPSType"));
+                new MP4Integer16Property(parentAtom, "IPMPSType"));
             AddProperty( /* 2 */
-                new MP4BytesProperty("IPMPData"));
+                new MP4BytesProperty(parentAtom, "IPMPData"));
             /* note: if IPMPSType == 0, IPMPData is an URL */
             m_size_offset = 3;
             m_bytes_index = 2;
             break;
         case MP4RegistrationDescrTag:
             AddProperty( /* 0 */
-                new MP4Integer32Property("formatIdentifier"));
+                new MP4Integer32Property(parentAtom, "formatIdentifier"));
             AddProperty( /* 1 */
-                new MP4BytesProperty("additionalIdentificationInfo"));
+                new MP4BytesProperty(parentAtom, "additionalIdentificationInfo"));
             m_size_offset = 4;
             m_bytes_index = 1;
             break;
         default:
-            MP4Printf("error in bytes descriptor - tag %u", tag);
+            log.errorf("%s: \"%s\": error in bytes descriptor - tag %u", __FUNCTION__,
+                       m_parentAtom.GetFile().GetFilename().c_str(), tag);
             break;
         }
     }
 }
 
-void MP4BytesDescriptor::Read(MP4File *pFile)
+void MP4BytesDescriptor::Read(MP4File& file)
 {
-    ReadHeader(pFile);
+    ReadHeader(file);
 
     /* byte properties need to know how long they are before reading */
     ((MP4BytesProperty*)m_pProperties[m_bytes_index])->SetValueSize(m_size - m_size_offset);
 
-    ReadProperties(pFile);
+    ReadProperties(file);
 }
-MP4IODescriptor::MP4IODescriptor()
-        : MP4Descriptor(MP4FileIODescrTag)
+MP4IODescriptor::MP4IODescriptor(MP4Atom& parentAtom)
+        : MP4Descriptor(parentAtom, MP4FileIODescrTag)
 {
     /* N.B. other member functions depend on the property indicies */
     AddProperty( /* 0 */
-        new MP4BitfieldProperty("objectDescriptorId", 10));
+        new MP4BitfieldProperty(parentAtom, "objectDescriptorId", 10));
     AddProperty( /* 1 */
-        new MP4BitfieldProperty("URLFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "URLFlag", 1));
     AddProperty( /* 2 */
-        new MP4BitfieldProperty("includeInlineProfileLevelFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "includeInlineProfileLevelFlag", 1));
     AddProperty( /* 3 */
-        new MP4BitfieldProperty("reserved", 4));
+        new MP4BitfieldProperty(parentAtom, "reserved", 4));
     AddProperty( /* 4 */
-        new MP4StringProperty("URL", Counted));
+        new MP4StringProperty(parentAtom, "URL", Counted));
     AddProperty( /* 5 */
-        new MP4Integer8Property("ODProfileLevelId"));
+        new MP4Integer8Property(parentAtom, "ODProfileLevelId"));
     AddProperty( /* 6 */
-        new MP4Integer8Property("sceneProfileLevelId"));
+        new MP4Integer8Property(parentAtom, "sceneProfileLevelId"));
     AddProperty( /* 7 */
-        new MP4Integer8Property("audioProfileLevelId"));
+        new MP4Integer8Property(parentAtom, "audioProfileLevelId"));
     AddProperty( /* 8 */
-        new MP4Integer8Property("visualProfileLevelId"));
+        new MP4Integer8Property(parentAtom, "visualProfileLevelId"));
     AddProperty( /* 9 */
-        new MP4Integer8Property("graphicsProfileLevelId"));
+        new MP4Integer8Property(parentAtom, "graphicsProfileLevelId"));
     AddProperty( /* 10 */
-        new MP4DescriptorProperty("esIds",
+        new MP4DescriptorProperty(parentAtom, "esIds",
                                   MP4ESIDIncDescrTag, 0, Required, Many));
     AddProperty( /* 11 */
-        new MP4DescriptorProperty("ociDescr",
+        new MP4DescriptorProperty(parentAtom, "ociDescr",
                                   MP4OCIDescrTagsStart, MP4OCIDescrTagsEnd, Optional, Many));
     AddProperty( /* 12 */
-        new MP4DescriptorProperty("ipmpDescrPtr",
+        new MP4DescriptorProperty(parentAtom, "ipmpDescrPtr",
                                   MP4IPMPPtrDescrTag, 0, Optional, Many));
     AddProperty( /* 13 */
-        new MP4DescriptorProperty("extDescr",
+        new MP4DescriptorProperty(parentAtom, "extDescr",
                                   MP4ExtDescrTagsStart, MP4ExtDescrTagsEnd, Optional, Many));
 
     SetReadMutate(2);
@@ -184,29 +186,29 @@ void MP4IODescriptor::Mutate()
     }
 }
 
-MP4ODescriptor::MP4ODescriptor()
-        : MP4Descriptor(MP4FileODescrTag)
+MP4ODescriptor::MP4ODescriptor(MP4Atom& parentAtom)
+        : MP4Descriptor(parentAtom, MP4FileODescrTag)
 {
     /* N.B. other member functions depend on the property indicies */
     AddProperty( /* 0 */
-        new MP4BitfieldProperty("objectDescriptorId", 10));
+        new MP4BitfieldProperty(parentAtom, "objectDescriptorId", 10));
     AddProperty( /* 1 */
-        new MP4BitfieldProperty("URLFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "URLFlag", 1));
     AddProperty( /* 2 */
-        new MP4BitfieldProperty("reserved", 5));
+        new MP4BitfieldProperty(parentAtom, "reserved", 5));
     AddProperty( /* 3 */
-        new MP4StringProperty("URL", Counted));
+        new MP4StringProperty(parentAtom, "URL", Counted));
     AddProperty( /* 4 */
-        new MP4DescriptorProperty("esIds",
+        new MP4DescriptorProperty(parentAtom, "esIds",
                                   MP4ESIDRefDescrTag, 0, Required, Many));
     AddProperty( /* 5 */
-        new MP4DescriptorProperty("ociDescr",
+        new MP4DescriptorProperty(parentAtom, "ociDescr",
                                   MP4OCIDescrTagsStart, MP4OCIDescrTagsEnd, Optional, Many));
     AddProperty( /* 6 */
-        new MP4DescriptorProperty("ipmpDescrPtr",
+        new MP4DescriptorProperty(parentAtom, "ipmpDescrPtr",
                                   MP4IPMPPtrDescrTag, 0, Optional, Many));
     AddProperty( /* 7 */
-        new MP4DescriptorProperty("extDescr",
+        new MP4DescriptorProperty(parentAtom, "extDescr",
                                   MP4ExtDescrTagsStart, MP4ExtDescrTagsEnd, Optional, Many));
 
     SetReadMutate(2);
@@ -227,52 +229,52 @@ void MP4ODescriptor::Mutate()
     }
 }
 
-MP4ESDescriptor::MP4ESDescriptor()
-        : MP4Descriptor(MP4ESDescrTag)
+MP4ESDescriptor::MP4ESDescriptor(MP4Atom& parentAtom)
+        : MP4Descriptor(parentAtom, MP4ESDescrTag)
 {
     /* N.B. other class functions depend on the property indicies */
     AddProperty( /* 0 */
-        new MP4Integer16Property("ESID"));
+        new MP4Integer16Property(parentAtom, "ESID"));
     AddProperty( /* 1 */
-        new MP4BitfieldProperty("streamDependenceFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "streamDependenceFlag", 1));
     AddProperty( /* 2 */
-        new MP4BitfieldProperty("URLFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "URLFlag", 1));
     AddProperty( /* 3 */
-        new MP4BitfieldProperty("OCRstreamFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "OCRstreamFlag", 1));
     AddProperty( /* 4 */
-        new MP4BitfieldProperty("streamPriority", 5));
+        new MP4BitfieldProperty(parentAtom, "streamPriority", 5));
     AddProperty( /* 5 */
-        new MP4Integer16Property("dependsOnESID"));
+        new MP4Integer16Property(parentAtom, "dependsOnESID"));
     AddProperty( /* 6 */
-        new MP4StringProperty("URL", Counted));
+        new MP4StringProperty(parentAtom, "URL", Counted));
     AddProperty( /* 7 */
-        new MP4Integer16Property("OCRESID"));
+        new MP4Integer16Property(parentAtom, "OCRESID"));
     AddProperty( /* 8 */
-        new MP4DescriptorProperty("decConfigDescr",
+        new MP4DescriptorProperty(parentAtom, "decConfigDescr",
                                   MP4DecConfigDescrTag, 0, Required, OnlyOne));
     AddProperty( /* 9 */
-        new MP4DescriptorProperty("slConfigDescr",
+        new MP4DescriptorProperty(parentAtom, "slConfigDescr",
                                   MP4SLConfigDescrTag, 0, Required, OnlyOne));
     AddProperty( /* 10 */
-        new MP4DescriptorProperty("ipiPtr",
+        new MP4DescriptorProperty(parentAtom, "ipiPtr",
                                   MP4IPIPtrDescrTag, 0, Optional, OnlyOne));
     AddProperty( /* 11 */
-        new MP4DescriptorProperty("ipIds",
+        new MP4DescriptorProperty(parentAtom, "ipIds",
                                   MP4ContentIdDescrTag, MP4SupplContentIdDescrTag, Optional, Many));
     AddProperty( /* 12 */
-        new MP4DescriptorProperty("ipmpDescrPtr",
+        new MP4DescriptorProperty(parentAtom, "ipmpDescrPtr",
                                   MP4IPMPPtrDescrTag, 0, Optional, Many));
     AddProperty( /* 13 */
-        new MP4DescriptorProperty("langDescr",
+        new MP4DescriptorProperty(parentAtom, "langDescr",
                                   MP4LanguageDescrTag, 0, Optional, Many));
     AddProperty( /* 14 */
-        new MP4DescriptorProperty("qosDescr",
+        new MP4DescriptorProperty(parentAtom, "qosDescr",
                                   MP4QosDescrTag, 0, Optional, OnlyOne));
     AddProperty( /* 15 */
-        new MP4DescriptorProperty("regDescr",
+        new MP4DescriptorProperty(parentAtom, "regDescr",
                                   MP4RegistrationDescrTag, 0, Optional, OnlyOne));
     AddProperty( /* 16 */
-        new MP4DescriptorProperty("extDescr",
+        new MP4DescriptorProperty(parentAtom, "extDescr",
                                   MP4ExtDescrTagsStart, MP4ExtDescrTagsEnd, Optional, Many));
 
     SetReadMutate(5);
@@ -293,28 +295,28 @@ void MP4ESDescriptor::Mutate()
     m_pProperties[7]->SetImplicit(!ocrFlag);
 }
 
-MP4DecConfigDescriptor::MP4DecConfigDescriptor()
-        : MP4Descriptor(MP4DecConfigDescrTag)
+MP4DecConfigDescriptor::MP4DecConfigDescriptor(MP4Atom& parentAtom)
+        : MP4Descriptor(parentAtom, MP4DecConfigDescrTag)
 {
     AddProperty( /* 0 */
-        new MP4Integer8Property("objectTypeId"));
+        new MP4Integer8Property(parentAtom, "objectTypeId"));
     AddProperty( /* 1 */
-        new MP4BitfieldProperty("streamType", 6));
+        new MP4BitfieldProperty(parentAtom, "streamType", 6));
     AddProperty( /* 2 */
-        new MP4BitfieldProperty("upStream", 1));
+        new MP4BitfieldProperty(parentAtom, "upStream", 1));
     AddProperty( /* 3 */
-        new MP4BitfieldProperty("reserved", 1));
+        new MP4BitfieldProperty(parentAtom, "reserved", 1));
     AddProperty( /* 4 */
-        new MP4BitfieldProperty("bufferSizeDB", 24));
+        new MP4BitfieldProperty(parentAtom, "bufferSizeDB", 24));
     AddProperty( /* 5 */
-        new MP4Integer32Property("maxBitrate"));
+        new MP4Integer32Property(parentAtom, "maxBitrate"));
     AddProperty( /* 6 */
-        new MP4Integer32Property("avgBitrate"));
+        new MP4Integer32Property(parentAtom, "avgBitrate"));
     AddProperty( /* 7 */
-        new MP4DescriptorProperty("decSpecificInfo",
+        new MP4DescriptorProperty(parentAtom, "decSpecificInfo",
                                   MP4DecSpecificDescrTag, 0, Optional, OnlyOne));
     AddProperty( /* 8 */
-        new MP4DescriptorProperty("profileLevelIndicationIndexDescr",
+        new MP4DescriptorProperty(parentAtom, "profileLevelIndicationIndexDescr",
                                   MP4ExtProfileLevelDescrTag, 0, Optional, Many));
 }
 
@@ -323,61 +325,61 @@ void MP4DecConfigDescriptor::Generate()
     ((MP4BitfieldProperty*)m_pProperties[3])->SetValue(1);
 }
 
-MP4SLConfigDescriptor::MP4SLConfigDescriptor()
-        : MP4Descriptor(MP4SLConfigDescrTag)
+MP4SLConfigDescriptor::MP4SLConfigDescriptor(MP4Atom& parentAtom)
+        : MP4Descriptor(parentAtom, MP4SLConfigDescrTag)
 {
     AddProperty( /* 0 */
-        new MP4Integer8Property("predefined"));
+        new MP4Integer8Property(parentAtom, "predefined"));
     AddProperty( /* 1 */
-        new MP4BitfieldProperty("useAccessUnitStartFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "useAccessUnitStartFlag", 1));
     AddProperty( /* 2 */
-        new MP4BitfieldProperty("useAccessUnitEndFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "useAccessUnitEndFlag", 1));
     AddProperty( /* 3 */
-        new MP4BitfieldProperty("useRandomAccessPointFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "useRandomAccessPointFlag", 1));
     AddProperty( /* 4 */
-        new MP4BitfieldProperty("hasRandomAccessUnitsOnlyFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "hasRandomAccessUnitsOnlyFlag", 1));
     AddProperty( /* 5 */
-        new MP4BitfieldProperty("usePaddingFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "usePaddingFlag", 1));
     AddProperty( /* 6 */
-        new MP4BitfieldProperty("useTimeStampsFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "useTimeStampsFlag", 1));
     AddProperty( /* 7 */
-        new MP4BitfieldProperty("useIdleFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "useIdleFlag", 1));
     AddProperty( /* 8 */
-        new MP4BitfieldProperty("durationFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "durationFlag", 1));
     AddProperty( /* 9 */
-        new MP4Integer32Property("timeStampResolution"));
+        new MP4Integer32Property(parentAtom, "timeStampResolution"));
     AddProperty( /* 10 */
-        new MP4Integer32Property("OCRResolution"));
+        new MP4Integer32Property(parentAtom, "OCRResolution"));
     AddProperty( /* 11 */
-        new MP4Integer8Property("timeStampLength"));
+        new MP4Integer8Property(parentAtom, "timeStampLength"));
     AddProperty( /* 12 */
-        new MP4Integer8Property("OCRLength"));
+        new MP4Integer8Property(parentAtom, "OCRLength"));
     AddProperty( /* 13 */
-        new MP4Integer8Property("AULength"));
+        new MP4Integer8Property(parentAtom, "AULength"));
     AddProperty( /* 14 */
-        new MP4Integer8Property("instantBitrateLength"));
+        new MP4Integer8Property(parentAtom, "instantBitrateLength"));
     AddProperty( /* 15 */
-        new MP4BitfieldProperty("degradationPriortyLength", 4));
+        new MP4BitfieldProperty(parentAtom, "degradationPriortyLength", 4));
     AddProperty( /* 16 */
-        new MP4BitfieldProperty("AUSeqNumLength", 5));
+        new MP4BitfieldProperty(parentAtom, "AUSeqNumLength", 5));
     AddProperty( /* 17 */
-        new MP4BitfieldProperty("packetSeqNumLength", 5));
+        new MP4BitfieldProperty(parentAtom, "packetSeqNumLength", 5));
     AddProperty( /* 18 */
-        new MP4BitfieldProperty("reserved", 2));
+        new MP4BitfieldProperty(parentAtom, "reserved", 2));
 
     // if durationFlag
     AddProperty( /* 19 */
-        new MP4Integer32Property("timeScale"));
+        new MP4Integer32Property(parentAtom, "timeScale"));
     AddProperty( /* 20 */
-        new MP4Integer16Property("accessUnitDuration"));
+        new MP4Integer16Property(parentAtom, "accessUnitDuration"));
     AddProperty( /* 21 */
-        new MP4Integer16Property("compositionUnitDuration"));
+        new MP4Integer16Property(parentAtom, "compositionUnitDuration"));
 
     // if !useTimeStampsFlag
     AddProperty( /* 22 */
-        new MP4BitfieldProperty("startDecodingTimeStamp", 64));
+        new MP4BitfieldProperty(parentAtom, "startDecodingTimeStamp", 64));
     AddProperty( /* 23 */
-        new MP4BitfieldProperty("startCompositionTimeStamp", 64));
+        new MP4BitfieldProperty(parentAtom, "startCompositionTimeStamp", 64));
 }
 
 void MP4SLConfigDescriptor::Generate()
@@ -393,25 +395,25 @@ void MP4SLConfigDescriptor::Generate()
     ((MP4BitfieldProperty*)m_pProperties[18])->SetValue(3);
 }
 
-void MP4SLConfigDescriptor::Read(MP4File* pFile)
+void MP4SLConfigDescriptor::Read(MP4File& file)
 {
-    ReadHeader(pFile);
+    ReadHeader(file);
 
     // read the first property, 'predefined'
-    ReadProperties(pFile, 0, 1);
+    ReadProperties(file, 0, 1);
 
     // if predefined == 0
     if (((MP4Integer8Property*)m_pProperties[0])->GetValue() == 0) {
 
         /* read the next 18 properties */
-        ReadProperties(pFile, 1, 18);
+        ReadProperties(file, 1, 18);
     }
 
     // now mutate
     Mutate();
 
     // and read the remaining properties
-    ReadProperties(pFile, 19);
+    ReadProperties(file, 19);
 }
 
 void MP4SLConfigDescriptor::Mutate()
@@ -474,44 +476,43 @@ void MP4SLConfigDescriptor::Mutate()
     }
 }
 
-MP4ContentIdDescriptor::MP4ContentIdDescriptor()
-        : MP4Descriptor(MP4ContentIdDescrTag)
+MP4ContentIdDescriptor::MP4ContentIdDescriptor(MP4Atom& parentAtom)
+        : MP4Descriptor(parentAtom, MP4ContentIdDescrTag)
 {
     AddProperty( /* 0 */
-        new MP4BitfieldProperty("compatibility", 2));
+        new MP4BitfieldProperty(parentAtom, "compatibility", 2));
     AddProperty( /* 1 */
-        new MP4BitfieldProperty("contentTypeFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "contentTypeFlag", 1));
     AddProperty( /* 2 */
-        new MP4BitfieldProperty("contentIdFlag", 1));
+        new MP4BitfieldProperty(parentAtom, "contentIdFlag", 1));
     AddProperty( /* 3 */
-        new MP4BitfieldProperty("protectedContent", 1));
+        new MP4BitfieldProperty(parentAtom, "protectedContent", 1));
     AddProperty( /* 4 */
-        new MP4BitfieldProperty("reserved", 3));
+        new MP4BitfieldProperty(parentAtom, "reserved", 3));
     AddProperty( /* 5 */
-        new MP4Integer8Property("contentType"));
+        new MP4Integer8Property(parentAtom, "contentType"));
     AddProperty( /* 6 */
-        new MP4Integer8Property("contentIdType"));
+        new MP4Integer8Property(parentAtom, "contentIdType"));
     AddProperty( /* 7 */
-        new MP4BytesProperty("contentId"));
+        new MP4BytesProperty(parentAtom, "contentId"));
 }
 
-void MP4ContentIdDescriptor::Read(MP4File* pFile)
+void MP4ContentIdDescriptor::Read(MP4File& file)
 {
-    ReadHeader(pFile);
+    ReadHeader(file);
 
     /* read the first property, 'compatiblity' */
-    ReadProperties(pFile, 0, 1);
+    ReadProperties(file, 0, 1);
 
     /* if compatiblity != 0 */
     if (((MP4Integer8Property*)m_pProperties[0])->GetValue() != 0) {
         /* we don't understand it */
-        VERBOSE_READ(pFile->GetVerbosity(),
-                     printf("incompatible content id descriptor\n"));
+        log.verbose1f("incompatible content id descriptor");
         return;
     }
 
     /* read the next four properties */
-    ReadProperties(pFile, 1, 4);
+    ReadProperties(file, 1, 4);
 
     /* which allows us to reconfigure ourselves */
     Mutate();
@@ -537,7 +538,7 @@ void MP4ContentIdDescriptor::Read(MP4File* pFile)
 
 
     /* read the remaining properties */
-    ReadProperties(pFile, 5);
+    ReadProperties(file, 5);
 }
 
 void MP4ContentIdDescriptor::Mutate()
@@ -551,27 +552,27 @@ void MP4ContentIdDescriptor::Mutate()
 
 }
 
-MP4Descriptor* MP4DescriptorProperty::CreateDescriptor(uint8_t tag)
+MP4Descriptor* MP4DescriptorProperty::CreateDescriptor(MP4Atom& parentAtom, uint8_t tag)
 {
     MP4Descriptor* pDescriptor = NULL;
 
     switch (tag) {
     case MP4ESDescrTag:
-        pDescriptor = new MP4ESDescriptor();
+        pDescriptor = new MP4ESDescriptor(parentAtom);
         break;
     case MP4DecConfigDescrTag:
-        pDescriptor = new MP4DecConfigDescriptor();
+        pDescriptor = new MP4DecConfigDescriptor(parentAtom);
         break;
     case MP4DecSpecificDescrTag:
     case MP4IPMPDescrTag:
     case MP4RegistrationDescrTag:
-        pDescriptor = new MP4BytesDescriptor(tag);
+        pDescriptor = new MP4BytesDescriptor(parentAtom, tag);
         break;
     case MP4SLConfigDescrTag:
-        pDescriptor = new MP4SLConfigDescriptor();
+        pDescriptor = new MP4SLConfigDescriptor(parentAtom);
         break;
     case MP4ContentIdDescrTag:
-        pDescriptor = new MP4ContentIdDescriptor();
+        pDescriptor = new MP4ContentIdDescriptor(parentAtom);
         break;
     case MP4ESIDIncDescrTag:
     case MP4ESIDRefDescrTag:
@@ -579,30 +580,30 @@ MP4Descriptor* MP4DescriptorProperty::CreateDescriptor(uint8_t tag)
     case MP4SupplContentIdDescrTag:
     case MP4IPMPPtrDescrTag:
     case MP4ExtProfileLevelDescrTag:
-        pDescriptor = new MP4BaseDescriptor(tag);
+        pDescriptor = new MP4BaseDescriptor(parentAtom, tag);
         break;
     case MP4QosDescrTag:
-        pDescriptor = new MP4QosDescriptorBase(MP4QosDescrTag);
+        pDescriptor = new MP4QosDescriptorBase(parentAtom, MP4QosDescrTag);
         break;
     case MP4IODescrTag:
     case MP4FileIODescrTag:
-        pDescriptor = new MP4IODescriptor();
+        pDescriptor = new MP4IODescriptor(parentAtom);
         pDescriptor->SetTag(tag);
         break;
     case MP4ODescrTag:
     case MP4FileODescrTag:
-        pDescriptor = new MP4ODescriptor();
+        pDescriptor = new MP4ODescriptor(parentAtom);
         pDescriptor->SetTag(tag);
         break;
     }
 
     if (pDescriptor == NULL) {
         if (tag >= MP4OCIDescrTagsStart && tag <= MP4OCIDescrTagsEnd) {
-            pDescriptor = CreateOCIDescriptor(tag);
+            pDescriptor = CreateOCIDescriptor(parentAtom, tag);
         }
 
         if (tag >= MP4ExtDescrTagsStart && tag <= MP4ExtDescrTagsEnd) {
-            pDescriptor = new MP4BytesDescriptor(tag);
+            pDescriptor = new MP4BytesDescriptor(parentAtom, tag);
         }
     }
 

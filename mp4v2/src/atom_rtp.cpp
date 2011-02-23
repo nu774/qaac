@@ -26,8 +26,8 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4RtpAtom::MP4RtpAtom()
-        : MP4Atom("rtp ")
+MP4RtpAtom::MP4RtpAtom(MP4File &file)
+        : MP4Atom(file, "rtp ")
 {
     // The atom type "rtp " is used in two complete unrelated ways
     // i.e. it's real two atoms with the same name
@@ -38,17 +38,17 @@ MP4RtpAtom::MP4RtpAtom()
 
 void MP4RtpAtom::AddPropertiesStsdType()
 {
-    AddReserved("reserved1", 6); /* 0 */
+    AddReserved(*this, "reserved1", 6); /* 0 */
 
     AddProperty( /* 1 */
-        new MP4Integer16Property("dataReferenceIndex"));
+        new MP4Integer16Property(*this, "dataReferenceIndex"));
 
     AddProperty( /* 2 */
-        new MP4Integer16Property("hintTrackVersion"));
+        new MP4Integer16Property(*this, "hintTrackVersion"));
     AddProperty( /* 3 */
-        new MP4Integer16Property("highestCompatibleVersion"));
+        new MP4Integer16Property(*this, "highestCompatibleVersion"));
     AddProperty( /* 4 */
-        new MP4Integer32Property("maxPacketSize"));
+        new MP4Integer32Property(*this, "maxPacketSize"));
 
     ExpectChildAtom("tims", Required, OnlyOne);
     ExpectChildAtom("tsro", Optional, OnlyOne);
@@ -58,16 +58,17 @@ void MP4RtpAtom::AddPropertiesStsdType()
 void MP4RtpAtom::AddPropertiesHntiType()
 {
     MP4StringProperty* pProp =
-        new MP4StringProperty("descriptionFormat");
+        new MP4StringProperty(*this, "descriptionFormat");
     pProp->SetFixedLength(4);
     AddProperty(pProp); /* 0 */
 
     AddProperty( /* 1 */
-        new MP4StringProperty("sdpText"));
+        new MP4StringProperty(*this, "sdpText"));
 }
 
 void MP4RtpAtom::Generate()
 {
+    ASSERT(m_pParentAtom);
     if (!strcmp(m_pParentAtom->GetType(), "stsd")) {
         AddPropertiesStsdType();
         GenerateStsdType();
@@ -75,8 +76,8 @@ void MP4RtpAtom::Generate()
         AddPropertiesHntiType();
         GenerateHntiType();
     } else {
-        VERBOSE_WARNING(m_pFile->GetVerbosity(),
-                        printf("Warning: rtp atom in unexpected context, can not generate"));
+        log.warningf("%s: \"%s\": rtp atom in unexpected context, can not generate",
+                     __FUNCTION__, GetFile().GetFilename().c_str() );
     }
 }
 
@@ -99,6 +100,7 @@ void MP4RtpAtom::GenerateHntiType()
 
 void MP4RtpAtom::Read()
 {
+    ASSERT(m_pParentAtom);
     if (!strcmp(m_pParentAtom->GetType(), "stsd")) {
         AddPropertiesStsdType();
         ReadStsdType();
@@ -106,8 +108,7 @@ void MP4RtpAtom::Read()
         AddPropertiesHntiType();
         ReadHntiType();
     } else {
-        VERBOSE_READ(m_pFile->GetVerbosity(),
-                     printf("rtp atom in unexpected context, can not read"));
+        log.verbose1f("rtp atom in unexpected context, can not read");
     }
 
     Skip(); // to end of atom
@@ -123,10 +124,10 @@ void MP4RtpAtom::ReadHntiType()
     ReadProperties(0, 1);
 
     // read sdp string, length is implicit in size of atom
-    uint64_t size = GetEnd() - m_pFile->GetPosition();
+    uint64_t size = GetEnd() - m_File.GetPosition();
     char* data = (char*)MP4Malloc(size + 1);
     ASSERT(data != NULL);
-    m_pFile->ReadBytes((uint8_t*)data, size);
+    m_File.ReadBytes((uint8_t*)data, size);
     data[size] = '\0';
     ((MP4StringProperty*)m_pProperties[1])->SetValue(data);
     MP4Free(data);

@@ -25,7 +25,7 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
+MP4StandardAtom::MP4StandardAtom (MP4File &file, const char *type) : MP4Atom(file, type)
 {
     /*
      * This is a big if else loop.  Make sure that you don't break it
@@ -36,17 +36,17 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
      */
     if (ATOMID(type) == ATOMID("bitr")) {
         AddProperty( /* 0 */
-            new MP4Integer32Property("avgBitrate"));
+            new MP4Integer32Property(*this, "avgBitrate"));
 
         AddProperty( /* 1 */
-            new MP4Integer32Property("maxBitrate"));
+            new MP4Integer32Property(*this, "maxBitrate"));
 
     } else if (ATOMID(type) == ATOMID("btrt")) {
-        AddProperty( new MP4Integer32Property("bufferSizeDB")); /* 0 */
-        AddProperty( new MP4Integer32Property("avgBitrate"));   /* 1 */
-        AddProperty( new MP4Integer32Property("maxBitrate"));   /* 2 */
+        AddProperty( new MP4Integer32Property(*this, "bufferSizeDB")); /* 0 */
+        AddProperty( new MP4Integer32Property(*this, "avgBitrate"));   /* 1 */
+        AddProperty( new MP4Integer32Property(*this, "maxBitrate"));   /* 2 */
     } else if (ATOMID(type) == ATOMID("burl")) {
-        AddProperty( new MP4StringProperty("base_url"));
+        AddProperty( new MP4StringProperty(*this, "base_url"));
         /*
          * c???
          */
@@ -54,26 +54,26 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
         AddVersionAndFlags();
 
         MP4Integer32Property* pCount =
-            new MP4Integer32Property("entryCount");
+            new MP4Integer32Property(*this, "entryCount");
         AddProperty(pCount);
 
-        MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+        MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
         pTable->AddProperty(
-            new MP4Integer64Property("chunkOffset"));
+            new MP4Integer64Property(*this, "chunkOffset"));
     } else if (ATOMID(type) == ATOMID("ctts")) {
         AddVersionAndFlags();
 
         MP4Integer32Property* pCount =
-            new MP4Integer32Property("entryCount");
+            new MP4Integer32Property(*this, "entryCount");
         AddProperty(pCount);
 
-        MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+        MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
-        pTable->AddProperty(new MP4Integer32Property("sampleCount"));
-        pTable->AddProperty(new MP4Integer32Property("sampleOffset"));
+        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "sampleCount"));
+        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "sampleOffset"));
         /*
          * d???
          */
@@ -82,19 +82,19 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
 
     } else if (ATOMID(type) == ATOMID("dimm")) {
         AddProperty( // bytes of immediate data
-            new MP4Integer64Property("bytes"));
+            new MP4Integer64Property(*this, "bytes"));
 
     } else if (ATOMID(type) == ATOMID("dmax")) {
         AddProperty( // max packet duration
-            new MP4Integer32Property("milliSecs"));
+            new MP4Integer32Property(*this, "milliSecs"));
 
     } else if (ATOMID(type) == ATOMID("dmed")) {
         AddProperty( // bytes sent from media data
-            new MP4Integer64Property("bytes"));
+            new MP4Integer64Property(*this, "bytes"));
 
     } else if (ATOMID(type) == ATOMID("drep")) {
         AddProperty( // bytes of repeated data
-            new MP4Integer64Property("bytes"));
+            new MP4Integer64Property(*this, "bytes"));
         /*
          * e???
          */
@@ -104,14 +104,14 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
     } else if (ATOMID(type) == ATOMID("esds")) {
         AddVersionAndFlags();
         AddProperty(
-            new MP4DescriptorProperty(NULL, MP4ESDescrTag, 0,
+            new MP4DescriptorProperty(*this, NULL, MP4ESDescrTag, 0,
                                       Required, OnlyOne));
         /*
          * f???
          */
     } else if (ATOMID(type) == ATOMID("frma")) {
         AddProperty( /* 0 */
-            new MP4Integer32Property("data-format"));
+            new MP4Integer32Property(*this, "data-format"));
         /*
          * g???
          */
@@ -122,29 +122,29 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
     } else if (ATOMID(type) == ATOMID("hmhd")) {
         AddVersionAndFlags();
 
-        AddProperty(new MP4Integer16Property("maxPduSize"));
-        AddProperty(new MP4Integer16Property("avgPduSize"));
-        AddProperty(new MP4Integer32Property("maxBitRate"));
-        AddProperty(new MP4Integer32Property("avgBitRate"));
-        AddProperty(new MP4Integer32Property("slidingAvgBitRate"));
+        AddProperty(new MP4Integer16Property(*this, "maxPduSize"));
+        AddProperty(new MP4Integer16Property(*this, "avgPduSize"));
+        AddProperty(new MP4Integer32Property(*this, "maxBitRate"));
+        AddProperty(new MP4Integer32Property(*this, "avgBitRate"));
+        AddProperty(new MP4Integer32Property(*this, "slidingAvgBitRate"));
         /*
          * i???
          */
     } else if (ATOMID(type) == ATOMID("iKMS")) {
         AddVersionAndFlags(); /* 0, 1 */
-        MP4StringProperty* pProp = new MP4StringProperty("kms_URI");
+        MP4StringProperty* pProp = new MP4StringProperty(*this, "kms_URI");
         AddProperty(pProp); /* 2 */
 
     } else if (ATOMID(type) == ATOMID("iSFM")) {
         AddVersionAndFlags(); /* 0, 1 */
         AddProperty( /* 2 */
-            new MP4BitfieldProperty("selective-encryption", 1));
+            new MP4BitfieldProperty(*this, "selective-encryption", 1));
         AddProperty( /* 3 */
-            new MP4BitfieldProperty("reserved", 7));
+            new MP4BitfieldProperty(*this, "reserved", 7));
         AddProperty( /* 4 */
-            new MP4Integer8Property("key-indicator-length"));
+            new MP4Integer8Property(*this, "key-indicator-length"));
         AddProperty( /* 5 */
-            new MP4Integer8Property("IV-length"));
+            new MP4Integer8Property(*this, "IV-length"));
 
     } else if (ATOMID(type) == ATOMID("ilst")) {
         ExpectChildAtom("\251nam", Optional, OnlyOne); /* name */
@@ -187,20 +187,20 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
         
     }  else if (ATOMID(type) == ATOMID("imif")) {
         AddVersionAndFlags();
-        AddProperty(new MP4DescriptorProperty("ipmp_desc", MP4IPMPDescrTag,
+        AddProperty(new MP4DescriptorProperty(*this, "ipmp_desc", MP4IPMPDescrTag,
                                               MP4IPMPDescrTag, Required, Many));
     } else if (ATOMID(type) == ATOMID("iods")) {
         AddVersionAndFlags();
         AddProperty(
-            new MP4DescriptorProperty(NULL, MP4FileIODescrTag,
+            new MP4DescriptorProperty(*this, NULL, MP4FileIODescrTag,
                                       MP4FileODescrTag,
                                       Required, OnlyOne));
         /*
          * m???
          */
     } else if (ATOMID(type) == ATOMID("maxr")) {
-        AddProperty(new MP4Integer32Property("granularity"));
-        AddProperty(new MP4Integer32Property("bytes"));
+        AddProperty(new MP4Integer32Property(*this, "granularity"));
+        AddProperty(new MP4Integer32Property(*this, "bytes"));
 
     } else if (ATOMID(type) == ATOMID("mdia")) {
         ExpectChildAtom("mdhd", Required, OnlyOne);
@@ -215,7 +215,7 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
     } else if (ATOMID(type) == ATOMID("mfhd")) {
         AddVersionAndFlags();   /* 0, 1 */
         AddProperty( /* 2 */
-            new MP4Integer32Property("sequenceNumber"));
+            new MP4Integer32Property(*this, "sequenceNumber"));
 
     } else if (ATOMID(type) == ATOMID("minf")) {
         ExpectChildAtom("vmhd", Optional, OnlyOne);
@@ -248,7 +248,7 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
 
     } else if (ATOMID(type) == ATOMID("nump")) {
         AddProperty( // packets sent
-            new MP4Integer64Property("packets"));
+            new MP4Integer64Property(*this, "packets"));
         /*
           * o???
           */
@@ -259,14 +259,14 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
          * p???
          */
     } else if (ATOMID(type) == ATOMID("payt")) {
-        AddProperty(new MP4Integer32Property("payloadNumber"));
-        AddProperty(new MP4StringProperty("rtpMap", Counted));
+        AddProperty(new MP4Integer32Property(*this, "payloadNumber"));
+        AddProperty(new MP4StringProperty(*this, "rtpMap", Counted));
 
     } else if (ATOMID(type) == ATOMID("pinf")) {
         ExpectChildAtom("frma", Required, OnlyOne);
     } else if (ATOMID(type) == ATOMID("pmax")) {
         AddProperty( // max packet size
-            new MP4Integer32Property("bytes"));
+            new MP4Integer32Property(*this, "bytes"));
     } else if (ATOMID(type) == ATOMID("schi")) {
         // not sure if this is child atoms or table of boxes
         // get clarification on spec 9.1.2.5
@@ -277,9 +277,9 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
     } else if (ATOMID(type) == ATOMID("schm")) {
         AddVersionAndFlags(); /* 0, 1 */
         AddProperty( /* 2 */
-            new MP4Integer32Property("scheme_type"));
+            new MP4Integer32Property(*this, "scheme_type"));
         AddProperty( /* 3 */
-            new MP4Integer32Property("scheme_version"));
+            new MP4Integer32Property(*this, "scheme_version"));
         // browser URI if flags set, TODO
 
     } else if (ATOMID(type) == ATOMID("sinf")) {
@@ -290,66 +290,66 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
 
     } else if (ATOMID(type) == ATOMID("smhd")) {
         AddVersionAndFlags();
-        AddReserved("reserved", 4);
+        AddReserved(*this, "reserved", 4);
 
     } else if (ATOMID(type) == ATOMID("snro")) {
-        AddProperty(new MP4Integer32Property("offset"));
+        AddProperty(new MP4Integer32Property(*this, "offset"));
 
     } else if (ATOMID(type) == ATOMID("stco")) {
         AddVersionAndFlags();
 
-        MP4Integer32Property* pCount = new MP4Integer32Property("entryCount");
+        MP4Integer32Property* pCount = new MP4Integer32Property(*this, "entryCount");
         AddProperty(pCount);
 
-        MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+        MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
-        pTable->AddProperty(new MP4Integer32Property("chunkOffset"));
+        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "chunkOffset"));
 
     } else if (ATOMID(type) == ATOMID("stsh")) {
         AddVersionAndFlags();
 
-        MP4Integer32Property* pCount = new MP4Integer32Property("entryCount");
+        MP4Integer32Property* pCount = new MP4Integer32Property(*this, "entryCount");
         AddProperty(pCount);
 
-        MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+        MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
-        pTable->AddProperty(new MP4Integer32Property("shadowedSampleNumber"));
-        pTable->AddProperty(new MP4Integer32Property("syncSampleNumber"));
+        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "shadowedSampleNumber"));
+        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "syncSampleNumber"));
 
     } else if (ATOMID(type) == ATOMID("stss")) {
         AddVersionAndFlags();
 
-        MP4Integer32Property* pCount = new MP4Integer32Property("entryCount");
+        MP4Integer32Property* pCount = new MP4Integer32Property(*this, "entryCount");
         AddProperty(pCount);
 
-        MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+        MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
-        pTable->AddProperty(new MP4Integer32Property("sampleNumber"));
+        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "sampleNumber"));
 
     } else if (ATOMID(type) == ATOMID("stts")) {
         AddVersionAndFlags();
-        MP4Integer32Property* pCount = new MP4Integer32Property("entryCount");
+        MP4Integer32Property* pCount = new MP4Integer32Property(*this, "entryCount");
         AddProperty(pCount);
 
-        MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+        MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
-        pTable->AddProperty(new MP4Integer32Property("sampleCount"));
-        pTable->AddProperty(new MP4Integer32Property("sampleDelta"));
+        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "sampleCount"));
+        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "sampleDelta"));
     } else if (ATOMID(type) == ATOMID("tims")) {
         AddProperty(
-            new MP4Integer32Property("timeScale"));
+            new MP4Integer32Property(*this, "timeScale"));
 
     } else if (ATOMID(type) == ATOMID("tmin")) {
         AddProperty( // min relative xmit time
-            new MP4Integer32Property("milliSecs"));
+            new MP4Integer32Property(*this, "milliSecs"));
 
     } else if (ATOMID(type) == ATOMID("tmax")) {
         AddProperty( // max relative xmit time
-            new MP4Integer32Property("milliSecs"));
+            new MP4Integer32Property(*this, "milliSecs"));
 
     } else if (ATOMID(type) == ATOMID("traf")) {
         ExpectChildAtom("tfhd", Required, OnlyOne);
@@ -373,24 +373,24 @@ MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
     } else if (ATOMID(type) == ATOMID("trex")) {
         AddVersionAndFlags();   /* 0, 1 */
         AddProperty( /* 2 */
-            new MP4Integer32Property("trackId"));
+            new MP4Integer32Property(*this, "trackId"));
         AddProperty( /* 3 */
-            new MP4Integer32Property("defaultSampleDesriptionIndex"));
+            new MP4Integer32Property(*this, "defaultSampleDesriptionIndex"));
         AddProperty( /* 4 */
-            new MP4Integer32Property("defaultSampleDuration"));
+            new MP4Integer32Property(*this, "defaultSampleDuration"));
         AddProperty( /* 5 */
-            new MP4Integer32Property("defaultSampleSize"));
+            new MP4Integer32Property(*this, "defaultSampleSize"));
         AddProperty( /* 6 */
-            new MP4Integer32Property("defaultSampleFlags"));
+            new MP4Integer32Property(*this, "defaultSampleFlags"));
 
     } else if (ATOMID(type) == ATOMID("trpy") ||
                ATOMID(type) == ATOMID("tpyl")) {
         AddProperty( // bytes sent including RTP headers
-            new MP4Integer64Property("bytes"));
+            new MP4Integer64Property(*this, "bytes"));
 
     } else if (ATOMID(type) == ATOMID("tsro")) {
         AddProperty(
-            new MP4Integer32Property("offset"));
+            new MP4Integer32Property(*this, "offset"));
     } else if (ATOMID(type) == ATOMID("wave")) {
         ExpectChildAtom("esds", Required, OnlyOne);
     } else {

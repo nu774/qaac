@@ -26,34 +26,34 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4VideoAtom::MP4VideoAtom (const char *type)
-        : MP4Atom(type)
+MP4VideoAtom::MP4VideoAtom (MP4File &file, const char *type)
+        : MP4Atom(file, type)
 {
-    AddReserved("reserved1", 6); /* 0 */
+    AddReserved(*this, "reserved1", 6); /* 0 */
 
     AddProperty( /* 1 */
-        new MP4Integer16Property("dataReferenceIndex"));
+        new MP4Integer16Property(*this, "dataReferenceIndex"));
 
-    AddReserved("reserved2", 16); /* 2 */
+    AddReserved(*this, "reserved2", 16); /* 2 */
 
     AddProperty( /* 3 */
-        new MP4Integer16Property("width"));
+        new MP4Integer16Property(*this, "width"));
     AddProperty( /* 4 */
-        new MP4Integer16Property("height"));
+        new MP4Integer16Property(*this, "height"));
 
-    AddReserved("reserved3", 14); /* 5 */
+    AddReserved(*this, "reserved3", 14); /* 5 */
 
     MP4StringProperty* pProp =
-        new MP4StringProperty("compressorName");
+        new MP4StringProperty(*this, "compressorName");
     pProp->SetFixedLength(32);
     pProp->SetCountedFormat(true);
     pProp->SetValue("");
     AddProperty(pProp); /* 6 */
 
     AddProperty(/* 7 */
-        new MP4Integer16Property("depth"));
+        new MP4Integer16Property(*this, "depth"));
     AddProperty(/* 8 */
-        new MP4Integer16Property("colorTableId"));
+        new MP4Integer16Property(*this, "colorTableId"));
     ExpectChildAtom("smi ", Optional, OnlyOne);
 }
 

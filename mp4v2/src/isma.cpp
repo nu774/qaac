@@ -40,7 +40,7 @@ static const uint8_t BifsV2Config[3] = {
 
 void MP4File::MakeIsmaCompliant(bool addIsmaComplianceSdp)
 {
-    ProtectWriteOperation("MP4MakeIsmaCompliant");
+    ProtectWriteOperation(__FILE__, __LINE__, __FUNCTION__);
 
     if (m_useIsma) {
         // already done
@@ -53,16 +53,17 @@ void MP4File::MakeIsmaCompliant(bool addIsmaComplianceSdp)
     try {
         audioTrackId = FindTrackId(0, MP4_AUDIO_TRACK_TYPE);
     }
-    catch (MP4Error* e) {
-        delete e;
+    catch ( Exception *x ) {
+        log.errorf(*x);
+        delete x;
     }
-
     MP4TrackId videoTrackId = MP4_INVALID_TRACK_ID;
     try {
         videoTrackId = FindTrackId(0, MP4_VIDEO_TRACK_TYPE);
     }
-    catch (MP4Error* e) {
-        delete e;
+    catch (Exception* x) {
+        log.errorf(*x);
+        delete x;
     }
     if (audioTrackId == MP4_INVALID_TRACK_ID &&
             videoTrackId == MP4_INVALID_TRACK_ID) return;
@@ -73,9 +74,8 @@ void MP4File::MakeIsmaCompliant(bool addIsmaComplianceSdp)
         audio_media_data_name = MP4GetTrackMediaDataName(this, audioTrackId);
         if (!(ATOMID(audio_media_data_name) == ATOMID("mp4a") ||
                 ATOMID(audio_media_data_name) == ATOMID("enca"))) {
-            VERBOSE_ERROR(m_verbosity,
-                          printf("MakeIsmaCompliant:can't make ISMA compliant when file contains an %s track\n", audio_media_data_name);
-                         );
+            log.errorf("%s: \"%s\": can't make ISMA compliant when file contains an %s track", 
+                       __FUNCTION__, GetFilename().c_str(), audio_media_data_name);
             return;
         }
     }
@@ -85,15 +85,14 @@ void MP4File::MakeIsmaCompliant(bool addIsmaComplianceSdp)
         video_media_data_name = MP4GetTrackMediaDataName(this, videoTrackId);
         if (!(ATOMID(video_media_data_name) == ATOMID("mp4v") ||
                 ATOMID(video_media_data_name) == ATOMID("encv"))) {
-            VERBOSE_ERROR(m_verbosity,
-                          printf("MakeIsmaCompliant:can't make ISMA compliant when file contains an %s track\n", video_media_data_name);
-                         );
+            log.errorf("%s: \"%s\": can't make ISMA compliant when file contains an %s track", __FUNCTION__, 
+                       GetFilename().c_str(), video_media_data_name);
             return;
         }
-        uint32_t verb = GetVerbosity();
-        SetVerbosity(verb & ~MP4_DETAILS_ERROR);
+        MP4LogLevel verb = log.verbosity;
+        log.setVerbosity(MP4_LOG_NONE);
         videoProfile = MP4GetVideoProfileLevel(this, videoTrackId);
-        SetVerbosity(verb);
+        log.setVerbosity(verb);
     }
 
     m_useIsma = true;
@@ -127,8 +126,9 @@ void MP4File::MakeIsmaCompliant(bool addIsmaComplianceSdp)
     try {
         sceneTrackId = FindTrackId(0, MP4_SCENE_TRACK_TYPE);
     }
-    catch (MP4Error *e) {
-        delete e;
+    catch (Exception *x) {
+        log.errorf(*x);
+        delete x;
     }
     if (sceneTrackId != MP4_INVALID_TRACK_ID) {
         DeleteTrack(sceneTrackId);
@@ -200,8 +200,7 @@ void MP4File::MakeIsmaCompliant(bool addIsmaComplianceSdp)
 
     SetSessionSdp(sdpBuf);
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("IOD SDP = %s\n", sdpBuf));
+    log.verbose1f("\"%s\": IOD SDP = %s", GetFilename().c_str(), sdpBuf);
 
     MP4Free(iodBase64);
     iodBase64 = NULL;
@@ -232,14 +231,14 @@ void MP4File::CreateIsmaIodFromFile(
     uint8_t** ppBytes,
     uint64_t* pNumBytes)
 {
-    MP4Descriptor* pIod = new MP4IODescriptor();
-    pIod->SetTag(MP4IODescrTag);
-    pIod->Generate();
-
     MP4Atom* pIodsAtom = FindAtom("moov.iods");
     ASSERT(pIodsAtom);
     MP4DescriptorProperty* pSrcIod =
         (MP4DescriptorProperty*)pIodsAtom->GetProperty(2);
+
+    MP4Descriptor* pIod = new MP4IODescriptor(*pIodsAtom);
+    pIod->SetTag(MP4IODescrTag);
+    pIod->Generate();
 
     CloneIntegerProperty(pIod, pSrcIod, "objectDescriptorId");
     CloneIntegerProperty(pIod, pSrcIod, "ODProfileLevelId");
@@ -280,8 +279,8 @@ void MP4File::CreateIsmaIodFromFile(
         &pBytes,
         &numBytes);
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("OD data =\n"); MP4HexDump(pBytes, numBytes));
+    log.hexDump(0, MP4_LOG_VERBOSE1, pBytes, numBytes, "\"%s\": OD data",
+                GetFilename().c_str() );
 
     char* odCmdBase64 = MP4ToBase64(pBytes, numBytes);
 
@@ -297,8 +296,8 @@ void MP4File::CreateIsmaIodFromFile(
                              (MP4Property**)&pUrlProperty))
         pUrlProperty->SetValue(urlBuf);
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("OD data URL = \042%s\042\n", urlBuf));
+    log.verbose1f("\"%s\": OD data URL = \042%s\042", GetFilename().c_str(),
+                  urlBuf);
 
     MP4Free(odCmdBase64);
     odCmdBase64 = NULL;
@@ -353,8 +352,8 @@ void MP4File::CreateIsmaIodFromFile(
         &pBytes,
         &numBytes);
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("Scene data =\n"); MP4HexDump(pBytes, numBytes));
+    log.hexDump(0, MP4_LOG_VERBOSE1, pBytes, numBytes, "\"%s\": Scene data",
+                GetFilename().c_str() );
 
     char *sceneCmdBase64 = MP4ToBase64(pBytes, numBytes);
 
@@ -367,8 +366,8 @@ void MP4File::CreateIsmaIodFromFile(
                                 (MP4Property**)&pUrlProperty))
         pUrlProperty->SetValue(urlBuf);
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("Scene data URL = \042%s\042\n", urlBuf));
+    log.verbose1f("\"%s\": Scene data URL = \042%s\042",
+                  GetFilename().c_str(), urlBuf);
 
     MP4Free(sceneCmdBase64);
     sceneCmdBase64 = NULL;
@@ -401,7 +400,7 @@ void MP4File::CreateIsmaIodFromFile(
 
 
     // finally get the whole thing written to a memory
-    pIod->WriteToMemory(this, ppBytes, pNumBytes);
+    pIod->WriteToMemory(*this, ppBytes, pNumBytes);
 
 
     // now carefully replace esd properties before destroying
@@ -412,8 +411,8 @@ void MP4File::CreateIsmaIodFromFile(
 
     delete pIod;
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("IOD data =\n"); MP4HexDump(*ppBytes, *pNumBytes));
+    log.hexDump(0, MP4_LOG_VERBOSE1, *ppBytes, *pNumBytes, "\"%s\": IOD data",
+                GetFilename().c_str() );
 }
 
 void MP4File::CreateIsmaIodFromParams(
@@ -432,8 +431,14 @@ void MP4File::CreateIsmaIodFromParams(
     uint8_t* pBytes = NULL;
     uint64_t numBytes;
 
+    // Descriptor constructors need a parent atom.  In this
+    // case we don't have one so create a dummy one.  This
+    // is OK as we only build the descriptor and then dump
+    // its contents to a buffer
+    MP4Atom     dummyParent(*this);
+
     // Create the IOD
-    MP4Descriptor* pIod = new MP4IODescriptor();
+    MP4Descriptor* pIod = new MP4IODescriptor(dummyParent);
     pIod->SetTag(MP4IODescrTag);
     pIod->Generate();
 
@@ -460,8 +465,8 @@ void MP4File::CreateIsmaIodFromParams(
         &pBytes,
         &numBytes);
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("Scene data =\n"); MP4HexDump(pBytes, numBytes));
+    log.hexDump(0, MP4_LOG_VERBOSE1, pBytes, numBytes, "\"%s\": Scene data",
+                GetFilename().c_str() );
 
     char* sceneCmdBase64 = MP4ToBase64(pBytes, numBytes);
 
@@ -471,8 +476,8 @@ void MP4File::CreateIsmaIodFromParams(
              "data:application/mpeg4-bifs-au;base64,%s",
              sceneCmdBase64);
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("Scene data URL = \042%s\042\n", urlBuf));
+    log.verbose1f("\"%s\": Scene data URL = \042%s\042", GetFilename().c_str(),
+                  urlBuf);
 
     /* MP4Descriptor* pSceneEsd = */
     CreateESD(
@@ -497,7 +502,7 @@ void MP4File::CreateIsmaIodFromParams(
 
     // Video
     MP4DescriptorProperty* pVideoEsdProperty =
-        new MP4DescriptorProperty();
+        new MP4DescriptorProperty(dummyParent);
     pVideoEsdProperty->SetTags(MP4ESDescrTag);
 
     /* MP4Descriptor* pVideoEsd = */
@@ -514,7 +519,7 @@ void MP4File::CreateIsmaIodFromParams(
 
     // Audio
     MP4DescriptorProperty* pAudioEsdProperty =
-        new MP4DescriptorProperty();
+        new MP4DescriptorProperty(dummyParent);
     pAudioEsdProperty->SetTags(MP4ESDescrTag);
 
     /* MP4Descriptor* pAudioEsd = */
@@ -539,8 +544,8 @@ void MP4File::CreateIsmaIodFromParams(
     delete pAudioEsdProperty;
     delete pVideoEsdProperty;
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("OD data = %" PRIu64 " bytes\n", numBytes); MP4HexDump(pBytes, numBytes));
+    log.hexDump(0, MP4_LOG_VERBOSE1,pBytes, numBytes,"\"%s\": OD data = %" PRIu64 " bytes",
+                GetFilename().c_str(), numBytes);
 
     char* odCmdBase64 = MP4ToBase64(pBytes, numBytes);
 
@@ -550,8 +555,7 @@ void MP4File::CreateIsmaIodFromParams(
                  "data:application/mpeg4-od-au;base64,%s",
                  odCmdBase64);
 
-        VERBOSE_ISMA(GetVerbosity(),
-                     printf("OD data URL = \042%s\042\n", urlBuf));
+        log.verbose1f("\"%s\": OD data URL = \042%s\042", GetFilename().c_str(), urlBuf);
 
         /* MP4Descriptor* pOdEsd = */
         CreateESD(
@@ -574,12 +578,12 @@ void MP4File::CreateIsmaIodFromParams(
     pBytes = NULL;
 
     // finally get the whole thing written to a memory
-    pIod->WriteToMemory(this, ppIodBytes, pIodNumBytes);
+    pIod->WriteToMemory(*this, ppIodBytes, pIodNumBytes);
 
     delete pIod;
 
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("IOD data =\n"); MP4HexDump(*ppIodBytes, *pIodNumBytes));
+    log.hexDump(0, MP4_LOG_VERBOSE1, *ppIodBytes, *pIodNumBytes,"\"%s\": IOD data",
+                GetFilename().c_str() );
 }
 
 void MP4File::CreateESD(
@@ -668,7 +672,12 @@ void MP4File::CreateIsmaODUpdateCommandFromFileForFile(
     uint8_t** ppBytes,
     uint64_t* pNumBytes)
 {
-    MP4Descriptor* pCommand = CreateODCommand(MP4ODUpdateODCommandTag);
+    // Descriptor constructors need a parent atom.  In this
+    // case we don't have one so create a dummy one.  This
+    // is OK as we only build the descriptor and then dump
+    // its contents to a buffer
+    MP4Atom     dummyParent(*this);
+    MP4Descriptor* pCommand = CreateODCommand(dummyParent, MP4ODUpdateODCommandTag);
     pCommand->Generate();
 
     for (uint8_t i = 0; i < 2; i++) {
@@ -725,7 +734,7 @@ void MP4File::CreateIsmaODUpdateCommandFromFileForFile(
         pRefIndexProperty->SetValue(mpodIndex);
     }
 
-    pCommand->WriteToMemory(this, ppBytes, pNumBytes);
+    pCommand->WriteToMemory(*this, ppBytes, pNumBytes);
 
     delete pCommand;
 }
@@ -807,8 +816,10 @@ void MP4File::CreateIsmaODUpdateCommandFromFileForStream(
 
     CreateIsmaODUpdateCommandForStream(
         pAudioEsd, pVideoEsd, ppBytes, pNumBytes);
-    VERBOSE_ISMA(GetVerbosity(),
-                 printf("After CreateImsaODUpdateCommandForStream len %" PRIu64 " =\n", *pNumBytes); MP4HexDump(*ppBytes, *pNumBytes));
+    log.hexDump(0, MP4_LOG_VERBOSE1, *ppBytes, *pNumBytes,
+                "\"%s\": After CreateImsaODUpdateCommandForStream len %" PRIu64,
+                GetFilename().c_str(), *pNumBytes);
+
     // return SL config values to 2 (file)
     // return ESID values to 0
     if (pAudioSLConfigPredef) {
@@ -840,8 +851,13 @@ void MP4File::CreateIsmaODUpdateCommandForStream(
     MP4Descriptor* pAudioOd = NULL;
     MP4Descriptor* pVideoOd = NULL;
 
+    // Descriptor constructors need a parent atom.  In this
+    // case we don't have one so create a dummy one.  This
+    // is OK as we only build the descriptor and then dump
+    // its contents to a buffer
+    MP4Atom     dummyParent(*this);
     MP4Descriptor* pCommand =
-        CreateODCommand(MP4ODUpdateODCommandTag);
+        CreateODCommand(dummyParent, MP4ODUpdateODCommandTag);
     pCommand->Generate();
 
     for (uint8_t i = 0; i < 2; i++) {
@@ -886,7 +902,7 @@ void MP4File::CreateIsmaODUpdateCommandForStream(
     }
 
     // serialize OD command
-    pCommand->WriteToMemory(this, ppBytes, pNumBytes);
+    pCommand->WriteToMemory(*this, ppBytes, pNumBytes);
 
     // detach from esd descriptor params
     if (pAudioOd) {

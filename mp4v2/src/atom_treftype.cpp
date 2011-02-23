@@ -26,19 +26,19 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4TrefTypeAtom::MP4TrefTypeAtom(const char* type)
-        : MP4Atom(type)
+MP4TrefTypeAtom::MP4TrefTypeAtom(MP4File &file, const char* type)
+        : MP4Atom(file, type)
 {
     MP4Integer32Property* pCount =
-        new MP4Integer32Property("entryCount");
+        new MP4Integer32Property(*this, "entryCount");
     pCount->SetImplicit();
     AddProperty(pCount); /* 0 */
 
-    MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+    MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
     AddProperty(pTable); /* 1 */
 
     pTable->AddProperty( /* 1, 0 */
-        new MP4Integer32Property("trackId"));
+        new MP4Integer32Property(pTable->GetParentAtom(), "trackId"));
 }
 
 void MP4TrefTypeAtom::Read()

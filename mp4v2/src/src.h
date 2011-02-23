@@ -24,7 +24,7 @@ namespace mp4v2 { namespace impl {
 #include "itmf/type.h"
 
 #include "util.h"
-#include "mp4error.h"
+#include "log.h"
 #include "mp4util.h"
 #include "mp4array.h"
 #include "mp4track.h"

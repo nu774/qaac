@@ -101,9 +101,11 @@ uint32_t MP4GetTrackTimeScale(
  *  @param hFile handle of file for operation.
  *  @param trackId id of track for operation.
  *  @param timeScale desired time scale for the track.
+ *
+ *  @return <b>true</b> on success, <b>false</b> on failure.
  */
 MP4V2_EXPORT
-void MP4SetTrackTimeScale(
+bool MP4SetTrackTimeScale(
     MP4FileHandle hFile,
     MP4TrackId    trackId,
     uint32_t      value );
@@ -220,7 +222,7 @@ bool MP4GetTrackH264ProfileLevel(
     uint8_t*      pLevel );
 
 MP4V2_EXPORT
-void MP4GetTrackH264SeqPictHeaders(
+bool MP4GetTrackH264SeqPictHeaders(
     MP4FileHandle hFile,
     MP4TrackId    trackId,
     uint8_t***    pSeqHeaders,

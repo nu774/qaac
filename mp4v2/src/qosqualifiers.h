@@ -32,7 +32,7 @@ const uint8_t MP4QosDescrTag                = 0x0C;
 #if 0
 class MP4QosDescriptor : public MP4Descriptor {
 public:
-    MP4QosDescriptor();
+    MP4QosDescriptor(MP4Atom &parentAtom);
 };
 
 typedef MP4Descriptor MP4QosQualifier;
@@ -51,49 +51,57 @@ const uint8_t MP4QosTagsEnd             = 0xFF;
 #if 0
 class MP4MaxDelayQosQualifier : public MP4QosQualifier {
 public:
-    MP4MaxDelayQosQualifier();
+    MP4MaxDelayQosQualifier(MP4Atom &parentAtom);
 };
 
 class MP4PrefMaxDelayQosQualifier : public MP4QosQualifier {
 public:
-    MP4PrefMaxDelayQosQualifier();
+    MP4PrefMaxDelayQosQualifier(MP4Atom &parentAtom);
 };
 
 class MP4LossProbQosQualifier : public MP4QosQualifier {
 public:
-    MP4LossProbQosQualifier();
+    MP4LossProbQosQualifier(MP4Atom &parentAtom);
 };
 
 class MP4MaxGapLossQosQualifier : public MP4QosQualifier {
 public:
-    MP4MaxGapLossQosQualifier();
+    MP4MaxGapLossQosQualifier(MP4Atom &parentAtom);
 };
 
 class MP4MaxAUSizeQosQualifier : public MP4QosQualifier {
 public:
-    MP4MaxAUSizeQosQualifier();
+    MP4MaxAUSizeQosQualifier(MP4Atom &parentAtom);
 };
 
 class MP4AvgAUSizeQosQualifier : public MP4QosQualifier {
 public:
-    MP4AvgAUSizeQosQualifier();
+    MP4AvgAUSizeQosQualifier(MP4Atom &parentAtom);
 };
 
 class MP4MaxAURateQosQualifier : public MP4QosQualifier {
 public:
-    MP4MaxAURateQosQualifier();
+    MP4MaxAURateQosQualifier(MP4Atom &parentAtom);
 };
 #else
 class MP4QosDescriptorBase : public MP4Descriptor {
 public:
-    MP4QosDescriptorBase(uint8_t tag);
+    MP4QosDescriptorBase(MP4Atom &parentAtom, uint8_t tag);
+private:
+    MP4QosDescriptorBase();
+    MP4QosDescriptorBase ( const MP4QosDescriptorBase &src );
+    MP4QosDescriptorBase &operator= ( const MP4QosDescriptorBase &src );
 };
 
 #endif
 class MP4UnknownQosQualifier : public MP4Descriptor {
 public:
+    MP4UnknownQosQualifier(MP4Atom &parentAtom);
+    void Read(MP4File& file);
+private:
     MP4UnknownQosQualifier();
-    void Read(MP4File* pFile);
+    MP4UnknownQosQualifier ( const MP4UnknownQosQualifier &src );
+    MP4UnknownQosQualifier &operator= ( const MP4UnknownQosQualifier &src );
 };
 
 ///////////////////////////////////////////////////////////////////////////////

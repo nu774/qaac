@@ -25,8 +25,8 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4MdhdAtom::MP4MdhdAtom()
-        : MP4Atom("mdhd")
+MP4MdhdAtom::MP4MdhdAtom(MP4File &file)
+        : MP4Atom(file, "mdhd")
 {
     AddVersionAndFlags();
 }
@@ -35,34 +35,34 @@ void MP4MdhdAtom::AddProperties(uint8_t version)
 {
     if (version == 1) {
         AddProperty(
-            new MP4Integer64Property("creationTime"));
+            new MP4Integer64Property(*this, "creationTime"));
         AddProperty(
-            new MP4Integer64Property("modificationTime"));
+            new MP4Integer64Property(*this, "modificationTime"));
     } else {
         AddProperty(
-            new MP4Integer32Property("creationTime"));
+            new MP4Integer32Property(*this, "creationTime"));
         AddProperty(
-            new MP4Integer32Property("modificationTime"));
+            new MP4Integer32Property(*this, "modificationTime"));
     }
 
     AddProperty(
-        new MP4Integer32Property("timeScale"));
+        new MP4Integer32Property(*this, "timeScale"));
 
     if (version == 1) {
         AddProperty(
-            new MP4Integer64Property("duration"));
+            new MP4Integer64Property(*this, "duration"));
     } else {
         AddProperty(
-            new MP4Integer32Property("duration"));
+            new MP4Integer32Property(*this, "duration"));
     }
 
-    AddProperty( new MP4LanguageCodeProperty( "language" ));
-    AddReserved("reserved", 2);
+    AddProperty( new MP4LanguageCodeProperty(*this,  "language" ));
+    AddReserved(*this, "reserved", 2);
 }
 
 void MP4MdhdAtom::Generate()
 {
-    uint8_t version = m_pFile->Use64Bits(GetType()) ? 1 : 0;
+    uint8_t version = m_File.Use64Bits(GetType()) ? 1 : 0;
     SetVersion(version);
     AddProperties(version);
 

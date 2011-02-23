@@ -7,7 +7,7 @@
 
 using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Atom;
-using mp4v2::impl::MP4Error;
+using mp4v2::impl::Exception;
 
 class ShortTagWriter {
     typedef std::codecvt<wchar_t, char, std::mbstate_t> codec_t;
@@ -65,7 +65,7 @@ public:
 		"com.apple.iTunes",
 		reinterpret_cast<const uint8_t*>(sv.c_str()),
 		sv.size());
-	} catch (MP4Error *e) {
+	} catch (Exception *e) {
 	    handle_mp4error(e);
 	}
     }
@@ -85,7 +85,7 @@ void TagEditor::save()
 	utf8_codecvt_facet u8codec;
 	std::string utf8_name = w2m(m_filename, u8codec);
 
-	MP4FileX file(0);
+	MP4FileX file;
 	file.Modify(utf8_name.c_str());
 
 	if (m_chapters.size()) {
@@ -107,7 +107,7 @@ void TagEditor::save()
 		LongTagWriter(file, u8codec));
 
 	file.Close();
-    } catch (MP4Error *e) {
+    } catch (Exception *e) {
 	handle_mp4error(e);
     }
 }
@@ -179,7 +179,7 @@ M4ATagParser::M4ATagParser(const std::wstring &filename)
 	utf8_codecvt_facet u8codec;
 	std::string utf8_name = w2m(filename, u8codec);
 
-	MP4File file(0);
+	MP4File file;
 	file.Read(utf8_name.c_str(), 0);
 	MP4TrackId track_id = file.FindTrackId(0, MP4_AUDIO_TRACK_TYPE);
 	MP4Atom *atom
@@ -209,7 +209,7 @@ M4ATagParser::M4ATagParser(const std::wstring &filename)
 		if (!v.empty()) m_tags[fcc] = v;
 	    }
 	}
-    } catch (MP4Error *e) {
+    } catch (Exception *e) {
 	handle_mp4error(e);
     }
 }

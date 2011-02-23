@@ -34,20 +34,20 @@ namespace impl {
 
 #define H263_VENDOR 0x6d346970
 
-MP4D263Atom::MP4D263Atom()
-        : MP4Atom("d263")
+MP4D263Atom::MP4D263Atom(MP4File &file)
+        : MP4Atom(file, "d263")
 {
     AddProperty( /* 0 */
-        new MP4Integer32Property("vendor"));
+        new MP4Integer32Property(*this, "vendor"));
 
     AddProperty( /* 1 */
-        new MP4Integer8Property("decoderVersion"));
+        new MP4Integer8Property(*this, "decoderVersion"));
 
     AddProperty( /* 2 */
-        new MP4Integer8Property("h263Level"));
+        new MP4Integer8Property(*this, "h263Level"));
 
     AddProperty( /* 3 */
-        new MP4Integer8Property("h263Profile"));
+        new MP4Integer8Property(*this, "h263Profile"));
 
     ExpectChildAtom("bitr", Optional, OnlyOne);
 

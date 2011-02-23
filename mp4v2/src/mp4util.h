@@ -33,58 +33,15 @@ namespace mp4v2 { namespace impl {
 #ifndef ASSERT
 #   define ASSERT(expr) \
         if (!(expr)) { \
-            throw new MP4Error("assert failure", LIBMPV42_STRINGIFY((expr))); \
+            throw new Exception("assert failure: "LIBMPV42_STRINGIFY((expr)), __FILE__, __LINE__, __FUNCTION__ ); \
         }
 #endif
 
 #define WARNING(expr) \
     if (expr) { \
-        fflush(stdout); \
-        fprintf(stderr, "Warning (%s) in %s at line %u\n", \
-            LIBMPV42_STRINGIFY(expr), __FILE__, __LINE__); \
+        log.errorf("Warning (%s) in %s at line %u", \
+                         LIBMPV42_STRINGIFY(expr), __FILE__, __LINE__); \
     }
-
-#define VERBOSE(exprverbosity, verbosity, expr) \
-    if (((exprverbosity) & (verbosity)) == (exprverbosity)) { expr; }
-
-#define VERBOSE_ERROR(verbosity, expr)      \
-    VERBOSE(MP4_DETAILS_ERROR, verbosity, expr)
-
-#define VERBOSE_WARNING(verbosity, expr)        \
-    VERBOSE(MP4_DETAILS_WARNING, verbosity, expr)
-
-#define VERBOSE_READ(verbosity, expr)       \
-    VERBOSE(MP4_DETAILS_READ, verbosity, expr)
-
-#define VERBOSE_READ_TABLE(verbosity, expr) \
-    VERBOSE((MP4_DETAILS_READ | MP4_DETAILS_TABLE), verbosity, expr)
-
-#define VERBOSE_READ_SAMPLE(verbosity, expr)    \
-    VERBOSE((MP4_DETAILS_READ | MP4_DETAILS_SAMPLE), verbosity, expr)
-
-#define VERBOSE_READ_HINT(verbosity, expr)  \
-    VERBOSE((MP4_DETAILS_READ | MP4_DETAILS_HINT), verbosity, expr)
-
-#define VERBOSE_WRITE(verbosity, expr)      \
-    VERBOSE(MP4_DETAILS_WRITE, verbosity, expr)
-
-#define VERBOSE_WRITE_TABLE(verbosity, expr)    \
-    VERBOSE((MP4_DETAILS_WRITE | MP4_DETAILS_TABLE), verbosity, expr)
-
-#define VERBOSE_WRITE_SAMPLE(verbosity, expr)   \
-    VERBOSE((MP4_DETAILS_WRITE | MP4_DETAILS_SAMPLE), verbosity, expr)
-
-#define VERBOSE_WRITE_HINT(verbosity, expr) \
-    VERBOSE((MP4_DETAILS_WRITE | MP4_DETAILS_HINT), verbosity, expr)
-
-#define VERBOSE_FIND(verbosity, expr)       \
-    VERBOSE(MP4_DETAILS_FIND, verbosity, expr)
-
-#define VERBOSE_ISMA(verbosity, expr)       \
-    VERBOSE(MP4_DETAILS_ISMA, verbosity, expr)
-
-#define VERBOSE_EDIT(verbosity, expr)       \
-    VERBOSE(MP4_DETAILS_EDIT, verbosity, expr)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -94,30 +51,11 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-inline void Indent(FILE* pFile, uint8_t depth) {
-    fprintf(pFile, "%*c", depth, ' ');
-}
-
-static inline void MP4Printf(const char* fmt, ...) MP4V2_WFORMAT_PRINTF(1,2);
-
-static inline void MP4Printf(const char* fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    // TBD API call to set error_msg_func instead of just printf
-    vprintf(fmt, ap);
-    va_end(ap);
-}
-
-void MP4HexDump(
-    uint8_t* pBytes, uint32_t numBytes,
-    FILE* pFile = stdout, uint8_t indent = 0);
-
 inline void* MP4Malloc(size_t size) {
     if (size == 0) return NULL;
     void* p = malloc(size);
     if (p == NULL && size > 0) {
-        throw new MP4Error(errno);
+        throw new PlatformException("malloc failed",errno,__FILE__,__LINE__,__FUNCTION__);
     }
     return p;
 }
@@ -140,7 +78,7 @@ inline void* MP4Realloc(void* p, uint32_t newSize) {
     }
     p = realloc(p, newSize);
     if (p == NULL && newSize > 0) {
-        throw new MP4Error(errno);
+        throw new PlatformException("malloc failed",errno,__FILE__,__LINE__,__FUNCTION__);
     }
     return p;
 }
@@ -165,8 +103,7 @@ char* MP4ToBase16(const uint8_t* pData, uint32_t dataSize);
 
 char* MP4ToBase64(const uint8_t* pData, uint32_t dataSize);
 
-const char* MP4NormalizeTrackType(const char* type,
-                                  uint32_t verbosity);
+const char* MP4NormalizeTrackType(const char* type);
 
 ///////////////////////////////////////////////////////////////////////////////
 

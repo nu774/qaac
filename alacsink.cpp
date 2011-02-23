@@ -4,8 +4,7 @@
 #include "alacsink.h"
 
 ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder)
-	: m_mp4file(0),
-	  m_filename(path),
+	: m_filename(path),
 	  m_closed(false)
 {
     static const char * const compatibleBrands[] = { "M4A ", "mp42" };
@@ -30,7 +29,7 @@ ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder)
 	m_track_id = m_mp4file.AddAlacAudioTrack(sample_rate,
 		reinterpret_cast<uint8_t*>(&cookie[20]),
 		cookie.size() - 28);
-    } catch (mp4v2::impl::MP4Error *e) {
+    } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
     }
 }
@@ -41,7 +40,7 @@ void ALACSink::close()
 	m_closed = true;
 	try {
 	    m_mp4file.Close();
-	} catch (mp4v2::impl::MP4Error *e) {
+	} catch (mp4v2::impl::Exception *e) {
 	    handle_mp4error(e);
 	}
     }

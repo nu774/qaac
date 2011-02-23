@@ -24,15 +24,15 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4PaspAtom::MP4PaspAtom()
-        : MP4Atom("pasp")
+MP4PaspAtom::MP4PaspAtom(MP4File &file)
+        : MP4Atom(file, "pasp")
 {
 
     AddProperty( /* 0 */
-        new MP4Integer32Property("hSpacing"));
+        new MP4Integer32Property(*this, "hSpacing"));
 
     AddProperty( /* 1 */
-        new MP4Integer32Property("vSpacing"));
+        new MP4Integer32Property(*this, "vSpacing"));
 
 }
 

@@ -28,11 +28,11 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4SmiAtom::MP4SmiAtom()
-        : MP4Atom("meta")
+MP4SmiAtom::MP4SmiAtom(MP4File &file)
+        : MP4Atom(file, "meta")
 {
 
-    AddProperty( new MP4BytesProperty("metadata"));
+    AddProperty( new MP4BytesProperty(*this, "metadata"));
 
 }
 

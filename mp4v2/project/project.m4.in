@@ -1,0 +1,25 @@
+define(<<__PROJECT_name>>,            <<@PROJECT_name@>>)dnl
+define(<<__PROJECT_name_lower>>,      <<@PROJECT_name_lower@>>)dnl
+define(<<__PROJECT_name_upper>>,      <<@PROJECT_name_upper@>>)dnl
+define(<<__PROJECT_name_formal>>,     <<@PROJECT_name_formal@>>)dnl
+define(<<__PROJECT_url_website>>,     <<@PROJECT_url_website@>>)dnl
+define(<<__PROJECT_url_downloads>>,   <<@PROJECT_url_downloads@>>)dnl
+define(<<__PROJECT_url_discussion>>,  <<@PROJECT_url_discussion@>>)dnl
+define(<<__PROJECT_irc>>,             <<@PROJECT_irc@>>)dnl
+define(<<__PROJECT_bugreport>>,       <<@PROJECT_bugreport@>>)dnl
+define(<<__PROJECT_version>>,         <<@PROJECT_version@>>)dnl
+define(<<__PROJECT_version_hex>>,     <<@PROJECT_version_hex@>>)dnl
+define(<<__PROJECT_version_major>>,   <<@PROJECT_version_major@>>)dnl
+define(<<__PROJECT_version_minor>>,   <<@PROJECT_version_minor@>>)dnl
+define(<<__PROJECT_version_point>>,   <<@PROJECT_version_point@>>)dnl
+define(<<__PROJECT_repo_url>>,        <<@PROJECT_repo_url@>>)dnl
+define(<<__PROJECT_repo_branch>>,     <<@PROJECT_repo_branch@>>)dnl
+define(<<__PROJECT_repo_root>>,       <<@PROJECT_repo_root@>>)dnl
+define(<<__PROJECT_repo_uuid>>,       <<@PROJECT_repo_uuid@>>)dnl
+define(<<__PROJECT_repo_rev>>,        <<@PROJECT_repo_rev@>>)dnl
+define(<<__PROJECT_repo_date>>,       <<@PROJECT_repo_date@>>)dnl
+define(<<__PROJECT_repo_type>>,       <<@PROJECT_repo_type@>>)dnl
+define(<<__PROJECT_build>>,           <<@PROJECT_build@>>)dnl
+dnl
+define(<<__MAKE_ABS_TOP_BUILDDIR>>,  <<@abs_top_builddir@>>)dnl
+define(<<__MAKE_ABS_TOP_SRCDIR>>,    <<@abs_top_srcdir@>>)dnl

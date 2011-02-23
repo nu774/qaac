@@ -26,21 +26,21 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4StdpAtom::MP4StdpAtom()
-        : MP4Atom("stdp")
+MP4StdpAtom::MP4StdpAtom(MP4File &file)
+        : MP4Atom(file, "stdp")
 {
     AddVersionAndFlags();
 
     MP4Integer32Property* pCount =
-        new MP4Integer32Property("entryCount");
+        new MP4Integer32Property(*this, "entryCount");
     pCount->SetImplicit();
     AddProperty(pCount);
 
-    MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+    MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
     AddProperty(pTable);
 
     pTable->AddProperty(
-        new MP4Integer16Property("priority"));
+        new MP4Integer16Property(pTable->GetParentAtom(), "priority"));
 }
 
 void MP4StdpAtom::Read()

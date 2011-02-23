@@ -26,19 +26,19 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4SdpAtom::MP4SdpAtom() : MP4Atom("sdp ")
+MP4SdpAtom::MP4SdpAtom(MP4File &file) : MP4Atom(file, "sdp ")
 {
     AddProperty(
-        new MP4StringProperty("sdpText"));
+        new MP4StringProperty(*this, "sdpText"));
 }
 
 void MP4SdpAtom::Read()
 {
     // read sdp string, length is implicit in size of atom
-    uint64_t size = GetEnd() - m_pFile->GetPosition();
+    uint64_t size = GetEnd() - m_File.GetPosition();
     char* data = (char*)MP4Malloc(size + 1);
     ASSERT(data != NULL);
-    m_pFile->ReadBytes((uint8_t*)data, size);
+    m_File.ReadBytes((uint8_t*)data, size);
     data[size] = '\0';
     ((MP4StringProperty*)m_pProperties[0])->SetValue(data);
     MP4Free(data);

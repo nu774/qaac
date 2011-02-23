@@ -597,8 +597,9 @@ char* MP4Info(
                 info = PrintTrackInfo(mp4File, trackId);
             }
         }
-        catch (MP4Error* e) {
-            delete e;
+        catch (Exception* x) {
+            mp4v2::impl::log.errorf(*x);
+            delete x;
         }
     }
 

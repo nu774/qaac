@@ -7,9 +7,9 @@
 #undef FindAtom
 #include "impl.h"
 
-std::string format_mp4error(const mp4v2::impl::MP4Error &e);
+std::string format_mp4error(const mp4v2::impl::Exception &e);
 
-inline void handle_mp4error(mp4v2::impl::MP4Error *e)
+inline void handle_mp4error(mp4v2::impl::Exception *e)
 {
     std::runtime_error re(format_mp4error(*e));
     delete e;
@@ -18,7 +18,7 @@ inline void handle_mp4error(mp4v2::impl::MP4Error *e)
 
 class MP4FileX: public mp4v2::impl::MP4File {
 public:
-    MP4FileX(uint32_t verbosity=0): mp4v2::impl::MP4File(verbosity) {}
+    MP4FileX() {}
 
     MP4TrackId AddAlacAudioTrack(uint32_t timeScale, const uint8_t *cookie,
 	    size_t cookieLength);

@@ -26,8 +26,8 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4FreeAtom::MP4FreeAtom( const char* type )
-    : MP4Atom( type ? type : "free" )
+MP4FreeAtom::MP4FreeAtom( MP4File &file, const char* type )
+    : MP4Atom( file, type ? type : "free" )
 {
 }
 
@@ -38,16 +38,14 @@ void MP4FreeAtom::Read()
 
 void MP4FreeAtom::Write()
 {
-    ASSERT(m_pFile);
-
     bool use64 = (GetSize() > (0xFFFFFFFF - 8));
     BeginWrite(use64);
 #if 1
     for (uint64_t ix = 0; ix < GetSize(); ix++) {
-        m_pFile->WriteUInt8(0);
+        m_File.WriteUInt8(0);
     }
 #else
-    m_pFile->SetPosition(m_pFile->GetPosition() + GetSize());
+    m_File.SetPosition(m_File.GetPosition() + GetSize());
 #endif
     FinishWrite(use64);
 }

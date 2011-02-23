@@ -125,7 +125,7 @@ CoverArtBox::add( MP4FileHandle hFile, const Item& item )
 
     // no empty atom found, create one.
     if( !data ) {
-        data = MP4Atom::CreateAtom( covr, "data" );
+        data = MP4Atom::CreateAtom( file, covr, "data" );
         covr->AddChildAtom( data );
         data->Generate();
         index = covr->GetNumberOfChildAtoms() - 1;

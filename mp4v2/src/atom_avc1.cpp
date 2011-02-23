@@ -26,31 +26,31 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4Avc1Atom::MP4Avc1Atom()
-        : MP4Atom("avc1")
+MP4Avc1Atom::MP4Avc1Atom(MP4File &file)
+        : MP4Atom(file, "avc1")
 {
-    AddReserved("reserved1", 6); /* 0 */
+    AddReserved(*this, "reserved1", 6); /* 0 */
 
     AddProperty( /* 1 */
-        new MP4Integer16Property("dataReferenceIndex"));
+        new MP4Integer16Property(*this, "dataReferenceIndex"));
 
-    AddReserved("reserved2", 16); /* 2 */
+    AddReserved(*this, "reserved2", 16); /* 2 */
 
     AddProperty( /* 3 */
-        new MP4Integer16Property("width"));
+        new MP4Integer16Property(*this, "width"));
     AddProperty( /* 4 */
-        new MP4Integer16Property("height"));
+        new MP4Integer16Property(*this, "height"));
 
-    AddReserved("reserved3", 14); /* 5 */
+    AddReserved(*this, "reserved3", 14); /* 5 */
 
     MP4StringProperty* pProp =
-        new MP4StringProperty("compressorName");
+        new MP4StringProperty(*this, "compressorName");
     pProp->SetFixedLength(32);
     pProp->SetCountedFormat(true);
     pProp->SetValue("JVT/AVC Coding");
     AddProperty(pProp); /* 6 */
 
-    AddReserved("reserved4", 4); /* 7 */
+    AddReserved(*this, "reserved4", 4); /* 7 */
 
     ExpectChildAtom("avcC", Required, OnlyOne);
     ExpectChildAtom("btrt", Optional, OnlyOne);

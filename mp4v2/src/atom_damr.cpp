@@ -34,23 +34,23 @@ namespace impl {
 
 #define AMR_VENDOR 0x6d346970
 
-MP4DamrAtom::MP4DamrAtom()
-        : MP4Atom("damr")
+MP4DamrAtom::MP4DamrAtom(MP4File &file)
+        : MP4Atom(file, "damr")
 {
     AddProperty( /* 0 */
-        new MP4Integer32Property("vendor"));
+        new MP4Integer32Property(*this, "vendor"));
 
     AddProperty( /* 1 */
-        new MP4Integer8Property("decoderVersion"));
+        new MP4Integer8Property(*this, "decoderVersion"));
 
     AddProperty( /* 2 */
-        new MP4Integer16Property("modeSet"));
+        new MP4Integer16Property(*this, "modeSet"));
 
     AddProperty( /* 3 */
-        new MP4Integer8Property("modeChangePeriod"));
+        new MP4Integer8Property(*this, "modeChangePeriod"));
 
     AddProperty( /* 4 */
-        new MP4Integer8Property("framesPerSample"));
+        new MP4Integer8Property(*this, "framesPerSample"));
 
 }
 

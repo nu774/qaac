@@ -77,7 +77,7 @@ protected:
         \
         void Insert(type newElement, MP4ArrayIndex newIndex) { \
             if (newIndex > m_numElements) { \
-                throw new MP4Error(ERANGE, "MP4Array::Insert"); \
+                  throw new PlatformException("illegal array index", ERANGE, __FILE__, __LINE__, __FUNCTION__); \
             } \
             if (m_numElements == m_maxNumElements) { \
                 m_maxNumElements = max(m_maxNumElements, (MP4ArrayIndex)1) * 2; \
@@ -92,7 +92,9 @@ protected:
         \
         void Delete(MP4ArrayIndex index) { \
             if (!ValidIndex(index)) { \
-                throw new MP4Error(ERANGE, "MP4Array::Delete"); \
+                ostringstream msg; \
+                msg << "illegal array index: " << index << " of " << m_numElements; \
+                throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__); \
             } \
             m_numElements--; \
             if (index < m_numElements) { \
@@ -109,7 +111,9 @@ protected:
         \
         type& operator[](MP4ArrayIndex index) { \
             if (!ValidIndex(index)) { \
-                throw new MP4Error(ERANGE, "index %u of %u", "MP4Array::[]", index, m_numElements); \
+                ostringstream msg; \
+                msg << "illegal array index: " << index << " of " << m_numElements; \
+                throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__ ); \
             } \
             return m_elements[index]; \
         } \

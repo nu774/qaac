@@ -349,7 +349,7 @@ MP4TrackId MP4CopyTrack(
     MP4TrackId    dstHintTrackReferenceTrack DEFAULT(MP4_INVALID_TRACK_ID) );
 
 MP4V2_EXPORT
-void MP4DeleteTrack(
+bool MP4DeleteTrack(
     MP4FileHandle hFile,
     MP4TrackId    trackId );
 
@@ -395,7 +395,7 @@ bool MP4GetTrackDurationPerChunk(
  *  @param trackId id of track for operation.
  *  @param duration in timescale units.
  *
- *  return <b>true</b> on success, <b>false</b> on failure.
+ *  @return <b>true</b> on success, <b>false</b> on failure.
  */
 MP4V2_EXPORT
 bool MP4SetTrackDurationPerChunk(
@@ -403,8 +403,14 @@ bool MP4SetTrackDurationPerChunk(
     MP4TrackId    trackId,
     MP4Duration   duration );
 
+/**
+ *  @param hFile handle of file for operation.
+ *  @param trackId id of track for operation.
+ *
+ *  @return <b>true</b> on success, <b>false</b> on failure.
+ */
 MP4V2_EXPORT
-void MP4AddIPodUUID(
+bool MP4AddIPodUUID(
     MP4FileHandle hFile,
     MP4TrackId    trackId );
 

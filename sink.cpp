@@ -39,8 +39,7 @@ uint32_t getChannelConfig(const AudioChannelLayout *layout)
 using mp4v2::impl::MP4Atom;
 
 MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder)
-	: m_mp4file(0),
-	  m_filename(path),
+	: m_filename(path),
 	  m_closed(false)
 {
     static const char * const compatibleBrands[] = { "M4A ", "mp42" };
@@ -106,7 +105,7 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder)
 		atom = parent;
 	    }
 	}
-    } catch (mp4v2::impl::MP4Error *e) {
+    } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
     }
 }
@@ -117,7 +116,7 @@ void MP4Sink::close()
 	m_closed = true;
 	try {
 	    m_mp4file.Close();
-	} catch (mp4v2::impl::MP4Error *e) {
+	} catch (mp4v2::impl::Exception *e) {
 	    handle_mp4error(e);
 	}
     }

@@ -14,17 +14,17 @@
 // 
 //  The Initial Developer of the Original Code is Kona Blend.
 //  Portions created by Kona Blend are Copyright (C) 2008.
+//  Portions created by David Byron are Copyright (C) 2009, 2010, 2011.
 //  All Rights Reserved.
 //
 //  Contributors:
 //      Kona Blend, kona8lend@@gmail.com
 //      Rouven Wessling, mp4v2@rouvenwessling.de
+//      David Byron, dbyron0@gmail.com
 //
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "src/impl.h"
-
-#define PRINT_ERROR(e) VERBOSE_ERROR(((MP4File*)hFile)->GetVerbosity(), e->Print());
 
 using namespace mp4v2::impl;
 
@@ -32,12 +32,28 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void
+bool
 MP4TagsAddArtwork( const MP4Tags* tags, MP4TagArtwork* artwork )
 {
+    if( !tags || !tags->__handle || !artwork )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(tags->__handle);
     MP4Tags* c = const_cast<MP4Tags*>(tags);
-    cpp.c_addArtwork( c, *artwork );
+
+    try {
+        cpp.c_addArtwork( c, *artwork );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed", __FUNCTION__);
+    }
+
+    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -46,9 +62,33 @@ const MP4Tags*
 MP4TagsAlloc()
 {
     MP4Tags* result = NULL;
-    itmf::Tags& m = *new itmf::Tags();
-    m.c_alloc( result );
-    return result;
+    itmf::Tags* m = NULL;
+
+    try {
+        m = new itmf::Tags();
+        m->c_alloc( result );
+        return result;
+    }
+    catch( std::bad_alloc ) {
+        // This could be a failure to allocate itmf::Tags or
+        // a failure to allocate inside c_alloc.
+        mp4v2::impl::log.errorf("%s: memory allocation error", __FUNCTION__);
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed", __FUNCTION__ );
+    }
+
+    if( result )
+        delete result;
+
+    if( m )
+        delete m;
+
+    return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -56,453 +96,1302 @@ MP4TagsAlloc()
 void
 MP4TagsFree( const MP4Tags* tags )
 {
-    itmf::Tags* cpp = static_cast<itmf::Tags*>(tags->__handle);
-    MP4Tags* c = const_cast<MP4Tags*>(tags);
-    cpp->c_free( c );
-    delete cpp;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void
-MP4TagsFetch( const MP4Tags* tags, MP4FileHandle hFile )
-{
-    if( !MP4_IS_VALID_FILE_HANDLE( hFile ))
+    if( !tags || !tags->__handle )
         return;
 
     itmf::Tags* cpp = static_cast<itmf::Tags*>(tags->__handle);
     MP4Tags* c = const_cast<MP4Tags*>(tags);
 
     try {
-        cpp->c_fetch( c, hFile );
+        cpp->c_free( c );
+        delete cpp;
     }
-    catch( MP4Error* e ) {
-        VERBOSE_ERROR( static_cast<MP4File*>(hFile)->GetVerbosity(), e->Print() );
-        delete e;
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed", __FUNCTION__ );
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void
+bool
+MP4TagsFetch( const MP4Tags* tags, MP4FileHandle hFile )
+{
+    if( !MP4_IS_VALID_FILE_HANDLE( hFile ))
+        return false;
+
+    if( !tags || !tags->__handle )
+        return false;
+
+    itmf::Tags* cpp = static_cast<itmf::Tags*>(tags->__handle);
+    MP4Tags* c = const_cast<MP4Tags*>(tags);
+
+    try {
+        cpp->c_fetch( c, hFile );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool
+MP4TagsHasMetadata ( const MP4Tags* tags, bool *hasMetadata )
+{
+    if( !tags || !tags->__handle || !hasMetadata )
+        return false;
+
+    itmf::Tags& cpp = *static_cast<itmf::Tags*>(tags->__handle);
+
+    (*hasMetadata) = cpp.hasMetadata;
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool
 MP4TagsRemoveArtwork( const MP4Tags* tags, uint32_t index )
 {
+    if( !tags || !tags->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(tags->__handle);
     MP4Tags* c = const_cast<MP4Tags*>(tags);
-    cpp.c_removeArtwork( c, index );
+
+    try {
+        cpp.c_removeArtwork( c, index );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void
+bool
 MP4TagsSetArtwork( const MP4Tags* tags, uint32_t index, MP4TagArtwork* artwork )
 {
+    if( !tags || !tags->__handle || !artwork)
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(tags->__handle);
     MP4Tags* c = const_cast<MP4Tags*>(tags);
-    cpp.c_setArtwork( c, index, *artwork );
+
+    try {
+        cpp.c_setArtwork( c, index, *artwork );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void
+bool
 MP4TagsStore( const MP4Tags* tags, MP4FileHandle hFile )
 {
+    if( !MP4_IS_VALID_FILE_HANDLE( hFile ))
+        return false;
+
+    if( !tags || !tags->__handle )
+        return false;
+
     itmf::Tags* cpp = static_cast<itmf::Tags*>(tags->__handle);
     MP4Tags* c = const_cast<MP4Tags*>(tags);
 
     try {
         cpp->c_store( c, hFile );
+        return true;
     }
-    catch( MP4Error* e ) {
-        VERBOSE_ERROR( static_cast<MP4File*>(hFile)->GetVerbosity(), e->Print() );
-        delete e;
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
     }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed", __FUNCTION__ );
+    }
+
+    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void
+bool
 MP4TagsSetName( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.name, c.name );
+
+    try {
+        cpp.c_setString( value, cpp.name, c.name );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetArtist( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.artist, c.artist );
+
+    try {
+        cpp.c_setString( value, cpp.artist, c.artist );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetAlbumArtist( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.albumArtist, c.albumArtist );
+
+    try {
+        cpp.c_setString( value, cpp.albumArtist, c.albumArtist );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetAlbum( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.album, c.album );
+
+    try {
+        cpp.c_setString( value, cpp.album, c.album );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetGrouping( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.grouping, c.grouping );
+
+    try {
+        cpp.c_setString( value, cpp.grouping, c.grouping );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetComposer( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.composer, c.composer );
+
+    try {
+        cpp.c_setString( value, cpp.composer, c.composer );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetComments( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.comments, c.comments );
+
+    try {
+        cpp.c_setString( value, cpp.comments, c.comments );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetGenre( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.genre, c.genre );
+
+    try {
+        cpp.c_setString( value, cpp.genre, c.genre );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetGenreType( const MP4Tags* m, const uint16_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.genreType, c.genreType );
+
+    try {
+        cpp.c_setInteger( value, cpp.genreType, c.genreType );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetReleaseDate( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.releaseDate, c.releaseDate );
+
+    try {
+        cpp.c_setString( value, cpp.releaseDate, c.releaseDate );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetTrack( const MP4Tags* m, const MP4TagTrack* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setTrack( value, cpp.track, c.track );
+
+    try {
+        cpp.c_setTrack( value, cpp.track, c.track );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetDisk( const MP4Tags* m, const MP4TagDisk* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setDisk( value, cpp.disk, c.disk );
+
+    try {
+        cpp.c_setDisk( value, cpp.disk, c.disk );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetTempo( const MP4Tags* m, const uint16_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.tempo, c.tempo );
+    
+    try {
+        cpp.c_setInteger( value, cpp.tempo, c.tempo );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetCompilation( const MP4Tags* m, const uint8_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.compilation, c.compilation );
+    
+    try {
+        cpp.c_setInteger( value, cpp.compilation, c.compilation );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetTVShow( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.tvShow, c.tvShow );
+    
+    try {
+        cpp.c_setString( value, cpp.tvShow, c.tvShow );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetTVNetwork( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.tvNetwork, c.tvNetwork );
+    
+    try {
+        cpp.c_setString( value, cpp.tvNetwork, c.tvNetwork );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetTVEpisodeID( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.tvEpisodeID, c.tvEpisodeID );
+    
+    try {
+        cpp.c_setString( value, cpp.tvEpisodeID, c.tvEpisodeID );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetTVSeason( const MP4Tags* m, const uint32_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.tvSeason, c.tvSeason );
+    
+    try {
+        cpp.c_setInteger( value, cpp.tvSeason, c.tvSeason );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetTVEpisode( const MP4Tags* m, const uint32_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.tvEpisode, c.tvEpisode );
+    
+    try {
+        cpp.c_setInteger( value, cpp.tvEpisode, c.tvEpisode );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetSortName( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.sortName, c.sortName );
+    
+    try {
+        cpp.c_setString( value, cpp.sortName, c.sortName );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetSortArtist( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.sortArtist, c.sortArtist );
+    
+    try {
+        cpp.c_setString( value, cpp.sortArtist, c.sortArtist );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetSortAlbumArtist( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.sortAlbumArtist, c.sortAlbumArtist );
+    
+    try {
+        cpp.c_setString( value, cpp.sortAlbumArtist, c.sortAlbumArtist );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetSortAlbum( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.sortAlbum, c.sortAlbum );
+    
+    try {
+        cpp.c_setString( value, cpp.sortAlbum, c.sortAlbum );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetSortComposer( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.sortComposer, c.sortComposer );
+    
+    try {
+        cpp.c_setString( value, cpp.sortComposer, c.sortComposer );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetSortTVShow( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.sortTVShow, c.sortTVShow );
+    
+    try {
+        cpp.c_setString( value, cpp.sortTVShow, c.sortTVShow );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetDescription( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.description, c.description );
+    
+    try {
+        cpp.c_setString( value, cpp.description, c.description );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetLongDescription( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.longDescription, c.longDescription );
+    
+    try {
+        cpp.c_setString( value, cpp.longDescription, c.longDescription );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetLyrics( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.lyrics, c.lyrics );
+    
+    try {
+        cpp.c_setString( value, cpp.lyrics, c.lyrics );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetCopyright( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.copyright, c.copyright );
+    
+    try {
+        cpp.c_setString( value, cpp.copyright, c.copyright );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetEncodingTool( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.encodingTool, c.encodingTool );
+    
+    try {
+        cpp.c_setString( value, cpp.encodingTool, c.encodingTool );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetEncodedBy( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.encodedBy, c.encodedBy );
+    
+    try {
+        cpp.c_setString( value, cpp.encodedBy, c.encodedBy );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetPurchaseDate( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.purchaseDate, c.purchaseDate );
+    
+    try {
+        cpp.c_setString( value, cpp.purchaseDate, c.purchaseDate );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetPodcast( const MP4Tags* m, const uint8_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.podcast, c.podcast );
+    
+    try {
+        cpp.c_setInteger( value, cpp.podcast, c.podcast );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetKeywords( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.keywords, c.keywords );
+    
+    try {
+        cpp.c_setString( value, cpp.keywords, c.keywords );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetCategory( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.category, c.category );
+    
+    try {
+        cpp.c_setString( value, cpp.category, c.category );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetHDVideo( const MP4Tags* m, const uint8_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.hdVideo, c.hdVideo );
+    
+    try {
+        cpp.c_setInteger( value, cpp.hdVideo, c.hdVideo );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetMediaType( const MP4Tags* m, const uint8_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.mediaType, c.mediaType );
+    
+    try {
+        cpp.c_setInteger( value, cpp.mediaType, c.mediaType );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetContentRating( const MP4Tags* m, const uint8_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.contentRating, c.contentRating );
+    
+    try {
+        cpp.c_setInteger( value, cpp.contentRating, c.contentRating );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetGapless( const MP4Tags* m, const uint8_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.gapless, c.gapless );
+    
+    try {
+        cpp.c_setInteger( value, cpp.gapless, c.gapless );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetITunesAccount( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.iTunesAccount, c.iTunesAccount );
+    
+    try {
+        cpp.c_setString( value, cpp.iTunesAccount, c.iTunesAccount );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetITunesAccountType( const MP4Tags* m, const uint8_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.iTunesAccountType, c.iTunesAccountType );
+    
+    try {
+        cpp.c_setInteger( value, cpp.iTunesAccountType, c.iTunesAccountType );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetITunesCountry( const MP4Tags* m, const uint32_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.iTunesCountry, c.iTunesCountry );
+    
+    try {
+        cpp.c_setInteger( value, cpp.iTunesCountry, c.iTunesCountry );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetContentID( const MP4Tags* m, const uint32_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.contentID, c.contentID );
+    
+    try {
+        cpp.c_setInteger( value, cpp.contentID, c.contentID );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetArtistID( const MP4Tags* m, const uint32_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.artistID, c.artistID );
+    
+    try {
+        cpp.c_setInteger( value, cpp.artistID, c.artistID );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetPlaylistID( const MP4Tags* m, const uint64_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.playlistID, c.playlistID );
+    
+    try {
+        cpp.c_setInteger( value, cpp.playlistID, c.playlistID );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetGenreID( const MP4Tags* m, const uint32_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.genreID, c.genreID );
+
+    try {
+        cpp.c_setInteger( value, cpp.genreID, c.genreID );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetComposerID( const MP4Tags* m, const uint32_t* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setInteger( value, cpp.composerID, c.composerID );
+
+    try {
+        cpp.c_setInteger( value, cpp.composerID, c.composerID );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
-void
+bool
 MP4TagsSetXID( const MP4Tags* m, const char* value )
 {
+    if( !m || !m->__handle )
+        return false;
+
     itmf::Tags& cpp = *static_cast<itmf::Tags*>(m->__handle);
     MP4Tags& c = *const_cast<MP4Tags*>(m);
-    cpp.c_setString( value, cpp.xid, c.xid );
+    
+    try {
+        cpp.c_setString( value, cpp.xid, c.xid );
+        return true;
+    }
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
+    }
+
+    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -540,9 +1429,12 @@ MP4ItmfGetItems( MP4FileHandle hFile )
     try {
         return itmf::genericGetItems( *(MP4File*)hFile );
     }
-    catch( MP4Error* e ) {
-        PRINT_ERROR( e );
-        delete e;
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
     }
 
     return NULL;
@@ -559,9 +1451,12 @@ MP4ItmfGetItemsByCode( MP4FileHandle hFile, const char* code )
     try {
         return itmf::genericGetItemsByCode( *(MP4File*)hFile, code );
     }   
-    catch( MP4Error* e ) {
-        PRINT_ERROR( e );
-        delete e;
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed",__FUNCTION__);
     }
 
     return NULL;
@@ -575,12 +1470,18 @@ MP4ItmfGetItemsByMeaning( MP4FileHandle hFile, const char* meaning, const char* 
     if( !MP4_IS_VALID_FILE_HANDLE( hFile ))
         return NULL;
 
+    if( !meaning )
+        return NULL;
+
     try {
         return itmf::genericGetItemsByMeaning( *(MP4File*)hFile, meaning, name ? name : "" );
     }
-    catch( MP4Error* e ) {
-        PRINT_ERROR( e );
-        delete e;
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed", __FUNCTION__ );
     }
 
     return NULL;
@@ -597,9 +1498,12 @@ MP4ItmfAddItem( MP4FileHandle hFile, const MP4ItmfItem* item )
     try {
         return itmf::genericAddItem( *(MP4File*)hFile, item );
     }
-    catch( MP4Error* e ) {
-        PRINT_ERROR( e );
-        delete e;
+    catch( Exception* x) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed", __FUNCTION__ );
     }
 
     return false;
@@ -616,9 +1520,12 @@ MP4ItmfSetItem( MP4FileHandle hFile, const MP4ItmfItem* item )
     try {
         return itmf::genericSetItem( *(MP4File*)hFile, item );
     }
-    catch( MP4Error* e ) {
-        PRINT_ERROR( e );
-        delete e;
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed", __FUNCTION__ );
     }
 
     return false;
@@ -635,9 +1542,12 @@ MP4ItmfRemoveItem( MP4FileHandle hFile, const MP4ItmfItem* item )
     try {
         return itmf::genericRemoveItem( *(MP4File*)hFile, item );
     }
-    catch( MP4Error* e ) {
-        PRINT_ERROR( e );
-        delete e;
+    catch( Exception* x ) {
+        mp4v2::impl::log.errorf(*x);
+        delete x;
+    }
+    catch( ... ) {
+        mp4v2::impl::log.errorf("%s: failed", __FUNCTION__ );
     }
 
     return false;

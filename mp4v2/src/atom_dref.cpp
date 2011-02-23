@@ -26,13 +26,13 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4DrefAtom::MP4DrefAtom()
-        : MP4Atom("dref")
+MP4DrefAtom::MP4DrefAtom(MP4File &file)
+        : MP4Atom(file, "dref")
 {
     AddVersionAndFlags();
 
     MP4Integer32Property* pCount =
-        new MP4Integer32Property("entryCount");
+        new MP4Integer32Property(*this, "entryCount");
     pCount->SetReadOnly();
     AddProperty(pCount);
 
@@ -51,8 +51,8 @@ void MP4DrefAtom::Read()
         (MP4Integer32Property*)m_pProperties[2];
 
     if (m_pChildAtoms.Size() != pCount->GetValue()) {
-        VERBOSE_READ(GetVerbosity(),
-                     MP4Printf("Warning: dref inconsistency with number of entries"));
+        log.warningf("%s: \"%s\": dref inconsistency with number of entries",
+                     __FUNCTION__, GetFile().GetFilename().c_str() );
 
         /* fix it */
         pCount->SetReadOnly(false);

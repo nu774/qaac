@@ -26,8 +26,8 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4UdtaAtom::MP4UdtaAtom()
-        : MP4Atom("udta")
+MP4UdtaAtom::MP4UdtaAtom(MP4File &file)
+        : MP4Atom(file, "udta")
 {
     ExpectChildAtom("chpl", Optional, OnlyOne);
     ExpectChildAtom("cprt", Optional, Many);

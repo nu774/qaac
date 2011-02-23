@@ -41,7 +41,7 @@ void MP4File::Make3GPCompliant(const char* fileName,  char* majorBrand, uint32_t
 
     if (majorBrand) {
         if (!supportedBrands || !supportedBrandsCount) {
-            throw new MP4Error("Invalid parameters", "MP4File::Make3GPCompliant");
+            throw new Exception("Invalid parameters",  __FILE__, __LINE__, __FUNCTION__);
         }
     }
 

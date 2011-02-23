@@ -34,10 +34,10 @@ class MP4RtpPacket;
 
 class MP4RtpData : public MP4Container {
 public:
-    MP4RtpData(MP4RtpPacket* pPacket);
+    MP4RtpData(MP4RtpPacket& packet);
 
-    MP4RtpPacket* GetPacket() {
-        return m_pPacket;
+    MP4RtpPacket& GetPacket() {
+        return m_packet;
     }
 
     virtual uint16_t GetDataSize() = 0;
@@ -45,19 +45,19 @@ public:
 
     MP4Track* FindTrackFromRefIndex(uint8_t refIndex);
 
-    virtual void WriteEmbeddedData(MP4File* pFile, uint64_t startPos) {
+    virtual void WriteEmbeddedData(MP4File& file, uint64_t startPos) {
         // default is no-op
     }
 
 protected:
-    MP4RtpPacket* m_pPacket;
+    MP4RtpPacket& m_packet;
 };
 
 MP4ARRAY_DECL(MP4RtpData, MP4RtpData*)
 
 class MP4RtpNullData : public MP4RtpData {
 public:
-    MP4RtpNullData(MP4RtpPacket* pPacket);
+    MP4RtpNullData(MP4RtpPacket& packet);
 
     uint16_t GetDataSize() {
         return 0;
@@ -70,7 +70,7 @@ public:
 
 class MP4RtpImmediateData : public MP4RtpData {
 public:
-    MP4RtpImmediateData(MP4RtpPacket* pPacket);
+    MP4RtpImmediateData(MP4RtpPacket& packet);
 
     void Set(const uint8_t* pBytes, uint8_t numBytes);
 
@@ -81,7 +81,7 @@ public:
 
 class MP4RtpSampleData : public MP4RtpData {
 public:
-    MP4RtpSampleData(MP4RtpPacket* pPacket);
+    MP4RtpSampleData(MP4RtpPacket& packet);
 
     ~MP4RtpSampleData(void) {
         CHECK_AND_FREE(m_pRefData);
@@ -104,7 +104,7 @@ public:
 
     void GetData(uint8_t* pDest);
 
-    void WriteEmbeddedData(MP4File* pFile, uint64_t startPos);
+    void WriteEmbeddedData(MP4File& file, uint64_t startPos);
 
 protected:
     uint8_t*        m_pRefData;
@@ -116,7 +116,7 @@ protected:
 
 class MP4RtpSampleDescriptionData : public MP4RtpData {
 public:
-    MP4RtpSampleDescriptionData(MP4RtpPacket* pPacket);
+    MP4RtpSampleDescriptionData(MP4RtpPacket& packet);
 
     void Set(uint32_t sampleDescrIndex,
              uint32_t offset, uint16_t length);
@@ -128,14 +128,14 @@ public:
 
 class MP4RtpPacket : public MP4Container {
 public:
-    MP4RtpPacket(MP4RtpHint* pHint);
+    MP4RtpPacket(MP4RtpHint& hint);
 
     ~MP4RtpPacket();
 
     void AddExtraProperties();
 
-    MP4RtpHint* GetHint() {
-        return m_pHint;
+    MP4RtpHint& GetHint() {
+        return m_hint;
     }
 
     void Set(uint8_t payloadNumber, uint32_t packetId, bool setMbit);
@@ -166,18 +166,18 @@ public:
 
     void GetData(uint8_t* pDest);
 
-    void Read(MP4File* pFile);
+    void Read(MP4File& file);
 
-    void ReadExtra(MP4File* pFile);
+    void ReadExtra(MP4File& file);
 
-    void Write(MP4File* pFile);
+    void Write(MP4File& file);
 
-    void WriteEmbeddedData(MP4File* pFile, uint64_t startPos);
+    void WriteEmbeddedData(MP4File& file, uint64_t startPos);
 
-    void Dump(FILE* pFile, uint8_t indent, bool dumpImplicits);
+    void Dump(uint8_t indent, bool dumpImplicits);
 
 protected:
-    MP4RtpHint*         m_pHint;
+    MP4RtpHint&         m_hint;
     MP4RtpDataArray     m_rtpData;
 };
 
@@ -185,12 +185,12 @@ MP4ARRAY_DECL(MP4RtpPacket, MP4RtpPacket*)
 
 class MP4RtpHint : public MP4Container {
 public:
-    MP4RtpHint(MP4RtpHintTrack* pTrack);
+    MP4RtpHint(MP4RtpHintTrack& track);
 
     ~MP4RtpHint();
 
-    MP4RtpHintTrack* GetTrack() {
-        return m_pTrack;
+    MP4RtpHintTrack& GetTrack() {
+        return m_track;
     }
 
     uint16_t GetNumberOfPackets() {
@@ -224,14 +224,14 @@ public:
         return m_rtpPackets[m_rtpPackets.Size() - 1];
     }
 
-    void Read(MP4File* pFile);
+    void Read(MP4File& file);
 
-    void Write(MP4File* pFile);
+    void Write(MP4File& file);
 
-    void Dump(FILE* pFile, uint8_t indent, bool dumpImplicits);
+    void Dump(uint8_t indent, bool dumpImplicits);
 
 protected:
-    MP4RtpHintTrack*    m_pTrack;
+    MP4RtpHintTrack&    m_track;
     MP4RtpPacketArray   m_rtpPackets;
 
     // values when adding packets to a hint (write mode)
@@ -241,7 +241,7 @@ protected:
 
 class MP4RtpHintTrack : public MP4Track {
 public:
-    MP4RtpHintTrack(MP4File* pFile, MP4Atom* pTrakAtom);
+    MP4RtpHintTrack(MP4File& file, MP4Atom& trakAtom);
 
     ~MP4RtpHintTrack();
 

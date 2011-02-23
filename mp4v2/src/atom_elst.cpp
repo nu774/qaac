@@ -26,16 +26,16 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4ElstAtom::MP4ElstAtom()
-        : MP4Atom("elst")
+MP4ElstAtom::MP4ElstAtom(MP4File &file)
+        : MP4Atom(file, "elst")
 {
     AddVersionAndFlags();
 
     MP4Integer32Property* pCount =
-        new MP4Integer32Property("entryCount");
+        new MP4Integer32Property(*this, "entryCount");
     AddProperty(pCount);
 
-    MP4TableProperty* pTable = new MP4TableProperty("entries", pCount);
+    MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
     AddProperty(pTable);
 }
 
@@ -45,20 +45,20 @@ void MP4ElstAtom::AddProperties(uint8_t version)
 
     if (version == 1) {
         pTable->AddProperty(
-            new MP4Integer64Property("segmentDuration"));
+            new MP4Integer64Property(pTable->GetParentAtom(), "segmentDuration"));
         pTable->AddProperty(
-            new MP4Integer64Property("mediaTime"));
+            new MP4Integer64Property(pTable->GetParentAtom(), "mediaTime"));
     } else {
         pTable->AddProperty(
-            new MP4Integer32Property("segmentDuration"));
+            new MP4Integer32Property(pTable->GetParentAtom(), "segmentDuration"));
         pTable->AddProperty(
-            new MP4Integer32Property("mediaTime"));
+            new MP4Integer32Property(pTable->GetParentAtom(), "mediaTime"));
     }
 
     pTable->AddProperty(
-        new MP4Integer16Property("mediaRate"));
+        new MP4Integer16Property(pTable->GetParentAtom(), "mediaRate"));
     pTable->AddProperty(
-        new MP4Integer16Property("reserved"));
+        new MP4Integer16Property(pTable->GetParentAtom(), "reserved"));
 }
 
 void MP4ElstAtom::Generate()

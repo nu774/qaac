@@ -14,10 +14,12 @@
 // 
 //  The Initial Developer of the Original Code is Kona Blend.
 //  Portions created by Kona Blend are Copyright (C) 2008.
+//  Portions created by David Byron are Copyright (C) 2009.
 //  All Rights Reserved.
 //
 //  Contributors:
 //      Kona Blend, kona8lend@@gmail.com
+//      David Byron, dbyron0@gmail.com
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -27,24 +29,66 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4Exception::MP4Exception( const string& what_ )
-    : _what ( what_ )
-    , what  ( _what )
+Exception::Exception( const string&     what_,
+                      const char        *file_,
+                      int               line_,
+                      const char        *function_ )
+    : what(what_)
+    , file(file_)
+    , line(line_)
+    , function(function_)
+{
+    ASSERT(file_);
+    ASSERT(function_);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Exception::~Exception()
 {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4Exception::MP4Exception( const ostringstream& what_ )
-    : _what ( what_.str() )
-    , what  ( _what )
+string
+Exception::msg() const
+{
+    ostringstream retval;
+
+    retval << function << ": " << what << " (" << file << "," << line << ")";
+
+    return retval.str();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+PlatformException::PlatformException( const string&     what_,
+                                      int               errno_,
+                                      const char        *file_,
+                                      int               line_,
+                                      const char        *function_ )
+    : Exception(what_,file_,line_,function_)
+    , m_errno(errno_)
 {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4Exception::~MP4Exception()
+PlatformException::~PlatformException()
 {
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+string
+PlatformException::msg() const
+{
+    ostringstream retval;
+
+    retval << function << ": " << what << ": errno: " << m_errno << " (" <<
+        file << "," << line << ")";
+
+    return retval.str();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

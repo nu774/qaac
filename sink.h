@@ -19,7 +19,7 @@ public:
 	try {
 	    m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
 		length, MP4_INVALID_DURATION);
-	} catch (mp4v2::impl::MP4Error *e) {
+	} catch (mp4v2::impl::Exception *e) {
 	    handle_mp4error(e);
 	}
     }

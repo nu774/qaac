@@ -34,54 +34,58 @@ namespace impl {
 class SizeTableProperty : public MP4TableProperty
 {
 public:
-    SizeTableProperty(const char *name, MP4IntegerProperty *pCountProperty) :
-            MP4TableProperty(name, pCountProperty) {};
+    SizeTableProperty(MP4Atom& parentAtom, const char *name, MP4IntegerProperty *pCountProperty) :
+            MP4TableProperty(parentAtom, name, pCountProperty) {};
 protected:
-    void ReadEntry(MP4File *pFile, uint32_t index) {
+    void ReadEntry(MP4File& file, uint32_t index) {
         // Each table has a size, followed by the length field
         // first, read the length
-        m_pProperties[0]->Read(pFile, index);
+        m_pProperties[0]->Read(file, index);
         MP4IntegerProperty *pIntProp = (MP4IntegerProperty *)m_pProperties[0];
         // set the size in the bytes property
         MP4BytesProperty *pBytesProp = (MP4BytesProperty *)m_pProperties[1];
         pBytesProp->SetValueSize(pIntProp->GetValue(index), index);
         // And read the bytes
-        m_pProperties[1]->Read(pFile, index);
+        m_pProperties[1]->Read(file, index);
     };
+private:
+    SizeTableProperty();
+    SizeTableProperty ( const SizeTableProperty &src );
+    SizeTableProperty &operator= ( const SizeTableProperty &src );
 };
 
-MP4AvcCAtom::MP4AvcCAtom()
-        : MP4Atom("avcC")
+MP4AvcCAtom::MP4AvcCAtom(MP4File &file)
+        : MP4Atom(file, "avcC")
 {
     MP4BitfieldProperty *pCount;
     MP4TableProperty *pTable;
 
-    AddProperty( new MP4Integer8Property("configurationVersion")); /* 0 */
+    AddProperty( new MP4Integer8Property(*this,"configurationVersion")); /* 0 */
 
-    AddProperty( new MP4Integer8Property("AVCProfileIndication")); /* 1 */
+    AddProperty( new MP4Integer8Property(*this,"AVCProfileIndication")); /* 1 */
 
-    AddProperty( new MP4Integer8Property("profile_compatibility")); /* 2 */
+    AddProperty( new MP4Integer8Property(*this,"profile_compatibility")); /* 2 */
 
-    AddProperty( new MP4Integer8Property("AVCLevelIndication")); /* 3 */
+    AddProperty( new MP4Integer8Property(*this,"AVCLevelIndication")); /* 3 */
 
-    AddProperty( new MP4BitfieldProperty("reserved", 6)); /* 4 */
-    AddProperty( new MP4BitfieldProperty("lengthSizeMinusOne", 2)); /* 5 */
-    AddProperty( new MP4BitfieldProperty("reserved1", 3)); /* 6 */
-    pCount = new MP4BitfieldProperty("numOfSequenceParameterSets", 5);
+    AddProperty( new MP4BitfieldProperty(*this,"reserved", 6)); /* 4 */
+    AddProperty( new MP4BitfieldProperty(*this,"lengthSizeMinusOne", 2)); /* 5 */
+    AddProperty( new MP4BitfieldProperty(*this,"reserved1", 3)); /* 6 */
+    pCount = new MP4BitfieldProperty(*this,"numOfSequenceParameterSets", 5);
     AddProperty(pCount); /* 7 */
 
-    pTable = new SizeTableProperty("sequenceEntries", pCount);
+    pTable = new SizeTableProperty(*this,"sequenceEntries", pCount);
     AddProperty(pTable); /* 8 */
-    pTable->AddProperty(new MP4Integer16Property("sequenceParameterSetLength"));
-    pTable->AddProperty(new MP4BytesProperty("sequenceParameterSetNALUnit"));
+    pTable->AddProperty(new MP4Integer16Property(pTable->GetParentAtom(),"sequenceParameterSetLength"));
+    pTable->AddProperty(new MP4BytesProperty(pTable->GetParentAtom(),"sequenceParameterSetNALUnit"));
 
-    MP4Integer8Property *pCount2 = new MP4Integer8Property("numOfPictureParameterSets");
+    MP4Integer8Property *pCount2 = new MP4Integer8Property(*this,"numOfPictureParameterSets");
     AddProperty(pCount2); /* 9 */
 
-    pTable = new SizeTableProperty("pictureEntries", pCount2);
+    pTable = new SizeTableProperty(*this,"pictureEntries", pCount2);
     AddProperty(pTable); /* 10 */
-    pTable->AddProperty(new MP4Integer16Property("pictureParameterSetLength"));
-    pTable->AddProperty(new MP4BytesProperty("pictureParameterSetNALUnit"));
+    pTable->AddProperty(new MP4Integer16Property(pTable->GetParentAtom(),"pictureParameterSetLength"));
+    pTable->AddProperty(new MP4BytesProperty(pTable->GetParentAtom(),"pictureParameterSetNALUnit"));
 }
 
 void MP4AvcCAtom::Generate()

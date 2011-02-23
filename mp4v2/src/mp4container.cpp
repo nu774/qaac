@@ -60,8 +60,7 @@ void MP4Container::FindIntegerProperty(const char* name,
                                        MP4Property** ppProperty, uint32_t* pIndex)
 {
     if (!FindProperty(name, ppProperty, pIndex)) {
-        throw new MP4Error("no such property",
-                           "MP4Container::FindIntegerProperty");
+        throw new Exception("no such property", __FILE__, __LINE__, __FUNCTION__);
     }
 
     switch ((*ppProperty)->GetType()) {
@@ -72,8 +71,7 @@ void MP4Container::FindIntegerProperty(const char* name,
     case Integer64Property:
         break;
     default:
-        throw new MP4Error("type mismatch",
-                           "MP4Container::FindIntegerProperty");
+        throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);
     }
 }
 
@@ -101,12 +99,10 @@ void MP4Container::FindFloatProperty(const char* name,
                                      MP4Property** ppProperty, uint32_t* pIndex)
 {
     if (!FindProperty(name, ppProperty, pIndex)) {
-        throw new MP4Error("no such property",
-                           "MP4Container::FindFloatProperty");
+        throw new Exception("no such property", __FILE__, __LINE__, __FUNCTION__);
     }
     if ((*ppProperty)->GetType() != Float32Property) {
-        throw new MP4Error("type mismatch",
-                           "MP4Container::FindFloatProperty");
+        throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);
     }
 }
 
@@ -134,12 +130,10 @@ void MP4Container::FindStringProperty(const char* name,
                                       MP4Property** ppProperty, uint32_t* pIndex)
 {
     if (!FindProperty(name, ppProperty, pIndex)) {
-        throw new MP4Error("no such property",
-                           "MP4Container::FindStringProperty");
+        throw new Exception("no such property", __FILE__, __LINE__, __FUNCTION__);
     }
     if ((*ppProperty)->GetType() != StringProperty) {
-        throw new MP4Error("type mismatch",
-                           "MP4Container::FindStringProperty");
+        throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);
     }
 }
 
@@ -167,12 +161,10 @@ void MP4Container::FindBytesProperty(const char* name,
                                      MP4Property** ppProperty, uint32_t* pIndex)
 {
     if (!FindProperty(name, ppProperty, pIndex)) {
-        throw new MP4Error("no such property",
-                           "MP4Container::FindBytesProperty");
+        throw new Exception("no such property", __FILE__, __LINE__, __FUNCTION__);
     }
     if ((*ppProperty)->GetType() != BytesProperty) {
-        throw new MP4Error("type mismatch",
-                           "MP4Container::FindBytesProperty");
+        throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);
     }
 }
 
@@ -198,16 +190,16 @@ void MP4Container::SetBytesProperty(const char* name,
     ((MP4BytesProperty*)pProperty)->SetValue(pValue, valueSize, index);
 }
 
-void MP4Container::Read(MP4File* pFile)
+void MP4Container::Read(MP4File& file)
 {
     uint32_t numProperties = m_pProperties.Size();
 
     for (uint32_t i = 0; i < numProperties; i++) {
-        m_pProperties[i]->Read(pFile);
+        m_pProperties[i]->Read(file);
     }
 }
 
-void MP4Container::Write(MP4File* pFile)
+void MP4Container::Write(MP4File& file)
 {
     uint32_t numProperties = m_pProperties.Size();
 
@@ -217,16 +209,16 @@ void MP4Container::Write(MP4File* pFile)
     }
 
     for (uint32_t i = 0; i < numProperties; i++) {
-        m_pProperties[i]->Write(pFile);
+        m_pProperties[i]->Write(file);
     }
 }
 
-void MP4Container::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
+void MP4Container::Dump(uint8_t indent, bool dumpImplicits)
 {
     uint32_t numProperties = m_pProperties.Size();
 
     for (uint32_t i = 0; i < numProperties; i++) {
-        m_pProperties[i]->Dump(pFile, indent, dumpImplicits);
+        m_pProperties[i]->Dump(indent, dumpImplicits);
     }
 }
 

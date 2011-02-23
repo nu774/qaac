@@ -24,8 +24,8 @@ namespace impl {
 ///////////////////////////////////////////////////////////////////////////////
 
 // MP4ChplAtom is for Nero chapter list atom which is a child of udta
-MP4ChplAtom::MP4ChplAtom ()
-        : MP4Atom("chpl")
+MP4ChplAtom::MP4ChplAtom (MP4File &file)
+        : MP4Atom(file, "chpl")
 {
     // it is not completely clear if version, flags, reserved and chaptercount
     // have the right sizes but
@@ -35,20 +35,20 @@ MP4ChplAtom::MP4ChplAtom ()
     AddVersionAndFlags();
 
     // add reserved bytes
-    AddReserved("reserved", 1);
+    AddReserved(*this,"reserved", 1);
 
     // define the chaptercount
-    MP4Integer32Property * counter = new MP4Integer32Property("chaptercount");
+    MP4Integer32Property * counter = new MP4Integer32Property(*this,"chaptercount");
     AddProperty(counter);
 
     // define the chapterlist
-    MP4TableProperty * list = new MP4TableProperty("chapters", counter);
+    MP4TableProperty * list = new MP4TableProperty(*this,"chapters", counter);
 
     // the start time as 100 nanoseconds units
-    list->AddProperty(new MP4Integer64Property("starttime"));
+    list->AddProperty(new MP4Integer64Property(*this,"starttime"));
 
     // the chapter name as UTF-8
-    list->AddProperty(new MP4StringProperty("title", true));
+    list->AddProperty(new MP4StringProperty(*this,"title", true));
 
     // add the chapterslist
     AddProperty(list);

@@ -71,6 +71,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\mp4v2\libplatform\platform_win32.cpp" />
     <ClCompile Include="..\..\mp4v2\src\3gp.cpp" />
     <ClCompile Include="..\..\mp4v2\src\atom_ac3.cpp" />
     <ClCompile Include="..\..\mp4v2\src\atom_amr.cpp" />
@@ -129,6 +130,7 @@
     <ClCompile Include="..\..\mp4v2\src\atom_video.cpp" />
     <ClCompile Include="..\..\mp4v2\src\atom_vmhd.cpp" />
     <ClCompile Include="..\..\mp4v2\src\cmeta.cpp" />
+    <ClCompile Include="..\..\mp4v2\src\log.cpp" />
     <ClCompile Include="..\..\mp4v2\src\qtff\coding.cpp" />
     <ClCompile Include="..\..\mp4v2\src\qtff\ColorParameterBox.cpp" />
     <ClCompile Include="..\..\mp4v2\src\itmf\CoverArtBox.cpp" />

@@ -23,8 +23,8 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4NmhdAtom::MP4NmhdAtom()
-        : MP4Atom("nmhd")
+MP4NmhdAtom::MP4NmhdAtom(MP4File &file)
+        : MP4Atom(file, "nmhd")
 {
     AddVersionAndFlags();
 }

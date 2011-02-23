@@ -49,69 +49,105 @@ const uint8_t MP4ExtDescrTagsEnd            = 0xFE;
 
 class MP4BaseDescriptor : public MP4Descriptor {
 public:
-    MP4BaseDescriptor(uint8_t tag);
+    MP4BaseDescriptor(MP4Atom& parentAtom, uint8_t tag);
+private:
+    MP4BaseDescriptor();
+    MP4BaseDescriptor ( const MP4BaseDescriptor &src );
+    MP4BaseDescriptor &operator= ( const MP4BaseDescriptor &src );
 };
 
 class MP4BytesDescriptor : public MP4Descriptor {
 public:
-    MP4BytesDescriptor(uint8_t tag);
-    void Read(MP4File* pFile);
+    MP4BytesDescriptor(MP4Atom& parentAtom, uint8_t tag);
+    void Read(MP4File& file);
 protected:
     uint32_t m_size_offset; // size to adjust the size for the bytes property
     uint32_t m_bytes_index; // index into properties for bytes property
+private:
+    MP4BytesDescriptor();
+    MP4BytesDescriptor ( const MP4BytesDescriptor &src );
+    MP4BytesDescriptor &operator= ( const MP4BytesDescriptor &src );
 };
 
 class MP4IODescriptor : public MP4Descriptor {
 public:
-    MP4IODescriptor();
+    MP4IODescriptor(MP4Atom& parentAtom);
     void Generate();
 protected:
     void Mutate();
+private:
+    MP4IODescriptor();
+    MP4IODescriptor ( const MP4IODescriptor &src );
+    MP4IODescriptor &operator= ( const MP4IODescriptor &src );
 };
 
 class MP4ODescriptor : public MP4Descriptor {
 public:
-    MP4ODescriptor();
+    MP4ODescriptor(MP4Atom& parentAtom);
     void Generate();
 protected:
     void Mutate();
+private:
+    MP4ODescriptor();
+    MP4ODescriptor ( const MP4ODescriptor &src );
+    MP4ODescriptor &operator= ( const MP4ODescriptor &src );
 };
 
 
 class MP4ESDescriptor : public MP4Descriptor {
 public:
-    MP4ESDescriptor();
+    MP4ESDescriptor(MP4Atom& parentAtom);
 protected:
     void Mutate();
+private:
+    MP4ESDescriptor();
+    MP4ESDescriptor ( const MP4ESDescriptor &src );
+    MP4ESDescriptor &operator= ( const MP4ESDescriptor &src );
 };
 
 class MP4DecConfigDescriptor : public MP4Descriptor {
 public:
-    MP4DecConfigDescriptor();
+    MP4DecConfigDescriptor(MP4Atom& parentAtom);
     void Generate();
+private:
+    MP4DecConfigDescriptor();
+    MP4DecConfigDescriptor ( const MP4DecConfigDescriptor &src );
+    MP4DecConfigDescriptor &operator= ( const MP4DecConfigDescriptor &src );
 };
 
 
 class MP4SLConfigDescriptor : public MP4Descriptor {
 public:
-    MP4SLConfigDescriptor();
+    MP4SLConfigDescriptor(MP4Atom& parentAtom);
     void Generate();
-    void Read(MP4File* pFile);
+    void Read(MP4File& file);
 protected:
     void Mutate();
+private:
+    MP4SLConfigDescriptor();
+    MP4SLConfigDescriptor ( const MP4SLConfigDescriptor &src );
+    MP4SLConfigDescriptor &operator= ( const MP4SLConfigDescriptor &src );
 };
 
 class MP4IPIPtrDescriptor : public MP4Descriptor {
 public:
+    MP4IPIPtrDescriptor(MP4Atom& parentAtom);
+private:
     MP4IPIPtrDescriptor();
+    MP4IPIPtrDescriptor ( const MP4IPIPtrDescriptor &src );
+    MP4IPIPtrDescriptor &operator= ( const MP4IPIPtrDescriptor &src );
 };
 
 class MP4ContentIdDescriptor : public MP4Descriptor {
 public:
-    MP4ContentIdDescriptor();
-    void Read(MP4File* pFile);
+    MP4ContentIdDescriptor(MP4Atom& parentAtom);
+    void Read(MP4File& file);
 protected:
     void Mutate();
+private:
+    MP4ContentIdDescriptor();
+    MP4ContentIdDescriptor ( const MP4ContentIdDescriptor &src );
+    MP4ContentIdDescriptor &operator= ( const MP4ContentIdDescriptor &src );
 };
 
 // associated values in descriptors

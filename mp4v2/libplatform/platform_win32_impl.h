@@ -4,48 +4,65 @@
 // of windows.h vs stdc++'s min/max template functions)
 #include <windows.h>
 
+///////////////////////////////////////////////////////////////////////////////
+
 namespace mp4v2 { namespace platform { namespace win32 {
 
-class Utf8ToWideChar
+class Utf8ToFilename
 {
-public:
-    Utf8ToWideChar( string utf8string ) :
-        _wideCharString( NULL ),
-        _cchWideCharString( 0 )
-    {
-        // NOTE: The return values of MultiByteToWideChar will include room
-        //  for the NUL character since we use -1 for the input length.
-        _cchWideCharString = ::MultiByteToWideChar( CP_UTF8, 0, utf8string.c_str(), -1, NULL, 0 );
-        if( _cchWideCharString > 0 )
-        {
-            _wideCharString = new WCHAR[_cchWideCharString];
-            if( _wideCharString == NULL )
-            {
-                _cchWideCharString = 0;
-            }
-            else
-            {
-                ::MultiByteToWideChar( CP_UTF8, 0, utf8string.c_str(), -1, _wideCharString, _cchWideCharString );
-                // Guarantee its NUL terminated.
-                _wideCharString[_cchWideCharString-1] = L'\0';
-            }
-        }
-    }
-    ~Utf8ToWideChar( )
-    {
-        if( _wideCharString != NULL )
-        {
-            delete [] _wideCharString;
-            _wideCharString = NULL;
-        }
-    }
+    public:
+    Utf8ToFilename( const string &utf8string );
+    ~Utf8ToFilename( );
+
+    bool                IsUTF16Valid( ) const;
+
     operator LPCWSTR( ) const { return _wideCharString; }
     operator LPWSTR( ) const { return _wideCharString; }
-    int size( ) const { return _cchWideCharString; }
 
-private:
-    WCHAR* _wideCharString;
-    int _cchWideCharString;
+    private:
+    Utf8ToFilename ( const Utf8ToFilename &src );
+    Utf8ToFilename &operator= ( const Utf8ToFilename &src );
+    
+    wchar_t             *ConvertToUTF16 ( const string &utf8 );
+
+    static int          ConvertToUTF16Buf ( const char      *utf8,
+                                            wchar_t         *utf16_buf,
+                                            size_t          num_bytes );
+    static int          GetPrefixLen ( const string &utf8string );
+
+    static int          IsAbsolute ( const string &utf8string );
+
+    static int          IsPathSeparator ( char c );
+
+    static int          IsUncPath ( const string &utf8string );
+
+    static const UINT8  *Utf8DecodeChar (
+        const UINT8     *utf8_char,
+        size_t          num_bytes,
+        wchar_t         *utf16,
+        int             *invalid
+        );
+
+    static size_t       Utf8LenFromUcs4 ( UINT32 ucs4 );
+
+    static UINT8        Utf8NumOctets ( UINT8 utf8_first_byte );
+
+    /**
+     * The UTF-8 encoding of the filename actually used
+     */
+    string      _utf8;
+
+    /**
+     * The UTF-16 encoding of the filename actually used
+     */
+    wchar_t*    _wideCharString;
+
+    public:
+
+    /**
+     * Accessor for @p _utf8
+     */
+    const string&       utf8;
 };
 
 }}} // namespace mp4v2::platform::win32

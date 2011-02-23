@@ -25,8 +25,8 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4StblAtom::MP4StblAtom()
-        : MP4Atom("stbl")
+MP4StblAtom::MP4StblAtom(MP4File &file)
+        : MP4Atom(file, "stbl")
 {
     ExpectChildAtom("stsd", Required, OnlyOne);
     ExpectChildAtom("stts", Required, OnlyOne);
@@ -49,10 +49,10 @@ void MP4StblAtom::Generate()
 
     // but we also need one of the chunk offset atoms
     MP4Atom* pChunkOffsetAtom;
-    if (m_pFile->Use64Bits(GetType())) {
-        pChunkOffsetAtom = CreateAtom(this, "co64");
+    if (m_File.Use64Bits(GetType())) {
+        pChunkOffsetAtom = CreateAtom(m_File, this, "co64");
     } else {
-        pChunkOffsetAtom = CreateAtom(this, "stco");
+        pChunkOffsetAtom = CreateAtom(m_File, this, "stco");
     }
 
     AddChildAtom(pChunkOffsetAtom);

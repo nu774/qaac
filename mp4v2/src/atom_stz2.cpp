@@ -35,8 +35,8 @@ namespace impl {
 class MP4HalfSizeTableProperty : public MP4TableProperty
 {
 public:
-    MP4HalfSizeTableProperty(const char *name, MP4IntegerProperty *pCountProperty) :
-            MP4TableProperty(name, pCountProperty) {};
+    MP4HalfSizeTableProperty(MP4Atom& parentAtom, const char *name, MP4IntegerProperty *pCountProperty) :
+            MP4TableProperty(parentAtom, name, pCountProperty) {};
 
     // The count is half the actual size
     uint32_t GetCount() {
@@ -45,21 +45,25 @@ public:
     void SetCount(uint32_t count) {
         m_pCountProperty->SetValue(count * 2);
     };
+private:
+    MP4HalfSizeTableProperty();
+    MP4HalfSizeTableProperty ( const MP4HalfSizeTableProperty &src );
+    MP4HalfSizeTableProperty &operator= ( const MP4HalfSizeTableProperty &src );
 };
 
 
-MP4Stz2Atom::MP4Stz2Atom()
-        : MP4Atom("stz2")
+MP4Stz2Atom::MP4Stz2Atom(MP4File &file)
+        : MP4Atom(file, "stz2")
 {
     AddVersionAndFlags(); /* 0, 1 */
 
-    AddReserved("reserved", 3); /* 2 */
+    AddReserved(*this, "reserved", 3); /* 2 */
 
     AddProperty( /* 3 */
-        new MP4Integer8Property("fieldSize"));
+        new MP4Integer8Property(*this, "fieldSize"));
 
     MP4Integer32Property* pCount =
-        new MP4Integer32Property("sampleCount");
+        new MP4Integer32Property(*this, "sampleCount");
     AddProperty(pCount); /* 4 */
 
 }
@@ -77,20 +81,20 @@ void MP4Stz2Atom::Read()
 
     MP4TableProperty *pTable;
     if (fieldSize != 4) {
-        pTable = new MP4TableProperty("entries", pCount);
+        pTable = new MP4TableProperty(*this, "entries", pCount);
     } else {
         // 4 bit field size uses a special table.
-        pTable = new MP4HalfSizeTableProperty("entries", pCount);
+        pTable = new MP4HalfSizeTableProperty(*this, "entries", pCount);
     }
 
     AddProperty(pTable);
 
     if (fieldSize == 16) {
         pTable->AddProperty( /* 5/0 */
-            new MP4Integer16Property("entrySize"));
+            new MP4Integer16Property(*this, "entrySize"));
     } else {
         pTable->AddProperty( /* 5/0 */
-            new MP4Integer8Property("entrySize"));
+            new MP4Integer8Property(*this, "entrySize"));
     }
 
     ReadProperties(4);

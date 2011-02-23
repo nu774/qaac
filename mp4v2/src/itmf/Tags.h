@@ -14,11 +14,13 @@
 // 
 //  The Initial Developer of the Original Code is Kona Blend.
 //  Portions created by Kona Blend are Copyright (C) 2008.
+//  Portions created by David Byron are Copyright (C) 2011.
 //  All Rights Reserved.
 //
 //  Contributors:
 //      Kona Blend, kona8lend@gmail.com
 //      Rouven Wessling, mp4v2@rouvenwessling.de
+//      David Byron, dbyron@dbyron.com
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -146,6 +148,8 @@ public:
     uint32_t genreID;
     uint32_t composerID;
     string   xid;
+
+    bool     hasMetadata;
 
 public:
     Tags();

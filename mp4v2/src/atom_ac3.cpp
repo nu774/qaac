@@ -28,28 +28,28 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4Ac3Atom::MP4Ac3Atom()
-        : MP4Atom("ac-3")
+MP4Ac3Atom::MP4Ac3Atom(MP4File &file)
+        : MP4Atom(file, "ac-3")
 {
-    AddReserved("reserved1", 6); /* 0 */
+    AddReserved(*this, "reserved1", 6); /* 0 */
 
     AddProperty( /* 1 */
-        new MP4Integer16Property("dataReferenceIndex"));
+        new MP4Integer16Property(*this,"dataReferenceIndex"));
 
-    AddReserved("reserved2", 8); /* 2 */
+    AddReserved(*this,"reserved2", 8); /* 2 */
 
     AddProperty( /* 3 */
-        new MP4Integer16Property("channelCount"));
+        new MP4Integer16Property(*this,"channelCount"));
 
     AddProperty( /* 4 */
-        new MP4Integer16Property("sampleSize"));
+        new MP4Integer16Property(*this,"sampleSize"));
 
-    AddReserved("reserved3", 4); /* 5 */
+    AddReserved(*this,"reserved3", 4); /* 5 */
 
     AddProperty( /* 6 */
-        new MP4Integer16Property("samplingRate"));
+        new MP4Integer16Property(*this,"samplingRate"));
 
-    AddReserved("reserved4", 2); /* 7 */
+    AddReserved(*this,"reserved4", 2); /* 7 */
 
     ExpectChildAtom("dac3", Required, OnlyOne);
 }

@@ -25,8 +25,8 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4HinfAtom::MP4HinfAtom()
-        : MP4Atom("hinf")
+MP4HinfAtom::MP4HinfAtom(MP4File &file)
+        : MP4Atom(file, "hinf")
 {
     ExpectChildAtom("trpy", Optional, OnlyOne);
     ExpectChildAtom("nump", Optional, OnlyOne);
@@ -50,7 +50,7 @@ void MP4HinfAtom::Generate()
 
     for (uint32_t i = 0; i < m_pChildAtomInfos.Size(); i++) {
         MP4Atom* pChildAtom =
-            CreateAtom(this, m_pChildAtomInfos[i]->m_name);
+            CreateAtom(m_File, this, m_pChildAtomInfos[i]->m_name);
 
         AddChildAtom(pChildAtom);
 

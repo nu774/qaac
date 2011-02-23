@@ -1,6 +1,7 @@
 #include "util.h"
 #include "mp4v2wrapper.h"
 
+using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Atom;
 using mp4v2::impl::MP4DataAtom;
 using mp4v2::impl::MP4NameAtom;
@@ -11,26 +12,16 @@ using mp4v2::impl::MP4StringProperty;
 using mp4v2::impl::MP4BytesProperty;
 namespace itmf = mp4v2::impl::itmf;
 
-std::string format_mp4error(const mp4v2::impl::MP4Error &e)
+std::string format_mp4error(const mp4v2::impl::Exception &e)
 {
-    std::vector<const char*> parts;
-    parts.push_back("libmp4v2");
-    if (e.m_where) parts.push_back(e.m_where);
-    if (e.m_errstring) parts.push_back(e.m_errstring);
-    if (e.m_errno) parts.push_back(std::strerror(e.m_errno));
-    std::string message;
-    for (size_t i = 0; i < parts.size(); ++i) {
-	if (i > 0) message += ": ";
-	message += parts[i];
-    }
-    return message;
+    return std::string("libmp4v2: ") + e.msg();
 }
 
 class MP4AlacAtom: public MP4Atom {
 public:
-    MP4AlacAtom(const char *id): MP4Atom(id)
+    MP4AlacAtom(MP4File &file, const char *id): MP4Atom(file, id)
     {
-	AddProperty(new MP4BytesProperty("decoderConfig"));
+	AddProperty(new MP4BytesProperty(*this, "decoderConfig"));
     }
 };
 
@@ -55,7 +46,7 @@ MP4TrackId MP4FileX::AddAlacAudioTrack(uint32_t timeScale,
     atom = atom->FindChildAtom("alac");
     atom->FindProperty("alac.timeScale", &pProp);
     dynamic_cast<MP4Integer32Property*>(pProp)->SetValue(timeScale<<16);
-    MP4AlacAtom *alacAtom = new MP4AlacAtom("alac");
+    MP4AlacAtom *alacAtom = new MP4AlacAtom(*this, "alac");
     pProp = alacAtom->GetProperty(0);
     dynamic_cast<MP4BytesProperty*>(pProp)->SetValue(cookie, cookieLength, 0);
     atom->AddChildAtom(alacAtom);
@@ -69,7 +60,7 @@ MP4FileX::CreateMetadataAtom(const char *name, itmf::BasicType typeCode)
 	    format("udta.meta.ilst.%s", name).c_str());
     if (!pAtom) return 0;
     MP4DataAtom *pDataAtom = dynamic_cast<MP4DataAtom*>(
-	    MP4Atom::CreateAtom(pAtom, "data"));
+	    MP4Atom::CreateAtom(*this, pAtom, "data"));
     if (!pDataAtom) return 0;
     pDataAtom->typeCode.SetValue(typeCode);
     pAtom->AddChildAtom(pDataAtom);
@@ -185,7 +176,7 @@ bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
 	    dynamic_cast<MP4DataAtom*>(pTagAtom->FindChildAtom("data"));
 	if (!pDataAtom) {
 	    pDataAtom = dynamic_cast<MP4DataAtom*>(
-		    MP4Atom::CreateAtom(pTagAtom, "data"));
+		    MP4Atom::CreateAtom(*this, pTagAtom, "data"));
 	    pTagAtom->AddChildAtom(pDataAtom);
 	}
 	break;
@@ -195,21 +186,21 @@ bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
 	if (!pTagAtom) return false;
 
 	MP4NameAtom *pNameAtom = dynamic_cast<MP4NameAtom*>(
-		MP4Atom::CreateAtom(pTagAtom, "name"));
+		MP4Atom::CreateAtom(*this, pTagAtom, "name"));
 	if (!pNameAtom) return false;
 	pNameAtom->value.SetValue(
 		reinterpret_cast<const uint8_t*>(name), std::strlen(name));
 	pTagAtom->AddChildAtom(pNameAtom);
 
 	MP4MeanAtom *pMeanAtom = dynamic_cast<MP4MeanAtom*>(
-		MP4Atom::CreateAtom(pTagAtom, "mean"));
+		MP4Atom::CreateAtom(*this, pTagAtom, "mean"));
 	if (!pMeanAtom) return false;
 	pMeanAtom->value.SetValue(
 		reinterpret_cast<const uint8_t*>(mean), std::strlen(mean));
 	pTagAtom->AddChildAtom(pMeanAtom);
 
 	pDataAtom = dynamic_cast<MP4DataAtom*>(
-		MP4Atom::CreateAtom(pTagAtom, "data"));
+		MP4Atom::CreateAtom(*this, pTagAtom, "data"));
 	if (!pDataAtom) return false;
 	pTagAtom->AddChildAtom(pDataAtom);
     }

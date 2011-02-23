@@ -34,13 +34,13 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4StsdAtom::MP4StsdAtom()
-        : MP4Atom("stsd")
+MP4StsdAtom::MP4StsdAtom(MP4File &file)
+        : MP4Atom(file, "stsd")
 {
     AddVersionAndFlags();
 
     MP4Integer32Property* pCount =
-        new MP4Integer32Property("entryCount");
+        new MP4Integer32Property(*this, "entryCount");
     pCount->SetReadOnly();
     AddProperty(pCount);
 
@@ -69,8 +69,8 @@ void MP4StsdAtom::Read()
         (MP4Integer32Property*)m_pProperties[2];
 
     if (m_pChildAtoms.Size() != pCount->GetValue()) {
-        VERBOSE_READ(GetVerbosity(),
-                     printf("Warning: stsd inconsistency with number of entries"));
+        log.warningf("%s: \"%s\": stsd inconsistency with number of entries",
+                     __FUNCTION__, GetFile().GetFilename().c_str() );
 
         /* fix it */
         pCount->SetReadOnly(false);

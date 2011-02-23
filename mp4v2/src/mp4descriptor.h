@@ -29,7 +29,7 @@ namespace impl {
 
 class MP4Descriptor {
 public:
-    MP4Descriptor(uint8_t tag = 0);
+    MP4Descriptor(MP4Atom& parentAtom, uint8_t tag = 0);
 
     virtual ~MP4Descriptor();
 
@@ -40,19 +40,12 @@ public:
         m_tag = tag;
     }
 
-    void SetParentAtom(MP4Atom* pParentAtom) {
-        m_pParentAtom = pParentAtom;
-        for (uint32_t i = 0; i < m_pProperties.Size(); i++) {
-            m_pProperties[i]->SetParentAtom(pParentAtom);
-        }
-    }
-
     void AddProperty(MP4Property* pProperty);
 
     virtual void Generate();
-    virtual void Read(MP4File* pFile);
-    virtual void Write(MP4File* pFile);
-    virtual void Dump(FILE* pFile, uint8_t indent, bool dumpImplicits);
+    virtual void Read(MP4File& file);
+    virtual void Write(MP4File& file);
+    virtual void Dump(uint8_t indent, bool dumpImplicits);
 
     MP4Property* GetProperty(uint32_t index) {
         return m_pProperties[index];
@@ -69,7 +62,7 @@ public:
         return FindContainedProperty(name, ppProperty, pIndex);
     }
 
-    void WriteToMemory(MP4File* pFile,
+    void WriteToMemory(MP4File& file,
                        uint8_t** ppBytes, uint64_t* pNumBytes);
 
 protected:
@@ -77,8 +70,8 @@ protected:
         m_readMutatePoint = propIndex;
     }
 
-    void ReadHeader(MP4File* pFile);
-    void ReadProperties(MP4File* pFile,
+    void ReadHeader(MP4File& file);
+    void ReadProperties(MP4File& file,
                         uint32_t startIndex = 0, uint32_t count = 0xFFFFFFFF);
 
     virtual void Mutate() {
@@ -91,12 +84,16 @@ protected:
     uint8_t GetDepth();
 
 protected:
-    MP4Atom*            m_pParentAtom;
+    MP4Atom&            m_parentAtom;
     uint8_t             m_tag;
     uint64_t            m_start;
     uint32_t            m_size;
     MP4PropertyArray    m_pProperties;
     uint32_t            m_readMutatePoint;
+private:
+    MP4Descriptor();
+    MP4Descriptor ( const MP4Descriptor &src );
+    MP4Descriptor &operator= ( const MP4Descriptor &src );
 };
 
 ///////////////////////////////////////////////////////////////////////////////

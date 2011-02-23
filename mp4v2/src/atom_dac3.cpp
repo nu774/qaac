@@ -29,16 +29,16 @@ namespace impl {
 ///////////////////////////////////////////////////////////////////////////////
 
 
-MP4DAc3Atom::MP4DAc3Atom()
-        : MP4Atom("dac3")
+MP4DAc3Atom::MP4DAc3Atom(MP4File &file)
+        : MP4Atom(file, "dac3")
 {
-    AddProperty( new MP4BitfieldProperty("fscod", 2)); /* 0 */
-    AddProperty( new MP4BitfieldProperty("bsid", 5)); /* 1 */
-    AddProperty( new MP4BitfieldProperty("bsmod", 3)); /* 2 */
-    AddProperty( new MP4BitfieldProperty("acmod", 3)); /* 3 */
-    AddProperty( new MP4BitfieldProperty("lfeon", 1)); /* 4 */
-    AddProperty( new MP4BitfieldProperty("bit_rate_code", 5)); /* 5 */
-    AddProperty( new MP4BitfieldProperty("reserved", 5)); /* 6 */
+    AddProperty( new MP4BitfieldProperty(*this, "fscod", 2)); /* 0 */
+    AddProperty( new MP4BitfieldProperty(*this, "bsid", 5)); /* 1 */
+    AddProperty( new MP4BitfieldProperty(*this, "bsmod", 3)); /* 2 */
+    AddProperty( new MP4BitfieldProperty(*this, "acmod", 3)); /* 3 */
+    AddProperty( new MP4BitfieldProperty(*this, "lfeon", 1)); /* 4 */
+    AddProperty( new MP4BitfieldProperty(*this, "bit_rate_code", 5)); /* 5 */
+    AddProperty( new MP4BitfieldProperty(*this, "reserved", 5)); /* 6 */
     m_pProperties[6]->SetReadOnly(true);
 }
 
@@ -73,7 +73,7 @@ void MP4DAc3Atom::Generate()
  *       reserved = 0 (0x00) <5 bits>
  *
  */
-void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
+void MP4DAc3Atom::Dump(uint8_t indent, bool dumpImplicits)
 {
   
     MP4BitfieldProperty* fscodProp = ((MP4BitfieldProperty*)m_pProperties[0]);
@@ -84,9 +84,8 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
     MP4BitfieldProperty* brcProp = ((MP4BitfieldProperty*)m_pProperties[5]);
     MP4BitfieldProperty* resProp = ((MP4BitfieldProperty*)m_pProperties[6]);
     
-    Indent(pFile, indent++);
-
-    fprintf(pFile, "type = dac3\n");
+    log.dump(indent++, MP4_LOG_VERBOSE2, "\"%s\": type = dac3",
+             GetFile().GetFilename().c_str() );
 
     if (fscodProp) { 
         uint64_t fscod = 0xFF;
@@ -94,8 +93,6 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
         const char* fscods[] = {
             "48", "44.1", "32", "Reserved",
         };
-
-        Indent(pFile, indent);
 
         fscod = fscodProp->GetValue();
 
@@ -110,11 +107,11 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
             hexWidth++;
         }
 
-        fprintf(pFile, 
-                "fscod = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%s kHz]\n",
-                fscod, (int)hexWidth, fscod, fscodProp->GetNumBits(), fscodString);
+        log.dump(indent, MP4_LOG_VERBOSE2, "\"%s\": fscod = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%s kHz]",
+                 GetFile().GetFilename().c_str(),
+                 fscod, (int)hexWidth, fscod, fscodProp->GetNumBits(), fscodString);
     }
-    if (bsidProp)  bsidProp->Dump(pFile, indent, dumpImplicits);
+    if (bsidProp)  bsidProp->Dump(indent, dumpImplicits);
 
     if (bsmodProp) { 
         uint64_t bsmod = 0xFF;
@@ -130,8 +127,6 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
             "Associated service: voice over (VO) or Main audio service: karaoke",
         };
 
-        Indent(pFile, indent);
-
         bsmod = bsmodProp->GetValue();
 
         if (bsmod < (sizeof(bsmods) / sizeof(bsmods[0]))) {
@@ -145,9 +140,10 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
             hexWidth++;
         }
 
-        fprintf(pFile, 
-                "bsmod = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%s]\n",
-                bsmod, (int)hexWidth, bsmod, bsmodProp->GetNumBits(), bsmodString);
+        log.dump(indent, MP4_LOG_VERBOSE2,
+                "\"%s\": bsmod = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%s]",
+                 GetFile().GetFilename().c_str(),
+                 bsmod, (int)hexWidth, bsmod, bsmodProp->GetNumBits(), bsmodString);
     }
     
     if (acmodProp) { 
@@ -165,8 +161,6 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
             "3/2 (L, C, R, SL, SR)",
         };
 
-        Indent(pFile, indent);
-
         acmod = acmodProp->GetValue();
 
         if (acmod < (sizeof(acmods) / sizeof(acmods[0]))) {
@@ -180,25 +174,24 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
             hexWidth++;
         }
 
-        fprintf(pFile, 
-                "acmod = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%s]\n",
-                acmod, (int)hexWidth, acmod, acmodProp->GetNumBits(), acmodString);
+        log.dump(indent, MP4_LOG_VERBOSE2,
+                 "\"%s\": acmod = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%s]",
+                 GetFile().GetFilename().c_str(),
+                 acmod, (int)hexWidth, acmod, acmodProp->GetNumBits(), acmodString);
     }
 
     if (lfeonProp) {
         uint64_t lfeon = lfeonProp->GetValue();
         uint8_t hexWidth = lfeonProp->GetNumBits() / 4;
         
-        Indent(pFile, indent);
-
         if (hexWidth == 0 || (lfeonProp->GetNumBits() % 4)) {
             hexWidth++;
         }
         
-        fprintf(pFile, 
-                "lfeon = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%s]\n",
-                lfeon, (int)hexWidth, lfeon, 
-                lfeonProp->GetNumBits(), lfeon ? "ENABLED" : "DISABLED"); 
+        log.dump(indent, MP4_LOG_VERBOSE2,
+                "\"%s\": lfeon = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%s]",
+                 GetFile().GetFilename().c_str(), lfeon, (int)hexWidth, lfeon, 
+                 lfeonProp->GetNumBits(), lfeon ? "ENABLED" : "DISABLED"); 
     }
     
     if (brcProp) {
@@ -226,8 +219,6 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
         uint64_t bit_rate_code = brcProp->GetValue();
         uint32_t bit_rate;
 
-        Indent(pFile, indent);
-
         if (bit_rate_code < (sizeof(bit_rate_codes) / sizeof(bit_rate_codes[0]))) {
             bit_rate = bit_rate_codes[bit_rate_code];
         } else {
@@ -239,12 +230,13 @@ void MP4DAc3Atom::Dump(FILE* pFile, uint8_t indent, bool dumpImplicits)
             hexWidth++;
         }
         
-        fprintf(pFile, 
-                "bit_rate_code = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%" PRIu32 " kbit/s]\n",
-                bit_rate_code, (int)hexWidth, bit_rate_code, 
-                brcProp->GetNumBits(), bit_rate); 
+        log.dump(indent, MP4_LOG_VERBOSE2,
+                 "\"%s\": bit_rate_code = %" PRIu64 " (0x%0*" PRIx64 ") <%u bits> [%" PRIu32 " kbit/s]",
+                 GetFile().GetFilename().c_str(),
+                 bit_rate_code, (int)hexWidth, bit_rate_code, 
+                 brcProp->GetNumBits(), bit_rate); 
     }
-    if (resProp) resProp->Dump(pFile, indent, dumpImplicits);
+    if (resProp) resProp->Dump(indent, dumpImplicits);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

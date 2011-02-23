@@ -26,8 +26,8 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4MdatAtom::MP4MdatAtom()
-        : MP4Atom("mdat")
+MP4MdatAtom::MP4MdatAtom(MP4File &file)
+        : MP4Atom(file, "mdat")
 {
 }
 

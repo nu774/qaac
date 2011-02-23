@@ -373,13 +373,13 @@ void write_tags(const std::wstring &ofilename,
     }
     editor.save();
     if (!opts.no_optimize) {
-	mp4v2::impl::MP4File optimizer(0);
+	mp4v2::impl::MP4File optimizer;
 	std::string utf8_name = w2m(ofilename, utf8_codecvt_facet());
 	std::string tmpname = utf8_name + ".tmp";
 	try {
 	    optimizer.Optimize(tmpname.c_str(), utf8_name.c_str());
 	    DeleteFileW(ofilenamex.c_str());
-	} catch (mp4v2::impl::MP4Error *e) {
+	} catch (mp4v2::impl::Exception *e) {
 	    handle_mp4error(e);
 	}
     }
@@ -669,6 +669,8 @@ int wmain(int argc, wchar_t **argv)
 	if (opts.isSBR())
 	    install_aach_codec();
 	load_modules(opts);
+
+	mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
 
 	while (opts.ifilename = *argv++) {
 	    opts.reset();

@@ -27,20 +27,20 @@ namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MP4EncaAtom::MP4EncaAtom()
-        : MP4Atom("enca")
+MP4EncaAtom::MP4EncaAtom(MP4File &file)
+        : MP4Atom(file, "enca")
 {
-    AddReserved("reserved1", 6); /* 0 */
+    AddReserved(*this, "reserved1", 6); /* 0 */
 
     AddProperty( /* 1 */
-        new MP4Integer16Property("dataReferenceIndex"));
+        new MP4Integer16Property(*this, "dataReferenceIndex"));
 
-    AddReserved("reserved2", 16); /* 2 */
+    AddReserved(*this, "reserved2", 16); /* 2 */
 
     AddProperty( /* 3 */
-        new MP4Integer16Property("timeScale"));
+        new MP4Integer16Property(*this, "timeScale"));
 
-    AddReserved("reserved3", 2); /* 4 */
+    AddReserved(*this, "reserved3", 2); /* 4 */
 
     ExpectChildAtom("esds", Required, OnlyOne);
     ExpectChildAtom("sinf", Required, OnlyOne);
