@@ -59,11 +59,8 @@ MP4FileX::CreateMetadataAtom(const char *name, itmf::BasicType typeCode)
     MP4Atom *pAtom = AddDescendantAtoms("moov",
 	    format("udta.meta.ilst.%s", name).c_str());
     if (!pAtom) return 0;
-    MP4DataAtom *pDataAtom = dynamic_cast<MP4DataAtom*>(
-	    MP4Atom::CreateAtom(*this, pAtom, "data"));
-    if (!pDataAtom) return 0;
+    MP4DataAtom *pDataAtom = AddChildAtomT(pAtom, "data");
     pDataAtom->typeCode.SetValue(typeCode);
-    pAtom->AddChildAtom(pDataAtom);
 
     MP4Atom *pHdlrAtom = FindAtom("moov.udta.meta.hdlr");
     MP4Property *pProp;
@@ -78,8 +75,7 @@ MP4DataAtom *MP4FileX::FindOrCreateMetadataAtom(
 	const char *atom, itmf::BasicType typeCode)
 {
     std::string atomstring = format("moov.udta.meta.ilst.%s.data", atom);
-    MP4DataAtom *pAtom = dynamic_cast<MP4DataAtom*>(
-	    FindAtom(atomstring.c_str()));
+    MP4DataAtom *pAtom = FindAtomT(atomstring.c_str());
     if (!pAtom)
 	pAtom = CreateMetadataAtom(atom, typeCode);
     return pAtom;
@@ -164,45 +160,30 @@ bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
 	MP4Atom *pTagAtom = FindAtom(tagname.c_str());
 	if (!pTagAtom)	
 	    break;
-	MP4NameAtom *pNameAtom =
-	    dynamic_cast<MP4NameAtom*>(pTagAtom->FindChildAtom("name"));
+	MP4NameAtom *pNameAtom = FindChildAtomT(pTagAtom, "name");
 	if (!pNameAtom || pNameAtom->value.CompareToString(name))
 	    continue;
-	MP4MeanAtom *pMeanAtom =
-	    dynamic_cast<MP4MeanAtom*>(pTagAtom->FindChildAtom("mean"));
+	MP4MeanAtom *pMeanAtom = FindChildAtomT(pTagAtom, "mean");
 	if (!pMeanAtom || pMeanAtom->value.CompareToString(mean))
 	    continue;
-	pDataAtom =
-	    dynamic_cast<MP4DataAtom*>(pTagAtom->FindChildAtom("data"));
-	if (!pDataAtom) {
-	    pDataAtom = dynamic_cast<MP4DataAtom*>(
-		    MP4Atom::CreateAtom(*this, pTagAtom, "data"));
-	    pTagAtom->AddChildAtom(pDataAtom);
-	}
+	MP4DataAtom *pDataAtom = FindChildAtomT(pTagAtom, "data");
+	if (!pDataAtom)
+	    pDataAtom = AddChildAtomT(pTagAtom, "data");
 	break;
     }
     if (!pDataAtom) {
 	MP4Atom *pTagAtom = AddDescendantAtoms("moov", tagname.c_str() + 5);
 	if (!pTagAtom) return false;
 
-	MP4NameAtom *pNameAtom = dynamic_cast<MP4NameAtom*>(
-		MP4Atom::CreateAtom(*this, pTagAtom, "name"));
-	if (!pNameAtom) return false;
+	MP4NameAtom *pNameAtom = AddChildAtomT(pTagAtom, "name");
 	pNameAtom->value.SetValue(
 		reinterpret_cast<const uint8_t*>(name), std::strlen(name));
-	pTagAtom->AddChildAtom(pNameAtom);
 
-	MP4MeanAtom *pMeanAtom = dynamic_cast<MP4MeanAtom*>(
-		MP4Atom::CreateAtom(*this, pTagAtom, "mean"));
-	if (!pMeanAtom) return false;
+	MP4MeanAtom *pMeanAtom = AddChildAtomT(pTagAtom, "mean");
 	pMeanAtom->value.SetValue(
 		reinterpret_cast<const uint8_t*>(mean), std::strlen(mean));
-	pTagAtom->AddChildAtom(pMeanAtom);
 
-	pDataAtom = dynamic_cast<MP4DataAtom*>(
-		MP4Atom::CreateAtom(*this, pTagAtom, "data"));
-	if (!pDataAtom) return false;
-	pTagAtom->AddChildAtom(pDataAtom);
+	pDataAtom = AddChildAtomT(pTagAtom, "data");
     }
     pDataAtom->typeCode.SetValue(typeCode);
     pDataAtom->metadata.SetValue(pValue, valueSize);

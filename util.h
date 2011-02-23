@@ -129,6 +129,15 @@ std::wstring wslower(const std::wstring &s)
     return strtransform(s, towlower);
 }
 
+template <typename T>
+class AutoDynaCast {
+    T *m_pointer;
+public:
+    AutoDynaCast(T *p): m_pointer(p) {}
+    template <typename U>
+    operator U*() { return dynamic_cast<U*>(m_pointer); }
+};
+
 inline void check_eof(bool expr)
 {
     if (!expr) throw std::runtime_error("Premature EOF");

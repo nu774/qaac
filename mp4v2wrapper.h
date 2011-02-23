@@ -6,6 +6,7 @@
 #include <GNUCompatibility/stdint.h> // To avoid conflict with QT
 #undef FindAtom
 #include "impl.h"
+#include "util.h"
 
 std::string format_mp4error(const mp4v2::impl::Exception &e);
 
@@ -20,6 +21,21 @@ class MP4FileX: public mp4v2::impl::MP4File {
 public:
     MP4FileX() {}
 
+    AutoDynaCast<mp4v2::impl::MP4Atom>
+    FindAtomT(const char *name)
+    {
+	return FindAtom(name);
+    }
+    AutoDynaCast<mp4v2::impl::MP4Atom>
+    FindChildAtomT(mp4v2::impl::MP4Atom *parent, const char *name)
+    {
+	return parent->FindChildAtom(name);
+    }
+    AutoDynaCast<mp4v2::impl::MP4Atom>
+    AddChildAtomT(mp4v2::impl::MP4Atom *parent, const char *name)
+    {
+	return AddChildAtom(parent, name);
+    }
     MP4TrackId AddAlacAudioTrack(uint32_t timeScale, const uint8_t *cookie,
 	    size_t cookieLength);
     bool SetMetadataString(const char *atom, const char *value);
