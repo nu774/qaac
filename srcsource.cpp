@@ -60,7 +60,7 @@ SRCSource::SRCSource(const SRCModule &module, ISource *src, uint32_t rate,
     m_conversion_data.src_ratio = 1.0 * rate / srcFormat.m_rate;
 
     wchar_t *tmpname = _wtempnam(GetTempPathX().c_str(), L"qaac.tmp");
-    FILE *tmpfile = _wfopen(tmpname, L"wb+");
+    FILE *tmpfile = wfopenx(tmpname, L"wb+");
     TempFileCloser closer(tmpname, tmpfile);
     std::free(tmpname);
     if (!tmpfile)

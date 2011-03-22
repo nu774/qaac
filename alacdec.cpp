@@ -40,9 +40,7 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
 	_setmode(1, _O_BINARY);
 	ofp.swap(file_ptr_t(stdout, noop));
     } else {
-	FILE *fp = _wfopen(ofilename.c_str(), L"wb");
-	if (!fp)
-	    throw std::runtime_error(std::strerror(errno));
+	FILE *fp = wfopenx(ofilename.c_str(), L"wb");
 	ofp.swap(file_ptr_t(fp, std::fclose));
     }
     ISink *sink = 0;

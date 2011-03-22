@@ -14,7 +14,10 @@ public:
     {
 	Handle ref;
 	OSType type;
-	std::wstring fullpath = GetFullPathNameX(path);
+	/*
+	 * XXX: QuickTime seems to return pathTooLongErr for very long paths.
+	 */
+	std::wstring fullpath = GetFullPathNameX(path.c_str());
 	TRYF(QTNewDataReferenceFromFullPathCFString(
 		    W2CF(fullpath), kQTNativeDefaultPathStyle,
 		    0, &ref, &type), path);

@@ -71,8 +71,10 @@ LibSndfileSource::LibSndfileSource(
     SNDFILE *fp;
     if (!std::wcscmp(path, L"-"))
 	fp = m_module.open_fd(0, SFM_READ, &info, 0);
-    else
-	fp = m_module.wchar_open(path, SFM_READ, &info);
+    else {
+	std::wstring fullpath = get_prefixed_fullpath(path);
+	fp = m_module.wchar_open(fullpath.c_str(), SFM_READ, &info);
+    }
     if (!fp)
 	throw std::runtime_error(m_module.strerror(0));
     m_handle.swap(handle_t(fp, m_module.close));

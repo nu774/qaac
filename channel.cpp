@@ -12,10 +12,7 @@ StdioChannel::StdioChannel(const wchar_t *name)
 	m_fp.swap(fileptr_t(stdin, no_close));
     } else {
 	m_name = format("%ls", name);
-	FILE *fp = _wfopen(name, L"rb");
-	if (!fp) throw std::runtime_error(format("%ls: %s",
-		    name, std::strerror(errno)));
-	m_fp.swap(fileptr_t(fp, fclose));
+	m_fp.swap(fileptr_t(wfopenx(name, L"rb"), fclose));
     }
     test_seekable();
 }
@@ -69,41 +66,6 @@ int64_t StdioChannel::tell()
     if (std::fgetpos(m_fp.get(), &off))
 	throw std::runtime_error(std::strerror(errno));
     return off;
-}
-
-Win32Channel::Win32Channel(const wchar_t *name)
-{
-    if (!std::wcscmp(name, L"-")) {
-	m_name = "<stdin>";
-	m_fp.swap(fileptr_t(GetStdHandle(STD_INPUT_HANDLE), no_close));
-    } else {
-	m_name = format("%ls", name);
-	HANDLE handle = CreateFileW(name, GENERIC_READ, FILE_SHARE_READ,
-		0, OPEN_EXISTING, 0, 0);
-	if (handle == INVALID_HANDLE_VALUE)
-	    throw_win32_error(m_name, GetLastError());
-	m_fp.swap(fileptr_t(handle, CloseHandle));
-    }
-    test_seekable();
-}
-
-void Win32Channel::test_seekable()
-{
-    m_is_seekable = GetFileType(m_fp.get()) == FILE_TYPE_DISK;
-}
-
-ssize_t Win32Channel::read(void *buf, size_t count)
-{
-    DWORD dwRead;
-    return ReadFile(m_fp.get(), buf, count, &dwRead, 0) ? dwRead : -1;
-}
-
-int64_t Win32Channel::seek(int64_t offset, int whence)
-{
-    LARGE_INTEGER off, newoff;
-    off.QuadPart = offset;
-    return SetFilePointerEx(m_fp.get(), off, &newoff, whence)
-	? newoff.QuadPart :  -1;
 }
 
 namespace __InputStreamImpl {

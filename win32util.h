@@ -1,6 +1,8 @@
 #ifndef _WIN32UTIL_H
 #define _WIN32UTIL_H
 
+#include <cstdio>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #ifndef NOMINMAX
@@ -11,6 +13,7 @@
 #endif
 #include <windows.h>
 #include <shlwapi.h>
+#include "util.h"
 
 void throw_win32_error(const std::string& msg, DWORD error);
 
@@ -86,6 +89,35 @@ std::wstring GetTempPathX()
     std::vector<wchar_t> buffer(len + 1);
     len = GetTempPathW(buffer.size(), &buffer[0]);
     return std::wstring(&buffer[0], &buffer[len]);
+}
+
+inline
+std::wstring get_prefixed_fullpath(const wchar_t *path)
+{
+    std::wstring fullpath = GetFullPathNameX(path);
+    if (fullpath.size() > 2 && fullpath.substr(2) == L"\\\\")
+	fullpath.insert(2, L"?\\UNC\\");
+    else
+	fullpath.insert(0, L"\\\\?\\");
+    return fullpath;
+}
+
+inline
+FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
+{
+    std::wstring fullpath = get_prefixed_fullpath(path);
+    FILE *fp = _wfopen(fullpath.c_str(), mode);
+    if (!fp)
+	throw std::runtime_error(format("_wfopen: %ls: %s",
+		    fullpath.c_str(), std::strerror(errno)));
+    return fp;
+}
+
+inline
+BOOL DeleteFileX(const wchar_t *path)
+{
+    std::wstring fullpath = get_prefixed_fullpath(path);
+    return DeleteFileW(fullpath.c_str());
 }
 
 class DirectorySaver {

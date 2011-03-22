@@ -43,7 +43,7 @@ QTMovieSource::QTMovieSource(const std::wstring &path, bool alac_only)
     : m_extraction_complete(false)
 {
     try {
-	M4ATagParser parser(path);
+	M4ATagParser parser(GetFullPathNameX(path.c_str()));
 	if (alac_only && !parser.isALAC())
 	    throw std::runtime_error("Not an ALAC file");
 	m_tags = parser.getTags();

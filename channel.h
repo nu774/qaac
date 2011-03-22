@@ -61,29 +61,6 @@ private:
     void test_seekable();
 };
 
-class Win32Channel : public ISeekable {
-    typedef boost::shared_ptr<void> fileptr_t;
-    fileptr_t m_fp;
-    std::string m_name;
-    bool m_is_seekable;
-public:
-    explicit Win32Channel(void *handle)
-	: m_name("<stdin>"),
-	  m_fp(handle, no_close)
-    {
-	test_seekable();
-    }
-    Win32Channel(const wchar_t *name);
-    virtual Win32Channel *copy() { return new Win32Channel(*this); }
-    const char *name() { return m_name.c_str(); }
-    bool seekable() { return m_is_seekable; }
-    ssize_t read(void *buf, size_t count);
-    int64_t seek(int64_t offset, int whence);
-private:
-    static void no_close(void *handle) {}
-    void test_seekable();
-};
-
 template <class T>
 class BinaryRead {
 public:

@@ -207,8 +207,8 @@ void set_codec_options(AACEncoder &encoder, Options &opts)
 static
 std::wstring get_output_filename(const wchar_t *ifilename, Options &opts)
 {
-    if (opts.ofilename)
-	return opts.ofilename;
+    if (opts.ofilename && std::wcscmp(opts.ofilename, L"-"))
+	return GetFullPathNameX(opts.ofilename);
 
     const wchar_t *ext = opts.isMP4() ? L"m4a" : L"aac";
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
@@ -217,8 +217,9 @@ std::wstring get_output_filename(const wchar_t *ifilename, Options &opts)
     else {
 	std::wstring obasename =
 	    PathReplaceExtension(PathFindFileNameW(ifilename), ext);
-	std::wstring ofilename = format(L"%s/%s", outdir, obasename.c_str());
-	if (GetFullPathNameX(ifilename) == GetFullPathNameX(ofilename)) {
+	std::wstring ofilename = 
+	    GetFullPathNameX(format(L"%s/%s", outdir, obasename.c_str()));
+	if (GetFullPathNameX(ifilename) == ofilename) {
 	    std::wstring tl = 
 		opts.isALAC() ? std::wstring(L"alac.") + ext
 			      : std::wstring(L"aac.") + ext;
@@ -252,8 +253,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
     file_t statfp;
     if (opts.save_stat) {
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
-	FILE *fp = _wfopen(statname.c_str(), L"w");
-	if (fp) statfp = file_t(fp, std::fclose);
+	statfp = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
     PeriodicDisplay disp(stderr, 100);
     try {
@@ -315,8 +315,9 @@ ISource *open_source(const Options &opts)
     }
     try {
 	return new QTMovieSource(opts.ifilename, true);
-    } catch (const std::runtime_error&) {
-	throw std::runtime_error("Unsupported format");
+    } catch (const std::runtime_error& e) {
+	throw e;
+	//throw std::runtime_error("Unsupported format");
     }
 }
 
@@ -341,7 +342,10 @@ void write_tags(const std::wstring &ofilename,
 
     if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-")) {
 	try {
-	    TagLib::RIFF::AIFF::File file(opts.ifilename);
+	    std::wstring fullname = get_prefixed_fullpath(opts.ifilename);
+	    TagLib::RIFF::AIFF::File file(fullname.c_str());
+	    if (!file.isOpen())
+		throw std::runtime_error("taglib: can't open file");
 	    TagLib::ID3v2::Tag *tag = file.tag();
 	    const TagLib::ID3v2::FrameList &frameList = tag->frameList();
 	    TagLib::ID3v2::FrameList::ConstIterator it;
@@ -378,7 +382,7 @@ void write_tags(const std::wstring &ofilename,
 	std::string tmpname = utf8_name + ".tmp";
 	try {
 	    optimizer.Optimize(tmpname.c_str(), utf8_name.c_str());
-	    DeleteFileW(ofilenamex.c_str());
+	    DeleteFileX(ofilenamex.c_str());
 	} catch (mp4v2::impl::Exception *e) {
 	    handle_mp4error(e);
 	}
@@ -675,11 +679,6 @@ int wmain(int argc, wchar_t **argv)
 	while (opts.ifilename = *argv++) {
 	    opts.reset();
 
-	    std::wstring iname;
-	    if (std::wcscmp(opts.ifilename, L"-")) {
-		iname = GetFullPathNameX(opts.ifilename);
-		opts.ifilename = const_cast<wchar_t*>(iname.c_str());
-	    }
 	    if (opts.verbose) {
 		const wchar_t *name = L"<stdin>";
 		if (std::wcscmp(opts.ifilename, L"-"))

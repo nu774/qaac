@@ -20,11 +20,17 @@ inline void TryE(int err, const char *msg)
 inline void TryF(int err, const char *msg, const std::wstring &filename)
 {
     std::string s = "";
+    const char *syserr = 0;
     if (err == couldNotResolveDataRef)
-	s = format("%ls: No such file or directory", filename.c_str());
+	syserr = "No such file or directory";
     else if (err == ioErr)
-	s = format("%ls: I/O error", filename.c_str());
-    else if (err)
+	syserr = "I/O error";
+    else if (err == pathTooLongErr)
+	syserr = "Filename too long";
+
+    if (syserr)
+	s = format("Error: %ls: %s: %s", filename.c_str(), syserr, msg);
+    else
 	s = format("Error: %ls: %d: %s", filename.c_str(), err, msg);
     if (err) throw std::runtime_error(s);
 }

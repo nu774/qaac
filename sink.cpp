@@ -132,11 +132,7 @@ ADTSSink::ADTSSink(const std::wstring &path, EncoderBase &encoder)
 #endif
 	m_fp.swap(file_ptr_t(stdout, noop));
     } else {
-	FILE *fp = _wfopen(path.c_str(), L"wb");
-	if (!fp)
-	    throw std::runtime_error(
-		   format("%ls: %s", path, std::strerror(errno)));
-	m_fp.swap(file_ptr_t(fp, fclose));
+	m_fp.swap(file_ptr_t(wfopenx(path.c_str(), L"wb"), fclose));
     }
     const AudioStreamBasicDescription &format
 	= encoder.getOutputBasicDescription();
