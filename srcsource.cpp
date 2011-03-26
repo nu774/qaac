@@ -29,7 +29,7 @@ struct TempFileCloser {
     {}
     void operator()(void *) {
 	std::fclose(m_fp);
-	DeleteFileW(m_name.c_str());
+	DeleteFileX(m_name.c_str());
     }
     std::wstring m_name;
     FILE *m_fp;
