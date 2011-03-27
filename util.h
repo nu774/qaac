@@ -23,20 +23,16 @@ inline int _wtoi(const wchar_t *s) { return std::wcstol(s, 0, 10); }
 template <typename T, size_t size>
 inline size_t array_size(const T (&)[size]) { return size; }
 
-template <typename T, typename U>
-class find_string_pred {
-    T m_value; 
-public:
-    find_string_pred(T value): m_value(value) {}
-    bool operator()(U ch) { return !ch || ch == m_value; }
-};
-
-template <typename T, typename U>
-inline int strindex(const T *s, U ch)
+inline int strindex(const char *s, int ch)
 {
-    const T *p = std::find_if(s, reinterpret_cast<const T*>(-1LL),
-	    find_string_pred<U, T>(ch));
-    return *p ? p - s : -1;
+    const char *p = std::strchr(s, ch);
+    return p ? p - s : -1;
+}
+
+inline int strindex(const wchar_t *s, int ch)
+{
+    const wchar_t *p = std::wcschr(s, ch);
+    return p ? p - s : -1;
 }
 
 template <typename T>

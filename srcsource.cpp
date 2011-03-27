@@ -38,7 +38,7 @@ struct TempFileCloser {
 
 SRCSource::SRCSource(const SRCModule &module, ISource *src, uint32_t rate,
 	int mode)
-    : m_module(module), m_src(src), m_peak(0.0), m_length(0)
+    : m_module(module), m_src(src), m_length(0), m_peak(0.0)
 {
     const SampleFormat &srcFormat = src->getSampleFormat();
     if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
@@ -89,8 +89,10 @@ size_t SRCSource::readSamples(void *buffer, size_t nsamples)
  	    nsamples * m_format.m_nchannels, m_tmpfile.get());
     float *fp = reinterpret_cast<float*>(buffer);
     if (m_peak > 1.0) {
-	for (size_t i = 0; i < nc; ++i)
-	    *fp++ = static_cast<float>(*fp / m_peak);
+	for (size_t i = 0; i < nc; ++i) {
+	    float nfp = static_cast<float>(*fp / m_peak);
+	    *fp++ = nfp;
+	}
     }
     return nc / m_format.m_nchannels;
 }
