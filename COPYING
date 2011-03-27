@@ -2,7 +2,7 @@ All files are distributed as Public Domain, except for the followings:
 
 Files under mp4v2:
 These are part of mp4v2 (http://code.google.com/p/mp4v2/),
-svn-r455
+svn-r458
 
 Files under taglib:
 These are part of TagLib (http://developer.kde.org/~wheeler/taglib.html),
@@ -25,7 +25,7 @@ version 1.2.1
 
 include/sndfile.h:
 This is header file of libsndfile (http://www.mega-nerd.com/libsndfile/),
-version 1.0.23
+version 1.0.24
 
 include/wavpack.h:
 This is header file of WavPack (http://www.wavpack.com/),
