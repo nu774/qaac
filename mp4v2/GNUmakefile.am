@@ -171,6 +171,7 @@ if ADD_PLATFORM_POSIX
 endif
 if ADD_PLATFORM_WIN32
     libmp4v2_la_SOURCES += \
+	libplatform/platform_win32.cpp         \
         libplatform/io/File_win32.cpp          \
         libplatform/io/FileSystem_win32.cpp    \
         libplatform/number/random_win32.cpp    \

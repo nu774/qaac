@@ -184,7 +184,21 @@ MP4StandardAtom::MP4StandardAtom (MP4File &file, const char *type) : MP4Atom(fil
         ExpectChildAtom("catg", Optional, OnlyOne); /* Category (for podcasts?) */
         ExpectChildAtom("purl", Optional, OnlyOne); /* Podcast URL */
         ExpectChildAtom("egid", Optional, OnlyOne); /* Podcast episode global unique ID */
-        
+        ExpectChildAtom("rtng", Optional, OnlyOne); /* Content Rating */
+        ExpectChildAtom("stik", Optional, OnlyOne); /* MediaType */
+        ExpectChildAtom("\251grp", Optional, OnlyOne); /* Grouping */
+        ExpectChildAtom("\251lyr", Optional, OnlyOne); /* Lyrics */
+        ExpectChildAtom("cprt", Optional, OnlyOne); /* Copyright */
+        ExpectChildAtom("apID", Optional, OnlyOne); /* iTunes Account */
+        ExpectChildAtom("akID", Optional, OnlyOne); /* iTunes Account Type */
+        ExpectChildAtom("sfID", Optional, OnlyOne); /* iTunes Country */
+        ExpectChildAtom("cnID", Optional, OnlyOne); /* Content ID */
+        ExpectChildAtom("atID", Optional, OnlyOne); /* Artist ID */
+        ExpectChildAtom("plID", Optional, OnlyOne); /* Playlist ID */
+        ExpectChildAtom("geID", Optional, OnlyOne); /* Genre ID */
+        ExpectChildAtom("cmID", Optional, OnlyOne); /* Composer ID */
+        ExpectChildAtom("xid ", Optional, OnlyOne); /* XID */
+
     }  else if (ATOMID(type) == ATOMID("imif")) {
         AddVersionAndFlags();
         AddProperty(new MP4DescriptorProperty(*this, "ipmp_desc", MP4IPMPDescrTag,

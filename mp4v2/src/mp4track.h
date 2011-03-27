@@ -218,7 +218,8 @@ protected:
     MP4SampleId m_writeSampleId;
     MP4Duration m_fixedSampleDuration;
     uint8_t*    m_pChunkBuffer;
-    uint32_t    m_chunkBufferSize;
+    uint32_t    m_chunkBufferSize;          // Actual size of our chunk buffer.
+    uint32_t    m_sizeOfDataInChunkBuffer;  // Size of the data in the chunk buffer.
     uint32_t    m_chunkSamples;
     MP4Duration m_chunkDuration;
 

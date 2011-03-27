@@ -52,6 +52,7 @@ MP4Track::MP4Track(MP4File& file, MP4Atom& trakAtom)
     m_fixedSampleDuration = 0;
     m_pChunkBuffer = NULL;
     m_chunkBufferSize = 0;
+    m_sizeOfDataInChunkBuffer = 0;
     m_chunkSamples = 0;
     m_chunkDuration = 0;
 
@@ -249,7 +250,9 @@ MP4Track::MP4Track(MP4File& file, MP4Atom& trakAtom)
 MP4Track::~MP4Track()
 {
     MP4Free(m_pCachedReadSample);
+    m_pCachedReadSample = NULL;
     MP4Free(m_pChunkBuffer);
+    m_pChunkBuffer = NULL;
 }
 
 const char* MP4Track::GetType()
@@ -439,11 +442,16 @@ void MP4Track::WriteSample(
     }
 
     // append sample bytes to chunk buffer
-    m_pChunkBuffer = (uint8_t*)MP4Realloc(m_pChunkBuffer,
-                                          m_chunkBufferSize + numBytes);
-    if (m_pChunkBuffer == NULL) return;
-    memcpy(&m_pChunkBuffer[m_chunkBufferSize], pBytes, numBytes);
-    m_chunkBufferSize += numBytes;
+    if( m_sizeOfDataInChunkBuffer + numBytes > m_chunkBufferSize ) {
+        m_pChunkBuffer = (uint8_t*)MP4Realloc(m_pChunkBuffer, m_chunkBufferSize + numBytes);
+        if (m_pChunkBuffer == NULL) 
+            return;	
+        
+        m_chunkBufferSize += numBytes;
+    }
+
+    memcpy(&m_pChunkBuffer[m_sizeOfDataInChunkBuffer], pBytes, numBytes);
+    m_sizeOfDataInChunkBuffer += numBytes;
     m_chunkSamples++;
     m_chunkDuration += duration;
 
@@ -481,19 +489,19 @@ void MP4Track::WriteSampleDependency(
 
 void MP4Track::WriteChunkBuffer()
 {
-    if (m_chunkBufferSize == 0) {
+    if (m_sizeOfDataInChunkBuffer == 0) {
         return;
     }
 
     uint64_t chunkOffset = m_File.GetPosition();
 
     // write chunk buffer
-    m_File.WriteBytes(m_pChunkBuffer, m_chunkBufferSize);
+    m_File.WriteBytes(m_pChunkBuffer, m_sizeOfDataInChunkBuffer);
 
     log.verbose3f("\"%s\": WriteChunk: track %u offset 0x%" PRIx64 " size %u (0x%x) numSamples %u",
                   GetFile().GetFilename().c_str(), 
-                  m_trackId, chunkOffset, m_chunkBufferSize,
-                  m_chunkBufferSize, m_chunkSamples);
+                  m_trackId, chunkOffset, m_sizeOfDataInChunkBuffer,
+                  m_sizeOfDataInChunkBuffer, m_chunkSamples);
 
     UpdateSampleToChunk(m_writeSampleId,
                         m_pChunkCountProperty->GetValue() + 1,
@@ -501,10 +509,9 @@ void MP4Track::WriteChunkBuffer()
 
     UpdateChunkOffsets(chunkOffset);
 
-    // clean up chunk buffer
-    MP4Free(m_pChunkBuffer);
-    m_pChunkBuffer = NULL;
-    m_chunkBufferSize = 0;
+    // note: we do not free our chunk buffer; we reuse it, expanding as needed.
+    // It gets zapped when this class goes out of scope
+    m_sizeOfDataInChunkBuffer = 0;
     m_chunkSamples = 0;
     m_chunkDuration = 0;
 }

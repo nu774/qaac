@@ -103,8 +103,8 @@ FileSystem::getFileSize( string path_, File::Size& size_ )
     WIN32_FILE_ATTRIBUTE_DATA data = {0};
     if( !GetFileAttributesExW( filename, GetFileExInfoStandard, (LPVOID)&data ) )
     {
-        log.errorf("%s: GetFileAttributesExW(%s) failed (%d)",__FUNCTION__,filename.utf8,
-                   GetLastError());
+        log.errorf("%s: GetFileAttributesExW(%s) failed (%d)",
+		__FUNCTION__,filename.utf8.c_str(), GetLastError());
         return true;
     }
 
@@ -128,7 +128,8 @@ FileSystem::rename( string from, string to )
     if (!::MoveFileExW( from_file, to_file,
                         MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) )
     {
-        log.errorf("%s: MoveFileExW(%s,%s) failed (%d)",__FUNCTION__,from_file.utf8,to_file.utf8,
+        log.errorf("%s: MoveFileExW(%s,%s) failed (%d)",
+		__FUNCTION__,from_file.utf8.c_str(),to_file.utf8.c_str(),
                    GetLastError());
         return true;
     }

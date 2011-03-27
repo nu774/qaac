@@ -1,0 +1,7 @@
+#!/bin/sh
+
+CA=configure.ac
+(rm -f $CA && sed '/^m4_define..SVNINFO/ s/svn info/cat svninfo/' > $CA) < $CA
+
+exec autoreconf -i
+
