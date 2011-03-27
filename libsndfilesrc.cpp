@@ -59,7 +59,7 @@ LibSndfileModule::LibSndfileModule(const std::wstring &path)
 	m_loaded = false;
 	return;
     }
-    m_module.swap(module_t(hDll, FreeLibrary));
+    m_module = module_t(hDll, FreeLibrary);
 }
 
 
@@ -77,7 +77,7 @@ LibSndfileSource::LibSndfileSource(
     }
     if (!fp)
 	throw std::runtime_error(m_module.strerror(0));
-    m_handle.swap(handle_t(fp, m_module.close));
+    m_handle = handle_t(fp, m_module.close);
     setRange(0, info.frames);
 
     const char *fmtstr;

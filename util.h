@@ -2,6 +2,7 @@
 #define _UTIL_H
 
 #include <cstdlib>
+#include <cstring>
 #include <cwchar>
 #include <string>
 #include <algorithm>
@@ -129,6 +130,18 @@ std::wstring wslower(const std::wstring &s)
     return strtransform(s, towlower);
 }
 
+inline
+int tolower_(int ch)
+{
+    return tolower(ch);
+}
+
+inline
+std::string slower(const std::string &s)
+{
+    return strtransform(s, tolower_);
+}
+
 template <typename T>
 class AutoDynaCast {
     T *m_pointer;
@@ -194,13 +207,6 @@ uint32_t bitcount(uint32_t bits)
     bits = (bits & 0x0f0f0f0f) + (bits >> 4 & 0x0f0f0f0f);
     bits = (bits & 0x00ff00ff) + (bits >> 8 & 0x00ff00ff);
     return (bits & 0x0000ffff) + (bits >>16 & 0x0000ffff);
-}
-
-inline
-bool big_endian_host()
-{
-    int n = 1;
-    return !reinterpret_cast<char*>(&n);
 }
 
 /* XXX: assumes little endian host */

@@ -78,9 +78,9 @@ private:
     {
 	size_t size = offsetof(AudioChannelLayout, mChannelDescriptions);
 	size += channel_count * sizeof(AudioChannelDescription);
-	m_instance.swap(owner_t(
+	m_instance = owner_t(
 		reinterpret_cast<AudioChannelLayout*>(xcalloc(1, size)),
-		std::free));
+		std::free);
 	m_instance->mNumberChannelDescriptions = channel_count;
     }
     void attach(const AudioChannelLayout *layout)
@@ -152,44 +152,44 @@ public:
 			inPropValueAddress),
 		"setProperty", inPropClass, inPropID);
     }
-    template <typename T>
-    T getPodProperty(OSType cls, OSType id)
+    template <typename U>
+    U getPodProperty(OSType cls, OSType id)
     {
-	T data;
-	getProperty(cls, id, sizeof(T), &data);
+	U data;
+	getProperty(cls, id, sizeof(U), &data);
 	return data;
     }
-    template <typename T>
-    void getPodProperty(OSType cls, OSType id, T *data)
+    template <typename U>
+    void getPodProperty(OSType cls, OSType id, U *data)
     {
-	getProperty(cls, id, sizeof(T), data);
+	getProperty(cls, id, sizeof(U), data);
     }
-    template <typename T>
-    void setPodProperty(OSType cls, OSType id, const T &value)
+    template <typename U>
+    void setPodProperty(OSType cls, OSType id, const U &value)
     {
-	setProperty(cls, id, sizeof(T), &value);
+	setProperty(cls, id, sizeof(U), &value);
     }
-    template <typename T>
-    void getVectorProperty(OSType cls, OSType id, std::vector<T> *result)
+    template <typename U>
+    void getVectorProperty(OSType cls, OSType id, std::vector<U> *result)
     {
 	ByteCount size;
 	getPropertyInfo(cls, id, 0, &size);
-	std::vector<T> buffer(size / sizeof(T));
+	std::vector<U> buffer(size / sizeof(U));
 	if (size) getProperty(cls, id, size, &buffer[0]);
 	result->swap(buffer);
     }
     /* for variable-sized struct */
-    template <typename T>
+    template <typename U>
     void getPointerProperty(
 	    OSType cls,
 	    OSType id,
-	    boost::shared_ptr<T> *result,
+	    boost::shared_ptr<U> *result,
 	    ByteCount *size = 0)
     {
 	ByteCount sz;
 	getPropertyInfo(cls, id, 0, &sz);
-	boost::shared_ptr<T> ptr(
-		reinterpret_cast<T*>(xmalloc(sz)), std::free);
+	boost::shared_ptr<U> ptr(
+		reinterpret_cast<U*>(xmalloc(sz)), std::free);
 	getProperty(cls, id, sz, ptr.get());
 	if (size) *size = sz;
 	result->swap(ptr);

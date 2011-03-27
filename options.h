@@ -14,15 +14,20 @@ struct Options {
 
     Options() :
 	output_format(0),
-	method(-1), bitrate(-1), quality(2), rate(-1), downmix(-1),
-	ifilename(0), ofilename(0), outdir(0), fname_format(0),
+	method(-1),
+	bitrate(-1), quality(2),
+	raw_channels(2), raw_sample_rate(44100),
+	rate(-1),
+	downmix(-1),
+	src_mode(0),
+	ifilename(0), ofilename(0), outdir(0),
+	raw_format(L"S16LE"),
+	fname_format(0),
 	logfilename(0),
 	verbose(true), is_raw(false), is_first_file(true),
-	save_stat(false), is_adts(false), nice(false),
-	ignore_length(false), no_optimize(false),
-	native_resampler(false), src_mode(0),
-	raw_channels(2), raw_sample_rate(44100),
-	raw_format(L"S16LE")
+	is_adts(false), save_stat(false),
+       	nice(false), ignore_length(false), no_optimize(false),
+	native_resampler(false)
     {}
     bool parse(int &argc, wchar_t **&argv);
 

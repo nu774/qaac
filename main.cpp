@@ -7,6 +7,7 @@
 #include <aifffile.h>
 #include "strcnv.h"
 #include "win32util.h"
+#include <shellapi.h>
 #include "aacencoder.h"
 #include "itunetags.h"
 #include "sink.h"
@@ -273,7 +274,8 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 static
 ISource *open_source(const Options &opts)
 {
-    InputStream stream(StdioChannel(opts.ifilename));
+    StdioChannel channel(opts.ifilename);
+    InputStream stream(channel);
 
     if (opts.ignore_length)
 	return new WaveSource(stream, true);
@@ -476,7 +478,6 @@ std::wstring load_cue_sheet(const wchar_t *name)
     if (!std::memcmp(&buffer[0], "\xef\xbb\xbf", 3))
 	return m2w(&buffer[3], utf8_codecvt_facet());
     else if (!std::memcmp(&buffer[0], "\xff\xfe", 2)) {
-	wchar_t *p = reinterpret_cast<wchar_t*>(&buffer[2]);
 	return std::wstring(reinterpret_cast<wchar_t*>(&buffer[2]));
     }
     std::wstring result;
@@ -636,7 +637,11 @@ void load_modules(Options &opts)
     opts.libsamplerate = SRCModule(selfdir + L"libsamplerate_vc10.dll");
 }
 
+#ifdef _MSC_VER
 int wmain(int argc, wchar_t **argv)
+#else
+int wmain1(int argc, wchar_t **argv)
+#endif
 {
 #ifdef _DEBUG
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF);
@@ -676,7 +681,7 @@ int wmain(int argc, wchar_t **argv)
 
 	mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
 
-	while (opts.ifilename = *argv++) {
+	while ((opts.ifilename = *argv++)) {
 	    opts.reset();
 
 	    if (opts.verbose) {
@@ -703,3 +708,14 @@ int wmain(int argc, wchar_t **argv)
 	return 2;
     }
 }
+
+#ifndef _MSC_VER
+int main()
+{
+    int argc;
+    wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    int rc = wmain1(argc, argv);
+    GlobalFree(argv);
+    return rc;
+}
+#endif

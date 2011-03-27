@@ -40,7 +40,9 @@ std::wstring GetFullPathNameX(const std::wstring &path)
 inline
 std::wstring PathReplaceExtension(const std::wstring &path, const wchar_t *ext)
 {
-    std::wstring s(path.c_str(), PathFindExtensionW(path.c_str()));
+    const wchar_t *beg = path.c_str();
+    const wchar_t *end = PathFindExtensionW(beg);
+    std::wstring s(beg, end);
     if (ext[0] != L'.') s.push_back(L'.');
     s += ext;
     return s;

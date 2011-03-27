@@ -9,10 +9,10 @@ StdioChannel::StdioChannel(const wchar_t *name)
     if (!std::wcscmp(name, L"-")) {
 	m_name = "<stdin>";
 	_setmode(0, _O_BINARY);
-	m_fp.swap(fileptr_t(stdin, no_close));
+	m_fp = fileptr_t(stdin, no_close);
     } else {
 	m_name = format("%ls", name);
-	m_fp.swap(fileptr_t(wfopenx(name, L"rb"), fclose));
+	m_fp = fileptr_t(wfopenx(name, L"rb"), fclose);
     }
     test_seekable();
 }
@@ -113,10 +113,10 @@ namespace __InputStreamImpl {
 	const int64_t bufsiz = 0x4000;
 	char buf[bufsiz];
 	int64_t total;
-	ssize_t n;
+	ssize_t n, nr;
 	for (total = 0; total < count; total += n) {
 	    n = static_cast<ssize_t>(std::min(count - total, bufsiz));
-	    if ((n = read(buf, n)) < n)
+	    if ((nr = read(buf, n)) < n)
 		break;
 	}
 	return total;

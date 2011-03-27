@@ -114,7 +114,7 @@ size_t QTMovieSource::readSamples(void *buffer, size_t nsamples)
      * so number of buffers is 1
      */
 
-    AudioBufferList abl = { 1, 0 };
+    AudioBufferList abl = {1, {{ 0 }}};
     AudioBuffer &ab = abl.mBuffers[0];
     ab.mNumberChannels = m_description.mChannelsPerFrame;
     ab.mData = buffer;

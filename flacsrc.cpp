@@ -40,8 +40,8 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
      || (fcc == 'OggS' && std::memcmp(&buffer[28], "\177FLAC", 5)))
 	throw std::runtime_error("Not a FLAC file");
 
-    m_decoder.swap(decoder_t(m_module.stream_decoder_new(),
-		std::bind1st(std::mem_fun(&FLACSource::close_decoder), this)));
+    m_decoder = decoder_t(m_module.stream_decoder_new(),
+		std::bind1st(std::mem_fun(&FLACSource::close_decoder), this));
     TRYFL(m_module.stream_decoder_set_metadata_respond(
 		m_decoder.get(), FLAC__METADATA_TYPE_VORBIS_COMMENT));
 

@@ -11,7 +11,7 @@ struct SampleFormat {
     unsigned m_type, m_endian, m_bitsPerSample, m_nchannels, m_rate;
 
     SampleFormat() :
-	m_type(0), m_bitsPerSample(16), m_endian(0), m_nchannels(0), m_rate(0)
+	m_type(0), m_endian(0), m_bitsPerSample(16), m_nchannels(0), m_rate(0)
     {}
     SampleFormat(const char *spec, unsigned nchannels, unsigned rate);
     uint32_t bytesPerFrame() const

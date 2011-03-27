@@ -1,3 +1,4 @@
+#include <cmath>
 #include "srcsource.h"
 #include "win32util.h"
 
@@ -20,7 +21,7 @@ SRCModule::SRCModule(const std::wstring &path)
 	m_loaded = false;
 	return;
     }
-    m_module.swap(module_t(hDll, FreeLibrary));
+    m_module = module_t(hDll, FreeLibrary);
 }
 
 struct TempFileCloser {
@@ -51,8 +52,8 @@ SRCSource::SRCSource(const SRCModule &module, ISource *src, uint32_t rate,
     int error;
     SRC_STATE *converter = m_module.src_new(mode, m_format.m_nchannels, &error);
     if (!converter) throw std::runtime_error("src_new");
-    m_converter.swap(boost::shared_ptr<SRC_STATE_tag>(converter,
-		m_module.src_delete));
+    m_converter = boost::shared_ptr<SRC_STATE_tag>(converter,
+		m_module.src_delete);
 
     m_src_buffer.resize(4096);
     m_ibuffer.resize(m_src_buffer.size() * srcFormat.bytesPerFrame());
@@ -65,7 +66,7 @@ SRCSource::SRCSource(const SRCModule &module, ISource *src, uint32_t rate,
     std::free(tmpname);
     if (!tmpfile)
 	throw std::runtime_error(format("tmpfile: %s", std::strerror(errno)));
-    m_tmpfile.swap(boost::shared_ptr<FILE>(tmpfile, closer));
+    m_tmpfile = boost::shared_ptr<FILE>(tmpfile, closer);
 }
 
 size_t SRCSource::convertSamples(size_t nsamples)

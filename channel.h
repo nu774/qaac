@@ -11,6 +11,7 @@
 #include <intsafe.h>
   typedef SSIZE_T ssize_t;
 #endif
+#include "util.h"
 
 struct IChannel {
     virtual ~IChannel() {}
@@ -40,8 +41,8 @@ class StdioChannel : public ISeekable {
     bool m_is_seekable;
 public:
     explicit StdioChannel(FILE *handle)
-	: m_name("<stdin>"),
-	  m_fp(handle, no_close)
+	 : m_fp(handle, no_close),
+	   m_name("<stdin>")
     {
 	_setmode(0, _O_BINARY);
 	test_seekable();
@@ -66,33 +67,31 @@ class BinaryRead {
 public:
     bool read16le(uint16_t *result)
     {
-	if (!readn(result, 2)) return false;
+	if (((T*)(this))->read(result, 2) != 2)
+	    return false;
 	*result = l2host16(*result);
 	return true;
     }
     bool read16be(uint16_t *result)
     {
-	if (!readn(result, 2)) return false;
+	if (((T*)(this))->read(result, 2) != 2)
+	    return false;
 	*result = b2host16(*result);
 	return true;
     }
     bool read32le(uint32_t *result)
     {
-	if (!readn(result, 4)) return false;
+	if (((T*)(this))->read(result, 4) != 4)
+	    return false;
 	*result = l2host32(*result);
 	return true;
     }
     bool read32be(uint32_t *result)
     {
-	if (!readn(result, 4)) return false;
+	if (((T*)(this))->read(result, 4) != 4)
+	    return false;
 	*result = b2host32(*result);
 	return true;
-    }
-private:
-    bool readn(void *buff, size_t n)
-    {
-	T *pT = static_cast<T*>(this);
-	return pT->read(buff, n) == n;
     }
 };
 
@@ -176,10 +175,13 @@ public:
     {
 	ISeekable *pT = dynamic_cast<ISeekable*>(&channel);
 	m_seekable = (pT && pT->seekable());
+	__InputStreamImpl::Impl *ptr;
 	if (m_seekable)
-	    m_impl.swap(impl_t(new __InputStreamImpl::Seekable(*pT)));
+	    ptr = new __InputStreamImpl::Seekable(*pT);
 	else
-	    m_impl.swap(impl_t(new __InputStreamImpl::NonSeekable(channel)));
+	    ptr = new __InputStreamImpl::NonSeekable(channel);
+	impl_t foo(ptr);
+	m_impl.swap(foo);
     }
     void pushback(char ch) { m_impl->pushback(ch); }
     void pushback(const char *s, size_t count) { m_impl->pushback(s, count); }

@@ -130,9 +130,9 @@ ADTSSink::ADTSSink(const std::wstring &path, EncoderBase &encoder)
 #if defined(_MSC_VER) || defined(__MINGW__)
 	_setmode(_fileno(stdout), _O_BINARY);
 #endif
-	m_fp.swap(file_ptr_t(stdout, noop));
+	m_fp = file_ptr_t(stdout, noop);
     } else {
-	m_fp.swap(file_ptr_t(wfopenx(path.c_str(), L"wb"), fclose));
+	m_fp = file_ptr_t(wfopenx(path.c_str(), L"wb"), fclose);
     }
     const AudioStreamBasicDescription &format
 	= encoder.getOutputBasicDescription();

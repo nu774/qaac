@@ -207,7 +207,8 @@ public:
 	CFArrayRef ref;
 	getPodProperty(kSCAudio, kCodecSpecificSettingsArray, &ref);
 	if (!ref) throw std::runtime_error("getCodecSpecificSettingsArray");
-	result->swap(CFArrayT<CFDictionaryRef>(ref));
+	CFArrayT<CFDictionaryRef> x(ref);
+	result->swap(x);
     }
     void setCodecSpecificSettingsArray(const CFArrayRef &ref)
     {

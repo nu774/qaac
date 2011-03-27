@@ -260,7 +260,7 @@ namespace Vorbis {
 	std::string totaltracks, totaldiscs;
 	uint32_t id;
 	for (it = vc.begin(); it != vc.end(); ++it) {
-	    std::string key = strtransform(it->first, tolower);
+	    std::string key = slower(it->first);
 	    if (key == "totaltracks")
 		totaltracks = it->second;
 	    else if (key == "totaldiscs")

@@ -22,7 +22,7 @@ struct CueTokenizer {
 };
 
 struct CueSegment {
-    CueSegment(std::wstring &filename, unsigned index)
+    CueSegment(const std::wstring &filename, unsigned index)
 	: m_filename(filename), m_index(index), m_begin(0), m_end(-1)
     {}
     std::wstring m_filename;

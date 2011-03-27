@@ -73,5 +73,5 @@ FLACModule::FLACModule(const std::wstring &path)
 	m_loaded = false;
 	return;
     }
-    m_module.swap(module_t(hDll, FreeLibrary));
+    m_module = module_t(hDll, FreeLibrary);
 }
