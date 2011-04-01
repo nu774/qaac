@@ -1,6 +1,8 @@
 #ifndef _SRCSOURCE_H
 #define _SRCSOURCE_H
 
+#ifdef ENABLE_SRC
+
 #include <boost/shared_ptr.hpp>
 #include <samplerate.h>
 #include "iointer.h"
@@ -62,5 +64,7 @@ private:
     size_t doConvertSamples(float *buffer, size_t nsamples);
     void underflow(size_t nsamples);
 };
+
+#endif
 
 #endif

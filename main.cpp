@@ -426,6 +426,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 		    std::fprintf(stderr, "%s\n", opts.used_settings[i].c_str());
 	}
     }
+#ifdef ENABLE_SRC
     if (iasbd.mSampleRate != oasbd.mSampleRate &&
 	    opts.libsamplerate.loaded() && !opts.native_resampler) {
 	if (opts.verbose)
@@ -453,7 +454,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 	encode_file(srcx.get(), ofilename, opts, true);
 	return;
     }
-
+#endif
     do_encode(encoder, ofilename, opts);
     if (encoder.framesWritten()) {
 	if (opts.verbose)
@@ -628,13 +629,18 @@ const char *get_qaac_version();
 static
 void load_modules(Options &opts)
 {
+    std::wstring selfdir;
+#ifndef NOSTRICT_LOADING
     std::wstring selfpath = GetModuleFileNameX();
     const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
-    std::wstring selfdir = selfpath.substr(0, fpos - selfpath.c_str());
-    opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile_vc10.dll");
-    opts.libflac = FLACModule(selfdir + L"libFLAC_vc10.dll");
-    opts.libwavpack = WavpackModule(selfdir + L"wavpackdll_vc10.dll");
-    opts.libsamplerate = SRCModule(selfdir + L"libsamplerate_vc10.dll");
+    selfdir = selfpath.substr(0, fpos - selfpath.c_str());
+#endif
+    opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile-1.dll");
+    opts.libflac = FLACModule(selfdir + L"libFLAC.dll");
+    opts.libwavpack = WavpackModule(selfdir + L"wavpackdll.dll");
+#ifdef ENABLE_SRC
+    opts.libsamplerate = SRCModule(selfdir + L"libsamplerate.dll");
+#endif
 }
 
 #ifdef _MSC_VER

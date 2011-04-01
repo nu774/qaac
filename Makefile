@@ -65,19 +65,19 @@ version.o \
 wavsource.o \
 wvpacksrc.o
 
-LIBS=mp4v2/.libs/libmp4v2.a "$(QTSDKDir)/Libraries/QTMLClient.lib"
+LIBS="$(QTSDKDir)/Libraries/QTMLClient.lib"
 INCLUDES=-Iinclude -I "$(QTSDKDir)/CIncludes" -Imp4v2 -Imp4v2/include \
 	 -Imp4v2/src -Itaglib -Itaglib/toolkit -Itaglib/mpeg/id3v1 \
 	 -Itaglib/mpeg/id3v2 -Itaglib/riff -Itaglib/riff/aiff
 
 CPPFLAGS =-DMP4V2_USE_STATIC_LIB -DTAGLIB_STATIC $(INCLUDES)
-CXXFLAGS = -O -Wno-multichar -Wall
+CXXFLAGS =-O -Wno-multichar -Wall
 CFLAGS = -O -Wall
 
 all: qaac
 
 qaac: $(TOBJS) $(COBJS) $(QOBJS)
-	$(CXX) -static-libgcc -static-libstdc++ -o $@ $(TOBJS) $(COBJS) $(QOBJS) $(LIBS) -lshlwapi
+	$(CXX) -static-libgcc -static-libstdc++ -o $@ $(TOBJS) $(COBJS) $(QOBJS) $(LIBS) -lshlwapi -lmp4v2 $(LIBPATH)
 
 clean:
 	find . -name '*.o' -exec rm '{}' +

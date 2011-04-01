@@ -20,11 +20,11 @@ You need working autotools to generate mp4v2 configure script.
 
 $ pushd mp4v2
 $ ./make_configure
-$ ./configure --host=i686-w64-mingw32 --prefix=/usr/i686-w64-mingw32 --enable-shared=no --disable-util  # depends on your environment
+$ ./configure --host=i686-w64-mingw32 --prefix=/usr/i686-w64-mingw32/sys-root/mingw --enable-shared=no --disable-util  # depends on your environment
 $ make CPPFLAGS=-DMP4V2_USE_STATIC_LIB 
 $ popd
 $ . env.sh
-$ make
+$ make LIBPATH=-L./mp4v2/.libs
 
 Resulting binary will be VERY big.
 You may want to strip qaac.exe with i686-w64-mingw32-strip or something.

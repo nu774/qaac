@@ -8,6 +8,9 @@ Files under taglib:
 These are part of TagLib (http://developer.kde.org/~wheeler/taglib.html),
 version 1.6.3
 
+include/fp.h, include/Math64.h:
+These are part of QuickTimeSDK, and slightly modified for gcc compatibility.
+
 Files under include/boost and utf8_codecvt_facet.[ch]pp:
 These are part of Boost (http://www.boost.org/),
 version 1.45.0

@@ -77,7 +77,9 @@ struct Options {
     LibSndfileModule libsndfile;
     FLACModule libflac;
     WavpackModule libwavpack;
+#ifdef ENABLE_SRC
     SRCModule libsamplerate;
+#endif
 };
 
 #endif

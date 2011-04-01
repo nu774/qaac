@@ -25,8 +25,10 @@ static struct option long_options[] = {
     { L"nice", no_argument, 0, 'n' },
     { L"downmix", required_argument, 0, 'D' },
     { L"no-optimize", no_argument, 0, 'P' },
+#ifdef ENABLE_SRC
     { L"native-resampler", no_argument, 0, 'N' },
     { L"src-mode", required_argument, 0, 'M' },
+#endif
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  Raw::kChannels },
     { L"raw-rate", required_argument, 0,  Raw::kSampleRate },
@@ -95,9 +97,11 @@ void usage()
 "-n, --nice             Give lower process priority\n"
 "--downmix <mono|stereo>    Downmix to mono/stereo\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
+#ifdef ENABLE_SRC
 "--native-resampler     Always use QuickTime built-in resampler\n"
 "--src-mode <n>         libsamplerate mode [0-4]\n"
 "                       0 is best, 4 is fastest, default 0\n"
+#endif
 "--adts                 ADTS(raw AAC)output, instead of m4a(AAC only)\n"
 "--ignorelength         Assume WAV input and ignore the data chunk length\n"
 "-R, --raw              Raw PCM input\n"

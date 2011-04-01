@@ -1,3 +1,4 @@
+#ifdef ENABLE_SRC
 #include <cmath>
 #include "srcsource.h"
 #include "win32util.h"
@@ -186,3 +187,4 @@ void SRCSource::underflow(size_t nsamples)
 	break;
     }
 }
+#endif
