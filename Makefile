@@ -44,9 +44,11 @@ iointer.o \
 itunetags.o \
 mp4v2wrapper.o \
 qtmoviesource.o \
+riff.o \
 strcnv.o \
 utf8_codecvt_facet.o \
 util.o \
+wavsource.o \
 win32util.o
 
 QOBJS=\
@@ -58,12 +60,15 @@ flacsrc.o \
 libsndfilesrc.o \
 main.o \
 options.o \
-riff.o \
 sink.o \
 srcsource.o \
 version.o \
-wavsource.o \
 wvpacksrc.o
+
+AOBJS=\
+alacdec.o \
+flacsink.o \
+wavsink.o
 
 LIBS="$(QTSDKDir)/Libraries/QTMLClient.lib"
 INCLUDES=-Iinclude -I "$(QTSDKDir)/CIncludes" -Imp4v2 -Imp4v2/include \
@@ -71,13 +76,17 @@ INCLUDES=-Iinclude -I "$(QTSDKDir)/CIncludes" -Imp4v2 -Imp4v2/include \
 	 -Itaglib/mpeg/id3v2 -Itaglib/riff -Itaglib/riff/aiff
 
 CPPFLAGS =-DMP4V2_USE_STATIC_LIB -DTAGLIB_STATIC $(INCLUDES)
-CXXFLAGS =-O -Wno-multichar -Wall
+CXXFLAGS =-O -Wno-multichar -Wall 
 CFLAGS = -O -Wall
+LDFLAGS = -static-libgcc -static-libstdc++ -lshlwapi -luuid -lmp4v2 $(LIBPATH)
 
-all: qaac
+all: qaac alacdec
 
 qaac: $(TOBJS) $(COBJS) $(QOBJS)
-	$(CXX) -static-libgcc -static-libstdc++ -o $@ $(TOBJS) $(COBJS) $(QOBJS) $(LIBS) -lshlwapi -lmp4v2 $(LIBPATH)
+	$(CXX) -o $@ $(TOBJS) $(COBJS) $(QOBJS) $(LIBS) $(LDFLAGS)
+
+alacdec: $(TOBJS) $(COBJS) $(AOBJS)
+	$(CXX) -o $@ $(TOBJS) $(COBJS) $(AOBJS) $(LIBS) $(LDFLAGS)
 
 clean:
 	find . -name '*.o' -exec rm '{}' +

@@ -26,5 +26,9 @@ $ popd
 $ . env.sh
 $ make LIBPATH=-L./mp4v2/.libs
 
+You might need to specify QTSDKDir at the last like like::
+
+  $ make LIBPATH=-L./mp4v2/.libs QTSDKDir="C:/Program Files/QuickTime SDK"
+
 Resulting binary will be VERY big.
 You may want to strip qaac.exe with i686-w64-mingw32-strip or something.

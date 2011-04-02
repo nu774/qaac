@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "flacsink.h"
 #include "strcnv.h"
 #include "utf8_codecvt_facet.hpp"
@@ -20,8 +21,8 @@ FLACSink::FLACSink(FILE *fp, uint64_t duration, const SampleFormat &fmt,
 	throw std::runtime_error("Can't handle float source");
     if (fmt.m_endian == SampleFormat::kIsBigEndian)
 	throw std::runtime_error("Can't handle big endian source");
-    m_encoder.swap(encoder_t(m_module.stream_encoder_new(),
-		std::bind1st(std::mem_fun(&FLACSink::closeEncoder), this)));
+    m_encoder = encoder_t(m_module.stream_encoder_new(),
+		std::bind1st(std::mem_fun(&FLACSink::closeEncoder), this));
     TRYFL(m_module.stream_encoder_set_channels(
 		m_encoder.get(), fmt.m_nchannels));
     TRYFL(m_module.stream_encoder_set_bits_per_sample(
@@ -38,10 +39,10 @@ FLACSink::FLACSink(FILE *fp, uint64_t duration, const SampleFormat &fmt,
 	m_module.metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
     meta[1] = m_module.metadata_object_new(FLAC__METADATA_TYPE_PADDING);
     meta[1]->length = 0x1000;
-    m_metadata_holder[0].swap(
-	    metadata_t(meta[0], m_module.metadata_object_delete));
-    m_metadata_holder[1].swap(
-	    metadata_t(meta[1], m_module.metadata_object_delete));
+    m_metadata_holder[0] = 
+	    metadata_t(meta[0], m_module.metadata_object_delete);
+    m_metadata_holder[1] = 
+	    metadata_t(meta[1], m_module.metadata_object_delete);
     {
         std::map<std::string, std::string> vc;
 	Vorbis::ConvertFromItunesTags(tags, &vc);

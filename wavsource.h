@@ -5,6 +5,27 @@
 #include "iointer.h"
 #include "riff.h"
 
+namespace wav
+{
+    struct myGUID {
+	uint32_t Data1;
+	uint16_t Data2;
+	uint16_t Data3;
+	uint8_t  Data4[8];
+
+	bool operator==(const myGUID &rhs)
+	{
+	    return !std::memcmp(this, &rhs, sizeof(myGUID));
+	}
+    };
+    enum {
+	kFormatPCM = 1,
+	kFormatFloat = 3,
+	kFormatExtensible = 0xfffe
+    };
+    extern myGUID ksFormatSubTypePCM, ksFormatSubTypeFloat;
+}
+
 class WaveSource :
     public ISource, private RIFFParser, public PartialSource<WaveSource>
 {

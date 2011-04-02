@@ -3,6 +3,9 @@
 #include <clocale>
 #include <io.h>
 #include <fcntl.h>
+#define NOMINMAX
+#include <windows.h>
+#include <shellapi.h>
 #include <GNUCompatibility/stdint.h> // To avoid conflict with QT
 #include "impl.h"
 #include "getopt.h"
@@ -14,7 +17,10 @@ void usage()
 {
     std::cerr <<
 "Usage: alacdec [-o OUTFILE | -d OUTDIR | -F] INFILE...\n"
-"-o option can be specified only when single input mode\n";
+"-o <file>        Output filename (single input only)\n"
+"-d <dirname>     Output directory name\n"
+"-F               FLAC output\n"
+    << std::flush;
     std::exit(1);
 }
 
@@ -38,10 +44,10 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
     file_ptr_t ofp;
     if (!std::wcscmp(ofilename.c_str(), L"-")) {
 	_setmode(1, _O_BINARY);
-	ofp.swap(file_ptr_t(stdout, noop));
+	ofp = file_ptr_t(stdout, noop);
     } else {
 	FILE *fp = wfopenx(ofilename.c_str(), L"wb");
-	ofp.swap(file_ptr_t(fp, std::fclose));
+	ofp = file_ptr_t(fp, std::fclose);
     }
     ISink *sink = 0;
     if (flac) {
@@ -70,7 +76,11 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
     std::cerr << std::endl;
 }
 
+#ifdef _MSC_VER
 int wmain(int argc, wchar_t **argv)
+#else
+int wmain1(int argc, wchar_t **argv)
+#endif
 {
 #ifdef DEBUG_ATTACH
     std::getchar();
@@ -100,7 +110,7 @@ int wmain(int argc, wchar_t **argv)
     QTInitializer __quicktime__(true);
     try {
 	const wchar_t *ifile;
-	while (ifile = *argv++) {
+	while ((ifile = *argv++)) {
 	    std::cerr << format("\n%ls\n", PathFindFileNameW(ifile));
 	    decode(ifile, ofile, odir, flac);
 	}
@@ -110,3 +120,14 @@ int wmain(int argc, wchar_t **argv)
     }
     return 0;
 }
+
+#ifndef _MSC_VER
+int main()
+{
+    int argc;
+    wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    int rc = wmain1(argc, argv);
+    GlobalFree(argv);
+    return rc;
+}
+#endif
