@@ -1,5 +1,7 @@
 #include "util.h"
 #include "mp4v2wrapper.h"
+#include "strcnv.h"
+#include "utf8_codecvt_facet.hpp"
 
 using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Atom;
@@ -14,7 +16,8 @@ namespace itmf = mp4v2::impl::itmf;
 
 std::string format_mp4error(const mp4v2::impl::Exception &e)
 {
-    return std::string("libmp4v2: ") + e.msg();
+    std::wstring wmsg = m2w(e.msg(), utf8_codecvt_facet());
+    return format("libmp4v2: %ls", wmsg.c_str());
 }
 
 class MP4AlacAtom: public MP4Atom {

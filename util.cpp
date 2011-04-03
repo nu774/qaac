@@ -38,6 +38,10 @@ std::string format(const char *fmt, ...)
     va_start(args, fmt);
     rc = _vscprintf(fmt, args);
     va_end(args);
+    if (rc < 0) {
+	// format failed
+	return "";
+    }
 #endif
     buffer.resize(rc + 1);
     va_start(args, fmt);

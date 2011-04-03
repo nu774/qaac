@@ -87,6 +87,7 @@ int wmain1(int argc, wchar_t **argv)
 #endif
 
     std::setbuf(stderr, 0);
+    std::setlocale(LC_CTYPE, "");
 
     const wchar_t *ofile = 0;
     const wchar_t *odir = L".";
@@ -108,10 +109,12 @@ int wmain1(int argc, wchar_t **argv)
 	usage();
 
     QTInitializer __quicktime__(true);
+    mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
     try {
 	const wchar_t *ifile;
 	while ((ifile = *argv++)) {
-	    std::cerr << format("\n%ls\n", PathFindFileNameW(ifile));
+	    wchar_t *f = PathFindFileNameW(ifile);
+	    std::cerr << format("\n%ls\n", f);
 	    decode(ifile, ofile, odir, flac);
 	}
     } catch (const std::runtime_error &e) {
