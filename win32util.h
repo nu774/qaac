@@ -129,4 +129,16 @@ public:
     ~DirectorySaver() { SetCurrentDirectoryW(m_pwd.c_str()); }
 };
 
+#ifdef __MINGW32__
+#ifndef _STARTUP_INFO_DEFINED
+typedef struct
+{
+        int newmode;
+} _startupinfo;
+#define _STARTUP_INFO_DEFINED
+#endif  /* _STARTUP_INFO_DEFINED */
+extern "C"
+_CRTIMP int __wgetmainargs(int *, wchar_t ***, wchar_t ***,
+	int, _startupinfo *);
+#endif /* __MINGW32__ */
 #endif

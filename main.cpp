@@ -715,13 +715,13 @@ int wmain1(int argc, wchar_t **argv)
     }
 }
 
-#ifndef _MSC_VER
+#ifdef __MINGW32__
 int main()
 {
     int argc;
-    wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    int rc = wmain1(argc, argv);
-    GlobalFree(argv);
-    return rc;
+    wchar_t **argv, **envp;
+    _startupinfo si = { 0 };
+    __wgetmainargs(&argc, &argv, &envp, 1, &si);
+    return wmain1(argc, argv);
 }
 #endif
