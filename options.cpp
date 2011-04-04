@@ -2,41 +2,33 @@
 #include "getopt.h"
 #include "itunetags.h"
 
-namespace Raw {
-    enum {
-	kChannels = 'ChaN',
-	kSampleRate = 'SraT',
-	kFormat = 'FoRm'
-    };
-}
-
 static struct option long_options[] = {
     { L"help", no_argument, 0, 'h' },
     { L"abr", required_argument, 0, 'a' },
     { L"tvbr", required_argument, 0, 'V' },
     { L"cvbr", required_argument, 0, 'v' },
     { L"cbr", required_argument, 0, 'c' },
-    { L"he", no_argument, 0, 'H' },
+    { L"he", no_argument, 0, 'aach' },
     { L"alac", no_argument, 0, 'A' },
     { L"quality", required_argument, 0, 'q' },
     { L"rate", required_argument, 0, 'r' },
     { L"silent", no_argument, 0, 's' },
     { L"stat", no_argument, 0, 'S' },
     { L"nice", no_argument, 0, 'n' },
-    { L"downmix", required_argument, 0, 'D' },
-    { L"no-optimize", no_argument, 0, 'P' },
+    { L"downmix", required_argument, 0, 'dmix' },
+    { L"no-optimize", no_argument, 0, 'noop' },
 #ifdef ENABLE_SRC
-    { L"native-resampler", no_argument, 0, 'N' },
-    { L"src-mode", required_argument, 0, 'M' },
+    { L"native-resampler", no_argument, 0, 'nsmp' },
+    { L"src-mode", required_argument, 0, 'srcm' },
 #endif
     { L"raw", no_argument, 0, 'R' },
-    { L"raw-channels", required_argument, 0,  Raw::kChannels },
-    { L"raw-rate", required_argument, 0,  Raw::kSampleRate },
-    { L"raw-format", required_argument, 0,  Raw::kFormat },
-    { L"adts", no_argument, 0, 'E' },
+    { L"raw-channels", required_argument, 0,  'Rchn' },
+    { L"raw-rate", required_argument, 0,  'Rrat' },
+    { L"raw-format", required_argument, 0,  'Rfmt' },
+    { L"adts", no_argument, 0, 'ADTS' },
     { L"ignorelength", no_argument, 0, 'i' },
-    { L"fname-format", required_argument, 0, 'F' },
-    { L"log", required_argument, 0, 'L' },
+    { L"fname-format", required_argument, 0, 'nfmt' },
+    { L"log", required_argument, 0, 'log ' },
     { L"title", required_argument, 0, Tag::kTitle },
     { L"artist", required_argument, 0, Tag::kArtist },
     { L"band", required_argument, 0, Tag::kAlbumArtist },
@@ -103,7 +95,7 @@ void usage()
 "                       0 is best, 4 is fastest, default 0\n"
 #endif
 "--adts                 ADTS(raw AAC)output, instead of m4a(AAC only)\n"
-"--ignorelength         Assume WAV input and ignore the data chunk length\n"
+"-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
 "-R, --raw              Raw PCM input\n"
 "-S, --stat             Save bitrate statistics into file\n"
 "--log <filename>       Output message to file\n"
@@ -143,7 +135,7 @@ void usage()
 bool Options::parse(int &argc, wchar_t **&argv)
 {
     int ch, pos;
-    while ((ch = getopt_long(argc, argv, L"hAo:d:a:V:v:c:q:r:snSR",
+    while ((ch = getopt_long(argc, argv, L"hAo:d:a:V:v:c:q:r:insRS",
 		    long_options, 0)) != EOF)
     {
 	if (ch == 'h')
@@ -152,14 +144,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->ofilename = optarg;
 	else if (ch == 'd')
 	    this->outdir = optarg;
-	else if (ch == 'L')
+	else if (ch == 'log ')
 	    this->logfilename = optarg;
 	else if (ch == 'A') {
 	    if ((this->output_format && !isALAC()) || this->method != -1)
 		return usage(), false;
 	    this->output_format = 'alac';
 	}
-	else if (ch == 'H') {
+	else if (ch == 'aach') {
 	    if (this->output_format && !isAAC())
 		return usage(), false;
 	    this->output_format = 'aach';
@@ -172,9 +164,9 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return false;
 	    }
 	}
-	else if (ch == 'N')
+	else if (ch == 'nsmp')
 	    this->native_resampler = true;
-	else if (ch == 'M') {
+	else if (ch == 'srcm') {
 	    if (std::swscanf(optarg, L"%d", &this->src_mode) != 1) {
 		std::fputs("SRC mode must be an integer\n", stderr);
 		return false;
@@ -190,13 +182,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->ignore_length = true;
 	else if (ch == 'R')
 	    this->is_raw = true;
-	else if (ch == 'E')
+	else if (ch == 'ADTS')
 	    this->is_adts = true;
-	else if (ch == 'P')
+	else if (ch == 'noop')
 	    this->no_optimize = true;
-	else if (ch == 'F')
+	else if (ch == 'nfmt')
 	    this->fname_format = optarg;
-	else if (ch == 'D') {
+	else if (ch == 'dmix') {
 	    if (!std::wcscmp(optarg, L"mono"))
 		this->downmix = 1;
 	    else if (!std::wcscmp(optarg, L"stereo"))
@@ -217,19 +209,19 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return false;
 	    }
 	}
-	else if (ch == Raw::kChannels) {
+	else if (ch == 'Rchn') {
 	    if (std::swscanf(optarg, L"%u", &this->raw_channels) != 1) {
 		std::fputs("Raw channels must be an integer\n", stderr);
 		return false;
 	    }
 	}
-	else if (ch == Raw::kSampleRate) {
+	else if (ch == 'Rrat') {
 	    if (std::swscanf(optarg, L"%u", &this->raw_sample_rate) != 1) {
 		std::fputs("Raw sample rate must be an integer\n", stderr);
 		return false;
 	    }
 	}
-	else if (ch == Raw::kFormat)
+	else if (ch == 'Rfmt')
 	    this->raw_format = optarg;
 	else if ((pos = strindex("aVvc", ch)) >= 0) {
 	    if ((this->output_format && !isAAC()) || this->method != -1)

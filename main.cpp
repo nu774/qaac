@@ -239,7 +239,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
     ISink *sink;
 
     std::wstring ofilenamex(ofilename);
-    if (!opts.no_optimize && !opts.is_adts)
+    if (!opts.no_optimize && opts.isMP4())
 	ofilenamex += L".tmp";
     if (opts.is_adts)
 	sink = new ADTSSink(ofilenamex, encoder);
