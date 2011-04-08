@@ -2,7 +2,7 @@
 #include "utf8_codecvt_facet.hpp"
 #include "strcnv.h"
 #include "sink.h"
-#if defined(_MSC_VER) || defined(__MINGW__)
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #include <io.h>
 #include <fcntl.h>
 #endif
@@ -127,7 +127,7 @@ static void noop(void *) {}
 ADTSSink::ADTSSink(const std::wstring &path, EncoderBase &encoder)
 {
     if (path == L"-") {
-#if defined(_MSC_VER) || defined(__MINGW__)
+#if defined(_MSC_VER) || defined(__MINGW32__)
 	_setmode(_fileno(stdout), _O_BINARY);
 #endif
 	m_fp = file_ptr_t(stdout, noop);
@@ -163,4 +163,3 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
     if (ferror(m_fp.get()))
 	throw std::runtime_error("write error");
 }
-
