@@ -208,9 +208,12 @@ void set_codec_options(AACEncoder &encoder, Options &opts)
 static
 std::wstring get_output_filename(const wchar_t *ifilename, Options &opts)
 {
-    if (opts.ofilename && std::wcscmp(opts.ofilename, L"-"))
-	return GetFullPathNameX(opts.ofilename);
-
+    if (opts.ofilename) {
+	if (!std::wcscmp(opts.ofilename, L"-"))
+	    return opts.ofilename;
+	else
+	    return GetFullPathNameX(opts.ofilename);
+    }
     const wchar_t *ext = opts.isMP4() ? L"m4a" : L"aac";
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
     if (!std::wcscmp(ifilename, L"-"))
