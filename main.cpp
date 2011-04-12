@@ -289,13 +289,8 @@ ISource *open_source(const Options &opts)
 	return new RawSource(stream, sf);
     }
 
-    if (opts.libsndfile.loaded()) {
-	try {
-	    return new LibSndfileSource(opts.libsndfile, opts.ifilename);
-	} catch (const std::runtime_error&) {
-	    if (!stream.seekable()) throw;
-	    stream.rewind();
-	}
+    if (!stream.seekable() && opts.libsndfile.loaded()) {
+	return new LibSndfileSource(opts.libsndfile, opts.ifilename);
     } else {
 	try {
 	    return new WaveSource(stream, false);
@@ -318,11 +313,18 @@ ISource *open_source(const Options &opts)
 	    stream.rewind();
 	}
     }
+    if (opts.libsndfile.loaded()) {
+	try {
+	    return new LibSndfileSource(opts.libsndfile, opts.ifilename);
+	} catch (const std::runtime_error&) {
+	    stream.rewind();
+	}
+    }
     try {
 	return new QTMovieSource(opts.ifilename, true);
     } catch (const std::runtime_error& e) {
-	throw e;
-	//throw std::runtime_error("Unsupported format");
+	stream.rewind();
+	throw;
     }
 }
 
