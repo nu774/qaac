@@ -322,7 +322,7 @@ ISource *open_source(const Options &opts)
     }
     try {
 	return new QTMovieSource(opts.ifilename, true);
-    } catch (const std::runtime_error& e) {
+    } catch (const std::runtime_error&) {
 	stream.rewind();
 	throw;
     }

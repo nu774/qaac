@@ -26,7 +26,13 @@ ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder)
 	m_mp4file.SetTimeScale(sample_rate);
 	std::vector<char> cookie;
 	encoder.getMagicCookie(&cookie);
+	/* XXX
+	   OutputBasicDescription.mBitsPerChannel is always zero for ALAC.
+	   Therefore, we use InputBasicDescription instead.
+         */
+	uint32_t bps = encoder.getInputBasicDescription().mBitsPerChannel;
 	m_track_id = m_mp4file.AddAlacAudioTrack(sample_rate,
+		bps > 16 ? 24 : 16,
 		reinterpret_cast<uint8_t*>(&cookie[20]),
 		cookie.size() - 28);
     } catch (mp4v2::impl::Exception *e) {

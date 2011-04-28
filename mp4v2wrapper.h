@@ -36,8 +36,8 @@ public:
     {
 	return AddChildAtom(parent, name);
     }
-    MP4TrackId AddAlacAudioTrack(uint32_t timeScale, const uint8_t *cookie,
-	    size_t cookieLength);
+    MP4TrackId AddAlacAudioTrack(uint32_t timeScale, uint32_t bitsPerSample,
+	const uint8_t *cookie, size_t cookieLength);
     bool SetMetadataString(const char *atom, const char *value);
     bool SetMetadataTrack(uint16_t track, uint16_t totalTracks);
     bool SetMetadataDisk(uint16_t disk, uint16_t totalDisks);

@@ -9,6 +9,7 @@ using mp4v2::impl::MP4DataAtom;
 using mp4v2::impl::MP4NameAtom;
 using mp4v2::impl::MP4MeanAtom;
 using mp4v2::impl::MP4Property;
+using mp4v2::impl::MP4Integer16Property;
 using mp4v2::impl::MP4Integer32Property;
 using mp4v2::impl::MP4StringProperty;
 using mp4v2::impl::MP4BytesProperty;
@@ -30,7 +31,7 @@ public:
 
 
 MP4TrackId MP4FileX::AddAlacAudioTrack(uint32_t timeScale,
-	const uint8_t *cookie, size_t cookieLength)
+    uint32_t bitsPerSample, const uint8_t *cookie, size_t cookieLength)
 {
     MP4TrackId track = AddTrack(MP4_AUDIO_TRACK_TYPE, timeScale);
     AddTrackToOd(track);
@@ -47,8 +48,18 @@ MP4TrackId MP4FileX::AddAlacAudioTrack(uint32_t timeScale,
     dynamic_cast<MP4Integer32Property*>(pProp)->IncrementValue();
 
     atom = atom->FindChildAtom("alac");
+
+    /* XXX
+       Would overflow when samplerate >= 65536, so we shift down here.
+       Anyway, iTunes seems to always set 44100 to stsd samplerate for ALAC.
+     */
+    while (timeScale & 0xffff0000)
+	timeScale >>= 1;
     atom->FindProperty("alac.timeScale", &pProp);
     dynamic_cast<MP4Integer32Property*>(pProp)->SetValue(timeScale<<16);
+    atom->FindProperty("alac.sampleSize", &pProp);
+    dynamic_cast<MP4Integer16Property*>(pProp)->SetValue(bitsPerSample);
+
     MP4AlacAtom *alacAtom = new MP4AlacAtom(*this, "alac");
     pProp = alacAtom->GetProperty(0);
     dynamic_cast<MP4BytesProperty*>(pProp)->SetValue(cookie, cookieLength, 0);
