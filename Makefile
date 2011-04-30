@@ -60,8 +60,8 @@ flacsrc.o \
 libsndfilesrc.o \
 main.o \
 options.o \
+resampler.o \
 sink.o \
-srcsource.o \
 version.o \
 wvpacksrc.o
 

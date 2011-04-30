@@ -107,8 +107,8 @@
     <ClCompile Include="..\..\libsndfilesrc.cpp" />
     <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\options.cpp" />
+    <ClCompile Include="..\..\resampler.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
-    <ClCompile Include="..\..\srcsource.cpp" />
     <ClCompile Include="..\..\version.cpp" />
     <ClCompile Include="..\..\wvpacksrc.cpp" />
   </ItemGroup>

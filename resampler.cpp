@@ -1,12 +1,11 @@
-#ifdef ENABLE_SRC
 #include <cmath>
-#include "srcsource.h"
+#include "resampler.h"
 #include "win32util.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
     while (0)
 
-SRCModule::SRCModule(const std::wstring &path)
+SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
 {
     HMODULE hDll;
     hDll = LoadLibraryW(path.c_str());
@@ -14,9 +13,11 @@ SRCModule::SRCModule(const std::wstring &path)
     if (!m_loaded)
 	return;
     try {
-	CHECK(src_new = ProcAddress(hDll, "src_new"));
-	CHECK(src_delete = ProcAddress(hDll, "src_delete"));
-	CHECK(src_process = ProcAddress(hDll, "src_process"));
+	CHECK(init = ProcAddress(hDll, "speex_resampler_init"));
+	CHECK(destroy = ProcAddress(hDll, "speex_resampler_destroy"));
+	CHECK(process_interleaved_float = ProcAddress(hDll,
+		    "speex_resampler_process_interleaved_float"));
+	CHECK(strerror = ProcAddress(hDll, "speex_resampler_strerror"));
     } catch (...) {
 	FreeLibrary(hDll);
 	m_loaded = false;
@@ -37,9 +38,9 @@ struct TempFileCloser {
     FILE *m_fp;
 };
 
-SRCSource::SRCSource(const SRCModule &module, ISource *src, uint32_t rate,
-	int mode)
-    : m_module(module), m_src(src), m_length(0), m_peak(0.0)
+SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
+	ISource *src, uint32_t rate, int quality)
+    : m_module(module), m_src(src), m_length(0), m_peak(0.0), m_input_frames(0)
 {
     const SampleFormat &srcFormat = src->getSampleFormat();
     if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
@@ -48,18 +49,18 @@ SRCSource::SRCSource(const SRCModule &module, ISource *src, uint32_t rate,
 	throw std::runtime_error("Can't handle 64bit sample");
 
     m_format = SampleFormat("F32LE", srcFormat.m_nchannels, rate);
-    memset(&m_conversion_data, 0, sizeof m_conversion_data);
 
     int error;
-    SRC_STATE *converter = m_module.src_new(mode, m_format.m_nchannels, &error);
-    if (!converter) throw std::runtime_error("src_new");
-    m_converter = boost::shared_ptr<SRC_STATE_tag>(converter,
-		m_module.src_delete);
+    SpeexResamplerState *converter = m_module.init(
+	    m_format.m_nchannels, srcFormat.m_rate, rate, quality, &error);
+    if (!converter)
+	throw std::runtime_error(
+	    format("SpeexResampler: %s", m_module.strerror(error)));
+    m_converter = boost::shared_ptr<SpeexResamplerState>(converter,
+		m_module.destroy);
 
     m_src_buffer.resize(4096);
     m_ibuffer.resize(m_src_buffer.size() * srcFormat.bytesPerFrame());
-
-    m_conversion_data.src_ratio = 1.0 * rate / srcFormat.m_rate;
 
     wchar_t *tmpname = _wtempnam(GetTempPathX().c_str(), L"qaac.tmp");
     FILE *tmpfile = wfopenx(tmpname, L"wb+");
@@ -70,7 +71,7 @@ SRCSource::SRCSource(const SRCModule &module, ISource *src, uint32_t rate,
     m_tmpfile = boost::shared_ptr<FILE>(tmpfile, closer);
 }
 
-size_t SRCSource::convertSamples(size_t nsamples)
+size_t SpeexResampler::convertSamples(size_t nsamples)
 {
     std::vector<float> buff(nsamples* m_format.m_nchannels);
     size_t nc;
@@ -84,7 +85,7 @@ size_t SRCSource::convertSamples(size_t nsamples)
     return nc;
 }
 
-size_t SRCSource::readSamples(void *buffer, size_t nsamples)
+size_t SpeexResampler::readSamples(void *buffer, size_t nsamples)
 {
     size_t nc = std::fread(buffer, sizeof(float),
  	    nsamples * m_format.m_nchannels, m_tmpfile.get());
@@ -98,58 +99,55 @@ size_t SRCSource::readSamples(void *buffer, size_t nsamples)
     return nc / m_format.m_nchannels;
 }
 
-size_t SRCSource::doConvertSamples(float *buffer, size_t nsamples)
+size_t SpeexResampler::doConvertSamples(float *buffer, size_t nsamples)
 {
-    SRC_DATA &sd = m_conversion_data;
-    sd.data_out = buffer;
-    sd.output_frames = nsamples;
+    float *src = &m_src_buffer[0];
+    float *dst = buffer;
 
-    while (sd.output_frames > 0) {
-	if (sd.input_frames == 0) {
-	    sd.data_in = &m_src_buffer[0];
-	    underflow(nsamples);
+    while (nsamples > 0) {
+	if (m_input_frames == 0) {
+	    underflow();
+	    src = &m_src_buffer[0];
 	}
-	if (sd.input_frames == 0) {
-	    sd.end_of_input = 1;
-	}
-
-	int error;
-	if ((error = m_module.src_process(m_converter.get(), &sd))) {
-	    throw std::runtime_error(format("src_process: %d", error));
-	}
-
-	sd.data_in += sd.input_frames_used * m_format.m_nchannels;
-	sd.input_frames -= sd.input_frames_used;
-	if (sd.output_frames_gen == 0)
+	if (m_input_frames == 0)
+	    break;
+	uint32_t ilen = m_input_frames;
+	uint32_t olen = nsamples;
+	m_module.process_interleaved_float(m_converter.get(), src,
+		&ilen, dst, &olen);
+	nsamples -= olen;
+	m_input_frames -= ilen;
+	src += ilen * m_format.m_nchannels;
+	if (olen == 0)
 	    break;
 	double peak = m_peak;
-	for (float *fp = sd.data_out;
-		fp != sd.data_out + sd.output_frames_gen; ++fp)
+	for (float *fp = dst; fp != dst + olen * m_format.m_nchannels; ++fp)
 	{
 	    double abs = std::fabs(*fp);
 	    if (abs > peak) peak = abs;
 	}
 	m_peak = peak;
-	sd.data_out += sd.output_frames_gen * m_format.m_nchannels;
-	sd.output_frames -= sd.output_frames_gen;
+	dst += olen * m_format.m_nchannels;
     }
-    return (sd.data_out - buffer) / m_format.m_nchannels;
+    if (m_input_frames) {
+	std::memmove(&this->m_src_buffer[0], src,
+	    m_input_frames * m_format.m_nchannels * sizeof(float));
+    }
+    return (dst - buffer) / m_format.m_nchannels;
 }
 
-void SRCSource::underflow(size_t nsamples)
+void SpeexResampler::underflow()
 {
     const SampleFormat &srcFormat = m_src->getSampleFormat();
-    nsamples = std::min(nsamples, m_src_buffer.size() / m_format.m_nchannels);
+    size_t nsamples = m_src_buffer.size() / m_format.bytesPerFrame();
 
     if (srcFormat.m_type == SampleFormat::kIsFloat &&
 	    srcFormat.m_bitsPerSample == 32) {
-	m_conversion_data.input_frames =
-	    m_src->readSamples(&m_src_buffer[0], nsamples);
+	m_input_frames = m_src->readSamples(&m_src_buffer[0], nsamples);
 	return;
     }
-    m_conversion_data.input_frames =
-	m_src->readSamples(&m_ibuffer[0], nsamples);
-    size_t blen = m_conversion_data.input_frames * srcFormat.bytesPerFrame();
+    m_input_frames = m_src->readSamples(&m_ibuffer[0], nsamples);
+    size_t blen = m_input_frames * srcFormat.bytesPerFrame();
     float *fp = &m_src_buffer[0];
 
     switch (srcFormat.m_bitsPerSample) {
@@ -187,4 +185,3 @@ void SRCSource::underflow(size_t nsamples)
 	break;
     }
 }
-#endif

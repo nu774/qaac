@@ -7,7 +7,7 @@
 #include "flacsrc.h"
 #include "wvpacksrc.h"
 #include "itunetags.h"
-#include "srcsource.h"
+#include "resampler.h"
 
 struct Options {
     enum { kABR, kTVBR, kCVBR, kCBR };
@@ -19,7 +19,7 @@ struct Options {
 	raw_channels(2), raw_sample_rate(44100),
 	rate(-1),
 	downmix(-1),
-	src_mode(0),
+	src_mode(10),
 	ifilename(0), ofilename(0), outdir(0),
 	raw_format(L"S16LE"),
 	fname_format(0),
@@ -77,9 +77,7 @@ struct Options {
     LibSndfileModule libsndfile;
     FLACModule libflac;
     WavpackModule libwavpack;
-#ifdef ENABLE_SRC
-    SRCModule libsamplerate;
-#endif
+    SpeexResamplerModule libspeexdsp;
 };
 
 #endif

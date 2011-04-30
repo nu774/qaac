@@ -23,7 +23,7 @@
 #include "nullsource.h"
 #include "wavsource.h"
 #include "expand.h"
-#include "srcsource.h"
+#include "resampler.h"
 
 #include <crtdbg.h>
 
@@ -431,13 +431,12 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 		    std::fprintf(stderr, "%s\n", opts.used_settings[i].c_str());
 	}
     }
-#ifdef ENABLE_SRC
     if (iasbd.mSampleRate != oasbd.mSampleRate &&
-	    opts.libsamplerate.loaded() && !opts.native_resampler) {
+	    opts.libspeexdsp.loaded() && !opts.native_resampler) {
 	if (opts.verbose)
 	    std::fprintf(stderr,
-		"Resampling with SRC, mode %d\n", opts.src_mode);
-	SRCSource *resampler = new SRCSource(opts.libsamplerate, src,
+		"Resampling with libspeexdsp, quality %d\n", opts.src_mode);
+	SpeexResampler*resampler = new SpeexResampler(opts.libspeexdsp, src,
 		oasbd.mSampleRate, opts.src_mode);
 	std::auto_ptr<ISource> srcx(resampler);
 	uint64_t n = 0, rc;
@@ -459,7 +458,6 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 	encode_file(srcx.get(), ofilename, opts, true);
 	return;
     }
-#endif
     do_encode(encoder, ofilename, opts);
     if (encoder.framesWritten()) {
 	if (opts.verbose)
@@ -643,9 +641,7 @@ void load_modules(Options &opts)
     opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile-1.dll");
     opts.libflac = FLACModule(selfdir + L"libFLAC.dll");
     opts.libwavpack = WavpackModule(selfdir + L"wavpackdll.dll");
-#ifdef ENABLE_SRC
-    opts.libsamplerate = SRCModule(selfdir + L"libsamplerate.dll");
-#endif
+    opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp.dll");
 }
 
 #ifdef _MSC_VER
