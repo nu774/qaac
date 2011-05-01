@@ -90,8 +90,7 @@ LibSndfileSource::LibSndfileSource(
     else
 	throw std::runtime_error("Can't handle this kind of subformat");
 
-    SF_FORMAT_INFO finfo;
-    std::memset(&finfo, 0, sizeof finfo);
+    SF_FORMAT_INFO finfo = { 0 };
     int count;
     m_module.command(fp, SFC_GET_FORMAT_MAJOR_COUNT, &count, sizeof count);
     for (int i = 0; i < count; ++i) {

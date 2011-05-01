@@ -17,6 +17,8 @@ SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
 	CHECK(destroy = ProcAddress(hDll, "speex_resampler_destroy"));
 	CHECK(process_interleaved_float = ProcAddress(hDll,
 		    "speex_resampler_process_interleaved_float"));
+	CHECK(skip_zeros = ProcAddress(hDll, "speex_resampler_skip_zeros"));
+	CHECK(reset_mem = ProcAddress(hDll, "speex_resampler_reset_mem"));
 	CHECK(strerror = ProcAddress(hDll, "speex_resampler_strerror"));
     } catch (...) {
 	FreeLibrary(hDll);
@@ -25,18 +27,6 @@ SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
     }
     m_module = module_t(hDll, FreeLibrary);
 }
-
-struct TempFileCloser {
-    TempFileCloser(const std::wstring &name, FILE *fp):
-    	m_name(name), m_fp(fp)
-    {}
-    void operator()(void *) {
-	std::fclose(m_fp);
-	DeleteFileX(m_name.c_str());
-    }
-    std::wstring m_name;
-    FILE *m_fp;
-};
 
 SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
 	ISource *src, uint32_t rate, int quality)
@@ -58,17 +48,14 @@ SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
 	    format("SpeexResampler: %s", m_module.strerror(error)));
     m_converter = boost::shared_ptr<SpeexResamplerState>(converter,
 		m_module.destroy);
+    m_module.skip_zeros(converter);
+    m_module.reset_mem(converter);
 
-    m_src_buffer.resize(4096);
+    m_src_buffer.resize(4096 * srcFormat.m_nchannels);
     m_ibuffer.resize(m_src_buffer.size() * srcFormat.bytesPerFrame());
 
-    wchar_t *tmpname = _wtempnam(GetTempPathX().c_str(), L"qaac.tmp");
-    FILE *tmpfile = wfopenx(tmpname, L"wb+");
-    TempFileCloser closer(tmpname, tmpfile);
-    std::free(tmpname);
-    if (!tmpfile)
-	throw std::runtime_error(format("tmpfile: %s", std::strerror(errno)));
-    m_tmpfile = boost::shared_ptr<FILE>(tmpfile, closer);
+    FILE *tmpfile = win32_tmpfile(L"qaac.tmp");
+    m_tmpfile = boost::shared_ptr<FILE>(tmpfile, std::fclose);
 }
 
 size_t SpeexResampler::convertSamples(size_t nsamples)
@@ -139,7 +126,7 @@ size_t SpeexResampler::doConvertSamples(float *buffer, size_t nsamples)
 void SpeexResampler::underflow()
 {
     const SampleFormat &srcFormat = m_src->getSampleFormat();
-    size_t nsamples = m_src_buffer.size() / m_format.bytesPerFrame();
+    size_t nsamples = m_src_buffer.size() / m_format.m_nchannels;
 
     if (srcFormat.m_type == SampleFormat::kIsFloat &&
 	    srcFormat.m_bitsPerSample == 32) {

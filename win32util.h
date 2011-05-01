@@ -122,6 +122,8 @@ BOOL DeleteFileX(const wchar_t *path)
     return DeleteFileW(fullpath.c_str());
 }
 
+FILE *win32_tmpfile(const wchar_t *prefix);
+
 class DirectorySaver {
     std::wstring m_pwd;
 public:

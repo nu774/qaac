@@ -26,6 +26,10 @@ Files under include/FLAC:
 These are header files of FLAC (http://flac.sourceforge.net/),
 version 1.2.1
 
+Files under include/speex:
+These are header files of speex resampler (http://www.speex.org/),
+version 1.2rc1
+
 include/sndfile.h:
 This is header file of libsndfile (http://www.mega-nerd.com/libsndfile/),
 version 1.0.24

@@ -21,6 +21,8 @@ public:
     void (*destroy)(SpeexResamplerState *);
     int (*process_interleaved_float)(SpeexResamplerState *,
 	    const float *, spx_uint32_t *, float *, spx_uint32_t *);
+    int (*skip_zeros)(SpeexResamplerState *);
+    int (*reset_mem)(SpeexResamplerState *);
     const char *(*strerror)(int);
 };
 
