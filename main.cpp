@@ -433,9 +433,15 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
     }
     if (iasbd.mSampleRate != oasbd.mSampleRate &&
 	    opts.libspeexdsp.loaded() && !opts.native_resampler) {
-	if (opts.verbose)
+	if (opts.verbose) {
 	    std::fprintf(stderr,
 		"Resampling with libspeexdsp, quality %d\n", opts.src_mode);
+	    if (!opts.libspeexdsp.get_input_latency) {
+		std::fprintf(stderr,
+		    "WARNING: lacking speex_resampler_get_input_latency().\n"
+		    "Using guess... might not be quite acculate\n");
+	    }
+	}
 	SpeexResampler*resampler = new SpeexResampler(opts.libspeexdsp, src,
 		oasbd.mSampleRate, opts.src_mode);
 	std::auto_ptr<ISource> srcx(resampler);
@@ -641,7 +647,9 @@ void load_modules(Options &opts)
     opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile-1.dll");
     opts.libflac = FLACModule(selfdir + L"libFLAC.dll");
     opts.libwavpack = WavpackModule(selfdir + L"wavpackdll.dll");
-    opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp.dll");
+    opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp_vc10.dll");
+    if (!opts.libspeexdsp.loaded())
+	opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp.dll");
 }
 
 #ifdef _MSC_VER

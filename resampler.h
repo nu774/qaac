@@ -23,21 +23,45 @@ public:
 	    const float *, spx_uint32_t *, float *, spx_uint32_t *);
     int (*skip_zeros)(SpeexResamplerState *);
     int (*reset_mem)(SpeexResamplerState *);
+    /* XXX: may be null */
+    int (*get_input_latency)(SpeexResamplerState *);
     const char *(*strerror)(int);
 };
 
 class SpeexResampler: public ISource, public ITagParser {
+    class LatencyDetector {
+	double m_irate, m_orate;
+	uint64_t m_input_accum, m_output_accum;
+    public:
+	LatencyDetector():
+	    m_irate(0), m_orate(0), m_input_accum(0), m_output_accum(0)
+	{}
+	void set_sample_rates(uint32_t irate, uint32_t orate) {
+	    m_irate = irate;
+	    m_orate = orate;
+	}
+	void update(size_t ilen, size_t olen) {
+	    m_input_accum += ilen;
+	    m_output_accum += olen;
+	}
+	size_t guess_input_latency() {
+	    return static_cast<size_t>(m_input_accum
+		    - (m_output_accum * m_irate / m_orate) + 0.5);
+	}
+    };
     SpeexResamplerModule m_module;
     ISource *m_src;
     SampleFormat m_format;
     boost::shared_ptr<SpeexResamplerState> m_converter;
-    std::vector<char> m_ibuffer;
-    std::vector<float> m_src_buffer;
-    size_t m_input_frames;
-    boost::shared_ptr<FILE> m_tmpfile;
     uint64_t m_length;
     double m_peak;
+    bool m_end_of_input;
+    size_t m_input_frames;
+    std::vector<char> m_ibuffer;
+    std::vector<float> m_src_buffer;
+    boost::shared_ptr<FILE> m_tmpfile;
     std::map<uint32_t, std::wstring> m_emptyTags;
+    LatencyDetector m_latency_detector;
 public:
     SpeexResampler(const SpeexResamplerModule &module, ISource *src,
 	    uint32_t rate, int quality=3);
@@ -65,7 +89,7 @@ public:
     }
 private:
     size_t doConvertSamples(float *buffer, size_t nsamples);
-    void underflow();
+    bool underflow();
 };
 
 #endif
