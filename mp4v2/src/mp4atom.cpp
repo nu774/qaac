@@ -225,7 +225,7 @@ bool MP4Atom::IsReasonableType(const char* type)
 void MP4Atom::Read()
 {
     if (ATOMID(m_type) != 0 && m_size > 1000000) {
-        log.warningf("%s: \"%s\": %s atom size %" PRIu64 " is suspect", __FUNCTION__,
+        log.verbose1f("%s: \"%s\": %s atom size %" PRIu64 " is suspect", __FUNCTION__,
                      m_File.GetFilename().c_str(), m_type, m_size);
     }
 
@@ -436,8 +436,8 @@ void MP4Atom::ReadChildAtoms()
         // if child atom is of known type
         // but not expected here print warning
         if (pChildAtomInfo == NULL && !pChildAtom->IsUnknownType()) {
-            log.warningf("%s: \"%s\": In atom %s unexpected child atom %s", __FUNCTION__,
-                         m_File.GetFilename().c_str(), GetType(), pChildAtom->GetType());
+            log.verbose1f("%s: \"%s\": In atom %s unexpected child atom %s", __FUNCTION__,
+                          m_File.GetFilename().c_str(), GetType(), pChildAtom->GetType());
         }
 
         // if child atoms should have just one instance

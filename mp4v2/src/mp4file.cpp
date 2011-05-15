@@ -303,9 +303,12 @@ void MP4File::Optimize( const char* srcFileName, const char* dstFileName )
     }
     catch (...) {
         // cleanup and rethrow.  Without this, we'd leak memory and an open file handle(s).
+       if(src == NULL && dst == NULL)
+            delete m_file;// We didn't make it far enough to have m_file go to src or dst.
+
+        m_file = NULL;
         delete dst;
         delete src;
-        m_file = NULL;
         throw;
     }
 
@@ -1316,6 +1319,37 @@ MP4TrackId MP4File::AddAmrAudioTrack(
 
     m_pTracks[FindTrackIndex(trackId)]->
     SetFixedSampleDuration(fixedSampleDuration);
+
+    return trackId;
+}
+
+MP4TrackId MP4File::AddULawAudioTrack(    uint32_t timeScale)
+{
+    uint32_t fixedSampleDuration = (timeScale * 20)/1000; // 20mSec/Sample
+
+    MP4TrackId trackId = AddTrack(MP4_AUDIO_TRACK_TYPE, timeScale);
+
+    AddTrackToOd(trackId);
+
+    SetTrackFloatProperty(trackId, "tkhd.volume", 1.0);
+
+    (void)InsertChildAtom(MakeTrackName(trackId, "mdia.minf"), "smhd", 0);
+
+    (void)AddChildAtom(MakeTrackName(trackId, "mdia.minf.stbl.stsd"), "ulaw");
+
+    // stsd is a unique beast in that it has a count of the number
+    // of child atoms that needs to be incremented after we add the mp4a atom
+    MP4Integer32Property* pStsdCountProperty;
+    FindIntegerProperty(
+        MakeTrackName(trackId, "mdia.minf.stbl.stsd.entryCount"),
+        (MP4Property**)&pStsdCountProperty);
+    pStsdCountProperty->IncrementValue();
+
+    SetTrackIntegerProperty(trackId,
+                            "mdia.minf.stbl.stsd.ulaw.timeScale",
+                            timeScale<<16);
+
+    m_pTracks[FindTrackIndex(trackId)]->SetFixedSampleDuration(fixedSampleDuration);
 
     return trackId;
 }

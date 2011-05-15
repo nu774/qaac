@@ -13,7 +13,7 @@ You have to modify project files(vcxproj), if your SDK install directory is diff
 
 How to build with mingw
 -----------------------
-No so much tested, and not recommended.
+Not so much tested, and not recommended.
 You need working autotools to generate mp4v2 configure script.
 
 ::

@@ -110,7 +110,7 @@ bool MP4SetTrackTimeScale(
     MP4TrackId    trackId,
     uint32_t      value );
 
-/** Get ISO-639-2/T langauge code of a track.
+/** Get ISO-639-2/T language code of a track.
  *  The language code is a 3-char alpha code consisting of lower-case letters.
  *
  *  @param hFile handle of file for operation.
@@ -125,7 +125,7 @@ bool MP4GetTrackLanguage(
     MP4TrackId    trackId,
     char*         code );
 
-/** Set ISO-639-2/T langauge code of a track.
+/** Set ISO-639-2/T language code of a track.
  *  The language code is a 3-char alpha code consisting of lower-case letters.
  *
  *  @param hFile handle of file for operation.

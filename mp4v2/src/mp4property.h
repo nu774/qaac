@@ -603,7 +603,7 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/// ISO-639-2/T langauge code.
+/// ISO-639-2/T language code.
 /// Language codes are 3-alpha (always lowercase) codes which are then
 /// offset using 0x60 and packed as 5-bit values into 16-bits, most
 /// significant bit is zero-padding.

@@ -102,6 +102,9 @@ void MP4SoundAtom::Read()
         // Quicktime has an interesting thing - they'll put an mp4a atom
         // which is blank inside a wave atom, which is inside an mp4a atom
         // we have a mp4a inside an wave inside an mp4a - delete all properties
+        for(int i = 0; i < 9; ++ i)
+            delete m_pProperties[i];	// make sure we delete the properties themselves, then remove from  m_pProperties
+
         m_pProperties.Delete(8);
         m_pProperties.Delete(7);
         m_pProperties.Delete(6);
@@ -111,6 +114,7 @@ void MP4SoundAtom::Read()
         m_pProperties.Delete(2);
         m_pProperties.Delete(1);
         m_pProperties.Delete(0);
+
         if (ATOMID(GetType()) == ATOMID("alac")) {
             AddProperty(new MP4BytesProperty(*this, "decoderConfig", m_size));
             ReadProperties();

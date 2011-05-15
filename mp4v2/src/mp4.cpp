@@ -789,6 +789,26 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
         return MP4_INVALID_TRACK_ID;
     }
 
+    MP4TrackId MP4AddULawAudioTrack(
+        MP4FileHandle hFile,
+        uint32_t timeScale)
+    {
+        if (MP4_IS_VALID_FILE_HANDLE(hFile)) {
+            try {
+                return ((MP4File*)hFile)->
+                       AddULawAudioTrack(timeScale);
+            }
+            catch( Exception* x ) {
+                mp4v2::impl::log.errorf(*x);
+                delete x;
+            }
+            catch( ... ) {
+                mp4v2::impl::log.errorf( "%s: failed", __FUNCTION__ );
+            }
+        }
+        return MP4_INVALID_TRACK_ID;
+    }
+
     MP4TrackId MP4AddAudioTrack(
         MP4FileHandle hFile,
         uint32_t timeScale,

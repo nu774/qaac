@@ -69,9 +69,9 @@ MP4RtpHintTrack::MP4RtpHintTrack(MP4File& file, MP4Atom& trakAtom)
 
 MP4RtpHintTrack::~MP4RtpHintTrack()
 {
-    delete m_pReadHint;
-    delete m_pReadHintSample;
-    delete m_pWriteHint;
+    delete m_pReadHint; m_pReadHint = NULL;
+    MP4Free( m_pReadHintSample ); m_pReadHintSample = NULL;
+    delete m_pWriteHint; m_pWriteHint = NULL;
 }
 
 void MP4RtpHintTrack::InitRefTrack()
@@ -122,10 +122,8 @@ void MP4RtpHintTrack::ReadHint(
     }
 
     // dispose of any old hint
-    delete m_pReadHint;
-    m_pReadHint = NULL;
-    delete m_pReadHintSample;
-    m_pReadHintSample = NULL;
+    delete m_pReadHint; m_pReadHint = NULL;
+    MP4Free( m_pReadHintSample ); m_pReadHintSample = NULL;
     m_readHintSampleSize = 0;
 
     // read the desired hint sample into memory

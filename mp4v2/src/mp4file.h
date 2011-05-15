@@ -247,6 +247,9 @@ public:
         MP4Duration sampleDuration,
         uint8_t audioType);
 
+    MP4TrackId AddULawAudioTrack(
+        uint32_t timeScale);
+
     MP4TrackId AddAC3AudioTrack(
         uint32_t samplingRate,
         uint8_t fscod,
