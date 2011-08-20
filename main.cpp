@@ -237,8 +237,14 @@ static
 void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	const Options &opts)
 {
+#ifdef _DEBUG
     AudioChannelLayoutX layout;
+    encoder.getInputChannelLayout(&layout);
+    fprintf(stderr, "Input Channel Layout: %08x\n", layout->mChannelLayoutTag);
+
     encoder.getChannelLayout(&layout);
+    fprintf(stderr, "Output Channel Layout: %08x\n", layout->mChannelLayoutTag);
+#endif
     ISink *sink;
 
     std::wstring ofilenamex(ofilename);
