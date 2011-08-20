@@ -214,11 +214,13 @@ namespace Cue {
 
     void CueSheetToChapters(const std::wstring &cuesheet,
 	    unsigned sample_rate, uint64_t duration,
-	    std::vector<std::pair<std::wstring, int64_t> > *chapters)
+	    std::vector<std::pair<std::wstring, int64_t> > *chapters,
+	    std::map<uint32_t, std::wstring> *meta)
     {
 	std::wstringbuf strbuf(cuesheet);
 	CueSheet parser;
 	parser.parse(&strbuf);
+	ConvertToItunesTags(parser.m_meta, meta, true);
 	std::vector<std::pair<std::wstring, int64_t> > chaps;
 
 	int64_t dur_acc = 0;

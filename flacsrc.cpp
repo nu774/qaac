@@ -64,8 +64,12 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
     m_buffer.resize(m_format.m_nchannels);
     if (m_cuesheet.size()) {
 	try {
+	    std::map<uint32_t, std::wstring> tags;
 	    Cue::CueSheetToChapters(m_cuesheet, m_format.m_rate,
-		    getDuration(), &m_chapters);
+		    getDuration(), &m_chapters, &tags);
+	    std::map<uint32_t, std::wstring>::const_iterator it;
+	    for (it = tags.begin(); it != tags.end(); ++it)
+		m_tags[it->first] = it->second;
 	} catch (...) {}
     }
 }

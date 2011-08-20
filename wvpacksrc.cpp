@@ -124,6 +124,7 @@ void WavpackSource::fetchTags()
 
     int count = m_module.GetNumTagItems(wpc);
     std::map<std::string, std::string> vorbisComments;
+    std::map<uint32_t, std::wstring> tags;
     for (int i = 0; i < count; ++i) {
 	int size = m_module.GetTagItemIndexed(wpc, i, 0, 0);
 	std::vector<char> name(size + 1);
@@ -135,11 +136,14 @@ void WavpackSource::fetchTags()
 	    try {
 		std::wstring wvalue = m2w(&value[0], u8codec);
 		Cue::CueSheetToChapters(wvalue, m_format.m_rate,
-			getDuration(), &m_chapters);
+			getDuration(), &m_chapters, &tags);
 	    } catch (...) {}
 	} else {
 	    vorbisComments[&name[0]] = &value[0];
 	}
     }
     Vorbis::ConvertToItunesTags(vorbisComments, &m_tags);
+    std::map<uint32_t, std::wstring>::const_iterator it;
+    for (it = tags.begin(); it != tags.end(); ++it)
+	m_tags[it->first] = it->second;
 }
