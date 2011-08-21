@@ -1,4 +1,5 @@
 #include <iostream>
+#include <ctime>
 #include <cstdarg>
 #include <clocale>
 #include <algorithm>
@@ -234,6 +235,25 @@ std::wstring get_output_filename(const wchar_t *ifilename, Options &opts)
 }
 
 static
+void secondsToHMS(double seconds, int *h, int *m, int *s, int *millis)
+{
+    *h = seconds / 3600;
+    seconds -= *h * 3600;
+    *m = seconds / 60;
+    seconds -= *m * 60;
+    *s = seconds;
+    *millis = (seconds - *s) * 1000;
+}
+
+static
+std::string formatSeconds(double seconds)
+{
+    int h, m, s, millis;
+    secondsToHMS(seconds, &h, &m, &s, &millis);
+    return format("%02d:%02d:%02d.%03d", h, m, s, millis);
+}
+
+static
 void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	const Options &opts)
 {
@@ -267,10 +287,21 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
     }
     PeriodicDisplay disp(stderr, 100);
     try {
+	uint32_t rate = encoder.getInputBasicDescription().mSampleRate;
+	uint64_t total_samples = encoder.src()->length();
+	double total_seconds = static_cast<double>(total_samples) / rate;
+
 	while (encoder.encodeChunk(1)) {
-	    if (opts.verbose)
-		disp.put(format("\r%" PRId64 "/%" PRId64 " samples processed",
-		    encoder.samplesRead(), encoder.src()->length()));
+	    if (opts.verbose) {
+		uint64_t samplesRead = encoder.samplesRead();
+		double read_seconds = static_cast<double>(samplesRead) / rate;
+
+		disp.put(format("\r%s / %s processed",
+		    formatSeconds(read_seconds).c_str(),
+		    total_samples == -1
+		    ? "-"
+		    : formatSeconds(total_seconds).c_str()));
+	    }
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
 	}
