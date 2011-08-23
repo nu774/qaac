@@ -292,7 +292,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	double total_seconds = static_cast<double>(total_samples) / rate;
 
 	while (encoder.encodeChunk(1)) {
-	    if (opts.verbose) {
+	    if (opts.verbose && !opts.logfilename) {
 		uint64_t samplesRead = encoder.samplesRead();
 		double read_seconds = static_cast<double>(samplesRead) / rate;
 
@@ -305,7 +305,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
 	}
-	if (opts.verbose) disp.flush();
+	if (opts.verbose && !opts.logfilename) disp.flush();
     } catch (const std::exception &e) {
 	std::fprintf(stderr, "\n%s\n", e.what());
     }
@@ -486,11 +486,11 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
         PeriodicDisplay disp(stderr, 100);
 	while ((rc = resampler->convertSamples(4096)) > 0) {
 	    n += rc;
-	    if (opts.verbose)
+	    if (opts.verbose && !opts.logfilename)
 		disp.put(format("\r%" PRId64 " samples processed", n));
 	}
 	if (opts.verbose) {
-	    disp.flush();
+	    if (!opts.logfilename) disp.flush();
 	    std::fprintf(stderr, "\nDone rate conversion.\n");
 	    if (resampler->getPeak() > 1.0) {
 		std::fprintf(stderr,
