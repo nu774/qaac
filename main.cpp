@@ -305,7 +305,14 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
 	}
-	if (opts.verbose && !opts.logfilename) disp.flush();
+	if (opts.verbose && !opts.logfilename) {
+	    disp.flush();
+	    putc('\n', stderr);
+	}
+	if (opts.logfilename) {
+	    fprintf(stderr, "%" PRId64 "/%" PRId64 " samples processed\n",
+		    encoder.samplesRead(), total_samples);
+	}
     } catch (const std::exception &e) {
 	std::fprintf(stderr, "\n%s\n", e.what());
     }
@@ -495,8 +502,11 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 		disp.put(format("\r%" PRId64 " samples processed", n));
 	}
 	if (opts.verbose) {
-	    if (!opts.logfilename) disp.flush();
-	    std::fprintf(stderr, "\nDone rate conversion.\n");
+	    if (!opts.logfilename) {
+		disp.flush();
+		putc('\n', stderr);
+	    }
+	    std::fprintf(stderr, "Done rate conversion.\n");
 	    if (resampler->getPeak() > 1.0) {
 		std::fprintf(stderr,
 			"Peak value %g > 1.0, gain compressed.\n",
@@ -509,7 +519,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
     do_encode(encoder, ofilename, opts);
     if (encoder.framesWritten()) {
 	if (opts.verbose)
-	    std::fprintf(stderr, "\nOverall bitrate: %gkbps\n",
+	    std::fprintf(stderr, "Overall bitrate: %gkbps\n",
 		    encoder.overallBitrate());
 	if (opts.isMP4())
 	    write_tags(ofilename, opts, encoder);
