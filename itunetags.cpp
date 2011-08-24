@@ -224,6 +224,7 @@ namespace Vorbis {
 	{ "title", Tag::kTitle },
 	{ "artist", Tag::kArtist },
 	{ "albumartist", Tag::kAlbumArtist },
+	{ "album artist", Tag::kAlbumArtist },
 	{ "album", Tag::kAlbum },
 	{ "grouping", Tag::kGrouping },
 	{ "composer", Tag::kComposer },
@@ -266,9 +267,9 @@ namespace Vorbis {
 	uint32_t id;
 	for (it = vc.begin(); it != vc.end(); ++it) {
 	    std::string key = slower(it->first);
-	    if (key == "totaltracks")
+	    if (key == "totaltracks" || key == "tracktotal")
 		totaltracks = it->second;
-	    else if (key == "totaldiscs")
+	    else if (key == "totaldiscs" || key == "disctotal")
 		totaldiscs = it->second;
 	    else if ((id = GetIDFromTagName(it->first.c_str())) > 0)
 		result[id] = m2w(it->second, u8codec);
@@ -300,14 +301,14 @@ namespace Vorbis {
 		if (swscanf(ii->second.c_str(), L"%d/%d", &n, &t) < 1)
 		    continue;
 		result["tracknumber"] = format("%d", n);
-		if (t > 0) result["totaltracks"] = format("%d", t);
+		if (t > 0) result["tracktotal"] = format("%d", t);
 	    }
 	    else if (ii->first == Tag::kDisk) {
 		int n, t = 0;
 		if (swscanf(ii->second.c_str(), L"%d/%d", &n, &t) < 1)
 		    continue;
 		result["discnumber"] = format("%d", n);
-		if (t > 0) result["totaldiscs"] = format("%d", t);
+		if (t > 0) result["disctotal"] = format("%d", t);
 	    }
 	    else if (ii->first == Tag::kGenreID3) {
 		int n;
