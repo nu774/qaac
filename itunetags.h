@@ -57,6 +57,7 @@ class TagEditor {
     std::map<uint32_t, std::wstring> m_tags;
     std::map<std::string, std::wstring> m_long_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
+    std::vector<std::wstring> m_artworks;
     int m_encoder_delay;
     int m_padding;
     uint64_t m_nsamples;
@@ -87,6 +88,10 @@ public:
 	    &chapters)
     {
 	m_chapters = chapters;
+    }
+    void addArtwork(const wchar_t *filename)
+    {
+	m_artworks.push_back(filename);
     }
     void save();
 };

@@ -44,6 +44,10 @@ public:
     bool SetMetadataUint8(const char *atom, uint8_t value);
     bool SetMetadataUint16(const char *atom, uint16_t value);
     bool SetMetadataGenre(const char *atom, uint16_t value);
+    bool SetMetadataArtwork(const char *atom,
+	    const char *data, size_t size,
+	    mp4v2::impl::itmf::BasicType typeCode
+	     = mp4v2::impl::itmf::BT_UNDEFINED);
     bool SetMetadataFreeForm(const char *name, const char *mean,
 	      const uint8_t* pValue, uint32_t valueSize,
 	      mp4v2::impl::itmf::BasicType typeCode

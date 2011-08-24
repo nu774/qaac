@@ -124,6 +124,8 @@ BOOL DeleteFileX(const wchar_t *path)
 
 FILE *win32_tmpfile(const wchar_t *prefix);
 
+char *load_with_mmap(const wchar_t *path, uint64_t *size);
+
 class DirectorySaver {
     std::wstring m_pwd;
 public:

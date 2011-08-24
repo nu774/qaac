@@ -365,6 +365,36 @@ ISource *open_source(const Options &opts)
     }
 }
 
+static void fetch_aiff_id3_tags(const Options &opts, TagEditor &editor)
+{
+    try {
+	std::wstring fullname = get_prefixed_fullpath(opts.ifilename);
+	TagLib::RIFF::AIFF::File file(fullname.c_str());
+	if (!file.isOpen())
+	    throw std::runtime_error("taglib: can't open file");
+	TagLib::ID3v2::Tag *tag = file.tag();
+	const TagLib::ID3v2::FrameList &frameList = tag->frameList();
+	TagLib::ID3v2::FrameList::ConstIterator it;
+	for (it = frameList.begin(); it != frameList.end(); ++it) {
+	    TagLib::ByteVector vID = (*it)->frameID();
+	    std::string sID(vID.data(), vID.data() + vID.size());
+	    std::wstring value = (*it)->toString().toWString();
+	    uint32_t id = ID3::GetIDFromTagName(sID.c_str());
+	    if (id) {
+		if (id == Tag::kGenre) {
+		    wchar_t *endp;
+		    long n = std::wcstol(value.c_str(), &endp, 10);
+		    if (!*endp) {
+			id = Tag::kGenreID3;
+			value = widen(format("%d", n + 1));
+		    }
+		}
+		editor.setTag(id, value);
+	    }
+	}
+    } catch (...) {}
+}
+
 static
 void write_tags(const std::wstring &ofilename,
 	const Options &opts, AACEncoder &encoder)
@@ -383,35 +413,8 @@ void write_tags(const std::wstring &ofilename,
 	if (chapters)
 	    editor.setChapters(*chapters);
     }
-
-    if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-")) {
-	try {
-	    std::wstring fullname = get_prefixed_fullpath(opts.ifilename);
-	    TagLib::RIFF::AIFF::File file(fullname.c_str());
-	    if (!file.isOpen())
-		throw std::runtime_error("taglib: can't open file");
-	    TagLib::ID3v2::Tag *tag = file.tag();
-	    const TagLib::ID3v2::FrameList &frameList = tag->frameList();
-	    TagLib::ID3v2::FrameList::ConstIterator it;
-	    for (it = frameList.begin(); it != frameList.end(); ++it) {
-		TagLib::ByteVector vID = (*it)->frameID();
-		std::string sID(vID.data(), vID.data() + vID.size());
-		std::wstring value = (*it)->toString().toWString();
-		uint32_t id = ID3::GetIDFromTagName(sID.c_str());
-		if (id) {
-		    if (id == Tag::kGenre) {
-			wchar_t *endp;
-			long n = std::wcstol(value.c_str(), &endp, 10);
-			if (!*endp) {
-			    id = Tag::kGenreID3;
-			    value = widen(format("%d", n + 1));
-			}
-		    }
-		    editor.setTag(id, value);
-		}
-	    }
-	} catch (...) {}
-    }
+    if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-"))
+	fetch_aiff_id3_tags(opts, editor);
     editor.setTag(opts.tagopts);
     editor.setTag(Tag::kTool, opts.encoder_name);
     if (opts.isAAC()) {
@@ -419,6 +422,8 @@ void write_tags(const std::wstring &ofilename,
 	encoder.getGaplessInfo(&info);
 	editor.setGaplessInfo(info);
     }
+    for (size_t i = 0; i < opts.artworks.size(); ++i)
+	editor.addArtwork(opts.artworks[i].c_str());
     editor.save();
     if (!opts.no_optimize) {
 	mp4v2::impl::MP4File optimizer;

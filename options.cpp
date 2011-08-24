@@ -39,6 +39,7 @@ static struct option long_options[] = {
     { L"track", required_argument, 0, Tag::kTrack },
     { L"disk", required_argument, 0, Tag::kDisk },
     { L"compilation", no_argument, 0, Tag::kCompilation },
+    { L"artwork", required_argument, 0, Tag::kArtwork },
     { 0, 0, 0, 0 }
 };
 static const uint32_t tag_keys[] = {
@@ -53,7 +54,8 @@ static const uint32_t tag_keys[] = {
     Tag::kDate,
     Tag::kTrack,
     Tag::kDisk,
-    Tag::kCompilation
+    Tag::kCompilation,
+    Tag::kArtwork,
 };
 const uint32_t * const tag_keys_end = tag_keys + array_size(tag_keys);
 
@@ -125,6 +127,7 @@ void usage()
 "--track <number[/total]>\n"
 "--disk <number[/total]>\n"
 "--compilation\n"
+"--artwork <filename>\n"
     );
 }
 
@@ -228,6 +231,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return false;
 	    }
 	}
+	else if (ch == Tag::kArtwork)
+	    this->artworks.push_back(optarg);
 	else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end)
 	    this->tagopts[ch]
 		= (ch == Tag::kCompilation) ? L"1" : optarg;

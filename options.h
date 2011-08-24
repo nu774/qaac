@@ -72,6 +72,7 @@ struct Options {
     std::vector<std::string> used_settings;
     std::vector<int> sample_rate_table;
     std::map<uint32_t, std::wstring> tagopts;
+    std::vector<std::wstring> artworks;
     std::wstring encoder_name, encoder_name_;
 
     LibSndfileModule libsndfile;

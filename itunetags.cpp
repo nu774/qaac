@@ -105,7 +105,12 @@ void TagEditor::save()
 		ShortTagWriter(file, u8codec));
 	std::for_each(m_long_tags.begin(), m_long_tags.end(),
 		LongTagWriter(file, u8codec));
-
+	for (size_t i = 0; i < m_artworks.size(); ++i) {
+	    uint64_t size;
+	    char *data = load_with_mmap(m_artworks[i].c_str(), &size);
+	    file.SetMetadataArtwork("covr", data, size);
+	    UnmapViewOfFile(data);
+	}
 	file.Close();
     } catch (Exception *e) {
 	handle_mp4error(e);

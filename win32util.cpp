@@ -2,6 +2,7 @@
 #include "util.h"
 #include <io.h>
 #include <fcntl.h>
+#include "strcnv.h"
 
 void throw_win32_error(const std::string &msg, DWORD code)
 {
@@ -40,4 +41,24 @@ FILE *win32_tmpfile(const wchar_t *prefix)
 	throw std::runtime_error(std::strerror(errno));
     }
     return fp;
+}
+
+char *load_with_mmap(const wchar_t *path, uint64_t *size)
+{
+    std::wstring fullpath = get_prefixed_fullpath(path);
+    HANDLE hFile = CreateFileW(fullpath.c_str(), GENERIC_READ,
+	    0, 0, OPEN_EXISTING, 0, 0);
+    if (hFile == INVALID_HANDLE_VALUE)
+	throw_win32_error(w2m(fullpath), GetLastError());
+    DWORD sizeHi, sizeLo;
+    sizeLo = GetFileSize(hFile, &sizeHi);
+    *size = (static_cast<uint64_t>(sizeHi) << 32) | sizeLo;
+    HANDLE hMap = CreateFileMappingW(hFile, 0, PAGE_READONLY, 0, 0, 0);
+    DWORD err = GetLastError();
+    CloseHandle(hFile);
+    if (hMap <= 0) throw_win32_error("CreateFileMapping", err);
+    char *view = reinterpret_cast<char*>(
+	    MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0));
+    CloseHandle(hMap);
+    return view;
 }

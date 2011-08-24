@@ -164,6 +164,24 @@ bool MP4FileX::SetMetadataGenre(const char *atom, uint16_t value)
     return pAtom != 0;
 }
 
+bool MP4FileX::SetMetadataArtwork(const char *atom,
+	const char *data, size_t size, itmf::BasicType typeCode)
+{
+    MP4Atom *covr = FindAtom("moov.udta.meta.ilst.covr");
+    if (!covr) {
+	AddDescendantAtoms("moov", "udta.meta.ilst.covr");
+	covr = FindAtom("moov.udta.meta.ilst.covr");
+	if (!covr) return false;
+    }
+    MP4DataAtom *pDataAtom = AddChildAtomT(covr, "data");
+    if (typeCode == itmf::BT_UNDEFINED)
+	typeCode = itmf::computeBasicType(data, size);
+    pDataAtom->typeCode.SetValue(typeCode);
+    pDataAtom->metadata.SetValue(
+	reinterpret_cast<const uint8_t *>(data), size);
+    return true;
+}
+
 bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
       const uint8_t* pValue, uint32_t valueSize, itmf::BasicType typeCode)
 {
