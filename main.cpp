@@ -97,7 +97,8 @@ struct CloserTo {
 };
 
 static
-void setup_sample_rate(AACEncoder &encoder, const Options &opts)
+void setup_sample_rate(AACEncoder &encoder, const Options &opts,
+	const std::vector<int> &sample_rate_table)
 {
     int rate = opts.rate;
     if (rate != 0) {
@@ -106,8 +107,8 @@ void setup_sample_rate(AACEncoder &encoder, const Options &opts)
 	if (rate < 0)
 	    rate = srcrate;
 	std::vector<int>::const_iterator it
-	    = std::min_element(opts.sample_rate_table.begin(),
-		    opts.sample_rate_table.end(), CloserTo<int>(rate));
+	    = std::min_element(sample_rate_table.begin(),
+		    sample_rate_table.end(), CloserTo<int>(rate));
 	rate = *it;
     }
     AudioStreamBasicDescription oasbd = encoder.getOutputBasicDescription();
@@ -130,10 +131,11 @@ void set_codec_options(AACEncoder &encoder, Options &opts)
     {
 	encoder.getParameterRange(Param::kSampleRate, &menu, &limits);
 	double v;
+	std::vector<int> sample_rate_table;
 	for (size_t i = 0; i < limits.size(); ++i)
 	    if (std::swscanf(CF2W(limits.at(i)).c_str(), L"%lf", &v) == 1)
-		opts.sample_rate_table.push_back(static_cast<int>(v * 1000));
-	setup_sample_rate(encoder, opts);
+		sample_rate_table.push_back(static_cast<int>(v * 1000));
+	setup_sample_rate(encoder, opts, sample_rate_table);
     }
     // encoding method
     {
@@ -141,46 +143,27 @@ void set_codec_options(AACEncoder &encoder, Options &opts)
 	if (opts.isSBR()) {
 	    int mapping[] = { 1, 0xff, 2, 0 };
 	    method = mapping[opts.method];
-	    opts.encoder_name += L", HE";
 	}
 	encoder.getParameterRange(Param::kMethod, &menu);
 	if (method >= menu.size())
 	    parameter_not_supported(Param::kMethod, menu);
-	else {
+	else
 	    encoder.setEncoderParameter(Param::kMethod, method);
-	    std::wstring s = CF2W(menu.at(method));
-	    opts.used_settings.push_back(format("Method: %ls", s.c_str()));
-	    static const char *method_name[] = {
-		"ABR", "TVBR", "CVBR", "CBR"
-	    };
-	    opts.encoder_name
-		+= widen(format(", %s", method_name[opts.method]));
-	}
     }
     // bitrate
     {
-	size_t n = encoder.getParameterRange(Param::kBitRate,
-		&menu, &limits);
+	encoder.getParameterRange(Param::kBitRate, &menu, &limits);
 	if (opts.method == Options::kTVBR) {
-	    if (opts.bitrate > n)
+	    if (opts.bitrate > 127)
 		throw std::runtime_error("TVBR parameter too large");
-	    else {
+	    else
 		encoder.setEncoderParameter(Param::kBitRate, opts.bitrate);
-		opts.used_settings.push_back(
-		    format("TVBR Quality: %d", opts.bitrate));
-		opts.encoder_name += format(L" Quality %d", opts.bitrate);
-	    }
 	} else  {
-	    int index = get_bitrate_index(limits, opts.bitrate);
-	    if (index < 0)
+	    if (get_bitrate_index(limits, opts.bitrate) < 0)
 		parameter_not_supported(Param::kBitRate, limits, 1);
 	    else {
-		index = get_bitrate_index(menu, opts.bitrate);
+		size_t index = get_bitrate_index(menu, opts.bitrate);
 		encoder.setEncoderParameter(Param::kBitRate, index);
-		std::wstring s = CF2W(menu.at(index));
-		opts.used_settings.push_back(
-			format("Bitrate: %ls", s.c_str()));
-		opts.encoder_name += format(L" Bitrate %s", s.c_str());
 	    }
 	}
     }
@@ -189,12 +172,8 @@ void set_codec_options(AACEncoder &encoder, Options &opts)
 	encoder.getParameterRange(Param::kQuality, &menu);
 	if (opts.quality >= menu.size())
 	    parameter_not_supported(Param::kQuality, menu);
-	else {
+	else
 	    encoder.setEncoderParameter(Param::kQuality, opts.quality);
-	    opts.used_settings.push_back(
-		format("Quality: %ls",
-		    CF2W(menu.at(opts.quality)).c_str()));
-	}
     }
 #if 0
     {
@@ -204,6 +183,65 @@ void set_codec_options(AACEncoder &encoder, Options &opts)
 	dump_object(settings, std::cout);
     }
 #endif
+}
+
+static
+const char *get_strategy_name(int index, uint32_t codec)
+{
+    const char *lc_table[] = { "ABR", "TVBR", "CVBR", "CBR" };
+    const char *he_table[] = { "CBR", "ABR", "CVBR" };
+    return codec == 'aach' ? he_table[index] : lc_table[index];
+}
+
+static
+const char *get_codec_name(uint32_t codec)
+{
+    if (codec == 'aac ') return "AAC LC Encoder";
+    else if (codec == 'aach') return "AAC HE Encoder";
+    else if (codec == 'alac') return "Apple Lossless Encoder";
+    else return "Unknown Encoder";
+}
+
+static
+std::string get_codec_version(uint32_t codec)
+{
+    ComponentDescription cd = { 'aenc', codec, 'appl', 0 };
+    Component component = FindNextComponent(0, &cd);
+    boost::shared_ptr<Ptr> name(NewEmptyHandle(), DisposeHandle);
+    GetComponentInfo(component, &cd, name.get(), 0, 0);
+    ComponentResult version = 
+	CallComponentVersion(reinterpret_cast<ComponentInstance>(component));
+    std::string namex;
+    if (*name.get())
+	namex = p2cstr(reinterpret_cast<StringPtr>(*name.get()));
+    else
+	namex = get_codec_name(codec);
+    return format("%s %d.%d.%d", namex.c_str(),
+	    (version>>16) & 0xffff, (version>>8) & 0xff, version & 0xff);
+}
+
+static
+std::wstring get_encoder_config(AACEncoder &encoder)
+{
+    std::wstring s;
+    uint32_t codec = encoder.getOutputBasicDescription().mFormatID;
+    s = m2w(get_codec_version(codec));
+    if (codec != 'aac ' && codec != 'aach')
+	return s;
+
+    CFArrayT<CFStringRef> menu;
+    int value = encoder.getParameterRange(Param::kMethod, &menu);
+    s += format(L", %s", CF2W(menu.at(value)).c_str());
+
+    value = encoder.getParameterRange(Param::kBitRate, &menu);
+    if (menu.size())
+	s += format(L" %skbps", CF2W(menu.at(value)).c_str());
+    else
+	s += format(L" q%d", value);
+
+    value = encoder.getParameterRange(Param::kQuality, &menu);
+    s += format(L", %ls", CF2W(menu.at(value)).c_str());
+    return s;
 }
 
 static
@@ -286,6 +324,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	statfp = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
     PeriodicDisplay disp(stderr, 100);
+    DWORD ticks = GetTickCount();
     try {
 	uint32_t rate = encoder.getInputBasicDescription().mSampleRate;
 	uint64_t total_samples = encoder.src()->length();
@@ -305,6 +344,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
 	}
+	double ellapsed = static_cast<double>(GetTickCount() - ticks) / 1000.0;
 	if (opts.verbose && !opts.logfilename) {
 	    disp.flush();
 	    putc('\n', stderr);
@@ -313,6 +353,8 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	    fprintf(stderr, "%" PRId64 "/%" PRId64 " samples processed\n",
 		    encoder.samplesRead(), total_samples);
 	}
+	fprintf(stderr, "Encoding finished in %s seconds(%.1fx)\n",
+		formatSeconds(ellapsed).c_str(), total_seconds/ellapsed);
     } catch (const std::exception &e) {
 	std::fprintf(stderr, "\n%s\n", e.what());
     }
@@ -404,7 +446,8 @@ static void fetch_aiff_id3_tags(const Options &opts, TagEditor &editor)
 
 static
 void write_tags(const std::wstring &ofilename,
-	const Options &opts, AACEncoder &encoder)
+	const Options &opts, AACEncoder &encoder,
+	const std::wstring &encoder_config)
 {
     std::wstring ofilenamex(ofilename);
     if (!opts.no_optimize)
@@ -423,7 +466,8 @@ void write_tags(const std::wstring &ofilename,
     if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-"))
 	fetch_aiff_id3_tags(opts, editor);
     editor.setTag(opts.tagopts);
-    editor.setTag(Tag::kTool, opts.encoder_name);
+    editor.setTag(Tag::kTool,
+	opts.encoder_name + L", " + encoder_config);
     if (opts.isAAC()) {
 	GaplessInfo info;
 	encoder.getGaplessInfo(&info);
@@ -449,7 +493,6 @@ static
 void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 	bool resample=false)
 {
-    opts.reset();
     AACEncoder encoder(src, opts.output_format);
 
     if (opts.isAAC())
@@ -464,7 +507,9 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 	encoder.setOutputBasicDescription(oasbd);
 	oasbd = encoder.getOutputBasicDescription();
     }
+    std::wstring encoder_config = get_encoder_config(encoder);
     if (opts.verbose && !resample) {
+	std::fprintf(stderr, "%ls\n", encoder_config.c_str());
 	if (opts.rate > 0) {
 	    if (opts.rate != oasbd.mSampleRate)
 		std::fprintf(stderr, "WARNING: Sample rate will be %gHz\n",
@@ -475,9 +520,6 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 	if (opts.isAAC()) {
 	    if (iasbd.mChannelsPerFrame == 3)
 		std::fprintf(stderr, "WARNING: Downmixed to 2ch\n");
-	    if (opts.is_first_file)
-		for (size_t i = 0; i < opts.used_settings.size(); ++i)
-		    std::fprintf(stderr, "%s\n", opts.used_settings[i].c_str());
 	}
     }
     if (iasbd.mSampleRate != oasbd.mSampleRate &&
@@ -522,7 +564,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 	    std::fprintf(stderr, "Overall bitrate: %gkbps\n",
 		    encoder.overallBitrate());
 	if (opts.isMP4())
-	    write_tags(ofilename, opts, encoder);
+	    write_tags(ofilename, opts, encoder, encoder_config);
     }
 }
 
@@ -597,7 +639,6 @@ void handle_cue_sheet(Options &opts)
     meta_t album_tags;
     Cue::ConvertToItunesTags(cue.m_meta, &album_tags, true);
     for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
-	opts.reset();
 	CueTrack &track = cue.m_tracks[i];
 	if (!track.m_segments.size())
 	    continue;
@@ -653,7 +694,6 @@ void handle_cue_sheet(Options &opts)
 	    std::fprintf(stderr, "\n%ls\n",
 		    PathFindFileNameW(ofilename.c_str()));
 	encode_file(&source, ofilename, opts);
-	opts.is_first_file = false;
     }
 }
 
@@ -704,6 +744,32 @@ void load_modules(Options &opts)
 	opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp.dll");
 }
 
+void display_components()
+{
+    ComponentDescription cd = { 0 };
+    cd.componentType = 'aenc'; /* Audio Codec Service Encoder Object */
+    Component component = 0;
+    while ((component = FindNextComponent(component, &cd))) {
+	boost::shared_ptr<Ptr>
+	    componentName(NewEmptyHandle(), DisposeHandle),
+	    componentInfo(NewEmptyHandle(), DisposeHandle);
+
+	ComponentDescription desc = { 0 };
+	GetComponentInfo(component, &desc,
+	    componentName.get(), componentInfo.get(), 0);
+	printf("Type: %s, SubType: %s, Manufacturer: %s\n",
+		fourcc(desc.componentType).svalue,
+		fourcc(desc.componentSubType).svalue,
+		fourcc(desc.componentManufacturer).svalue);
+	printf("Name: %s\nInfo: %s\n",
+		*componentName ? p2cstr((StringPtr)*componentName.get()) : "",
+		*componentInfo ? p2cstr((StringPtr)*componentInfo.get()) : "");
+	ComponentResult res = CallComponentVersion((ComponentInstance)component);
+	printf("Version: %d.%d.%d\n",
+	    (res>>16) & 0xffff, (res>>8) & 0xff, res & 0xff);
+    }
+}
+
 #ifdef _MSC_VER
 int wmain(int argc, wchar_t **argv)
 #else
@@ -738,19 +804,18 @@ int wmain1(int argc, wchar_t **argv)
 	std::string encoder_name = format("qaac %s, QuickTime %d.%d.%d",
 		get_qaac_version(),
 		qtver >> 8, (qtver >> 4) & 0xf, qtver & 0xf);
-	opts.encoder_name = opts.encoder_name_ = widen(encoder_name);
+	opts.encoder_name = widen(encoder_name);
 	if (opts.verbose)
 	    std::fprintf(stderr, "%s\n", encoder_name.c_str());
 
 	if (opts.isSBR())
 	    install_aach_codec();
+	//display_components();
 	load_modules(opts);
 
 	mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
 
 	while ((opts.ifilename = *argv++)) {
-	    opts.reset();
-
 	    if (opts.verbose) {
 		const wchar_t *name = L"<stdin>";
 		if (std::wcscmp(opts.ifilename, L"-"))
@@ -766,7 +831,6 @@ int wmain1(int argc, wchar_t **argv)
 		std::auto_ptr<ISource> src(open_source(opts));
 		encode_file(src.get(), ofilename, opts);
 	    }
-	    opts.is_first_file = false;
 	}
 	return 0;
 

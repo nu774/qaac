@@ -24,8 +24,7 @@ struct Options {
 	raw_format(L"S16LE"),
 	fname_format(0),
 	logfilename(0),
-	verbose(true), is_raw(false), is_first_file(true),
-	is_adts(false), save_stat(false),
+	verbose(true), is_raw(false), is_adts(false), save_stat(false),
        	nice(false), ignore_length(false), no_optimize(false),
 	native_resampler(false)
     {}
@@ -51,12 +50,6 @@ struct Options {
     {
 	return output_format == 'lpcm';
     }
-    void reset()
-    {
-	this->encoder_name = this->encoder_name_;
-	this->sample_rate_table.clear();
-	this->used_settings.clear();
-    }
 
     uint32_t output_format;
     int32_t method;
@@ -67,13 +60,11 @@ struct Options {
     int src_mode;
     wchar_t *ifilename, *ofilename, *outdir, *raw_format, *fname_format;
     wchar_t *logfilename;
-    bool verbose, is_raw, is_first_file, is_adts, save_stat,
+    bool verbose, is_raw, is_adts, save_stat,
 	 nice, ignore_length, no_optimize, native_resampler;
-    std::vector<std::string> used_settings;
-    std::vector<int> sample_rate_table;
     std::map<uint32_t, std::wstring> tagopts;
     std::vector<std::wstring> artworks;
-    std::wstring encoder_name, encoder_name_;
+    std::wstring encoder_name;
 
     LibSndfileModule libsndfile;
     FLACModule libflac;

@@ -50,23 +50,27 @@ int AACEncoder::getParameterRange(const wchar_t *key,
     CFArrayT<CFDictionaryRef> settings;
     getCodecSpecificSettingsArray(&settings);
     CFDictionaryRef dict = GetParameterDictFromSettings(settings, key);
-    if (!std::wcscmp(key, L"Bit Rate")
-	    && CFDictionaryGetValue(dict, CFSTR("slider value"))) {
-	CFNumberRef v = CFDictionaryGetValueT<CFNumberRef>(dict, CFSTR("max"));
-	CFNumberGetValue(v, kCFNumberSInt32Type, &n);
-	*result = CFArrayT<CFStringRef>();
-	return n;
-    } else {
-	CFArrayRef v = CFDictionaryGetValueT<CFArrayRef>(
-			dict, CFSTR("available values"));
-	*result = CFArrayT<CFStringRef>((CFArrayRef)CFRetain(v));
-	if (limits) {
-	    v = CFDictionaryGetValueT<CFArrayRef>(
-		    dict, CFSTR("limited values"));
-	    *limits = CFArrayT<CFStringRef>((CFArrayRef)CFRetain(v));
-	}
-	return result->size();
+    if (!std::wcscmp(key, L"Bit Rate")) {
+	try {
+	    CFNumberRef v = CFDictionaryGetValueT<CFNumberRef>(
+		dict, CFSTR("slider value"));
+	    *result = CFArrayT<CFStringRef>();
+	    CFNumberGetValue(v, kCFNumberSInt32Type, &n);
+	    return n;
+	} catch (const std::exception &e) {}
+    } 
+    CFArrayRef v = CFDictionaryGetValueT<CFArrayRef>(
+		    dict, CFSTR("available values"));
+    *result = CFArrayT<CFStringRef>((CFArrayRef)CFRetain(v));
+    if (limits) {
+	v = CFDictionaryGetValueT<CFArrayRef>(
+		dict, CFSTR("limited values"));
+	*limits = CFArrayT<CFStringRef>((CFArrayRef)CFRetain(v));
     }
+    CFNumberRef nr =
+	CFDictionaryGetValueT<CFNumberRef>(dict, CFSTR("current value"));
+    CFNumberGetValue(nr, kCFNumberSInt32Type, &n);
+    return n;
 }
 
 void AACEncoder::getGaplessInfo(GaplessInfo *info) const

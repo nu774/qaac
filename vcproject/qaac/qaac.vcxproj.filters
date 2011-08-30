@@ -43,7 +43,7 @@
     <ClCompile Include="..\..\wvpacksrc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\srcsource.cpp">
+    <ClCompile Include="..\..\resampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

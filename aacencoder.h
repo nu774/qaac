@@ -10,8 +10,8 @@ public:
     {}
     void getGaplessInfo(GaplessInfo *info) const;
     void setEncoderParameter(const wchar_t *key, int value);
-    int getParameterRange(const wchar_t *key, CFArrayT<CFStringRef> *result,
-	    CFArrayT<CFStringRef> *limits=0);
+    int getParameterRange(const wchar_t *key,
+	    CFArrayT<CFStringRef> *avails, CFArrayT<CFStringRef> *limits=0);
 };
 
 #endif
