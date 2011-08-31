@@ -117,7 +117,7 @@ void setup_sample_rate(AACEncoder &encoder, const Options &opts,
 }
 
 static
-void set_codec_options(AACEncoder &encoder, Options &opts)
+void set_codec_options(AACEncoder &encoder, const Options &opts)
 {
     CFArrayT<CFStringRef> menu, limits;
 
@@ -245,7 +245,7 @@ std::wstring get_encoder_config(AACEncoder &encoder)
 }
 
 static
-std::wstring get_output_filename(const wchar_t *ifilename, Options &opts)
+std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 {
     if (opts.ofilename) {
 	if (!std::wcscmp(opts.ofilename, L"-"))
@@ -354,7 +354,8 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 		    encoder.samplesRead(), total_samples);
 	}
 	fprintf(stderr, "Encoding finished in %s seconds(%.1fx)\n",
-		formatSeconds(ellapsed).c_str(), total_seconds/ellapsed);
+		formatSeconds(ellapsed).c_str(),
+		static_cast<double>(encoder.samplesRead()) / rate / ellapsed);
     } catch (const std::exception &e) {
 	std::fprintf(stderr, "\n%s\n", e.what());
     }
@@ -490,8 +491,46 @@ void write_tags(const std::wstring &ofilename,
 }
 
 static
-void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
-	bool resample=false)
+boost::shared_ptr<ISource> do_resample(ISource *src, const Options &opts,
+    uint32_t rate)
+{
+    if (opts.verbose) {
+	std::fprintf(stderr,
+	    "Resampling with libspeexdsp, quality %d\n", opts.src_mode);
+	if (!opts.libspeexdsp.get_input_latency) {
+	    std::fprintf(stderr,
+		"WARNING: lacking speex_resampler_get_input_latency().\n"
+		"Using guess... might not be quite acculate\n");
+	}
+    }
+    SpeexResampler *resampler = new SpeexResampler(opts.libspeexdsp, src,
+	    rate, opts.src_mode);
+    boost::shared_ptr<ISource> new_src(resampler);
+    uint64_t n = 0, rc;
+    PeriodicDisplay disp(stderr, 100);
+    while ((rc = resampler->convertSamples(4096)) > 0) {
+	n += rc;
+	if (opts.verbose && !opts.logfilename)
+	    disp.put(format("\r%" PRId64 " samples processed", n));
+    }
+    if (opts.verbose) {
+	if (!opts.logfilename) {
+	    disp.flush();
+	    putc('\n', stderr);
+	}
+	std::fprintf(stderr, "Done rate conversion.\n");
+	if (resampler->getPeak() > 1.0) {
+	    std::fprintf(stderr,
+		    "Peak value %g > 1.0, gain compressed.\n",
+		    resampler->getPeak());
+	}
+    }
+    return new_src;
+}
+
+static
+void encode_file(ISource *src, const std::wstring &ofilename,
+    const Options &opts, bool resampled=false)
 {
     AACEncoder encoder(src, opts.output_format);
 
@@ -508,7 +547,7 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
 	oasbd = encoder.getOutputBasicDescription();
     }
     std::wstring encoder_config = get_encoder_config(encoder);
-    if (opts.verbose && !resample) {
+    if (opts.verbose && !resampled) {
 	std::fprintf(stderr, "%ls\n", encoder_config.c_str());
 	if (opts.rate > 0) {
 	    if (opts.rate != oasbd.mSampleRate)
@@ -524,37 +563,8 @@ void encode_file(ISource *src, const std::wstring &ofilename, Options &opts,
     }
     if (iasbd.mSampleRate != oasbd.mSampleRate &&
 	    opts.libspeexdsp.loaded() && !opts.native_resampler) {
-	if (opts.verbose) {
-	    std::fprintf(stderr,
-		"Resampling with libspeexdsp, quality %d\n", opts.src_mode);
-	    if (!opts.libspeexdsp.get_input_latency) {
-		std::fprintf(stderr,
-		    "WARNING: lacking speex_resampler_get_input_latency().\n"
-		    "Using guess... might not be quite acculate\n");
-	    }
-	}
-	SpeexResampler*resampler = new SpeexResampler(opts.libspeexdsp, src,
-		oasbd.mSampleRate, opts.src_mode);
-	std::auto_ptr<ISource> srcx(resampler);
-	uint64_t n = 0, rc;
-        PeriodicDisplay disp(stderr, 100);
-	while ((rc = resampler->convertSamples(4096)) > 0) {
-	    n += rc;
-	    if (opts.verbose && !opts.logfilename)
-		disp.put(format("\r%" PRId64 " samples processed", n));
-	}
-	if (opts.verbose) {
-	    if (!opts.logfilename) {
-		disp.flush();
-		putc('\n', stderr);
-	    }
-	    std::fprintf(stderr, "Done rate conversion.\n");
-	    if (resampler->getPeak() > 1.0) {
-		std::fprintf(stderr,
-			"Peak value %g > 1.0, gain compressed.\n",
-			resampler->getPeak());
-	    }
-	}
+	boost::shared_ptr<ISource> srcx
+	    = do_resample(src, opts, oasbd.mSampleRate);
 	encode_file(srcx.get(), ofilename, opts, true);
 	return;
     }
