@@ -93,6 +93,7 @@ public:
     {
 	m_artworks.push_back(filename);
     }
+    void fetchAiffID3Tags(const wchar_t *filename);
     void save();
 };
 

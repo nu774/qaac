@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <functional>
 #include <QTML.h>
-#include <aifffile.h>
 #include "strcnv.h"
 #include "win32util.h"
 #include <shellapi.h>
@@ -425,36 +424,6 @@ ISource *open_source(const Options &opts)
     }
 }
 
-static void fetch_aiff_id3_tags(const Options &opts, TagEditor &editor)
-{
-    try {
-	std::wstring fullname = get_prefixed_fullpath(opts.ifilename);
-	TagLib::RIFF::AIFF::File file(fullname.c_str());
-	if (!file.isOpen())
-	    throw std::runtime_error("taglib: can't open file");
-	TagLib::ID3v2::Tag *tag = file.tag();
-	const TagLib::ID3v2::FrameList &frameList = tag->frameList();
-	TagLib::ID3v2::FrameList::ConstIterator it;
-	for (it = frameList.begin(); it != frameList.end(); ++it) {
-	    TagLib::ByteVector vID = (*it)->frameID();
-	    std::string sID(vID.data(), vID.data() + vID.size());
-	    std::wstring value = (*it)->toString().toWString();
-	    uint32_t id = ID3::GetIDFromTagName(sID.c_str());
-	    if (id) {
-		if (id == Tag::kGenre) {
-		    wchar_t *endp;
-		    long n = std::wcstol(value.c_str(), &endp, 10);
-		    if (!*endp) {
-			id = Tag::kGenreID3;
-			value = widen(format("%d", n + 1));
-		    }
-		}
-		editor.setTag(id, value);
-	    }
-	}
-    } catch (...) {}
-}
-
 static
 void write_tags(const std::wstring &ofilename,
 	const Options &opts, AACEncoder &encoder,
@@ -474,8 +443,11 @@ void write_tags(const std::wstring &ofilename,
 	if (chapters)
 	    editor.setChapters(*chapters);
     }
-    if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-"))
-	fetch_aiff_id3_tags(opts, editor);
+    if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-")) {
+	try {
+	    editor.fetchAiffID3Tags(opts.ifilename);
+	} catch (const std::exception &) {}
+    }
     editor.setTag(opts.tagopts);
     editor.setTag(Tag::kTool,
 	opts.encoder_name + L", " + encoder_config);
@@ -691,10 +663,11 @@ void handle_cue_sheet(Options &opts)
 		opts.ifilename = const_cast<wchar_t*>(ifilename.c_str());
 		src = open_source(opts);
 	    }
-	    int64_t begin = static_cast<int64_t>(seg.m_begin) * 588;
+	    unsigned rate = src->getSampleFormat().m_rate;
+	    int64_t begin = static_cast<int64_t>(seg.m_begin) * rate / 75;
 	    int64_t end = -1;
 	    if (seg.m_end != -1)
-		end = static_cast<int64_t>(seg.m_end) * 588 - begin;
+		end = static_cast<int64_t>(seg.m_end) * rate / 75 - begin;
 	    IPartialSource *psrc = dynamic_cast<IPartialSource*>(src);
 	    if (!psrc) {
 		delete src;
@@ -764,32 +737,6 @@ void load_modules(Options &opts)
 	opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp.dll");
 }
 
-void display_components()
-{
-    ComponentDescription cd = { 0 };
-    cd.componentType = 'aenc'; /* Audio Codec Service Encoder Object */
-    Component component = 0;
-    while ((component = FindNextComponent(component, &cd))) {
-	boost::shared_ptr<Ptr>
-	    componentName(NewEmptyHandle(), DisposeHandle),
-	    componentInfo(NewEmptyHandle(), DisposeHandle);
-
-	ComponentDescription desc = { 0 };
-	GetComponentInfo(component, &desc,
-	    componentName.get(), componentInfo.get(), 0);
-	printf("Type: %s, SubType: %s, Manufacturer: %s\n",
-		fourcc(desc.componentType).svalue,
-		fourcc(desc.componentSubType).svalue,
-		fourcc(desc.componentManufacturer).svalue);
-	printf("Name: %s\nInfo: %s\n",
-		*componentName ? p2cstr((StringPtr)*componentName.get()) : "",
-		*componentInfo ? p2cstr((StringPtr)*componentInfo.get()) : "");
-	ComponentResult res = CallComponentVersion((ComponentInstance)component);
-	printf("Version: %d.%d.%d\n",
-	    (res>>16) & 0xffff, (res>>8) & 0xff, res & 0xff);
-    }
-}
-
 #ifdef _MSC_VER
 int wmain(int argc, wchar_t **argv)
 #else
@@ -830,7 +777,6 @@ int wmain1(int argc, wchar_t **argv)
 
 	if (opts.isSBR())
 	    install_aach_codec();
-	//display_components();
 	load_modules(opts);
 
 	mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
