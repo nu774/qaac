@@ -288,8 +288,18 @@ std::string formatSeconds(double seconds)
 {
     int h, m, s, millis;
     secondsToHMS(seconds, &h, &m, &s, &millis);
-    return format("%02d:%02d:%02d.%03d", h, m, s, millis);
+    return h ? format("%02d:%02d:%02d.%03d", h, m, s, millis)
+	     : format("%02d:%02d.%03d", m, s, millis);
 }
+
+class Timer {
+    DWORD m_ticks;
+public:
+    Timer() { m_ticks = GetTickCount(); };
+    double ellapsed() {
+	return (static_cast<double>(GetTickCount()) - m_ticks) / 1000.0;
+    }
+};
 
 static
 void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
@@ -324,38 +334,38 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	statfp = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
     PeriodicDisplay disp(stderr, 100);
-    DWORD ticks = GetTickCount();
-    try {
-	uint32_t rate = encoder.getInputBasicDescription().mSampleRate;
-	uint64_t total_samples = encoder.src()->length();
-	double total_seconds = static_cast<double>(total_samples) / rate;
+    uint32_t rate = encoder.getInputBasicDescription().mSampleRate;
+    uint64_t tsamples = encoder.src()->length();
+    double tseconds = static_cast<double>(tsamples) / rate;
+    std::string tstamp = tsamples == -1 ? "-" : formatSeconds(tseconds);
 
+    try {
+	Timer timer;
 	while (encoder.encodeChunk(1)) {
 	    if (opts.verbose && !opts.logfilename) {
-		uint64_t samplesRead = encoder.samplesRead();
-		double read_seconds = static_cast<double>(samplesRead) / rate;
+		double processed = encoder.samplesRead();
+		double pseconds = processed / rate;
+		double ellapsed = timer.ellapsed();
 
-		disp.put(format("\r%s / %s processed",
-		    formatSeconds(read_seconds).c_str(),
-		    total_samples == -1
-		    ? "-"
-		    : formatSeconds(total_seconds).c_str()));
+		disp.put(format("\r%s / %s (%.1fx)    ",
+		    formatSeconds(pseconds).c_str(),
+		    tstamp.c_str(),
+		    pseconds / ellapsed));
 	    }
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
 	}
-	double ellapsed = static_cast<double>(GetTickCount() - ticks) / 1000.0;
+	uint64_t processed = encoder.samplesRead();
+	double pseconds = static_cast<double>(processed) / rate;
+	double ellapsed = timer.ellapsed();
 	if (opts.verbose && !opts.logfilename) {
 	    disp.flush();
 	    putc('\n', stderr);
 	}
-	if (opts.logfilename) {
-	    fprintf(stderr, "%" PRId64 "/%" PRId64 " samples processed\n",
-		    encoder.samplesRead(), total_samples);
-	}
-	fprintf(stderr, "Encoding finished in %s seconds(%.1fx)\n",
-		formatSeconds(ellapsed).c_str(),
-		static_cast<double>(encoder.samplesRead()) / rate / ellapsed);
+	fprintf(stderr, "%" PRId64 "/%" PRId64 " samples processed\n",
+		processed, tsamples);
+	fprintf(stderr, "Encoding finished in %s (%.1fx)\n",
+		formatSeconds(ellapsed).c_str(), pseconds / ellapsed);
     } catch (const std::exception &e) {
 	std::fprintf(stderr, "\n%s\n", e.what());
     }
