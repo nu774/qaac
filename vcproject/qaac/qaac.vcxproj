@@ -105,6 +105,7 @@
     <ClCompile Include="..\..\encoderbase.cpp" />
     <ClCompile Include="..\..\flacsrc.cpp" />
     <ClCompile Include="..\..\libsndfilesrc.cpp" />
+    <ClCompile Include="..\..\logging.cpp" />
     <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\resampler.cpp" />

@@ -24,18 +24,17 @@
 #include "wavsource.h"
 #include "expand.h"
 #include "resampler.h"
+#include "logging.h"
 
 #include <crtdbg.h>
 
 class PeriodicDisplay {
-    FILE *m_fp;
     uint32_t m_interval;
     uint32_t m_last_tick;
     std::string m_message;
 public:
-    PeriodicDisplay(FILE *fp, uint32_t interval)
-	: m_fp(fp),
-	  m_interval(interval),
+    PeriodicDisplay(uint32_t interval)
+	: m_interval(interval),
 	  m_last_tick(0)
     {}
     void put(const std::string &message) {
@@ -46,21 +45,18 @@ public:
 	    m_last_tick = tick;
 	}
     }
-    void flush() {
-	std::fputs(m_message.c_str(), m_fp);
-	std::fflush(m_fp);
-    }
+    void flush() { std::fprintf(stderr, m_message.c_str()); }
 };
 
 static
 void parameter_not_supported(const wchar_t *name,
 	const CFArrayT<CFStringRef> &menu, size_t base=0)
 {
-    std::fprintf(stderr, "Specified %ls value is not supported.\n"
-			"Available values are:\n", name);
+    LOG("Specified %ls value is not supported.\n"
+	"Available values are:\n", name);
     for (size_t i = base; i < menu.size(); ++i)
-	std::fprintf(stderr, "%d: %ls\n", i, CF2W(menu.at(i)).c_str());
-    std::exit(2);
+	LOG("%d: %ls\n", i, CF2W(menu.at(i)).c_str());
+    throw std::runtime_error("");
 }
 
 namespace Param {
@@ -307,10 +303,10 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 #ifdef _DEBUG
     AudioChannelLayoutX layout;
     encoder.getInputChannelLayout(&layout);
-    fprintf(stderr, "Input Channel Layout: %08x\n", layout->mChannelLayoutTag);
+    LOG("Input Channel Layout: %08x\n", layout->mChannelLayoutTag);
 
     encoder.getChannelLayout(&layout);
-    fprintf(stderr, "Output Channel Layout: %08x\n", layout->mChannelLayoutTag);
+    LOG("Output Channel Layout: %08x\n", layout->mChannelLayoutTag);
 #endif
     ISink *sink;
 
@@ -332,7 +328,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
 	statfp = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
-    PeriodicDisplay disp(stderr, 100);
+    PeriodicDisplay disp(100);
     uint32_t rate = encoder.getInputBasicDescription().mSampleRate;
     uint64_t tsamples = encoder.src()->length();
     double tseconds = static_cast<double>(tsamples) / rate;
@@ -341,7 +337,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
     try {
 	Timer timer;
 	while (encoder.encodeChunk(1)) {
-	    if (opts.verbose && !opts.logfilename) {
+	    if (opts.verbose) {
 		double processed = encoder.samplesRead();
 		double pseconds = processed / rate;
 		double ellapsed = timer.ellapsed();
@@ -357,16 +353,15 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	uint64_t processed = encoder.samplesRead();
 	double pseconds = static_cast<double>(processed) / rate;
 	double ellapsed = timer.ellapsed();
-	if (opts.verbose && !opts.logfilename) {
+	if (opts.verbose) {
 	    disp.flush();
-	    putc('\n', stderr);
+	    fputc('\n', stderr);
 	}
-	fprintf(stderr, "%" PRId64 "/%" PRId64 " samples processed\n",
-		processed, tsamples);
-	fprintf(stderr, "Encoding finished in %s (%.1fx)\n",
+	LOG("%" PRId64 "/%" PRId64 " samples processed\n", processed, tsamples);
+	LOG("Encoding finished in %s (%.1fx)\n",
 		formatSeconds(ellapsed).c_str(), pseconds / ellapsed);
     } catch (const std::exception &e) {
-	std::fprintf(stderr, "\n%s\n", e.what());
+	LOG("\n%s\n", e.what());
     }
 }
 
@@ -476,36 +471,29 @@ static
 boost::shared_ptr<ISource> do_resample(ISource *src, const Options &opts,
     uint32_t rate)
 {
-    if (opts.verbose) {
-	std::fprintf(stderr,
-	    "Resampling with libspeexdsp, quality %d\n", opts.src_mode);
-	if (!opts.libspeexdsp.get_input_latency) {
-	    std::fprintf(stderr,
-		"WARNING: lacking speex_resampler_get_input_latency().\n"
-		"Using guess... might not be quite acculate\n");
-	}
+    LOG("Resampling with libspeexdsp, quality %d\n", opts.src_mode);
+    if (!opts.libspeexdsp.get_input_latency) {
+	LOG("WARNING: lacking speex_resampler_get_input_latency().\n"
+	    "Using guess... might not be quite acculate\n");
     }
     SpeexResampler *resampler = new SpeexResampler(opts.libspeexdsp, src,
 	    rate, opts.src_mode);
     boost::shared_ptr<ISource> new_src(resampler);
     uint64_t n = 0, rc;
-    PeriodicDisplay disp(stderr, 100);
+    PeriodicDisplay disp(100);
     while ((rc = resampler->convertSamples(4096)) > 0) {
 	n += rc;
-	if (opts.verbose && !opts.logfilename)
+	if (opts.verbose)
 	    disp.put(format("\r%" PRId64 " samples processed", n));
     }
     if (opts.verbose) {
-	if (!opts.logfilename) {
-	    disp.flush();
-	    putc('\n', stderr);
-	}
-	std::fprintf(stderr, "Done rate conversion.\n");
-	if (resampler->getPeak() > 1.0) {
-	    std::fprintf(stderr,
-		    "Peak value %g > 1.0, gain compressed.\n",
-		    resampler->getPeak());
-	}
+	disp.flush();
+	fputc('\n', stderr);
+    }
+    LOG("Done rate conversion.\n");
+    if (resampler->getPeak() > 1.0) {
+	LOG("Peak value %g > 1.0, gain compressed.\n",
+	    resampler->getPeak());
     }
     return new_src;
 }
@@ -529,18 +517,17 @@ void encode_file(ISource *src, const std::wstring &ofilename,
 	oasbd = encoder.getOutputBasicDescription();
     }
     std::wstring encoder_config = get_encoder_config(encoder);
-    if (opts.verbose && !resampled) {
-	std::fprintf(stderr, "%ls\n", encoder_config.c_str());
+    if (!resampled) {
+	LOG("%ls\n", encoder_config.c_str());
 	if (opts.rate > 0) {
 	    if (opts.rate != oasbd.mSampleRate)
-		std::fprintf(stderr, "WARNING: Sample rate will be %gHz\n",
+		LOG("WARNING: Sample rate will be %gHz\n",
 			oasbd.mSampleRate);
 	} else if (iasbd.mSampleRate != oasbd.mSampleRate)
-	    std::fprintf(stderr, "WARNING: Resampled to %gHz\n",
-		    oasbd.mSampleRate);
+	    LOG("WARNING: Resampled to %gHz\n", oasbd.mSampleRate);
 	if (opts.isAAC()) {
 	    if (iasbd.mChannelsPerFrame == 3)
-		std::fprintf(stderr, "WARNING: Downmixed to 2ch\n");
+		LOG("WARNING: Downmixed to 2ch\n");
 	}
     }
     if (iasbd.mSampleRate != oasbd.mSampleRate &&
@@ -552,9 +539,7 @@ void encode_file(ISource *src, const std::wstring &ofilename,
     }
     do_encode(encoder, ofilename, opts);
     if (encoder.framesWritten()) {
-	if (opts.verbose)
-	    std::fprintf(stderr, "Overall bitrate: %gkbps\n",
-		    encoder.overallBitrate());
+	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
 	if (opts.isMP4())
 	    write_tags(ofilename, opts, encoder, encoder_config);
     }
@@ -683,9 +668,7 @@ void handle_cue_sheet(Options &opts)
 	    process_template(formatstr, TagLookup(track, track_tags));
 	ofilename = strtransform(ofilename, FNConverter()) + L".stub";
 	ofilename = get_output_filename(ofilename.c_str(), opts);
-	if (opts.verbose)
-	    std::fprintf(stderr, "\n%ls\n",
-		    PathFindFileNameW(ofilename.c_str()));
+	LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
 	encode_file(&source, ofilename, opts);
     }
 }
@@ -758,12 +741,16 @@ int wmain1(int argc, wchar_t **argv)
 	if (!opts.parse(argc, argv))
 	    return 1;
 
+	if (opts.verbose)
+	    Log::instance()->enable_stderr();
 	if (opts.logfilename)
-	    _wfreopen(opts.logfilename, L"w", stderr);
+	    Log::instance()->enable_file(opts.logfilename);
 
 	if (opts.nice)
 	    SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
-	QTInitializer __quicktime__(opts.verbose);
+	LOG("initializing QTML...");
+	QTInitializer __quicktime__;
+	LOG("done\n\n");
 
 	uint32_t qtver;
 	Gestalt(gestaltQuickTime, reinterpret_cast<long*>(&qtver));
@@ -772,8 +759,7 @@ int wmain1(int argc, wchar_t **argv)
 		get_qaac_version(),
 		qtver >> 8, (qtver >> 4) & 0xf, qtver & 0xf);
 	opts.encoder_name = widen(encoder_name);
-	if (opts.verbose)
-	    std::fprintf(stderr, "%s\n", encoder_name.c_str());
+	LOG("%s\n", encoder_name.c_str());
 
 	if (opts.isSBR())
 	    install_aach_codec();
@@ -782,12 +768,10 @@ int wmain1(int argc, wchar_t **argv)
 	mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
 
 	while ((opts.ifilename = *argv++)) {
-	    if (opts.verbose) {
-		const wchar_t *name = L"<stdin>";
-		if (std::wcscmp(opts.ifilename, L"-"))
-		    name = PathFindFileNameW(opts.ifilename);
-		std::fprintf(stderr, "\n%ls\n", name);
-	    }
+	    const wchar_t *name = L"<stdin>";
+	    if (std::wcscmp(opts.ifilename, L"-"))
+		name = PathFindFileNameW(opts.ifilename);
+	    LOG("\n%ls\n", name);
 	    size_t len = std::wcslen(opts.ifilename);
 	    if (len > 4 && wslower(opts.ifilename + (len - 4)) == L".cue")
 		handle_cue_sheet(opts);
@@ -801,7 +785,7 @@ int wmain1(int argc, wchar_t **argv)
 	return 0;
 
     } catch (const std::exception &e) {
-	std::fprintf(stderr, "%s\n", e.what());
+	LOG("%s\n", e.what());
 	return 2;
     }
 }

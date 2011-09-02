@@ -10,11 +10,9 @@
 #include "win32util.h"
 
 struct QTInitializer {
-    QTInitializer(bool verbose) {
+    QTInitializer() {
 	DirectorySaver __saver__;
-	if (verbose) std::fprintf(stderr, "initializing QTML...");
 	InitializeQTML(0);
-	if (verbose) std::fprintf(stderr, "done\n\n");
     }
     ~QTInitializer() { /*TerminateQTML();*/ }
 };

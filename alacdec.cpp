@@ -108,7 +108,11 @@ int wmain1(int argc, wchar_t **argv)
     if (!argc || (argc > 1 && ofile))
 	usage();
 
-    QTInitializer __quicktime__(true);
+
+    std::cerr << "initializing QTML..." << std::flush;
+    QTInitializer __quicktime__;
+    std::cerr << "done" << std::endl << std::endl;
+
     mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
     try {
 	const wchar_t *ifile;

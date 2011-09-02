@@ -58,6 +58,7 @@ cuesheet.o \
 encoderbase.o \
 flacsrc.o \
 libsndfilesrc.o \
+logging.o \
 main.o \
 options.o \
 resampler.o \
