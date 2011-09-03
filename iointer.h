@@ -99,5 +99,42 @@ public:
 	    m_duration -= start;
     }
 };
+
+class DelegatingSource: public ISource, public ITagParser {
+    ISource *m_src;
+    std::map<uint32_t, std::wstring> m_emptyTags;
+public:
+    DelegatingSource(ISource *src): m_src(src) {}
+    ISource *source() { return m_src; }
+    uint64_t length() const { return m_src->length(); }
+    const SampleFormat &getSampleFormat() const
+    {
+	return m_src->getSampleFormat();
+    }
+    const std::vector<uint32_t> *getChannelMap() const
+    {
+	return m_src->getChannelMap();
+    }
+    const std::map<uint32_t, std::wstring> &getTags() const
+    {
+	ITagParser *parser = dynamic_cast<ITagParser*>(m_src);
+	if (!parser)
+	    return m_emptyTags;
+	else
+	    return parser->getTags();
+    }
+    const std::vector<std::pair<std::wstring, int64_t> > * getChapters() const
+    {
+	ITagParser *parser = dynamic_cast<ITagParser*>(m_src);
+	if (!parser)
+	    return 0;
+	else
+	    return parser->getChapters();
+    }
+    size_t readSamples(void *buffer, size_t nsamples)
+    {
+	return m_src->readSamples(buffer, nsamples);
+    }
+};
 #endif
 

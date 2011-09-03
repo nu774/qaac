@@ -32,10 +32,10 @@ SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
 
 SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
 	ISource *src, uint32_t rate, int quality)
-    : m_module(module), m_src(src), m_length(0), m_peak(0.0),
+    : DelegatingSource(src), m_module(module), m_length(0), m_peak(0.0),
       m_end_of_input(false), m_input_frames(0)
 {
-    const SampleFormat &srcFormat = src->getSampleFormat();
+    const SampleFormat &srcFormat = source()->getSampleFormat();
     if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
 	throw std::runtime_error("Can't handle big endian sample");
     if (srcFormat.m_bitsPerSample == 64)
@@ -136,15 +136,15 @@ size_t SpeexResampler::doConvertSamples(float *buffer, size_t nsamples)
 
 bool SpeexResampler::underflow()
 {
-    const SampleFormat &srcFormat = m_src->getSampleFormat();
+    const SampleFormat &srcFormat = source()->getSampleFormat();
     size_t nsamples = m_src_buffer.size() / m_format.m_nchannels;
 
     if (srcFormat.m_type == SampleFormat::kIsFloat &&
 	    srcFormat.m_bitsPerSample == 32) {
-	m_input_frames = m_src->readSamples(&m_src_buffer[0], nsamples);
+	m_input_frames = source()->readSamples(&m_src_buffer[0], nsamples);
 	return m_input_frames > 0;
     }
-    m_input_frames = m_src->readSamples(&m_ibuffer[0], nsamples);
+    m_input_frames = source()->readSamples(&m_ibuffer[0], nsamples);
     size_t blen = m_input_frames * srcFormat.bytesPerFrame();
     float *fp = &m_src_buffer[0];
 

@@ -32,11 +32,11 @@ GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap)
 
 size_t ChannelMapper::readSamples(void *buffer, size_t nsamples)
 {
-    const SampleFormat &sfmt = m_src->getSampleFormat();
+    const SampleFormat &sfmt = source()->getSampleFormat();
     size_t width = sfmt.m_bitsPerSample >> 3;
     size_t framelen = sfmt.bytesPerFrame();
     std::vector<char> tmp_buffer(framelen);
-    size_t rc = m_src->readSamples(buffer, nsamples);
+    size_t rc = source()->readSamples(buffer, nsamples);
     char *bp = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < rc ; ++i, bp += framelen) {
 	std::memcpy(&tmp_buffer[0], bp, framelen);
