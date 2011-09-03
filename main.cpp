@@ -502,7 +502,15 @@ static
 void encode_file(ISource *src, const std::wstring &ofilename,
     const Options &opts, bool resampled=false)
 {
-    AACEncoder encoder(src, opts.output_format);
+    std::auto_ptr<ISource> srcx;
+    if (opts.chanmap.size()) {
+	if (opts.chanmap.size() != src->getSampleFormat().m_nchannels)
+	    throw std::runtime_error(
+		    "nchannels of input and --chanmap spec unmatch");
+	srcx.reset(new ChannelMapper(src, opts.chanmap));
+    }
+    AACEncoder encoder(opts.chanmap.size() ? srcx.get() : src,
+	    opts.output_format);
 
     if (opts.isAAC())
         set_codec_options(encoder, opts);

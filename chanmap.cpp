@@ -1,6 +1,5 @@
 #include <CoreAudioTypes.h>
 #include "chanmap.h"
-#include "util.h"
 
 uint32_t
 LayoutToChannelMask(const std::vector<uint32_t>& chanmap)
@@ -29,4 +28,22 @@ GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap)
     case 0xff: case 0x63f: return kAudioChannelLayoutTag_MPEG_7_1_A;
     }
     throw std::runtime_error("Sorry, this channel layout not supported");
+}
+
+size_t ChannelMapper::readSamples(void *buffer, size_t nsamples)
+{
+    const SampleFormat &sfmt = m_src->getSampleFormat();
+    size_t width = sfmt.m_bitsPerSample >> 3;
+    size_t framelen = sfmt.bytesPerFrame();
+    std::vector<char> tmp_buffer(framelen);
+    size_t rc = m_src->readSamples(buffer, nsamples);
+    char *bp = reinterpret_cast<char*>(buffer);
+    for (size_t i = 0; i < rc ; ++i, bp += framelen) {
+	std::memcpy(&tmp_buffer[0], bp, framelen);
+	for (size_t j = 0; j < m_chanmap.size(); ++j) {
+	    std::memcpy(bp + width * j,
+		    &tmp_buffer[0] + width * m_chanmap[j], width);
+	}
+    }
+    return rc;
 }

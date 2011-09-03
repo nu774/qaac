@@ -24,6 +24,20 @@ char *strsep(char **strp, const char *sep)
     return tok;
 }
 
+wchar_t *wcssep(wchar_t **strp, const wchar_t *sep)
+{
+    wchar_t *tok, *s;
+
+    if (!strp || !(tok = *strp))
+	return 0;
+    if (s = std::wcspbrk(tok, sep)) {
+	*s = 0;
+	*strp = s + 1;
+    } else
+	*strp = 0;
+    return tok;
+}
+
 std::string format(const char *fmt, ...)
 {
     va_list args;

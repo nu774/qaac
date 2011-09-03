@@ -15,6 +15,7 @@ static struct option long_options[] = {
     { L"silent", no_argument, 0, 's' },
     { L"stat", no_argument, 0, 'S' },
     { L"nice", no_argument, 0, 'n' },
+    { L"chanmap", required_argument, 0, 'cmap' },
     { L"downmix", required_argument, 0, 'dmix' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
@@ -87,6 +88,11 @@ void usage()
 "                       <number>: Literal rate in Hz\n"
 "-s, --silent           Don't be verbose\n"
 "-n, --nice             Give lower process priority\n"
+"--chanmap <n1,n2...>   Remap channel order\n"
+"                       For Nch input, you take numbers 1,2..N, and\n"
+"                       re-order them with comma seperated, to the order\n"
+"                       you want.\n"
+"                       For example, \"--chanmap 2,1\" swaps left and right\n"
 "--downmix <mono|stereo>    Downmix to mono/stereo\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "--native-resampler     Always use QuickTime built-in resampler\n"
@@ -187,6 +193,29 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->no_optimize = true;
 	else if (ch == 'nfmt')
 	    this->fname_format = optarg;
+	else if (ch == 'cmap') {
+	    std::vector<wchar_t> buff(wcslen(optarg)+1);
+	    wchar_t *bp = &buff[0], *tok;
+	    std::wcscpy(bp, optarg);
+	    while ((tok = wcssep(&bp, L",")) != 0) {
+		unsigned n;
+		if (std::swscanf(tok, L"%u", &n) == 1)
+		    this->chanmap.push_back(n);
+		else 
+		    return usage(), false;
+	    }
+	    uint32_t low = INT_MAX;
+	    uint32_t high = 0;
+	    for (size_t i = 0; i < this->chanmap.size(); ++i) {
+		uint32_t n = this->chanmap[i];
+		if (n < low) low = n;
+		if (n > high) high = n;
+	    }
+	    if (low < 1 || high > this->chanmap.size()) {
+		std::fputs("Invalid channel mapping spec\n", stderr);
+		return false;
+	    }
+	}
 	else if (ch == 'dmix') {
 	    if (!std::wcscmp(optarg, L"mono"))
 		this->downmix = 1;

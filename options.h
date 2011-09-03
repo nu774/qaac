@@ -65,6 +65,7 @@ struct Options {
     std::map<uint32_t, std::wstring> tagopts;
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;
+    std::vector<uint32_t> chanmap;
 
     LibSndfileModule libsndfile;
     FLACModule libflac;

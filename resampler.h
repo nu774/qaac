@@ -67,7 +67,10 @@ public:
 	    uint32_t rate, int quality=3);
     uint64_t length() const { return m_length; }
     const SampleFormat &getSampleFormat() const { return m_format; }
-    const std::vector<uint32_t> *getChannelMap() const { return 0; }
+    const std::vector<uint32_t> *getChannelMap() const
+    {
+	return m_src->getChannelMap();
+    }
     size_t readSamples(void *buffer, size_t nsamples);
     double getPeak() const { return m_peak; }
     size_t convertSamples(size_t nsamples);

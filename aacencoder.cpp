@@ -57,7 +57,7 @@ int AACEncoder::getParameterRange(const wchar_t *key,
 	    *result = CFArrayT<CFStringRef>();
 	    CFNumberGetValue(v, kCFNumberSInt32Type, &n);
 	    return n;
-	} catch (const std::exception &e) {}
+	} catch (const std::exception &) {}
     } 
     CFArrayRef v = CFDictionaryGetValueT<CFArrayRef>(
 		    dict, CFSTR("available values"));

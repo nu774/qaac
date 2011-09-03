@@ -99,6 +99,7 @@ void *xcalloc(size_t count, size_t size)
 }
 
 char *strsep(char **stringp, const char *delim);
+wchar_t *wcssep(wchar_t **stringp, const wchar_t *delim);
 
 std::string format(const char *fmt, ...);
 #if defined(_MSC_VER) || defined(__MINGW32__)
