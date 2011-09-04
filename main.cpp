@@ -319,8 +319,8 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	sink = new ALACSink(ofilenamex, encoder);
     else if (opts.isAAC())
 	sink = new MP4Sink(ofilenamex, encoder);
-    std::auto_ptr<ISink> __delete_later__(sink);
-    encoder.setSink(*sink);
+    boost::shared_ptr<ISink> sinkp(sink);
+    encoder.setSink(sinkp);
 
     typedef boost::shared_ptr<std::FILE> file_t;
     file_t statfp;
@@ -366,25 +366,26 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 }
 
 static
-ISource *open_source(const Options &opts)
+boost::shared_ptr<ISource> open_source(const Options &opts)
 {
     StdioChannel channel(opts.ifilename);
     InputStream stream(channel);
 
     if (opts.ignore_length)
-	return new WaveSource(stream, true);
+	return boost::shared_ptr<ISource>(new WaveSource(stream, true));
 
     if (opts.is_raw) {
 	SampleFormat sf(nallow(opts.raw_format).c_str(),
 		opts.raw_channels, opts.raw_sample_rate);
-	return new RawSource(stream, sf);
+	return boost::shared_ptr<ISource>(new RawSource(stream, sf));
     }
 
     if (!stream.seekable() && opts.libsndfile.loaded()) {
-	return new LibSndfileSource(opts.libsndfile, opts.ifilename);
+	return boost::shared_ptr<ISource>(
+		new LibSndfileSource(opts.libsndfile, opts.ifilename));
     } else {
 	try {
-	    return new WaveSource(stream, false);
+	    return boost::shared_ptr<ISource>(new WaveSource(stream, false));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
 	}
@@ -392,27 +393,31 @@ ISource *open_source(const Options &opts)
 
     if (opts.libflac.loaded()) {
 	try {
-	    return new FLACSource(opts.libflac, stream);
+	    return boost::shared_ptr<ISource>(
+		    new FLACSource(opts.libflac, stream));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
 	}
     }
     if (opts.libwavpack.loaded()) {
 	try {
-	    return new WavpackSource(opts.libwavpack, stream);
+	    return boost::shared_ptr<ISource>(
+		    new WavpackSource(opts.libwavpack, stream));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
 	}
     }
     if (opts.libsndfile.loaded()) {
 	try {
-	    return new LibSndfileSource(opts.libsndfile, opts.ifilename);
+	    return boost::shared_ptr<ISource>(
+		    new LibSndfileSource(opts.libsndfile, opts.ifilename));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
 	}
     }
     try {
-	return new QTMovieSource(opts.ifilename, true);
+	return boost::shared_ptr<ISource>(
+		new QTMovieSource(opts.ifilename, true));
     } catch (const std::runtime_error&) {
 	stream.rewind();
 	throw;
@@ -468,7 +473,8 @@ void write_tags(const std::wstring &ofilename,
 }
 
 static
-boost::shared_ptr<ISource> do_resample(ISource *src, const Options &opts,
+boost::shared_ptr<ISource> do_resample(
+    const boost::shared_ptr<ISource> &src, const Options &opts,
     uint32_t rate)
 {
     LOG("Resampling with libspeexdsp, quality %d\n", opts.src_mode);
@@ -499,22 +505,24 @@ boost::shared_ptr<ISource> do_resample(ISource *src, const Options &opts,
 }
 
 static
-void encode_file(ISource *src, const std::wstring &ofilename,
-    const Options &opts, bool resampled=false)
+void encode_file(const boost::shared_ptr<ISource> &src,
+	const std::wstring &ofilename, const Options &opts,
+	bool resampled=false)
 {
-    std::auto_ptr<ISource> srcx;
+    boost::shared_ptr<ISource> srcx(src);
     if (opts.chanmap.size()) {
 	if (opts.chanmap.size() != src->getSampleFormat().m_nchannels)
 	    throw std::runtime_error(
 		    "nchannels of input and --chanmap spec unmatch");
-	srcx.reset(new ChannelMapper(src, opts.chanmap));
+	srcx = boost::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
     }
-    AACEncoder encoder(opts.chanmap.size() ? srcx.get() : src,
-	    opts.output_format);
+    AACEncoder encoder(srcx, opts.output_format);
 
-    if (opts.isAAC())
+    if (opts.isAAC()) {
+	if (!opts.native_chanmapper)
+	    encoder.forceAACChannelMapping();
         set_codec_options(encoder, opts);
-
+    }
     AudioStreamBasicDescription iasbd, oasbd;
     iasbd = encoder.getInputBasicDescription();
     oasbd = encoder.getOutputBasicDescription();
@@ -542,10 +550,12 @@ void encode_file(ISource *src, const std::wstring &ofilename,
 	    opts.libspeexdsp.loaded() && !opts.native_resampler) {
 	boost::shared_ptr<ISource> srcx
 	    = do_resample(src, opts, oasbd.mSampleRate);
-	encode_file(srcx.get(), ofilename, opts, true);
+	encode_file(srcx, ofilename, opts, true);
 	return;
     }
     do_encode(encoder, ofilename, opts);
+    // XXX super ugly.. want to destruct sink to close files */
+    encoder.setSink(boost::shared_ptr<ISink>());
     if (encoder.framesWritten()) {
 	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
 	if (opts.isMP4())
@@ -641,16 +651,17 @@ void handle_cue_sheet(Options &opts)
 	}
 	opts.tagopts = track_tags;
 
-	CompositeSource source;
+	boost::shared_ptr<ISource> source(new CompositeSource());
 	std::wstring ifilename;
-	ISource *src;
+	boost::shared_ptr<ISource> src;
 	for (size_t j = 0; j < track.m_segments.size(); ++j) {
 	    CueSegment &seg = track.m_segments[j];
 	    if (seg.m_filename == L"__GAP__") {
 		opts.ifilename = L"GAP";
 		if (!src)
 		    throw std::runtime_error("Pre/Postgap command before song");
-		src = new NullSource(src->getSampleFormat());
+		src = boost::shared_ptr<ISource>(
+			new NullSource(src->getSampleFormat()));
 	    } else {
 		ifilename = PathCombineX(cuedir, seg.m_filename);
 		opts.ifilename = const_cast<wchar_t*>(ifilename.c_str());
@@ -661,14 +672,11 @@ void handle_cue_sheet(Options &opts)
 	    int64_t end = -1;
 	    if (seg.m_end != -1)
 		end = static_cast<int64_t>(seg.m_end) * rate / 75 - begin;
-	    IPartialSource *psrc = dynamic_cast<IPartialSource*>(src);
-	    if (!psrc) {
-		delete src;
-		throw std::runtime_error(
-		    "Can't process partial input with this file type");
-	    }
+	    IPartialSource *psrc = dynamic_cast<IPartialSource*>(src.get());
+	    if (!p)
+		throw std::runtime_error("Cannot set range this filetype");
 	    psrc->setRange(begin, end);
-	    source.addSource(src);
+	    dynamic_cast<CompositeSource*>(source.get())->addSource(src);
 	}
 	std::wstring formatstr = opts.fname_format
 	    ? opts.fname_format : L"${tracknumber}${title& }${title}";
@@ -677,7 +685,7 @@ void handle_cue_sheet(Options &opts)
 	ofilename = strtransform(ofilename, FNConverter()) + L".stub";
 	ofilename = get_output_filename(ofilename.c_str(), opts);
 	LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
-	encode_file(&source, ofilename, opts);
+	encode_file(source, ofilename, opts);
     }
 }
 
@@ -786,8 +794,8 @@ int wmain1(int argc, wchar_t **argv)
 	    else {
 		std::wstring ofilename
 		    = get_output_filename(opts.ifilename, opts);
-		std::auto_ptr<ISource> src(open_source(opts));
-		encode_file(src.get(), ofilename, opts);
+		boost::shared_ptr<ISource> src(open_source(opts));
+		encode_file(src, ofilename, opts);
 	    }
 	}
 	return 0;

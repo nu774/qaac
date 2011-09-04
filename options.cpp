@@ -15,6 +15,7 @@ static struct option long_options[] = {
     { L"silent", no_argument, 0, 's' },
     { L"stat", no_argument, 0, 'S' },
     { L"nice", no_argument, 0, 'n' },
+    { L"native-chanmapper", no_argument, 0, 'nchm' },
     { L"chanmap", required_argument, 0, 'cmap' },
     { L"downmix", required_argument, 0, 'dmix' },
     { L"no-optimize", no_argument, 0, 'noop' },
@@ -88,6 +89,8 @@ void usage()
 "                       <number>: Literal rate in Hz\n"
 "-s, --silent           Don't be verbose\n"
 "-n, --nice             Give lower process priority\n"
+"--native-chanmapper    Use QuickTime native channel mapper\n"
+"                       Don't set this when using buggy versions\n"
 "--chanmap <n1,n2...>   Remap channel order\n"
 "                       For Nch input, you take numbers 1,2..N, and\n"
 "                       re-order them with comma seperated, to the order\n"
@@ -183,6 +186,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->save_stat = true;
 	else if (ch == 'n')
 	    this->nice = true;
+	else if (ch == 'nchm')
+	    this->native_chanmapper = true;
 	else if (ch == 'i')
 	    this->ignore_length = true;
 	else if (ch == 'R')

@@ -62,7 +62,8 @@ class SpeexResampler: public DelegatingSource {
     std::map<uint32_t, std::wstring> m_emptyTags;
     LatencyDetector m_latency_detector;
 public:
-    SpeexResampler(const SpeexResamplerModule &module, ISource *src,
+    SpeexResampler(const SpeexResamplerModule &module,
+	    const boost::shared_ptr<ISource> &src,
 	    uint32_t rate, int quality=3);
     uint64_t length() const { return m_length; }
     const SampleFormat &getSampleFormat() const { return m_format; }

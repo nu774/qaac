@@ -14,15 +14,14 @@ public:
     const std::vector<uint32_t> *getChannelMap() const { return 0; }
     const SampleFormat &getSampleFormat() const { return m_format; }
 
-    // takes ownership.
-    void addSource(ISource *src)
+    void addSource(const boost::shared_ptr<ISource> &src)
     {
 	if (!m_sources.size())
 	    m_format = src->getSampleFormat();
 	else if (m_format != src->getSampleFormat())
 	    throw std::runtime_error(
 		    "CompositeSource: can't compose different sample format");
-	m_sources.push_back(source_t(src));
+	m_sources.push_back(src);
     }
     uint64_t length() const
     {

@@ -88,3 +88,17 @@ void AACEncoder::getGaplessInfo(GaplessInfo *info) const
     info->padding = static_cast<uint32_t>(
 	    m_frames_written * frame_length - info->delay - info->samples);
 }
+
+void AACEncoder::forceAACChannelMapping()
+{
+    AudioChannelLayoutX layout;
+    getInputChannelLayout(&layout);
+    std::vector<uint32_t> chanmap;
+    uint32_t newtag = 
+	GetAACChannelMapFromLayoutTag(layout->mChannelLayoutTag, &chanmap);
+    if (!newtag) return;
+    layout->mChannelLayoutTag = newtag;
+    setInputChannelLayout(layout);
+    boost::shared_ptr<ISource> newsrc(new ChannelMapper(m_src, chanmap));
+    m_src = newsrc;
+}

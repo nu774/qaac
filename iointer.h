@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <boost/shared_ptr.hpp>
 #include "util.h"
 
 struct SampleFormat {
@@ -101,11 +102,11 @@ public:
 };
 
 class DelegatingSource: public ISource, public ITagParser {
-    ISource *m_src;
+    boost::shared_ptr<ISource> m_src;
     std::map<uint32_t, std::wstring> m_emptyTags;
 public:
-    DelegatingSource(ISource *src): m_src(src) {}
-    ISource *source() { return m_src; }
+    DelegatingSource(boost::shared_ptr<ISource> src): m_src(src) {}
+    ISource *source() { return m_src.get(); }
     uint64_t length() const { return m_src->length(); }
     const SampleFormat &getSampleFormat() const
     {
@@ -117,7 +118,7 @@ public:
     }
     const std::map<uint32_t, std::wstring> &getTags() const
     {
-	ITagParser *parser = dynamic_cast<ITagParser*>(m_src);
+	ITagParser *parser = dynamic_cast<ITagParser*>(m_src.get());
 	if (!parser)
 	    return m_emptyTags;
 	else
@@ -125,7 +126,7 @@ public:
     }
     const std::vector<std::pair<std::wstring, int64_t> > * getChapters() const
     {
-	ITagParser *parser = dynamic_cast<ITagParser*>(m_src);
+	ITagParser *parser = dynamic_cast<ITagParser*>(m_src.get());
 	if (!parser)
 	    return 0;
 	else

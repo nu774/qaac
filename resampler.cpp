@@ -31,7 +31,7 @@ SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
 }
 
 SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
-	ISource *src, uint32_t rate, int quality)
+	const boost::shared_ptr<ISource> &src, uint32_t rate, int quality)
     : DelegatingSource(src), m_module(module), m_length(0), m_peak(0.0),
       m_end_of_input(false), m_input_frames(0)
 {
