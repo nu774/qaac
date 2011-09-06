@@ -108,6 +108,7 @@
     <ClCompile Include="..\..\logging.cpp" />
     <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\options.cpp" />
+    <ClCompile Include="..\..\reg.cpp" />
     <ClCompile Include="..\..\resampler.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
     <ClCompile Include="..\..\version.cpp" />

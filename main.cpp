@@ -25,6 +25,7 @@
 #include "expand.h"
 #include "resampler.h"
 #include "logging.h"
+#include "reg.h"
 
 #include <crtdbg.h>
 
@@ -719,14 +720,19 @@ void install_aach_codec()
 
 const char *get_qaac_version();
 
+std::wstring get_module_directory()
+{
+    std::wstring selfpath = GetModuleFileNameX();
+    const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
+    return selfpath.substr(0, fpos - selfpath.c_str());
+}
+
 static
 void load_modules(Options &opts)
 {
     std::wstring selfdir;
 #ifndef NOSTRICT_LOADING
-    std::wstring selfpath = GetModuleFileNameX();
-    const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
-    selfdir = selfpath.substr(0, fpos - selfpath.c_str());
+    selfdir = get_module_directory();
 #endif
     opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile-1.dll");
     opts.libflac = FLACModule(selfdir + L"libFLAC.dll");
@@ -734,6 +740,28 @@ void load_modules(Options &opts)
     opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp_vc10.dll");
     if (!opts.libspeexdsp.loaded())
 	opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp.dll");
+}
+
+extern void OverrideRegistryWith(const boost::shared_ptr<FILE> &fp);
+
+static
+void override_registry()
+{
+    std::wstring fname = get_module_directory() + L"\\qaac.reg";
+    FILE *fp = wfopenx(fname.c_str(), L"r, ccs=UNICODE");
+    if (!fp) return;
+    LOG("Found qaac.reg, overriding registry\n");
+    boost::shared_ptr<FILE> fptr(fp, std::fclose);
+    RegAction action;
+    RegParser parser;
+    try {
+	parser.parse(fptr, &action);
+    } catch (const std::runtime_error &e) {
+	LOG("WARING: %s\n", e.what());
+	return;
+    }
+    action.show();
+    action.realize();
 }
 
 #ifdef _MSC_VER
@@ -764,6 +792,8 @@ int wmain1(int argc, wchar_t **argv)
 
 	if (opts.nice)
 	    SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+
+	override_registry();
 	LOG("initializing QTML...");
 	QTInitializer __quicktime__;
 	LOG("done\n\n");
