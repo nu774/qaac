@@ -5,6 +5,8 @@
 #include "logging.h"
 #include "reg.h"
 
+DWORD g_pid__;
+
 int hex2dec(int c)
 {
     switch (c) {
@@ -218,13 +220,16 @@ int RegParser::evalValue(int c)
 static void cleanup()
 {
     RegOverridePredefKey(HKEY_LOCAL_MACHINE, 0);
-    SHDeleteKeyW(HKEY_CURRENT_USER, L"SOFTWARE\\qaac");
+    std::wstring keyName = format(L"SOFTWARE\\qaac\\%d", g_pid__);
+    SHDeleteKeyW(HKEY_CURRENT_USER, keyName.c_str());
 }
 
 void RegAction::realize()
 {
     HKEY rootKey;
-    RegCreateKeyExW(HKEY_CURRENT_USER, L"SOFTWARE\\qaac", 0, 0,
+    g_pid__ = GetCurrentProcessId();
+    std::wstring keyName = format(L"SOFTWARE\\qaac\\%d", g_pid__);
+    RegCreateKeyExW(HKEY_CURRENT_USER, keyName.c_str(), 0, 0,
 	    REG_OPTION_VOLATILE, KEY_ALL_ACCESS, 0, &rootKey, 0);
     boost::shared_ptr<HKEY__> __rootKey__(rootKey, RegCloseKey);
     hive_t::const_iterator ii;
