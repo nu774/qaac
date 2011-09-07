@@ -53,6 +53,7 @@ uint32_t GetAACChannelMapFromLayoutTag(uint32_t tag,
     case kAudioChannelLayoutTag_MPEG_6_1_A:
 	a = a61; newtag = kAudioChannelLayoutTag_AAC_6_1; break;
     case kAudioChannelLayoutTag_MPEG_7_1_A:
+    case kAudioChannelLayoutTag_MPEG_7_1_C:
 	a = a71; newtag = kAudioChannelLayoutTag_AAC_7_1; break;
     }
     while (a && *a) result->push_back(*a++);

@@ -748,8 +748,12 @@ static
 void override_registry()
 {
     std::wstring fname = get_module_directory() + L"\\qaac.reg";
-    FILE *fp = wfopenx(fname.c_str(), L"r, ccs=UNICODE");
-    if (!fp) return;
+    FILE *fp;
+    try {
+	fp = wfopenx(fname.c_str(), L"r, ccs=UNICODE");
+    } catch (...) {
+	return;
+    }
     LOG("Found qaac.reg, overriding registry\n");
     boost::shared_ptr<FILE> fptr(fp, std::fclose);
     RegAction action;
