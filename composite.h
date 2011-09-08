@@ -1,11 +1,11 @@
 #ifndef _COMPOSITE_H
 #define _COMPOSITE_H
 
-#include <boost/shared_ptr.hpp>
+#include "shared_ptr.h"
 #include "iointer.h"
 
 class CompositeSource: public ISource {
-    typedef boost::shared_ptr<ISource> source_t;
+    typedef x::shared_ptr<ISource> source_t;
     std::vector<source_t> m_sources;
     SampleFormat m_format;
     size_t m_curpos;
@@ -14,7 +14,7 @@ public:
     const std::vector<uint32_t> *getChannelMap() const { return 0; }
     const SampleFormat &getSampleFormat() const { return m_format; }
 
-    void addSource(const boost::shared_ptr<ISource> &src)
+    void addSource(const x::shared_ptr<ISource> &src)
     {
 	if (!m_sources.size())
 	    m_format = src->getSampleFormat();

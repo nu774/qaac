@@ -203,7 +203,7 @@ std::string get_codec_version(uint32_t codec)
 {
     ComponentDescription cd = { 'aenc', codec, 'appl', 0 };
     Component component = FindNextComponent(0, &cd);
-    boost::shared_ptr<Ptr> name(NewEmptyHandle(), DisposeHandle);
+    x::shared_ptr<Ptr> name(NewEmptyHandle(), DisposeHandle);
     GetComponentInfo(component, &cd, name.get(), 0, 0);
     ComponentResult version = 
 	CallComponentVersion(reinterpret_cast<ComponentInstance>(component));
@@ -320,10 +320,10 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	sink = new ALACSink(ofilenamex, encoder);
     else if (opts.isAAC())
 	sink = new MP4Sink(ofilenamex, encoder);
-    boost::shared_ptr<ISink> sinkp(sink);
+    x::shared_ptr<ISink> sinkp(sink);
     encoder.setSink(sinkp);
 
-    typedef boost::shared_ptr<std::FILE> file_t;
+    typedef x::shared_ptr<std::FILE> file_t;
     file_t statfp;
     if (opts.save_stat) {
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
@@ -367,26 +367,26 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 }
 
 static
-boost::shared_ptr<ISource> open_source(const Options &opts)
+x::shared_ptr<ISource> open_source(const Options &opts)
 {
     StdioChannel channel(opts.ifilename);
     InputStream stream(channel);
 
     if (opts.ignore_length)
-	return boost::shared_ptr<ISource>(new WaveSource(stream, true));
+	return x::shared_ptr<ISource>(new WaveSource(stream, true));
 
     if (opts.is_raw) {
 	SampleFormat sf(nallow(opts.raw_format).c_str(),
 		opts.raw_channels, opts.raw_sample_rate);
-	return boost::shared_ptr<ISource>(new RawSource(stream, sf));
+	return x::shared_ptr<ISource>(new RawSource(stream, sf));
     }
 
     if (!stream.seekable() && opts.libsndfile.loaded()) {
-	return boost::shared_ptr<ISource>(
+	return x::shared_ptr<ISource>(
 		new LibSndfileSource(opts.libsndfile, opts.ifilename));
     } else {
 	try {
-	    return boost::shared_ptr<ISource>(new WaveSource(stream, false));
+	    return x::shared_ptr<ISource>(new WaveSource(stream, false));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
 	}
@@ -394,7 +394,7 @@ boost::shared_ptr<ISource> open_source(const Options &opts)
 
     if (opts.libflac.loaded()) {
 	try {
-	    return boost::shared_ptr<ISource>(
+	    return x::shared_ptr<ISource>(
 		    new FLACSource(opts.libflac, stream));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
@@ -402,7 +402,7 @@ boost::shared_ptr<ISource> open_source(const Options &opts)
     }
     if (opts.libwavpack.loaded()) {
 	try {
-	    return boost::shared_ptr<ISource>(
+	    return x::shared_ptr<ISource>(
 		    new WavpackSource(opts.libwavpack, stream));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
@@ -410,14 +410,14 @@ boost::shared_ptr<ISource> open_source(const Options &opts)
     }
     if (opts.libsndfile.loaded()) {
 	try {
-	    return boost::shared_ptr<ISource>(
+	    return x::shared_ptr<ISource>(
 		    new LibSndfileSource(opts.libsndfile, opts.ifilename));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
 	}
     }
     try {
-	return boost::shared_ptr<ISource>(
+	return x::shared_ptr<ISource>(
 		new QTMovieSource(opts.ifilename, true));
     } catch (const std::runtime_error&) {
 	stream.rewind();
@@ -474,8 +474,8 @@ void write_tags(const std::wstring &ofilename,
 }
 
 static
-boost::shared_ptr<ISource> do_resample(
-    const boost::shared_ptr<ISource> &src, const Options &opts,
+x::shared_ptr<ISource> do_resample(
+    const x::shared_ptr<ISource> &src, const Options &opts,
     uint32_t rate)
 {
     LOG("Resampling with libspeexdsp, quality %d\n", opts.src_mode);
@@ -485,7 +485,7 @@ boost::shared_ptr<ISource> do_resample(
     }
     SpeexResampler *resampler = new SpeexResampler(opts.libspeexdsp, src,
 	    rate, opts.src_mode);
-    boost::shared_ptr<ISource> new_src(resampler);
+    x::shared_ptr<ISource> new_src(resampler);
     uint64_t n = 0, rc;
     PeriodicDisplay disp(100);
     while ((rc = resampler->convertSamples(4096)) > 0) {
@@ -506,16 +506,16 @@ boost::shared_ptr<ISource> do_resample(
 }
 
 static
-void encode_file(const boost::shared_ptr<ISource> &src,
+void encode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts,
 	bool resampled=false)
 {
-    boost::shared_ptr<ISource> srcx(src);
+    x::shared_ptr<ISource> srcx(src);
     if (opts.chanmap.size()) {
 	if (opts.chanmap.size() != src->getSampleFormat().m_nchannels)
 	    throw std::runtime_error(
 		    "nchannels of input and --chanmap spec unmatch");
-	srcx = boost::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
+	srcx = x::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
     }
     AACEncoder encoder(srcx, opts.output_format);
 
@@ -549,14 +549,14 @@ void encode_file(const boost::shared_ptr<ISource> &src,
     }
     if (iasbd.mSampleRate != oasbd.mSampleRate &&
 	    opts.libspeexdsp.loaded() && !opts.native_resampler) {
-	boost::shared_ptr<ISource> srcx
+	x::shared_ptr<ISource> srcx
 	    = do_resample(src, opts, oasbd.mSampleRate);
 	encode_file(srcx, ofilename, opts, true);
 	return;
     }
     do_encode(encoder, ofilename, opts);
     // XXX super ugly.. want to destruct sink to close files */
-    encoder.setSink(boost::shared_ptr<ISink>());
+    encoder.setSink(x::shared_ptr<ISink>());
     if (encoder.framesWritten()) {
 	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
 	if (opts.isMP4())
@@ -652,16 +652,16 @@ void handle_cue_sheet(Options &opts)
 	}
 	opts.tagopts = track_tags;
 
-	boost::shared_ptr<ISource> source(new CompositeSource());
+	x::shared_ptr<ISource> source(new CompositeSource());
 	std::wstring ifilename;
-	boost::shared_ptr<ISource> src;
+	x::shared_ptr<ISource> src;
 	for (size_t j = 0; j < track.m_segments.size(); ++j) {
 	    CueSegment &seg = track.m_segments[j];
 	    if (seg.m_filename == L"__GAP__") {
 		opts.ifilename = L"GAP";
 		if (!src)
 		    throw std::runtime_error("Pre/Postgap command before song");
-		src = boost::shared_ptr<ISource>(
+		src = x::shared_ptr<ISource>(
 			new NullSource(src->getSampleFormat()));
 	    } else {
 		ifilename = PathCombineX(cuedir, seg.m_filename);
@@ -742,7 +742,7 @@ void load_modules(Options &opts)
 	opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp.dll");
 }
 
-extern void OverrideRegistryWith(const boost::shared_ptr<FILE> &fp);
+extern void OverrideRegistryWith(const x::shared_ptr<FILE> &fp);
 
 static
 void override_registry()
@@ -755,7 +755,7 @@ void override_registry()
 	return;
     }
     LOG("Found qaac.reg, overriding registry\n");
-    boost::shared_ptr<FILE> fptr(fp, std::fclose);
+    x::shared_ptr<FILE> fptr(fp, std::fclose);
     RegAction action;
     RegParser parser;
     try {
@@ -828,7 +828,7 @@ int wmain1(int argc, wchar_t **argv)
 	    else {
 		std::wstring ofilename
 		    = get_output_filename(opts.ifilename, opts);
-		boost::shared_ptr<ISource> src(open_source(opts));
+		x::shared_ptr<ISource> src(open_source(opts));
 		encode_file(src, ofilename, opts);
 	    }
 	}

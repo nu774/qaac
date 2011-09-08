@@ -1,5 +1,5 @@
-#include "flacmodule.h"
 #include "win32util.h"
+#include "flacmodule.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
     while (0)

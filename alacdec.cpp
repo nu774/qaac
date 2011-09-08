@@ -40,7 +40,7 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
 	ofilename = std::wstring(odir) + L"/" +
 		PathReplaceExtension(PathFindFileNameW(ifile), ext);
 
-    typedef boost::shared_ptr<FILE> file_ptr_t;
+    typedef x::shared_ptr<FILE> file_ptr_t;
     file_ptr_t ofp;
     if (!std::wcscmp(ofilename.c_str(), L"-")) {
 	_setmode(1, _O_BINARY);

@@ -1,7 +1,7 @@
 #ifndef _SINK_H
 #define _SINK_H
 
-#include <boost/shared_ptr.hpp>
+#include "shared_ptr.h"
 #include <CoreAudioTypes.h>
 #include "mp4v2wrapper.h"
 #include "encoderbase.h"
@@ -27,7 +27,7 @@ public:
 };
 
 class ADTSSink: public ISink {
-    typedef boost::shared_ptr<FILE> file_ptr_t;
+    typedef x::shared_ptr<FILE> file_ptr_t;
     file_ptr_t m_fp;
     uint32_t m_sample_rate_index;
     uint32_t m_channel_config;

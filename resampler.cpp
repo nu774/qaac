@@ -1,6 +1,8 @@
+#include <cstdio>
+#include <cstring>
 #include <cmath>
-#include "resampler.h"
 #include "win32util.h"
+#include "resampler.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
     while (0)
@@ -31,7 +33,7 @@ SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
 }
 
 SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
-	const boost::shared_ptr<ISource> &src, uint32_t rate, int quality)
+	const x::shared_ptr<ISource> &src, uint32_t rate, int quality)
     : DelegatingSource(src), m_module(module), m_length(0), m_peak(0.0),
       m_end_of_input(false), m_input_frames(0)
 {
@@ -49,7 +51,7 @@ SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
     if (!converter)
 	throw std::runtime_error(
 	    format("SpeexResampler: %s", m_module.strerror(error)));
-    m_converter = boost::shared_ptr<SpeexResamplerState>(converter,
+    m_converter = x::shared_ptr<SpeexResamplerState>(converter,
 		m_module.destroy);
     m_module.skip_zeros(converter);
 
@@ -57,7 +59,7 @@ SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
     m_ibuffer.resize(m_src_buffer.size() * srcFormat.bytesPerFrame());
 
     FILE *tmpfile = win32_tmpfile(L"qaac.tmp");
-    m_tmpfile = boost::shared_ptr<FILE>(tmpfile, std::fclose);
+    m_tmpfile = x::shared_ptr<FILE>(tmpfile, std::fclose);
 
     m_latency_detector.set_sample_rates(srcFormat.m_rate, rate);
 }

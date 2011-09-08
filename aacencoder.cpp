@@ -30,7 +30,7 @@ void AACEncoder::setEncoderParameter(const wchar_t *key, int value)
     getCodecSpecificSettingsArray(&settings);
     CFMutableArrayRef newSettings =
 	(CFMutableArrayRef)(CloneCFObject(settings));
-    boost::shared_ptr<__CFArray> newSettings__(newSettings, CFRelease);
+    x::shared_ptr<__CFArray> newSettings__(newSettings, CFRelease);
 
     CFDictionaryRef dict = GetParameterDictFromSettings(newSettings, key);
     CFStringRef value_key = CFSTR("current value");
@@ -99,6 +99,6 @@ void AACEncoder::forceAACChannelMapping()
     if (!newtag) return;
     layout->mChannelLayoutTag = newtag;
     setInputChannelLayout(layout);
-    boost::shared_ptr<ISource> newsrc(new ChannelMapper(m_src, chanmap));
+    x::shared_ptr<ISource> newsrc(new ChannelMapper(m_src, chanmap));
     m_src = newsrc;
 }

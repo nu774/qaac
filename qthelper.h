@@ -26,7 +26,7 @@ inline ByteCount AudioChannelLayout_length(const AudioChannelLayout *acl)
 
 class AudioChannelLayoutX {
 public:
-    typedef boost::shared_ptr<AudioChannelLayout> owner_t;
+    typedef x::shared_ptr<AudioChannelLayout> owner_t;
 
     AudioChannelLayoutX() { create(0); }
     explicit AudioChannelLayoutX(size_t channel_count)
@@ -181,12 +181,12 @@ public:
     void getPointerProperty(
 	    OSType cls,
 	    OSType id,
-	    boost::shared_ptr<U> *result,
+	    x::shared_ptr<U> *result,
 	    ByteCount *size = 0)
     {
 	ByteCount sz;
 	getPropertyInfo(cls, id, 0, &sz);
-	boost::shared_ptr<U> ptr(
+	x::shared_ptr<U> ptr(
 		reinterpret_cast<U*>(xmalloc(sz)), std::free);
 	getProperty(cls, id, sz, ptr.get());
 	if (size) *size = sz;
@@ -195,7 +195,7 @@ public:
 };
 
 class ComponentX: public PropertySupport<ComponentX> {
-    typedef boost::shared_ptr<ComponentInstanceRecord> owner_t;
+    typedef x::shared_ptr<ComponentInstanceRecord> owner_t;
     owner_t m_instance;
 protected:
     void attach(ComponentInstance instance)

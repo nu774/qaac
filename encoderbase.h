@@ -6,16 +6,16 @@
 
 class EncoderBase : public StdAudioComponentX {
 protected:
-    boost::shared_ptr<ISource> m_src;
-    boost::shared_ptr<ISink> m_sink;
+    x::shared_ptr<ISource> m_src;
+    x::shared_ptr<ISink> m_sink;
     std::vector<AudioStreamPacketDescription> m_packet_desc;
     std::vector<char> m_input_buffer, m_output_buffer;
     uint64_t m_samples_read, m_frames_written, m_bytes_written;
     double m_max_bitrate, m_cur_bitrate;
     AudioStreamBasicDescription m_input_desc, m_output_desc;
 public:
-    EncoderBase(const boost::shared_ptr<ISource> &src, uint32_t formatID);
-    void setSink(const boost::shared_ptr<ISink> &sink) { m_sink = sink; }
+    EncoderBase(const x::shared_ptr<ISource> &src, uint32_t formatID);
+    void setSink(const x::shared_ptr<ISink> &sink) { m_sink = sink; }
 
     uint64_t samplesRead() const { return m_samples_read; }
     uint64_t framesWritten() const { return m_frames_written; }

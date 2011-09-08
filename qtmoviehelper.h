@@ -28,7 +28,7 @@ public:
 };
 
 class MovieX {
-    boost::shared_ptr<MovieType *> m_instance;
+    x::shared_ptr<MovieType *> m_instance;
 public:
     MovieX() {}
     MovieX(Movie movie) : m_instance(movie, DisposeMovie) {}
@@ -54,7 +54,7 @@ public:
 };
 
 class MovieStorageX {
-    boost::shared_ptr<ComponentInstanceRecord> m_instance;
+    x::shared_ptr<ComponentInstanceRecord> m_instance;
 public:
     MovieStorageX() {}
     MovieStorageX(DataHandler dh) : m_instance(dh, CloseMovieStorage) {}
@@ -79,13 +79,13 @@ public:
 };
 
 class QTAtomContainerX {
-    boost::shared_ptr<Ptr> m_instance;
+    x::shared_ptr<Ptr> m_instance;
 public:
     QTAtomContainerX() 
     {
 	QTAtomContainer ac;
 	TRYE(QTNewAtomContainer(&ac));
-	m_instance = boost::shared_ptr<Ptr>(ac, QTDisposeAtomContainer);
+	m_instance = x::shared_ptr<Ptr>(ac, QTDisposeAtomContainer);
     }
     QTAtomContainerX(QTAtomContainer ac)
 	: m_instance(ac, QTDisposeAtomContainer)
@@ -117,7 +117,7 @@ class SoundDescriptionX : public PropertySupport<SoundDescriptionX> {
 	kBitRate = kQTSoundDescriptionPropertyID_BitRate,
 	kUserReadableText = kQTSoundDescriptionPropertyID_UserReadableText
     };
-    boost::shared_ptr<SoundDescriptionPtr> m_instance;
+    x::shared_ptr<SoundDescriptionPtr> m_instance;
 public:
     SoundDescriptionX() {}
     SoundDescriptionX(SoundDescriptionHandle handle):

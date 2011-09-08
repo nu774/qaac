@@ -29,7 +29,7 @@ int hex2dec(int c)
     return 0;
 }
 
-void RegParser::parse(const boost::shared_ptr<FILE> &fp, IRegAction *action)
+void RegParser::parse(const x::shared_ptr<FILE> &fp, IRegAction *action)
 {
     m_fp = fp;
     m_action = action;
@@ -228,7 +228,7 @@ void RegAction::realize()
     std::wstring keyName = format(L"SOFTWARE\\qaac\\%d", g_pid__);
     RegCreateKeyExW(HKEY_CURRENT_USER, keyName.c_str(), 0, 0,
 	    REG_OPTION_VOLATILE, KEY_ALL_ACCESS, 0, &rootKey, 0);
-    boost::shared_ptr<HKEY__> __rootKey__(rootKey, RegCloseKey);
+    x::shared_ptr<HKEY__> __rootKey__(rootKey, RegCloseKey);
     hive_t::const_iterator ii;
     section_t::const_iterator jj;
     for (ii = m_entries.begin(); ii != m_entries.end(); ++ii) {
@@ -240,7 +240,7 @@ void RegAction::realize()
 	HKEY hKey;
 	RegCreateKeyExW(rootKey, rest, 0, 0, REG_OPTION_VOLATILE,
 		KEY_ALL_ACCESS, 0, &hKey, 0);
-	boost::shared_ptr<HKEY__> __hKey__(hKey, RegCloseKey);
+	x::shared_ptr<HKEY__> __hKey__(hKey, RegCloseKey);
 	for (jj = ii->second.begin(); jj != ii->second.end(); ++jj)
 	    RegSetValueExW(hKey, jj->first.c_str(), 0, jj->second.type,
 		    &jj->second.value[0], jj->second.value.size());

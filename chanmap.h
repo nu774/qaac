@@ -16,7 +16,7 @@ uint32_t GetAACChannelMapFromLayoutTag(
 class ChannelMapper: public DelegatingSource {
     std::vector<uint32_t> m_chanmap;
 public:
-    ChannelMapper(const boost::shared_ptr<ISource> &source,
+    ChannelMapper(const x::shared_ptr<ISource> &source,
 	const std::vector<uint32_t> &chanmap)
 	: DelegatingSource(source)
     {

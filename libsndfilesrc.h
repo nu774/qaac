@@ -2,14 +2,14 @@
 #define _LIBSNDFILESRC_H
 
 #include <vector>
-#include <boost/shared_ptr.hpp>
+#include "shared_ptr.h"
 #include <sndfile.h>
 #include "iointer.h"
 
 struct HINSTANCE__;
 
 class LibSndfileModule {
-    typedef boost::shared_ptr<HINSTANCE__> module_t;
+    typedef x::shared_ptr<HINSTANCE__> module_t;
     module_t m_module;
     bool m_loaded;
 public:
@@ -32,7 +32,7 @@ public:
 class LibSndfileSource:
     public ISource, public PartialSource<LibSndfileSource>
 {
-    typedef boost::shared_ptr<SNDFILE_tag> handle_t;
+    typedef x::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
     LibSndfileModule m_module;
     SampleFormat m_format;

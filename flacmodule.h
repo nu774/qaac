@@ -1,14 +1,13 @@
 #ifndef _FLACMODULE_H
 #define _FLACMODULE_H
 
-#include <string>
-#include <boost/shared_ptr.hpp>
+#include "shared_ptr.h"
 #include <FLAC/all.h>
 
 struct HINSTANCE__;
 
 class FLACModule {
-    typedef boost::shared_ptr<HINSTANCE__> module_t;
+    typedef x::shared_ptr<HINSTANCE__> module_t;
     module_t m_module;
     bool m_loaded;
 public:

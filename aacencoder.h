@@ -5,7 +5,7 @@
 
 class AACEncoder : public EncoderBase {
 public:
-    AACEncoder(const boost::shared_ptr<ISource> &src, uint32_t formatID)
+    AACEncoder(const x::shared_ptr<ISource> &src, uint32_t formatID)
 	: EncoderBase(src, formatID)
     {}
     void getGaplessInfo(GaplessInfo *info) const;

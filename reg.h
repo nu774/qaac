@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 #include <windows.h>
-#include <boost/shared_ptr.hpp>
+#include "shared_ptr.h"
 #include "util.h"
 
 struct IRegAction {
@@ -21,12 +21,12 @@ struct IRegAction {
 class RegParser {
     int m_lineno;
     std::wstring m_token;
-    boost::shared_ptr<FILE> m_fp;
+    x::shared_ptr<FILE> m_fp;
     IRegAction *m_action;
 public:
     RegParser(): m_lineno(1) {}
 
-    void parse(const boost::shared_ptr<FILE> &fp, IRegAction *action);
+    void parse(const x::shared_ptr<FILE> &fp, IRegAction *action);
 private:
     int get()
     {

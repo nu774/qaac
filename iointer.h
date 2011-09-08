@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <map>
-#include <boost/shared_ptr.hpp>
+#include "shared_ptr.h"
 #include "util.h"
 
 struct SampleFormat {
@@ -102,10 +102,10 @@ public:
 };
 
 class DelegatingSource: public ISource, public ITagParser {
-    boost::shared_ptr<ISource> m_src;
+    x::shared_ptr<ISource> m_src;
     std::map<uint32_t, std::wstring> m_emptyTags;
 public:
-    DelegatingSource(boost::shared_ptr<ISource> src): m_src(src) {}
+    DelegatingSource(x::shared_ptr<ISource> src): m_src(src) {}
     ISource *source() { return m_src.get(); }
     uint64_t length() const { return m_src->length(); }
     const SampleFormat &getSampleFormat() const

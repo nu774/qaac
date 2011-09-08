@@ -24,7 +24,7 @@ AudioStreamBasicDescription BuildBasicDescription(const SampleFormat &format)
 }
 
 EncoderBase::EncoderBase(
-	const boost::shared_ptr<ISource> &src, uint32_t formatID) :
+	const x::shared_ptr<ISource> &src, uint32_t formatID) :
 	m_src(src),
 	m_samples_read(0),
 	m_frames_written(0),

@@ -1,14 +1,14 @@
 #ifndef _RESAMPLER_H
 #define _RESAMPLER_H
 
-#include <boost/shared_ptr.hpp>
+#include "shared_ptr.h"
 #include <speex/speex_resampler.h>
 #include "iointer.h"
 
 struct HINSTANCE__;
 
 class SpeexResamplerModule {
-    typedef boost::shared_ptr<HINSTANCE__> module_t;
+    typedef x::shared_ptr<HINSTANCE__> module_t;
     module_t m_module;
     bool m_loaded;
 public:
@@ -51,19 +51,19 @@ class SpeexResampler: public DelegatingSource {
     };
     SpeexResamplerModule m_module;
     SampleFormat m_format;
-    boost::shared_ptr<SpeexResamplerState> m_converter;
+    x::shared_ptr<SpeexResamplerState> m_converter;
     uint64_t m_length;
     double m_peak;
     bool m_end_of_input;
     size_t m_input_frames;
     std::vector<char> m_ibuffer;
     std::vector<float> m_src_buffer;
-    boost::shared_ptr<FILE> m_tmpfile;
+    x::shared_ptr<FILE> m_tmpfile;
     std::map<uint32_t, std::wstring> m_emptyTags;
     LatencyDetector m_latency_detector;
 public:
     SpeexResampler(const SpeexResamplerModule &module,
-	    const boost::shared_ptr<ISource> &src,
+	    const x::shared_ptr<ISource> &src,
 	    uint32_t rate, int quality=3);
     uint64_t length() const { return m_length; }
     const SampleFormat &getSampleFormat() const { return m_format; }

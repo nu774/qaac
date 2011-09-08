@@ -223,7 +223,7 @@ M4ATagParser::M4ATagParser(const std::wstring &filename)
 	MP4ItmfItemList *itemlist = mp4v2::impl::itmf::genericGetItems(file);
 	if (!itemlist)
 	    return;
-	boost::shared_ptr<MP4ItmfItemList> __delete_later__(
+	x::shared_ptr<MP4ItmfItemList> __delete_later__(
 		itemlist, mp4v2::impl::itmf::genericItemListFree);
 	for (size_t i = 0; i < itemlist->size; ++i) {
 	    MP4ItmfItem &item = itemlist->elements[i];

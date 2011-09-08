@@ -13,7 +13,7 @@ struct HINSTANCE__;
 typedef void WavpackContext;
 
 class WavpackModule {
-    typedef boost::shared_ptr<HINSTANCE__> module_t;
+    typedef x::shared_ptr<HINSTANCE__> module_t;
     module_t m_module;
     bool m_loaded;
 public:
@@ -43,7 +43,7 @@ class WavpackSource:
     WavpackModule m_module;
     InputStream m_stream;
     SampleFormat m_format;
-    boost::shared_ptr<void> m_wpc;
+    x::shared_ptr<void> m_wpc;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
