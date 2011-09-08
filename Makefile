@@ -61,6 +61,7 @@ libsndfilesrc.o \
 logging.o \
 main.o \
 options.o \
+reg.o \
 resampler.o \
 sink.o \
 version.o \

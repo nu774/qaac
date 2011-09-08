@@ -74,7 +74,6 @@ int RegParser::hexDigits(int c, int width)
 std::vector<BYTE> RegParser::getRawValue()
 {
     std::vector<BYTE> value;
-    char buf[3] = { 0 };
     for (size_t i = 0; i < m_token.size() / 2; ++i) {
 	int n = (hex2dec(m_token[i*2]) << 4) | hex2dec(m_token[i*2+1]);
 	value.push_back(n);
@@ -147,8 +146,7 @@ int RegParser::valueData(int c)
 	return dwordValue(c);
     else if (c == 'e')
 	return evalValue(c);
-    else
-	error("Invalid value data");
+    error("Invalid value data");
 }
 
 int RegParser::stringValue(int c)
@@ -167,7 +165,6 @@ int RegParser::stringValue(int c)
 
 int RegParser::hexType(int c)
 {
-    int value = 0;
     expect('e'); expect('x');
     c = get();
     if (c == '(') {

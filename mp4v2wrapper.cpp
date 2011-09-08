@@ -35,7 +35,6 @@ MP4TrackId MP4FileX::AddAlacAudioTrack(uint32_t timeScale,
 {
     MP4TrackId track = AddTrack(MP4_AUDIO_TRACK_TYPE, timeScale);
     AddTrackToOd(track);
-    MP4Atom *trackAtom = FindTrackAtom(track, 0);
 
     SetTrackFloatProperty(track, "tkhd.volume", 1.0);
 
