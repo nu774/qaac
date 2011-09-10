@@ -674,7 +674,7 @@ void handle_cue_sheet(Options &opts)
 	    if (seg.m_end != -1)
 		end = static_cast<int64_t>(seg.m_end) * rate / 75 - begin;
 	    IPartialSource *psrc = dynamic_cast<IPartialSource*>(src.get());
-	    if (!p)
+	    if (!psrc)
 		throw std::runtime_error("Cannot set range this filetype");
 	    psrc->setRange(begin, end);
 	    dynamic_cast<CompositeSource*>(source.get())->addSource(src);
