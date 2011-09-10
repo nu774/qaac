@@ -45,7 +45,8 @@ class StdAudioComponentX : public ComponentX {
 	    kQTSCAudioPropertyID_MaximumOutputPacketSize,
 	kOutputFormatIsExternallyFramed =
 	    kQTSCAudioPropertyID_OutputFormatIsExternallyFramed,
-	kSoundDescription = kQTSCAudioPropertyID_SoundDescription
+	kSoundDescription = kQTSCAudioPropertyID_SoundDescription,
+	kRenderQuality = kQTSCAudioPropertyID_RenderQuality
     };
 public:
     StdAudioComponentX(ComponentInstance instance): ComponentX(instance) {}
@@ -226,6 +227,14 @@ public:
     {
 	return getPodProperty<Boolean>(
 		kSCAudio, kOutputFormatIsExternallyFramed);
+    }
+    UInt32 getRenderQuality()
+    {
+	return getPodProperty<UInt32>(kSCAudio, kRenderQuality);
+    }
+    void setRenderQuality(UInt32 value)
+    {
+	setPodProperty(kSCAudio, kRenderQuality, value);
     }
 };
 
