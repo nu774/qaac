@@ -171,13 +171,6 @@ void set_codec_options(AACEncoder &encoder, const Options &opts)
 	else
 	    encoder.setEncoderParameter(Param::kQuality, opts.quality);
     }
-    /*
-     * It seems that this takes no effect, but just in case...
-     */
-    // render quality
-    {
-	encoder.setRenderQuality(kQTAudioRenderQuality_Max);
-    }
 #if 0
     {
 	extern void dump_object(CFTypeRef ref, std::ostream &os);
@@ -525,6 +518,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	srcx = x::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
     }
     AACEncoder encoder(srcx, opts.output_format);
+    encoder.setRenderQuality(kQTAudioRenderQuality_Max);
 
     if (opts.isAAC()) {
 	if (!opts.native_chanmapper)
