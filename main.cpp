@@ -651,9 +651,10 @@ void handle_cue_sheet(Options &opts)
 	    if (track_tags.find(Tag::kAlbumArtist) != track_tags.end())
 		track_tags[Tag::kArtist] = track_tags[Tag::kAlbumArtist];
 	}
-	opts.tagopts = track_tags;
 
-	x::shared_ptr<ISource> source(new CompositeSource());
+	CompositeSource *csp = new CompositeSource();
+	csp->setTags(track_tags);
+	x::shared_ptr<ISource> source(csp);
 	std::wstring ifilename;
 	x::shared_ptr<ISource> src;
 	for (size_t j = 0; j < track.m_segments.size(); ++j) {
@@ -678,7 +679,7 @@ void handle_cue_sheet(Options &opts)
 	    if (!psrc)
 		throw std::runtime_error("Cannot set range this filetype");
 	    psrc->setRange(begin, end);
-	    dynamic_cast<CompositeSource*>(source.get())->addSource(src);
+	    csp->addSource(src);
 	}
 	std::wstring formatstr = opts.fname_format
 	    ? opts.fname_format : L"${tracknumber}${title& }${title}";

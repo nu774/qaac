@@ -4,16 +4,25 @@
 #include "shared_ptr.h"
 #include "iointer.h"
 
-class CompositeSource: public ISource {
+class CompositeSource: public ISource, public ITagParser {
     typedef x::shared_ptr<ISource> source_t;
     std::vector<source_t> m_sources;
     SampleFormat m_format;
     size_t m_curpos;
+    std::map<uint32_t, std::wstring> m_tags;
 public:
     CompositeSource() : m_curpos(0) {}
     const std::vector<uint32_t> *getChannelMap() const { return 0; }
     const SampleFormat &getSampleFormat() const { return m_format; }
-
+    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
+    const std::vector<std::pair<std::wstring, int64_t> > *getChapters() const
+    {
+	return 0;
+    }
+    void setTags(const std::map<uint32_t, std::wstring> &tags)
+    {
+	m_tags = tags;
+    }
     void addSource(const x::shared_ptr<ISource> &src)
     {
 	if (!m_sources.size())
