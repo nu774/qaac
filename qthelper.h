@@ -65,10 +65,8 @@ public:
     }
     static AudioChannelLayoutX FromChannelMap(const std::vector<uint32_t> &map)
     {
-	AudioChannelLayoutX layout(map.size());
+	AudioChannelLayoutX layout;
 	layout->mChannelLayoutTag = GetChannelLayoutTagFromChannelMap(map);
-	for (size_t i = 0; i < map.size(); ++i)
-	    layout->mChannelDescriptions[i].mChannelLabel = map[i];
 	return layout;
     }
 private:
