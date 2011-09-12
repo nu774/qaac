@@ -4,6 +4,9 @@
 uint32_t
 LayoutToChannelMask(const std::vector<uint32_t>& chanmap)
 {
+    if (chanmap.size() == 1) return 1;
+    else if (chanmap.size() == 2) return 3;
+
     uint32_t result = 0;
     for (size_t i = 0; i < chanmap.size(); ++i)
 	result |= (1 << (chanmap[i] - 1));

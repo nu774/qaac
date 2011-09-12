@@ -342,11 +342,13 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 		double processed = encoder.samplesRead();
 		double pseconds = processed / rate;
 		double ellapsed = timer.ellapsed();
+		double eta = ellapsed * (tsamples/processed - 1);
 
-		disp.put(format("\r%s / %s (%.1fx)    ",
+		disp.put(format("\r%s / %s (%.1fx), ETA %s   ",
 		    formatSeconds(pseconds).c_str(),
 		    tstamp.c_str(),
-		    pseconds / ellapsed));
+		    pseconds / ellapsed,
+		    tsamples == -1 ? "-" : formatSeconds(eta).c_str()));
 	    }
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
