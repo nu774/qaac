@@ -53,6 +53,7 @@ class SpeexResampler: public DelegatingSource {
     SampleFormat m_format;
     x::shared_ptr<SpeexResamplerState> m_converter;
     uint64_t m_length;
+    uint64_t m_samples_read;
     double m_peak;
     bool m_end_of_input;
     size_t m_input_frames;
@@ -70,6 +71,7 @@ public:
     size_t readSamples(void *buffer, size_t nsamples);
     double getPeak() const { return m_peak; }
     size_t convertSamples(size_t nsamples);
+    uint64_t samplesRead() { return m_samples_read; }
 private:
     size_t doConvertSamples(float *buffer, size_t nsamples);
     bool underflow();

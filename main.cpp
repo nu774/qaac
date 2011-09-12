@@ -46,7 +46,10 @@ public:
 	    m_last_tick = tick;
 	}
     }
-    void flush() { std::fprintf(stderr, m_message.c_str()); }
+    void flush() {
+	std::fprintf(stderr, m_message.c_str());
+	SetConsoleTitleA(format("qaac: %s", m_message.c_str()).c_str());
+    }
 };
 
 static
@@ -344,7 +347,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 		double ellapsed = timer.ellapsed();
 		double eta = ellapsed * (tsamples/processed - 1);
 
-		disp.put(format("\r%s / %s (%.1fx), ETA %s   ",
+		disp.put(format("\rEncoding %s / %s (%.1fx), ETA %s   ",
 		    formatSeconds(pseconds).c_str(),
 		    tstamp.c_str(),
 		    pseconds / ellapsed,
@@ -490,10 +493,26 @@ x::shared_ptr<ISource> do_resample(
     x::shared_ptr<ISource> new_src(resampler);
     uint64_t n = 0, rc;
     PeriodicDisplay disp(100);
+    uint32_t srate = src->getSampleFormat().m_rate;
+    uint64_t tsamples = src->length();
+    double tseconds = static_cast<double>(tsamples) / srate;
+    std::string tstamp = tsamples == -1 ? "-" : formatSeconds(tseconds);
+    Timer timer;
+
     while ((rc = resampler->convertSamples(4096)) > 0) {
 	n += rc;
-	if (opts.verbose)
-	    disp.put(format("\r%" PRId64 " samples processed", n));
+	if (opts.verbose) {
+	    double processed = resampler->samplesRead();
+	    double pseconds = processed / srate;
+	    double ellapsed = timer.ellapsed();
+	    double eta = ellapsed * (tsamples/processed - 1);
+
+	    disp.put(format("\rResampling %s / %s (%.1fx), ETA %s   ",
+		formatSeconds(pseconds).c_str(),
+		tstamp.c_str(),
+		pseconds / ellapsed,
+		tsamples == -1 ? "-" : formatSeconds(eta).c_str()));
+	}
     }
     if (opts.verbose) {
 	disp.flush();

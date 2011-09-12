@@ -34,8 +34,8 @@ SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
 
 SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
 	const x::shared_ptr<ISource> &src, uint32_t rate, int quality)
-    : DelegatingSource(src), m_module(module), m_length(0), m_peak(0.0),
-      m_end_of_input(false), m_input_frames(0)
+    : DelegatingSource(src), m_module(module), m_length(0), m_samples_read(0),
+      m_peak(0.0), m_end_of_input(false), m_input_frames(0)
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
     if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
@@ -144,9 +144,11 @@ bool SpeexResampler::underflow()
     if (srcFormat.m_type == SampleFormat::kIsFloat &&
 	    srcFormat.m_bitsPerSample == 32) {
 	m_input_frames = source()->readSamples(&m_src_buffer[0], nsamples);
+	m_samples_read += m_input_frames;
 	return m_input_frames > 0;
     }
     m_input_frames = source()->readSamples(&m_ibuffer[0], nsamples);
+    m_samples_read += m_input_frames;
     size_t blen = m_input_frames * srcFormat.bytesPerFrame();
     float *fp = &m_src_buffer[0];
 
