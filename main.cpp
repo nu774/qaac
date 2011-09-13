@@ -120,12 +120,6 @@ void set_codec_options(AACEncoder &encoder, const Options &opts)
 {
     CFArrayT<CFStringRef> menu, limits;
 
-    if (opts.downmix > 0)
-    {
-	AudioStreamBasicDescription oasbd = encoder.getOutputBasicDescription();
-	oasbd.mChannelsPerFrame = opts.downmix;
-	encoder.setOutputBasicDescription(oasbd);
-    }
     // build sampling rate table
     {
 	encoder.getParameterRange(Param::kSampleRate, &menu, &limits);
@@ -541,21 +535,29 @@ void encode_file(const x::shared_ptr<ISource> &src,
     AACEncoder encoder(srcx, opts.output_format);
     encoder.setRenderQuality(kQTAudioRenderQuality_Max);
 
-    if (opts.isAAC()) {
-	if (!opts.native_chanmapper)
-	    encoder.forceAACChannelMapping();
-        set_codec_options(encoder, opts);
-    }
+    if (opts.isAAC() && !opts.native_chanmapper)
+	encoder.forceAACChannelMapping();
+
     AudioStreamBasicDescription iasbd, oasbd;
     iasbd = encoder.getInputBasicDescription();
     oasbd = encoder.getOutputBasicDescription();
 
-    if (!opts.isAAC() && opts.rate > 0) {
+    if (opts.downmix > 0)
+	oasbd.mChannelsPerFrame = opts.downmix;
+    if (!opts.isAAC() && opts.rate > 0)
 	oasbd.mSampleRate = opts.rate;
-	encoder.setOutputBasicDescription(oasbd);
-	oasbd = encoder.getOutputBasicDescription();
+    encoder.setOutputBasicDescription(oasbd);
+
+    if (opts.isAAC())
+	set_codec_options(encoder, opts);
+    else {
+	if (oasbd.mChannelsPerFrame != 2)
+	    throw std::runtime_error("Only 2ch encoding is supported for ALAC");
+	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)
+	    LOG("WARNING: Only 16/24bit format is supported for ALAC");
     }
     std::wstring encoder_config = get_encoder_config(encoder);
+
     if (!resampled) {
 	LOG("%ls\n", encoder_config.c_str());
 	if (opts.rate > 0) {

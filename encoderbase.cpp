@@ -35,17 +35,6 @@ EncoderBase::EncoderBase(
     m_input_desc = BuildBasicDescription(src->getSampleFormat());
     setInputBasicDescription(m_input_desc);
     uint32_t nchannels = m_input_desc.mChannelsPerFrame;
-    if (formatID == 'alac') {
-	if (nchannels != 2)
-	    throw std::runtime_error(
-		"Multi-channel ALAC encoding is currently not supported");
-	else if (m_input_desc.mBitsPerChannel != 16 &&
-		 m_input_desc.mBitsPerChannel != 24 &&
-		 !(m_input_desc.mBitsPerChannel == 32 &&
-		   (m_input_desc.mFormatFlags & kAudioFormatFlagIsFloat)))
-	    throw std::runtime_error(
-		"Only 16/24bit format is supported for ALAC encoding");
-    }
     const std::vector<uint32_t> *chanmap = src->getChannelMap();
     AudioChannelLayoutX layout =
 	chanmap ? AudioChannelLayoutX::FromChannelMap(*chanmap)
