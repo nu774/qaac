@@ -57,7 +57,7 @@ public:
 	    kAudioChannelLayoutTag_MPEG_5_0_A,
 	    kAudioChannelLayoutTag_MPEG_5_1_A,
 	    kAudioChannelLayoutTag_MPEG_6_1_A,
-	    kAudioChannelLayoutTag_MPEG_7_1_C
+	    kAudioChannelLayoutTag_MPEG_7_1_A
 	};
 	assert(nchannel <= array_size(tab));
 	layout->mChannelLayoutTag = tab[nchannel - 1];
