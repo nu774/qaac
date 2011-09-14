@@ -33,9 +33,11 @@ class PeriodicDisplay {
     uint32_t m_interval;
     uint32_t m_last_tick;
     std::string m_message;
+    bool m_verbose;
 public:
-    PeriodicDisplay(uint32_t interval)
+    PeriodicDisplay(uint32_t interval, bool verbose=true)
 	: m_interval(interval),
+	  m_verbose(verbose),
 	  m_last_tick(0)
     {}
     void put(const std::string &message) {
@@ -47,7 +49,7 @@ public:
 	}
     }
     void flush() {
-	std::fprintf(stderr, m_message.c_str());
+	if (m_verbose) std::fprintf(stderr, m_message.c_str());
 	SetConsoleTitleA(format("qaac: %s", m_message.c_str()).c_str());
     }
 };
@@ -326,7 +328,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
 	statfp = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
-    PeriodicDisplay disp(100);
+    PeriodicDisplay disp(100, opts.verbose);
     uint32_t rate = encoder.getInputBasicDescription().mSampleRate;
     uint64_t tsamples = encoder.src()->length();
     double tseconds = static_cast<double>(tsamples) / rate;
@@ -335,28 +337,24 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
     try {
 	Timer timer;
 	while (encoder.encodeChunk(1)) {
-	    if (opts.verbose) {
-		double processed = encoder.samplesRead();
-		double pseconds = processed / rate;
-		double ellapsed = timer.ellapsed();
-		double eta = ellapsed * (tsamples/processed - 1);
+	    double processed = encoder.samplesRead();
+	    double pseconds = processed / rate;
+	    double ellapsed = timer.ellapsed();
+	    double eta = ellapsed * (tsamples/processed - 1);
 
-		disp.put(format("\rEncoding %s / %s (%.1fx), ETA %s   ",
-		    formatSeconds(pseconds).c_str(),
-		    tstamp.c_str(),
-		    pseconds / ellapsed,
-		    tsamples == -1 ? "-" : formatSeconds(eta).c_str()));
-	    }
+	    disp.put(format("\r%s / %s (%.1fx), ETA %s   ",
+		formatSeconds(pseconds).c_str(),
+		tstamp.c_str(),
+		pseconds / ellapsed,
+		tsamples == -1 ? "-" : formatSeconds(eta).c_str()));
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
 	}
 	uint64_t processed = encoder.samplesRead();
 	double pseconds = static_cast<double>(processed) / rate;
 	double ellapsed = timer.ellapsed();
-	if (opts.verbose) {
-	    disp.flush();
-	    fputc('\n', stderr);
-	}
+	disp.flush();
+	if (opts.verbose) fputc('\n', stderr);
 	LOG("%" PRId64 "/%" PRId64 " samples processed\n", processed, tsamples);
 	LOG("Encoding finished in %s (%.1fx)\n",
 		formatSeconds(ellapsed).c_str(), pseconds / ellapsed);
@@ -486,7 +484,7 @@ x::shared_ptr<ISource> do_resample(
 	    rate, opts.src_mode);
     x::shared_ptr<ISource> new_src(resampler);
     uint64_t n = 0, rc;
-    PeriodicDisplay disp(100);
+    PeriodicDisplay disp(100, opts.verbose);
     uint32_t srate = src->getSampleFormat().m_rate;
     uint64_t tsamples = src->length();
     double tseconds = static_cast<double>(tsamples) / srate;
@@ -495,23 +493,19 @@ x::shared_ptr<ISource> do_resample(
 
     while ((rc = resampler->convertSamples(4096)) > 0) {
 	n += rc;
-	if (opts.verbose) {
-	    double processed = resampler->samplesRead();
-	    double pseconds = processed / srate;
-	    double ellapsed = timer.ellapsed();
-	    double eta = ellapsed * (tsamples/processed - 1);
+	double processed = resampler->samplesRead();
+	double pseconds = processed / srate;
+	double ellapsed = timer.ellapsed();
+	double eta = ellapsed * (tsamples/processed - 1);
 
-	    disp.put(format("\rResampling %s / %s (%.1fx), ETA %s   ",
-		formatSeconds(pseconds).c_str(),
-		tstamp.c_str(),
-		pseconds / ellapsed,
-		tsamples == -1 ? "-" : formatSeconds(eta).c_str()));
-	}
+	disp.put(format("\r%s / %s (%.1fx), ETA %s [resampling]  ",
+	    formatSeconds(pseconds).c_str(),
+	    tstamp.c_str(),
+	    pseconds / ellapsed,
+	    tsamples == -1 ? "-" : formatSeconds(eta).c_str()));
     }
-    if (opts.verbose) {
-	disp.flush();
-	fputc('\n', stderr);
-    }
+    disp.flush();
+    if (opts.verbose) fputc('\n', stderr);
     LOG("Done rate conversion.\n");
     if (resampler->getPeak() > 1.0) {
 	LOG("Peak value %g > 1.0, gain compressed.\n",
