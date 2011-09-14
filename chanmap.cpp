@@ -28,7 +28,7 @@ GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap)
 	return kAudioChannelLayoutTag_MPEG_5_1_A;
     case 0x13f: case 0x70f:
 	return kAudioChannelLayoutTag_MPEG_6_1_A;
-    case 0xff: case 0x63f: return kAudioChannelLayoutTag_MPEG_7_1_A;
+    case 0xff: case 0x63f: return kAudioChannelLayoutTag_MPEG_7_1_C;
     }
     throw std::runtime_error("Sorry, this channel layout not supported");
 }
