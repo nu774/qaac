@@ -49,8 +49,11 @@ public:
 	}
     }
     void flush() {
-	if (m_verbose) std::fprintf(stderr, m_message.c_str());
-	SetConsoleTitleA(format("qaac: %s", m_message.c_str()).c_str());
+	if (m_verbose) std::fputs(m_message.c_str(), stderr);
+	std::vector<char> s(m_message.size() + 1);
+	std::strcpy(&s[0], m_message.c_str());
+	squeeze(&s[0], "\r");
+	SetConsoleTitleA(format("qaac %s", &s[0]).c_str());
     }
 };
 
@@ -338,11 +341,13 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	Timer timer;
 	while (encoder.encodeChunk(1)) {
 	    double processed = encoder.samplesRead();
+	    double percent = 100.0 * processed / tsamples;
 	    double pseconds = processed / rate;
 	    double ellapsed = timer.ellapsed();
 	    double eta = ellapsed * (tsamples/processed - 1);
 
-	    disp.put(format("\r%s / %s (%.1fx), ETA %s   ",
+	    disp.put(format("\r%s%s/%s (%.1fx), ETA %s   ",
+		tsamples == -1 ? "" : format("[%.1f%%] ", percent).c_str(),
 		formatSeconds(pseconds).c_str(),
 		tstamp.c_str(),
 		pseconds / ellapsed,
@@ -494,11 +499,13 @@ x::shared_ptr<ISource> do_resample(
     while ((rc = resampler->convertSamples(4096)) > 0) {
 	n += rc;
 	double processed = resampler->samplesRead();
+	double percent = 100.0 * processed / tsamples;
 	double pseconds = processed / srate;
 	double ellapsed = timer.ellapsed();
 	double eta = ellapsed * (tsamples/processed - 1);
 
-	disp.put(format("\r%s / %s (%.1fx), ETA %s [resampling]  ",
+	disp.put(format("\r%s%s/%s (%.1fx), ETA %s [resampling]  ",
+	    tsamples == -1 ? "" : format("[%.1f%%] ", percent).c_str(),
 	    formatSeconds(pseconds).c_str(),
 	    tstamp.c_str(),
 	    pseconds / ellapsed,
