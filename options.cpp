@@ -79,6 +79,10 @@ void usage()
 "-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
 "-v, --cvbr <bitrate>   AAC Constrained VBR mode / bitrate\n"
 "-c, --cbr <bitrate>    AAC CBR mode / bitrate\n"
+"                       For -a, -v, -c, \"0\" as bitrate means \"highest\".\n"
+"                       Highest bitrate available is automatically chosen.\n"
+"                       For LC, default is -V90\n"
+"                       For HE, default is -v0\n"
 "--he                   HE AAC mode (Can't use TVBR)\n"
 "-A, --alac             ALAC encoding mode\n"
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
@@ -291,7 +295,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
     }
     if (isAAC() && this->method == -1) {
 	this->method = isSBR() ? kCVBR : kTVBR;
-	this->bitrate = 90;
+	this->bitrate = isSBR() ? 0 : 90;
     }
     if (!isAAC() && this->is_adts) {
 	std::fputs("ADTS output mode is only allowed for AAC encoding\n",

@@ -90,6 +90,17 @@ int get_bitrate_index(const CFArrayT<CFStringRef> &menu, int rate)
     return -1;
 }
 
+static
+int get_highest_bitrate(const CFArrayT<CFStringRef> &menu)
+{
+    for (int i = menu.size() - 1; i >= 0; --i) {
+	std::wstring s = CF2W(menu.at(i));
+	int v;
+	if (std::swscanf(s.c_str(), L"%d", &v) == 1) return v;
+    }
+    return 0;
+}
+
 template <typename T>
 struct CloserTo {
     const T &value_;
@@ -157,10 +168,12 @@ void set_codec_options(AACEncoder &encoder, const Options &opts)
 	    else
 		encoder.setEncoderParameter(Param::kBitRate, opts.bitrate);
 	} else  {
-	    if (get_bitrate_index(limits, opts.bitrate) < 0)
+	    int bitrate = opts.bitrate;
+	    if (bitrate == 0) bitrate = get_highest_bitrate(limits);
+	    if (get_bitrate_index(limits, bitrate) < 0)
 		parameter_not_supported(Param::kBitRate, limits, 1);
 	    else {
-		size_t index = get_bitrate_index(menu, opts.bitrate);
+		size_t index = get_bitrate_index(menu, bitrate);
 		encoder.setEncoderParameter(Param::kBitRate, index);
 	    }
 	}
@@ -173,12 +186,12 @@ void set_codec_options(AACEncoder &encoder, const Options &opts)
 	else
 	    encoder.setEncoderParameter(Param::kQuality, opts.quality);
     }
-#if 0
+#if _DEBUG
     {
 	extern void dump_object(CFTypeRef ref, std::ostream &os);
 	CFArrayT<CFDictionaryRef> settings;
 	encoder.getCodecSpecificSettingsArray(&settings);
-	dump_object(settings, std::cout);
+	dump_object(settings, std::cerr);
     }
 #endif
 }
