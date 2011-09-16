@@ -53,7 +53,7 @@ public:
 	    kAudioChannelLayoutTag_Mono,
 	    kAudioChannelLayoutTag_Stereo,
 	    kAudioChannelLayoutTag_MPEG_3_0_A,
-	    kAudioChannelLayoutTag_MPEG_4_0_A,
+	    kAudioChannelLayoutTag_Quadraphonic,
 	    kAudioChannelLayoutTag_MPEG_5_0_A,
 	    kAudioChannelLayoutTag_MPEG_5_1_A,
 	    kAudioChannelLayoutTag_MPEG_6_1_A,

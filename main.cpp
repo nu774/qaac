@@ -737,15 +737,14 @@ void install_aach_codec()
     HRESULT hr = RegOpenKeyExW(HKEY_LOCAL_MACHINE, key, 0, KEY_READ, &hKey);
     if (hr != ERROR_SUCCESS)
 	throw_win32_error(format("RegOpenKeyExW: %ls", key), hr);
+    x::shared_ptr<HKEY__> hKey__(hKey, RegCloseKey);
+
     DWORD size;
     key = L"QTSysDir";
     RegQueryValueExW(hKey, key, 0, 0, 0, &size);
-    std::vector<wchar_t> buffer(size);
-    RegQueryValueExW(hKey, key, 0, 0,
-	    reinterpret_cast<LPBYTE>(&buffer[0]), &size);
-    RegCloseKey(hKey);
-    std::wstring path =
-	format(L"%s%s", &buffer[0], L"QuickTimeAudioSupport.qtx");
+    std::vector<BYTE> buffer(size);
+    RegQueryValueExW(hKey, key, 0, 0, &buffer[0], &size);
+    std::wstring path = format(L"%s\\QuickTimeAudioSupport.qtx", &buffer[0]);
 
     HMODULE hModule = LoadLibraryW(path.c_str());
     if (!hModule)
@@ -769,16 +768,12 @@ std::wstring get_module_directory()
 static
 void load_modules(Options &opts)
 {
-    std::wstring selfdir;
-#ifndef NOSTRICT_LOADING
-    selfdir = get_module_directory();
-#endif
-    opts.libsndfile = LibSndfileModule(selfdir + L"libsndfile-1.dll");
-    opts.libflac = FLACModule(selfdir + L"libFLAC.dll");
-    opts.libwavpack = WavpackModule(selfdir + L"wavpackdll.dll");
-    opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp_vc10.dll");
+    opts.libsndfile = LibSndfileModule(L"libsndfile-1.dll");
+    opts.libflac = FLACModule(L"libFLAC.dll");
+    opts.libwavpack = WavpackModule(L"wavpackdll.dll");
+    opts.libspeexdsp = SpeexResamplerModule(L"libspeexdsp_vc10.dll");
     if (!opts.libspeexdsp.loaded())
-	opts.libspeexdsp = SpeexResamplerModule(selfdir + L"libspeexdsp.dll");
+	opts.libspeexdsp = SpeexResamplerModule(L"libspeexdsp.dll");
 }
 
 extern void OverrideRegistryWith(const x::shared_ptr<FILE> &fp);
@@ -818,8 +813,10 @@ int wmain1(int argc, wchar_t **argv)
 #endif
     Options opts;
 
+    SetDllDirectoryW(L"");
     std::setlocale(LC_CTYPE, "");
     std::setbuf(stderr, 0);
+
 #ifdef DEBUG_ATTACH
     FILE *fp = std::fopen("CON", "r");
     std::getc(fp);
