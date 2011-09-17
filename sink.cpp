@@ -38,20 +38,10 @@ uint32_t getChannelConfig(const AudioChannelLayout *layout)
 
 using mp4v2::impl::MP4Atom;
 
-MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder)
-	: m_filename(path),
-	  m_closed(false)
+MP4SinkBase::MP4SinkBase(const std::wstring &path)
+	: m_filename(path), m_closed(false)
 {
     static const char * const compatibleBrands[] = { "M4A ", "mp42" };
-
-    const AudioStreamBasicDescription &format
-	= encoder.getOutputBasicDescription();
-    uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
-    uint32_t frame_length = format.mFramesPerPacket;
-    if (format.mFormatID == 'aach') {
-	sample_rate /= 2;
-	frame_length /= 2;
-    }
     try {
 	m_mp4file.Create(
 		w2m(path, utf8_codecvt_facet()).c_str(),
@@ -62,7 +52,35 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder)
 		0, // minorVersion
 		const_cast<char**>(compatibleBrands), 
 		array_size(compatibleBrands));
+    } catch (mp4v2::impl::Exception *e) {
+	handle_mp4error(e);
+    }
+}
 
+void MP4SinkBase::close()
+{
+    if (!m_closed) {
+	m_closed = true;
+	try {
+	    m_mp4file.Close();
+	} catch (mp4v2::impl::Exception *e) {
+	    handle_mp4error(e);
+	}
+    }
+}
+
+MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder)
+	: MP4SinkBase(path)
+{
+    const AudioStreamBasicDescription &format
+	= encoder.getOutputBasicDescription();
+    uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
+    uint32_t frame_length = format.mFramesPerPacket;
+    if (format.mFormatID == 'aach') {
+	sample_rate /= 2;
+	frame_length /= 2;
+    }
+    try {
 	m_mp4file.SetTimeScale(sample_rate);
 	m_track_id = m_mp4file.AddAudioTrack(
 			sample_rate, frame_length, MP4_MPEG4_AUDIO_TYPE);
@@ -107,18 +125,6 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder)
 	}
     } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
-    }
-}
-
-void MP4Sink::close()
-{
-    if (!m_closed) {
-	m_closed = true;
-	try {
-	    m_mp4file.Close();
-	} catch (mp4v2::impl::Exception *e) {
-	    handle_mp4error(e);
-	}
     }
 }
 

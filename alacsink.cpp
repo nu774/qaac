@@ -4,25 +4,12 @@
 #include "alacsink.h"
 
 ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder)
-	: m_filename(path),
-	  m_closed(false)
+	: MP4SinkBase(path)
 {
-    static const char * const compatibleBrands[] = { "M4A ", "mp42" };
-
     const AudioStreamBasicDescription &format
 	= encoder.getOutputBasicDescription();
     uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
     try {
-	m_mp4file.Create(
-		w2m(path, utf8_codecvt_facet()).c_str(),
-		0, // flags
-		1, // add_ftypes
-		0, // add_iods
-		"M4A ", // majorBrand
-		0, // minorVersion
-		const_cast<char**>(compatibleBrands), 
-		array_size(compatibleBrands));
-
 	m_mp4file.SetTimeScale(sample_rate);
 	std::vector<char> cookie;
 	encoder.getMagicCookie(&cookie);
@@ -37,17 +24,5 @@ ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder)
 		cookie.size() - 28);
     } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
-    }
-}
-
-void ALACSink::close()
-{
-    if (!m_closed) {
-	m_closed = true;
-	try {
-	    m_mp4file.Close();
-	} catch (mp4v2::impl::Exception *e) {
-	    handle_mp4error(e);
-	}
     }
 }

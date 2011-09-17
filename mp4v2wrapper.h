@@ -17,9 +17,14 @@ inline void handle_mp4error(mp4v2::impl::Exception *e)
     throw re;
 }
 
+class MP4FileCopy;
+
 class MP4FileX: public mp4v2::impl::MP4File {
+    friend class MP4FileCopy;
 public:
     MP4FileX() {}
+
+    void FinishWriteX() { FinishWrite(); }
 
     AutoDynaCast<mp4v2::impl::MP4Atom>
     FindAtomT(const char *name)
@@ -57,5 +62,24 @@ protected:
 	    mp4v2::impl::itmf::BasicType typeCode);
     mp4v2::impl::MP4DataAtom *FindOrCreateMetadataAtom(const char *atom,
 	    mp4v2::impl::itmf::BasicType typeCode);
+};
+
+class MP4FileCopy {
+    struct ChunkInfo {
+	mp4v2::impl::MP4ChunkId current, final;
+	MP4Timestamp time;
+    };
+    MP4FileX *m_mp4file;
+    uint64_t m_nchunks;
+    std::vector<ChunkInfo> m_state;
+    mp4v2::platform::io::File *m_src;
+    mp4v2::platform::io::File *m_dst;
+public:
+    MP4FileCopy(mp4v2::impl::MP4File *file);
+    ~MP4FileCopy() { if (m_dst) finish(); }
+    void start(const char *path);
+    void finish();
+    bool copyNextChunk();
+    uint64_t getTotalChunks() { return m_nchunks; }
 };
 #endif

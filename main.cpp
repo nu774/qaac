@@ -441,15 +441,11 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 }
 
 static
-void write_tags(const std::wstring &ofilename,
+void write_tags(MP4SinkBase &sink,
 	const Options &opts, AACEncoder &encoder,
 	const std::wstring &encoder_config)
 {
-    std::wstring ofilenamex(ofilename);
-    if (!opts.no_optimize)
-	ofilenamex += L".tmp";
-
-    TagEditor editor(ofilenamex);
+    TagEditor editor;
 
     ITagParser *tp = dynamic_cast<ITagParser*>(encoder.src());
     if (tp) {
@@ -474,17 +470,27 @@ void write_tags(const std::wstring &ofilename,
     }
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
-    editor.save();
-    if (!opts.no_optimize) {
-	mp4v2::impl::MP4File optimizer;
-	std::string utf8_name = w2m(ofilename, utf8_codecvt_facet());
-	std::string tmpname = utf8_name + ".tmp";
-	try {
-	    optimizer.Optimize(tmpname.c_str(), utf8_name.c_str());
-	    DeleteFileX(ofilenamex.c_str());
-	} catch (mp4v2::impl::Exception *e) {
-	    handle_mp4error(e);
+    sink.saveTags(editor);
+}
+
+static void do_optimize(const std::wstring &src,
+	const std::wstring &dst, const Options &opts)
+{
+    try {
+	MP4FileX file;
+	file.Read(w2m(src, utf8_codecvt_facet()).c_str(), 0);
+	MP4FileCopy optimizer(&file);
+	optimizer.start(w2m(dst, utf8_codecvt_facet()).c_str());
+	uint64_t total = optimizer.getTotalChunks();
+	PeriodicDisplay disp(100, opts.verbose);
+	for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
+	    disp.put(format("\r%" PRId64 "/%" PRId64
+		    " chunks written (optimizing)", i, total).c_str());
 	}
+	disp.flush();
+	if (opts.verbose) std::putc('\n', stderr);
+    } catch (mp4v2::impl::Exception *e) {
+	handle_mp4error(e);
     }
 }
 
@@ -593,12 +599,26 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	return;
     }
     do_encode(encoder, ofilename, opts);
-    // XXX super ugly.. want to destruct sink to close files */
-    encoder.setSink(x::shared_ptr<ISink>());
-    if (encoder.framesWritten()) {
+    if (encoder.framesWritten())
 	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
-	if (opts.isMP4())
-	    write_tags(ofilename, opts, encoder, encoder_config);
+
+    MP4SinkBase *sink = dynamic_cast<MP4SinkBase*>(encoder.sink());
+    if (sink) {
+	write_tags(*sink, opts, encoder, encoder_config);
+	if (!opts.no_optimize) {
+	    sink->close();
+	    std::wstring tmpname = ofilename + L".tmp";
+	    for (size_t i = 0; i < 10; ++i) {
+		FILE *fp = _wfopen(tmpname.c_str(), L"rb");
+		if (fp) {
+		    std::fclose(fp);
+		    break;
+		}
+		Sleep(0);
+	    }
+	    do_optimize(tmpname, ofilename, opts);
+	    DeleteFileX(tmpname.c_str());
+	}
     }
 }
 

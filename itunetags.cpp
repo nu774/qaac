@@ -100,7 +100,7 @@ void TagEditor::fetchAiffID3Tags(const wchar_t *filename)
     }
 }
 
-void TagEditor::save()
+void TagEditor::save(MP4FileX &file)
 {
     try {
 	if (m_nsamples) {
@@ -112,10 +112,6 @@ void TagEditor::save()
 	    m_long_tags["iTunSMPB"] = widen(value);
 	}
 	utf8_codecvt_facet u8codec;
-	std::string utf8_name = w2m(m_filename, u8codec);
-
-	MP4FileX file;
-	file.Modify(utf8_name.c_str());
 
 	if (m_chapters.size()) {
 	    uint64_t timeScale = file.GetIntegerProperty("moov.mvhd.timeScale");
@@ -140,7 +136,6 @@ void TagEditor::save()
 	    file.SetMetadataArtwork("covr", data, size);
 	    UnmapViewOfFile(data);
 	}
-	file.Close();
     } catch (Exception *e) {
 	handle_mp4error(e);
     }

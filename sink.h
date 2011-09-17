@@ -5,15 +5,25 @@
 #include <CoreAudioTypes.h>
 #include "mp4v2wrapper.h"
 #include "encoderbase.h"
+#include "itunetags.h"
 
-class MP4Sink: public ISink {
+class MP4SinkBase {
+protected:
     std::wstring m_filename;
-    mp4v2::impl::MP4File m_mp4file;
+    MP4FileX m_mp4file;
     MP4TrackId m_track_id;
     bool m_closed;
 public:
+    MP4SinkBase(const std::wstring &path);
+    ~MP4SinkBase() { close(); }
+    void close();
+    void saveTags(TagEditor &editor) { editor.save(m_mp4file); }
+    MP4FileX *getFile() { return &m_mp4file; }
+};
+
+class MP4Sink: public ISink, public MP4SinkBase {
+public:
     MP4Sink(const std::wstring &path, EncoderBase &encoder);
-    ~MP4Sink() { close(); }
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
 	try {
@@ -23,7 +33,6 @@ public:
 	    handle_mp4error(e);
 	}
     }
-    void close();
 };
 
 class ADTSSink: public ISink {

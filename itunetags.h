@@ -5,6 +5,7 @@
 #include "utf8_codecvt_facet.hpp"
 #include "iointer.h"
 #include "iff.h"
+#include "mp4v2wrapper.h"
 
 namespace Tag {
     const uint32_t kTitle = fourcc("\xa9""nam");
@@ -53,7 +54,6 @@ const char * const iTunSMPB_template = " 00000000 %08X %08X %08X%08X "
 "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000";
 
 class TagEditor {
-    std::wstring m_filename;
     std::map<uint32_t, std::wstring> m_tags;
     std::map<std::string, std::wstring> m_long_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
@@ -62,9 +62,8 @@ class TagEditor {
     int m_padding;
     uint64_t m_nsamples;
 public:
-    TagEditor(const std::wstring &path)
-	: m_filename(path),
-	  m_encoder_delay(0),
+    TagEditor()
+	: m_encoder_delay(0),
 	  m_padding(0),
 	  m_nsamples(0)
     {}
@@ -94,7 +93,7 @@ public:
 	m_artworks.push_back(filename);
     }
     void fetchAiffID3Tags(const wchar_t *filename);
-    void save();
+    void save(MP4FileX &mp4file);
 };
 
 class M4ATagParser : public ITagParser {
