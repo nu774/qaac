@@ -821,6 +821,7 @@ int wmain1(int argc, wchar_t **argv)
     FILE *fp = std::fopen("CON", "r");
     std::getc(fp);
 #endif
+    int result = 0;
     try {
 	if (!opts.parse(argc, argv))
 	    return 1;
@@ -868,12 +869,12 @@ int wmain1(int argc, wchar_t **argv)
 		encode_file(src, ofilename, opts);
 	    }
 	}
-	return 0;
-
     } catch (const std::exception &e) {
 	LOG("%s\n", e.what());
-	return 2;
+	result = 2;
     }
+    delete Log::instance();
+    return result;
 }
 
 #ifdef __MINGW32__
