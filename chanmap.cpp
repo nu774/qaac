@@ -41,7 +41,8 @@ uint32_t GetAACChannelMapFromLayoutTag(uint32_t tag,
     static const uint32_t a50[] = { 3, 1, 2, 4, 5, 0 };
     static const uint32_t a51[] = { 3, 1, 2, 5, 6, 4, 0 };
     static const uint32_t a61[] = { 3, 1, 2, 5, 6, 7, 4, 0 };
-    static const uint32_t a71[] = { 3, 7, 8, 1, 2, 5, 6, 4, 0 };
+    //static const uint32_t a71[] = { 3, 7, 8, 1, 2, 5, 6, 4, 0 };
+    static const uint32_t a71[] = { 3, 1, 2, 7, 8, 5, 6, 4, 0 };
     const uint32_t *a = 0;
     uint32_t newtag = 0;
     switch (tag) {
