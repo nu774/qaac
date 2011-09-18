@@ -29,7 +29,11 @@ public:
 	    char *majorBrand, uint32_t minorVersion,
 	    char **supportedBrands, uint32_t supportedBrandsCount);
 
-    void FinishWriteX() { m_pTracks[0]->FinishWrite(0); }
+    void FinishWriteX()
+    {
+	for (size_t i = 0; i < m_pTracks.Size(); ++i)
+	    m_pTracks[i]->FinishWrite(0);
+    }
 
     AutoDynaCast<mp4v2::impl::MP4Atom>
     FindAtomT(const char *name)
