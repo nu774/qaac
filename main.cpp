@@ -830,10 +830,9 @@ int wmain1(int argc, wchar_t **argv)
     std::getc(fp);
 #endif
     int result = 0;
+    if (!opts.parse(argc, argv))
+	return 1;
     try {
-	if (!opts.parse(argc, argv))
-	    return 1;
-
 	if (opts.verbose)
 	    Log::instance()->enable_stderr();
 	if (opts.logfilename)
@@ -856,9 +855,24 @@ int wmain1(int argc, wchar_t **argv)
 	opts.encoder_name = widen(encoder_name);
 	LOG("%s\n", encoder_name.c_str());
 
-	if (opts.isSBR())
+	if (opts.isSBR() || opts.check_only)
 	    install_aach_codec();
 	load_modules(opts);
+
+	if (opts.check_only) {
+	    uint32_t codecs[] = { 'aac ', 'aach', 'alac', 0 };
+	    for (uint32_t *p = codecs; *p; ++p)
+		LOG("%s\n", get_codec_version(*p));
+	    if (opts.libspeexdsp.loaded())
+		LOG("libspeexdsp loaded\n");
+	    if (opts.libsndfile.loaded())
+		LOG("libsndfile loaded\n");
+	    if (opts.libflac.loaded())
+		LOG("libflac loaded\n");
+	    if (opts.libwavpack.loaded())
+		LOG("libwavpack loaded\n");
+	    return 0;
+	}
 
 	mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
 	//mp4v2::impl::log.setVerbosity(MP4_LOG_VERBOSE4);

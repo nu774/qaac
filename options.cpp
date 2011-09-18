@@ -4,6 +4,7 @@
 
 static struct option long_options[] = {
     { L"help", no_argument, 0, 'h' },
+    { L"check", no_argument, 0, 'chck' },
     { L"abr", required_argument, 0, 'a' },
     { L"tvbr", required_argument, 0, 'V' },
     { L"cvbr", required_argument, 0, 'v' },
@@ -74,6 +75,7 @@ void usage()
 "In ADTS output mode, \"-\" as outfile means stdout.\n"
 "\n"
 "Main options:\n"
+"--check                Show QT version etc, and exit\n"
 "-d <dirname>           Output directory, default is cwd\n"
 "-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
 "-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
@@ -153,6 +155,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
     {
 	if (ch == 'h')
 	    return usage(), false;
+	else if (ch == 'chck')
+	    this->check_only = true;
 	else if (ch == 'o')
 	    this->ofilename = optarg;
 	else if (ch == 'd')
@@ -281,7 +285,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
     argc -= optind;
     argv += optind;
 
-    if (!argc)
+    if (!argc && !check_only)
 	return usage(), false;
     if (argc > 1 && (this->ofilename || this->tagopts.size())) {
 	this->ofilename = 0;
