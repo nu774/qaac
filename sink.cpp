@@ -42,19 +42,11 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
 	: m_filename(path), m_closed(false)
 {
     static const char * const compatibleBrands[] = { "M4A ", "mp42" };
+    void (MP4FileX::*create)(const char *, uint32_t, int, int,
+	    char*, uint32_t, char **, uint32_t);
     try {
-	if (temp)
-	    m_mp4file.CreateTemp(
-		    w2m(path, utf8_codecvt_facet()).c_str(),
-		    0, // flags
-		    1, // add_ftypes
-		    0, // add_iods
-		    "M4A ", // majorBrand
-		    0, // minorVersion
-		    const_cast<char**>(compatibleBrands), 
-		    array_size(compatibleBrands));
-	else
-	    m_mp4file.Create(
+	create = temp ? &MP4FileX::CreateTemp : &MP4FileX::Create;
+	(m_mp4file.*create)(
 		    w2m(path, utf8_codecvt_facet()).c_str(),
 		    0, // flags
 		    1, // add_ftypes
