@@ -4,7 +4,7 @@
 
 m4_include([project/project.m4sugar])
 
-m4_define([SVNINFO],m4_esyscmd([svn info 2>/dev/null]))
+m4_define([SVNINFO],m4_esyscmd([LANG=en svn info 2>/dev/null]))
 
 changequote(<<,>>)dnl
     m4_define(<<PRJ_repo_url>>,m4_bregexp(SVNINFO,<<^URL: *\(.+\)>>,<<\1>>))

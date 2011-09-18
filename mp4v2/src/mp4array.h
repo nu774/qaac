@@ -37,10 +37,7 @@ public:
     }
 
     inline bool ValidIndex(MP4ArrayIndex index) {
-        if (m_numElements == 0 || index > m_numElements - 1) {
-            return false;
-        }
-        return true;
+        return (index < m_numElements && index >= 0);
     }
 
     inline MP4ArrayIndex Size(void) {
@@ -110,12 +107,14 @@ protected:
         } \
         \
         type& operator[](MP4ArrayIndex index) { \
-            if (!ValidIndex(index)) { \
+            if (ValidIndex(index)) { \
+                return m_elements[index]; \
+            } \
+            else { \
                 ostringstream msg; \
                 msg << "illegal array index: " << index << " of " << m_numElements; \
                 throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__ ); \
             } \
-            return m_elements[index]; \
         } \
         \
     protected: \

@@ -209,16 +209,18 @@ MP4Atom* MP4Atom::ReadAtom(MP4File& file, MP4Atom* pParentAtom)
 
 bool MP4Atom::IsReasonableType(const char* type)
 {
-    for (uint8_t i = 0; i < 4; i++) {
-        if ((unsigned char) isalnum(type[i])) {
-            continue;
+    // Unwound this.  Pricy when called a lot.
+    if( isalnum((unsigned char) type[0])) {
+        if( isalnum((unsigned char) type[1])) {
+            if( isalnum((unsigned char) type[2])) {
+                if( isalnum((unsigned char) type[3]) || type[3] == ' ' ) {
+                    return true;
+                }
+            }
         }
-        if (i == 3 && type[i] == ' ') {
-            continue;
-        }
-        return false;
     }
-    return true;
+
+    return false;
 }
 
 // generic read
@@ -759,8 +761,6 @@ static const char* const UDTA_ELEMENTS[] = {
     "\xA9" "swr",
     "\xA9" "wrt",
     "Allf",
-    "hinf",
-    "hnti",
     "name",
     "LOOP",
     "ptv ",
@@ -799,6 +799,10 @@ MP4Atom::factory( MP4File &file, MP4Atom* parent, const char* type )
                 return new MP4ItmfHdlrAtom(file);
         }
         else if( ATOMID( ptype ) == ATOMID( "udta" )) {
+            if( ATOMID( type ) == ATOMID( "hnti" ))
+                return new MP4HntiAtom(file);
+            if( ATOMID( type ) == ATOMID( "hinf" ))
+                return new MP4HinfAtom(file);
             for( const char* const* p = UDTA_ELEMENTS; *p; p++ )
                 if( !strcmp( type, *p ))
                     return new MP4UdtaElementAtom( file, type );
@@ -879,10 +883,6 @@ MP4Atom::factory( MP4File &file, MP4Atom* parent, const char* type )
                 return new MP4HdlrAtom(file);
             if( ATOMID(type) == ATOMID("hint") )
                 return new MP4TrefTypeAtom( file, type );
-            if( ATOMID(type) == ATOMID("hnti") )
-                return new MP4HntiAtom(file);
-            if( ATOMID(type) == ATOMID("hinf") )
-                return new MP4HinfAtom(file);
             if( ATOMID(type) == ATOMID("h263") )
                 return new MP4VideoAtom( file, type );
             if( ATOMID(type) == ATOMID("href") )

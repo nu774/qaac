@@ -219,10 +219,12 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
         return MP4_INVALID_FILE_HANDLE;
     }
 
-    bool MP4Optimize(const char* existingFileName,
+    bool MP4Optimize(const char* fileName,
                      const char* newFileName)
     {
-        if (!existingFileName || !newFileName)
+        // Must at least have fileName for in-place optimize; newFileName
+        // can be null, however.
+        if (fileName == NULL)
             return false;
 
         MP4File* pFile = ConstructMP4File();
@@ -231,7 +233,7 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
 
         try {
             ASSERT(pFile);
-            pFile->Optimize(existingFileName, newFileName);
+            pFile->Optimize(fileName, newFileName);
             delete pFile;
             return true;
         }
@@ -241,7 +243,7 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
         }
         catch( ... ) {
             mp4v2::impl::log.errorf("%s(%s,%s) failed", __FUNCTION__,
-                                    existingFileName, newFileName );
+                                    fileName, newFileName );
         }
 
         if (pFile)
@@ -249,14 +251,14 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
         return false;
     }
 
-    void MP4Close(MP4FileHandle hFile)
+    void MP4Close(MP4FileHandle hFile, uint32_t  flags)
     {
         if( !MP4_IS_VALID_FILE_HANDLE( hFile ))
             return;
 
         MP4File& f = *(MP4File*)hFile;
         try {
-            f.Close();
+            f.Close(flags);
         }
         catch( Exception* x ) {
             mp4v2::impl::log.errorf(*x);
@@ -797,6 +799,26 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
             try {
                 return ((MP4File*)hFile)->
                        AddULawAudioTrack(timeScale);
+            }
+            catch( Exception* x ) {
+                mp4v2::impl::log.errorf(*x);
+                delete x;
+            }
+            catch( ... ) {
+                mp4v2::impl::log.errorf( "%s: failed", __FUNCTION__ );
+            }
+        }
+        return MP4_INVALID_TRACK_ID;
+    }
+
+    MP4TrackId MP4AddALawAudioTrack(
+        MP4FileHandle hFile,
+        uint32_t timeScale)
+    {
+        if (MP4_IS_VALID_FILE_HANDLE(hFile)) {
+            try {
+                return ((MP4File*)hFile)->
+                       AddALawAudioTrack(timeScale);
             }
             catch( Exception* x ) {
                 mp4v2::impl::log.errorf(*x);
@@ -2402,7 +2424,7 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
 
                 MP4Track *pTrack = pFile->GetTrack(trackId);
                 uint64_t bytes = pTrack->GetTotalOfSampleSizes();
-                bytes *= UINT64_C(8 * 1000);
+                bytes *= UINT64_C(8000);	// 8 * 1000
                 bytes /= msDuration;
                 return (uint32_t)bytes;
             }

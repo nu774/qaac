@@ -516,8 +516,9 @@ void MP4Track::WriteChunkBuffer()
     m_chunkDuration = 0;
 }
 
-void MP4Track::FinishWrite()
+void MP4Track::FinishWrite(uint32_t options)
 {
+    m_writeSampleId--;
     FinishSdtp();
 
     // write out any remaining samples in chunk buffer
@@ -540,18 +541,21 @@ void MP4Track::FinishWrite()
         pBufferSizeProperty->SetValue(GetMaxSampleSize());
     }
 
-    MP4Integer32Property* pBitrateProperty;
+	// don't overwrite bitrate if it was requested in the Close call
+    if( !(options & MP4_CLOSE_DO_NOT_COMPUTE_BITRATE)) {
+        MP4Integer32Property* pBitrateProperty;
 
-    if (m_trakAtom.FindProperty(
-                "trak.mdia.minf.stbl.stsd.*.esds.decConfigDescr.maxBitrate",
-                (MP4Property**)&pBitrateProperty)) {
-        pBitrateProperty->SetValue(GetMaxBitrate());
-    }
+        if (m_trakAtom.FindProperty(
+                    "trak.mdia.minf.stbl.stsd.*.esds.decConfigDescr.maxBitrate",
+                    (MP4Property**)&pBitrateProperty)) {
+            pBitrateProperty->SetValue(GetMaxBitrate());
+        }
 
-    if (m_trakAtom.FindProperty(
-                "trak.mdia.minf.stbl.stsd.*.esds.decConfigDescr.avgBitrate",
-                (MP4Property**)&pBitrateProperty)) {
-        pBitrateProperty->SetValue(GetAvgBitrate());
+        if (m_trakAtom.FindProperty(
+                    "trak.mdia.minf.stbl.stsd.*.esds.decConfigDescr.avgBitrate",
+                    (MP4Property**)&pBitrateProperty)) {
+            pBitrateProperty->SetValue(GetAvgBitrate());
+        }
     }
 
     // cleaup trak.udta
@@ -838,13 +842,14 @@ uint32_t MP4Track::GetMaxBitrate()
                 (thisSecStart + timeScale) - lastSampleTime;
             // calculate the duration of the last sample
             MP4Duration lastSampleDur = sampleTime - lastSampleTime;
-            uint32_t overflow_bytes;
             // now, calculate the number of bytes we overflowed.  Round up.
-            overflow_bytes =
-                ((lastSampleSize * overflow_dur) + (lastSampleDur - 1)) / lastSampleDur;
+            if( lastSampleDur > 0 ) {
+                uint32_t overflow_bytes = 0;
+                overflow_bytes = ((lastSampleSize * overflow_dur) + (lastSampleDur - 1)) / lastSampleDur;
 
-            if (bytesThisSec - overflow_bytes > maxBytesPerSec) {
-                maxBytesPerSec = bytesThisSec - overflow_bytes;
+                if (bytesThisSec - overflow_bytes > maxBytesPerSec) {
+                    maxBytesPerSec = bytesThisSec - overflow_bytes;
+                }
             }
 
             // now adjust the values for this sample.  Remove the bytes

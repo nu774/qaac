@@ -76,11 +76,12 @@ inline void* MP4Realloc(void* p, uint32_t newSize) {
     if (p == NULL && newSize == 0) {
         return NULL;
     }
-    p = realloc(p, newSize);
-    if (p == NULL && newSize > 0) {
+
+    void* temp = realloc(p, newSize);
+    if (temp == NULL && newSize > 0) {
         throw new PlatformException("malloc failed",errno,__FILE__,__LINE__,__FUNCTION__);
     }
-    return p;
+    return temp;
 }
 
 uint32_t STRTOINT32( const char* );

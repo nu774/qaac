@@ -120,7 +120,7 @@ FileSystem::rename( string from, string to )
     win32::Utf8ToFilename from_file(from);
     win32::Utf8ToFilename to_file(to);
 
-    if (!from_file.IsUTF16Valid() || to_file.IsUTF16Valid())
+    if (!from_file.IsUTF16Valid() || !to_file.IsUTF16Valid())
     {
         return true;
     }

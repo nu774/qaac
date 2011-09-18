@@ -647,7 +647,7 @@ void MP4RtpHintTrack::WriteHint(MP4Duration duration, bool isSyncSample)
     m_pWriteHint = NULL;
 }
 
-void MP4RtpHintTrack::FinishWrite()
+void MP4RtpHintTrack::FinishWrite(uint32_t option)
 {
     if (m_writeHintId != MP4_INVALID_SAMPLE_ID) {
         m_pMaxPdu->SetValue(m_pPmax->GetValue());
@@ -782,8 +782,10 @@ void MP4RtpHint::Write(MP4File& file)
 
     file.SetPosition(endPos);
 
-    log.verbose1f("\"%s\": WriteRtpHint:", GetTrack().GetFile().GetFilename().c_str());
-    Dump(14, false);
+    if (log.verbosity >= MP4_LOG_VERBOSE1) {
+        log.verbose1f("\"%s\": WriteRtpHint:", GetTrack().GetFile().GetFilename().c_str());
+        Dump(14, false);
+    }
 }
 
 void MP4RtpHint::Dump(uint8_t indent, bool dumpImplicits)

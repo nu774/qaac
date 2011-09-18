@@ -14,7 +14,7 @@ protected:
     MP4TrackId m_track_id;
     bool m_closed;
 public:
-    MP4SinkBase(const std::wstring &path);
+    MP4SinkBase(const std::wstring &path, bool temp=false);
     ~MP4SinkBase() { close(); }
     void close();
     void saveTags(TagEditor &editor) { editor.save(m_mp4file); }
@@ -23,7 +23,7 @@ public:
 
 class MP4Sink: public ISink, public MP4SinkBase {
 public:
-    MP4Sink(const std::wstring &path, EncoderBase &encoder);
+    MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
 	try {

@@ -307,7 +307,7 @@ public:
 
     void WriteHint(MP4Duration duration, bool isSyncSample);
 
-    void FinishWrite();
+    void FinishWrite(uint32_t options = 0);
 
 protected:
     MP4Track*   m_pRefTrack;

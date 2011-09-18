@@ -140,6 +140,22 @@ MP4TrackId MP4AddULawAudioTrack(
     MP4FileHandle hFile,
     uint32_t timeScale);
 
+/** Add alaw track to mp4 file.
+ *
+ *  MP4AddALawAudioTrack adds a alaw track to the mp4 file. MP4WriteSample()
+ *  can then be used to add the desired audio samples.
+ *
+ *  @param hFile handle of file for operation.
+ *  @param timeScale the time scale in ticks per second of the track.
+ *
+ *  @return On success, the track-id of the new track.
+ *      On error, #MP4_INVALID_TRACK_ID.
+*/
+MP4V2_EXPORT
+MP4TrackId MP4AddALawAudioTrack(
+    MP4FileHandle hFile,
+    uint32_t timeScale);
+
 MP4V2_EXPORT
 MP4TrackId MP4AddAC3AudioTrack(
     MP4FileHandle hFile,

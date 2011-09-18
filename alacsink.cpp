@@ -3,8 +3,8 @@
 #include "strcnv.h"
 #include "alacsink.h"
 
-ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder)
-	: MP4SinkBase(path)
+ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder, bool temp)
+	: MP4SinkBase(path, temp)
 {
     const AudioStreamBasicDescription &format
 	= encoder.getOutputBasicDescription();

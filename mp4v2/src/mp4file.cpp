@@ -513,7 +513,7 @@ void MP4File::BeginWrite()
     m_pRootAtom->BeginWrite();
 }
 
-void MP4File::FinishWrite()
+void MP4File::FinishWrite(uint32_t options)
 {
     // remove empty moov.udta.meta.ilst
     {
@@ -571,7 +571,7 @@ void MP4File::FinishWrite()
     // for all tracks, flush chunking buffers
     for( uint32_t i = 0; i < m_pTracks.Size(); i++ ) {
         ASSERT( m_pTracks[i] );
-        m_pTracks[i]->FinishWrite();
+        m_pTracks[i]->FinishWrite(options);
     }
 
     // ask root atom to write
@@ -612,11 +612,11 @@ void MP4File::Dump( bool dumpImplicits )
     m_pRootAtom->Dump( 0, dumpImplicits);
 }
 
-void MP4File::Close()
+void MP4File::Close(uint32_t options)
 {
     if( IsWriteMode() ) {
         SetIntegerProperty( "moov.mvhd.modificationTime", MP4GetAbsTimestamp() );
-        FinishWrite();
+        FinishWrite(options);
     }
 
     delete m_file;
@@ -1347,6 +1347,37 @@ MP4TrackId MP4File::AddULawAudioTrack(    uint32_t timeScale)
 
     SetTrackIntegerProperty(trackId,
                             "mdia.minf.stbl.stsd.ulaw.timeScale",
+                            timeScale<<16);
+
+    m_pTracks[FindTrackIndex(trackId)]->SetFixedSampleDuration(fixedSampleDuration);
+
+    return trackId;
+}
+
+MP4TrackId MP4File::AddALawAudioTrack(    uint32_t timeScale)
+{
+    uint32_t fixedSampleDuration = (timeScale * 20)/1000; // 20mSec/Sample
+
+    MP4TrackId trackId = AddTrack(MP4_AUDIO_TRACK_TYPE, timeScale);
+
+    AddTrackToOd(trackId);
+
+    SetTrackFloatProperty(trackId, "tkhd.volume", 1.0);
+
+    (void)InsertChildAtom(MakeTrackName(trackId, "mdia.minf"), "smhd", 0);
+
+    (void)AddChildAtom(MakeTrackName(trackId, "mdia.minf.stbl.stsd"), "alaw");
+
+    // stsd is a unique beast in that it has a count of the number
+    // of child atoms that needs to be incremented after we add the mp4a atom
+    MP4Integer32Property* pStsdCountProperty;
+    FindIntegerProperty(
+        MakeTrackName(trackId, "mdia.minf.stbl.stsd.entryCount"),
+        (MP4Property**)&pStsdCountProperty);
+    pStsdCountProperty->IncrementValue();
+
+    SetTrackIntegerProperty(trackId,
+                            "mdia.minf.stbl.stsd.alaw.timeScale",
                             timeScale<<16);
 
     m_pTracks[FindTrackIndex(trackId)]->SetFixedSampleDuration(fixedSampleDuration);

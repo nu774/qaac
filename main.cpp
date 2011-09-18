@@ -186,7 +186,7 @@ void set_codec_options(AACEncoder &encoder, const Options &opts)
 	else
 	    encoder.setEncoderParameter(Param::kQuality, opts.quality);
     }
-#if _DEBUG
+#if 0
     {
 	extern void dump_object(CFTypeRef ref, std::ostream &os);
 	CFArrayT<CFDictionaryRef> settings;
@@ -326,15 +326,17 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 #endif
     ISink *sink;
 
-    std::wstring ofilenamex(ofilename);
-    if (!opts.no_optimize && opts.isMP4())
-	ofilenamex += L".tmp";
+    std::wstring ofilenamex = ofilename;
+    if (!opts.no_optimize)
+	ofilenamex = format(L"qaac.%s.tmp",
+		PathFindFileNameW(ofilename.c_str()));
+
     if (opts.is_adts)
-	sink = new ADTSSink(ofilenamex, encoder);
+	sink = new ADTSSink(ofilename, encoder);
     else if (opts.isALAC())
-	sink = new ALACSink(ofilenamex, encoder);
+	sink = new ALACSink(ofilenamex, encoder, !opts.no_optimize);
     else if (opts.isAAC())
-	sink = new MP4Sink(ofilenamex, encoder);
+	sink = new MP4Sink(ofilenamex, encoder, !opts.no_optimize);
     x::shared_ptr<ISink> sinkp(sink);
     encoder.setSink(sinkp);
 
@@ -441,7 +443,7 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 }
 
 static
-void write_tags(MP4SinkBase &sink,
+void write_tags(MP4SinkBase *sink,
 	const Options &opts, AACEncoder &encoder,
 	const std::wstring &encoder_config)
 {
@@ -470,16 +472,15 @@ void write_tags(MP4SinkBase &sink,
     }
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
-    sink.saveTags(editor);
+    sink->saveTags(editor);
 }
 
-static void do_optimize(const std::wstring &src,
+static void do_optimize(MP4FileX *file,
 	const std::wstring &dst, const Options &opts)
 {
     try {
-	MP4FileX file;
-	file.Read(w2m(src, utf8_codecvt_facet()).c_str(), 0);
-	MP4FileCopy optimizer(&file);
+	file->FinishWriteX();
+	MP4FileCopy optimizer(file);
 	optimizer.start(w2m(dst, utf8_codecvt_facet()).c_str());
 	uint64_t total = optimizer.getTotalChunks();
 	PeriodicDisplay disp(100, opts.verbose);
@@ -604,21 +605,9 @@ void encode_file(const x::shared_ptr<ISource> &src,
 
     MP4SinkBase *sink = dynamic_cast<MP4SinkBase*>(encoder.sink());
     if (sink) {
-	write_tags(*sink, opts, encoder, encoder_config);
-	if (!opts.no_optimize) {
-	    sink->close();
-	    std::wstring tmpname = ofilename + L".tmp";
-	    for (size_t i = 0; i < 10; ++i) {
-		FILE *fp = _wfopen(tmpname.c_str(), L"rb");
-		if (fp) {
-		    std::fclose(fp);
-		    break;
-		}
-		Sleep(0);
-	    }
-	    do_optimize(tmpname, ofilename, opts);
-	    DeleteFileX(tmpname.c_str());
-	}
+	write_tags(sink, opts, encoder, encoder_config);
+	if (!opts.no_optimize)
+	    do_optimize(sink->getFile(), ofilename, opts);
     }
 }
 
@@ -873,6 +862,7 @@ int wmain1(int argc, wchar_t **argv)
 	load_modules(opts);
 
 	mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
+	//mp4v2::impl::log.setVerbosity(MP4_LOG_VERBOSE4);
 
 	while ((opts.ifilename = *argv++)) {
 	    const wchar_t *name = L"<stdin>";

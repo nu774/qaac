@@ -24,7 +24,12 @@ class MP4FileX: public mp4v2::impl::MP4File {
 public:
     MP4FileX() {}
 
-    void FinishWriteX() { FinishWrite(); }
+    void CreateTemp(const char *prefix,
+	    uint32_t flags, int add_ftyp, int add_iods,
+	    char *majorBrand, uint32_t minorVersion,
+	    char **supportedBrands, uint32_t supportedBrandsCount);
+
+    void FinishWriteX() { m_pTracks[0]->FinishWrite(0); }
 
     AutoDynaCast<mp4v2::impl::MP4Atom>
     FindAtomT(const char *name)

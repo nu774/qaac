@@ -88,7 +88,6 @@ libmp4v2_la_SOURCES = \
     src/mp4container.h                   \
     src/mp4descriptor.cpp                \
     src/mp4descriptor.h                  \
-    src/mp4error.h                       \
     src/mp4file.cpp                      \
     src/mp4file.h                        \
     src/mp4file_io.cpp                   \

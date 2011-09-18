@@ -97,7 +97,7 @@ public:
         bool           isSyncSample,
         uint32_t       dependencyFlags );
 
-    virtual void FinishWrite();
+    virtual void FinishWrite(uint32_t options = 0);
 
     uint64_t    GetDuration();      // in track timeScale units
     uint32_t    GetTimeScale();

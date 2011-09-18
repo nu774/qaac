@@ -38,20 +38,31 @@ uint32_t getChannelConfig(const AudioChannelLayout *layout)
 
 using mp4v2::impl::MP4Atom;
 
-MP4SinkBase::MP4SinkBase(const std::wstring &path)
+MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
 	: m_filename(path), m_closed(false)
 {
     static const char * const compatibleBrands[] = { "M4A ", "mp42" };
     try {
-	m_mp4file.Create(
-		w2m(path, utf8_codecvt_facet()).c_str(),
-		0, // flags
-		1, // add_ftypes
-		0, // add_iods
-		"M4A ", // majorBrand
-		0, // minorVersion
-		const_cast<char**>(compatibleBrands), 
-		array_size(compatibleBrands));
+	if (temp)
+	    m_mp4file.CreateTemp(
+		    w2m(path, utf8_codecvt_facet()).c_str(),
+		    0, // flags
+		    1, // add_ftypes
+		    0, // add_iods
+		    "M4A ", // majorBrand
+		    0, // minorVersion
+		    const_cast<char**>(compatibleBrands), 
+		    array_size(compatibleBrands));
+	else
+	    m_mp4file.Create(
+		    w2m(path, utf8_codecvt_facet()).c_str(),
+		    0, // flags
+		    1, // add_ftypes
+		    0, // add_iods
+		    "M4A ", // majorBrand
+		    0, // minorVersion
+		    const_cast<char**>(compatibleBrands), 
+		    array_size(compatibleBrands));
     } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
     }
@@ -69,8 +80,8 @@ void MP4SinkBase::close()
     }
 }
 
-MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder)
-	: MP4SinkBase(path)
+MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
+	: MP4SinkBase(path, temp)
 {
     const AudioStreamBasicDescription &format
 	= encoder.getOutputBasicDescription();

@@ -12,6 +12,8 @@
 #define MP4_CREATE_64BIT_DATA 0x01
 /** Bit: enable 64-bit time-atoms. @note Incompatible with QuickTime. */
 #define MP4_CREATE_64BIT_TIME 0x02
+/** Bit: do not recompute avg/max bitrates on file close.  @note See http://code.google.com/p/mp4v2/issues/detail?id=66 */
+#define MP4_CLOSE_DO_NOT_COMPUTE_BITRATE 0x01
 
 /** Enumeration of file modes for custom file provider. */
 typedef enum MP4FileMode_e
@@ -46,10 +48,14 @@ typedef struct MP4FileProvider_s
  *  out all pending information to disk.
  *
  *  @param hFile handle of file to close.
+ *  @param flags bitmask that allows the user to set extra options for the
+ *       close commands.  Valid options include:
+ *          @li #MP4_CLOSE_DO_NOT_COMPUTE_BITRATE
  */
 MP4V2_EXPORT
 void MP4Close(
-    MP4FileHandle hFile );
+    MP4FileHandle hFile,
+    uint32_t    flags DEFAULT(0) );
 
 /** Create a new mp4 file.
  *

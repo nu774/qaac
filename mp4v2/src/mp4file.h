@@ -89,7 +89,7 @@ public:
     void Optimize( const char* srcFileName, const char* dstFileName = NULL );
     bool CopyClose( const string& copyFileName );
     void Dump( bool dumpImplicits = false );
-    void Close();
+    void Close(uint32_t flags = 0);
 
     bool Use64Bits(const char *atomName);
     void Check64BitStatus(const char *atomName);
@@ -248,6 +248,9 @@ public:
         uint8_t audioType);
 
     MP4TrackId AddULawAudioTrack(
+        uint32_t timeScale);
+
+    MP4TrackId AddALawAudioTrack(
         uint32_t timeScale);
 
     MP4TrackId AddAC3AudioTrack(
@@ -848,7 +851,7 @@ protected:
     void ReadFromFile();
     void GenerateTracks();
     void BeginWrite();
-    void FinishWrite();
+    void FinishWrite(uint32_t options);
     void CacheProperties();
     void RewriteMdat( File& src, File& dst );
     bool ShallHaveIods();

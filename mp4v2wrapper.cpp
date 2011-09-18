@@ -33,6 +33,75 @@ public:
 };
 
 
+extern FILE *win32_tmpfile(const wchar_t *prefix);
+
+namespace myprovider {
+
+static
+void *open(const char *name, MP4FileMode mode)
+{
+    return win32_tmpfile(m2w(name, utf8_codecvt_facet()).c_str());
+}
+
+static
+int seek(void *fh, int64_t pos)
+{
+    FILE *fp = reinterpret_cast<FILE*>(fh);
+    return std::fsetpos(fp, static_cast<fpos_t*>(&pos));
+}
+
+static
+int read(void *fh, void *data, int64_t size, int64_t *nc, int64_t)
+{
+    FILE *fp = reinterpret_cast<FILE*>(fh);
+    size_t n = std::fread(data, 1, size, fp);
+    *nc = n;
+    return std::ferror(fp);
+}
+
+static
+int write(void *fh, const void *data, int64_t size, int64_t *nc, int64_t)
+{
+    FILE *fp = reinterpret_cast<FILE*>(fh);
+    size_t n = std::fwrite(data, 1, size, fp);
+    *nc = n;
+    return std::ferror(fp);
+}
+
+static
+int close(void *fh)
+{
+    FILE *fp = reinterpret_cast<FILE*>(fh);
+    return std::fclose(fp);
+}
+
+} // namespace myprovider
+
+
+void MP4FileX::CreateTemp(const char *prefix,
+	    uint32_t flags, int add_ftyp, int add_iods,
+	    char *majorBrand, uint32_t minorVersion,
+	    char **supportedBrands, uint32_t supportedBrandsCount)
+{
+    MP4FileProvider provider = {
+	myprovider::open, myprovider::seek, myprovider::read,
+	myprovider::write, myprovider::close
+    };
+    m_createFlags = flags;
+    Open(prefix, File::MODE_CREATE, &provider);
+
+    m_pRootAtom = MP4Atom::CreateAtom(*this, NULL, NULL);
+    m_pRootAtom->Generate();
+
+    if (add_ftyp)
+        MakeFtypAtom(majorBrand, minorVersion,
+                     supportedBrands, supportedBrandsCount);
+    CacheProperties();
+    InsertChildAtom(m_pRootAtom, "mdat", add_ftyp ? 1 : 0);
+    m_pRootAtom->BeginWrite();
+    if (add_iods != 0) (void)AddChildAtom("moov", "iods");
+}
+
 MP4TrackId MP4FileX::AddAlacAudioTrack(uint32_t timeScale,
     uint32_t bitsPerSample, const uint8_t *cookie, size_t cookieLength)
 {
