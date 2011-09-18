@@ -58,7 +58,7 @@ SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
     m_src_buffer.resize(4096 * srcFormat.m_nchannels);
     m_ibuffer.resize(m_src_buffer.size() * srcFormat.bytesPerFrame());
 
-    FILE *tmpfile = win32_tmpfile(L"qaac.tmp");
+    FILE *tmpfile = win32_tmpfile(L"qaac.SRC");
     m_tmpfile = x::shared_ptr<FILE>(tmpfile, std::fclose);
 
     m_latency_detector.set_sample_rates(srcFormat.m_rate, rate);

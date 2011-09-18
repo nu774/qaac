@@ -327,9 +327,7 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
     ISink *sink;
 
     std::wstring ofilenamex = ofilename;
-    if (!opts.no_optimize)
-	ofilenamex = format(L"qaac.%s.tmp",
-		PathFindFileNameW(ofilename.c_str()));
+    if (!opts.no_optimize) ofilenamex = L"qaac.int";
 
     if (opts.is_adts)
 	sink = new ADTSSink(ofilename, encoder);
@@ -569,9 +567,10 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	oasbd.mSampleRate = opts.rate;
     encoder.setOutputBasicDescription(oasbd);
 
-    if (opts.isAAC())
+    if (opts.isAAC()) {
 	set_codec_options(encoder, opts);
-    else {
+	oasbd = encoder.getOutputBasicDescription();
+    } else {
 	if (oasbd.mChannelsPerFrame != 2)
 	    throw std::runtime_error("Only 2ch encoding is supported for ALAC");
 	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)
