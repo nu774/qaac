@@ -27,7 +27,10 @@ GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap)
 	return kAudioChannelLayoutTag_MPEG_5_1_A;
     case 0x13f:
 	return kAudioChannelLayoutTag_MPEG_6_1_A;
-    case 0xff: case 0x63f: return kAudioChannelLayoutTag_MPEG_7_1_C;
+    case 0xff:
+	return kAudioChannelLayoutTag_MPEG_7_1_A;
+    case 0x63f:
+	return kAudioChannelLayoutTag_MPEG_7_1_C;
     }
     throw std::runtime_error("Sorry, this channel layout not supported");
 }
@@ -39,7 +42,8 @@ uint32_t GetAACChannelMapFromLayoutTag(uint32_t tag,
     static const uint32_t a50[] = { 3, 1, 2, 4, 5, 0 };
     static const uint32_t a51[] = { 3, 1, 2, 5, 6, 4, 0 };
     static const uint32_t a61[] = { 3, 1, 2, 5, 6, 7, 4, 0 };
-    static const uint32_t a71[] = { 3, 1, 2, 7, 8, 5, 6, 4, 0 };
+    static const uint32_t a71a[] = { 3, 7, 8, 1, 2, 5, 6, 4, 0 };
+    static const uint32_t a71c[] = { 3, 1, 2, 7, 8, 5, 6, 4, 0 };
     const uint32_t *a = 0;
     uint32_t newtag = 0;
     switch (tag) {
@@ -52,8 +56,9 @@ uint32_t GetAACChannelMapFromLayoutTag(uint32_t tag,
     case kAudioChannelLayoutTag_MPEG_6_1_A:
 	a = a61; newtag = kAudioChannelLayoutTag_AAC_6_1; break;
     case kAudioChannelLayoutTag_MPEG_7_1_A:
+	a = a71a; newtag = kAudioChannelLayoutTag_AAC_7_1; break;
     case kAudioChannelLayoutTag_MPEG_7_1_C:
-	a = a71; newtag = kAudioChannelLayoutTag_AAC_7_1; break;
+	a = a71c; newtag = kAudioChannelLayoutTag_AAC_7_1; break;
     }
     while (a && *a) result->push_back(*a++);
     return newtag;
