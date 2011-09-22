@@ -570,7 +570,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	if (oasbd.mChannelsPerFrame != 2)
 	    throw std::runtime_error("Only 2ch encoding is supported for ALAC");
 	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)
-	    LOG("WARNING: Only 16/24bit format is supported for ALAC");
+	    LOG("WARNING: Only 16/24bit format is supported for ALAC\n");
     }
     std::wstring encoder_config = get_encoder_config(encoder);
 
