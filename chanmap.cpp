@@ -20,7 +20,8 @@ GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap)
     case 0x1: return kAudioChannelLayoutTag_Mono;
     case 0x3: return kAudioChannelLayoutTag_Stereo;
     case 0x7: return kAudioChannelLayoutTag_MPEG_3_0_A;
-    case 0x33: return kAudioChannelLayoutTag_Quadraphonic;
+    case 0x33: case 0x603:
+	return kAudioChannelLayoutTag_Quadraphonic;
     case 0x37: case 0x607:
 	return kAudioChannelLayoutTag_MPEG_5_0_A;
     case 0x3f: case 0x60f:
