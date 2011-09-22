@@ -1,57 +1,31 @@
 #ifndef _RESAMPLER_H
 #define _RESAMPLER_H
 
-#include "shared_ptr.h"
-#include <speex/speex_resampler.h>
+#include <libsoxrate.h>
 #include "iointer.h"
 
 struct HINSTANCE__;
 
-class SpeexResamplerModule {
+class SoxResamplerModule {
     typedef x::shared_ptr<HINSTANCE__> module_t;
     module_t m_module;
     bool m_loaded;
 public:
-    SpeexResamplerModule(): m_loaded(false) {}
-    SpeexResamplerModule(const std::wstring &path);
+    SoxResamplerModule(): m_loaded(false) {}
+    SoxResamplerModule(const std::wstring &path);
     bool loaded() const { return m_loaded; }
 
-    SpeexResamplerState *
-	(*init)(spx_uint32_t, spx_uint32_t, spx_uint32_t, int, int *);
-    void (*destroy)(SpeexResamplerState *);
-    int (*process_interleaved_float)(SpeexResamplerState *,
-	    const float *, spx_uint32_t *, float *, spx_uint32_t *);
-    int (*skip_zeros)(SpeexResamplerState *);
-    int (*reset_mem)(SpeexResamplerState *);
-    /* XXX: may be null */
-    int (*get_input_latency)(SpeexResamplerState *);
-    const char *(*strerror)(int);
+    lsx_rate_t * (*create)(unsigned, unsigned, unsigned);
+    void (*close)(lsx_rate_t *);
+    int (*config)(lsx_rate_t *, lsx_rate_config_e, ...);
+    void (*start)(lsx_rate_t *);
+    size_t (*process)(lsx_rate_t *, const float *, float *, size_t *, size_t *);
 };
 
-class SpeexResampler: public DelegatingSource {
-    class LatencyDetector {
-	double m_irate, m_orate;
-	uint64_t m_input_accum, m_output_accum;
-    public:
-	LatencyDetector():
-	    m_irate(0), m_orate(0), m_input_accum(0), m_output_accum(0)
-	{}
-	void set_sample_rates(uint32_t irate, uint32_t orate) {
-	    m_irate = irate;
-	    m_orate = orate;
-	}
-	void update(size_t ilen, size_t olen) {
-	    m_input_accum += ilen;
-	    m_output_accum += olen;
-	}
-	size_t guess_input_latency() {
-	    return static_cast<size_t>(m_input_accum
-		    - (m_output_accum * m_irate / m_orate) + 0.5);
-	}
-    };
-    SpeexResamplerModule m_module;
+class SoxResampler: public DelegatingSource {
+    SoxResamplerModule m_module;
     SampleFormat m_format;
-    x::shared_ptr<SpeexResamplerState> m_converter;
+    x::shared_ptr<lsx_rate_t> m_converter;
     uint64_t m_length;
     uint64_t m_samples_read;
     double m_peak;
@@ -61,11 +35,10 @@ class SpeexResampler: public DelegatingSource {
     std::vector<float> m_src_buffer;
     x::shared_ptr<FILE> m_tmpfile;
     std::map<uint32_t, std::wstring> m_emptyTags;
-    LatencyDetector m_latency_detector;
 public:
-    SpeexResampler(const SpeexResamplerModule &module,
+    SoxResampler(const SoxResamplerModule &module,
 	    const x::shared_ptr<ISource> &src,
-	    uint32_t rate, int quality=3);
+	    uint32_t rate, int quality=2);
     uint64_t length() const { return m_length; }
     const SampleFormat &getSampleFormat() const { return m_format; }
     size_t readSamples(void *buffer, size_t nsamples);

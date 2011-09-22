@@ -19,7 +19,6 @@ struct Options {
 	raw_channels(2), raw_sample_rate(44100),
 	rate(-1),
 	downmix(-1),
-	src_mode(10),
 	ifilename(0), ofilename(0), outdir(0),
 	raw_format(L"S16LE"),
 	fname_format(0),
@@ -57,7 +56,6 @@ struct Options {
     uint32_t raw_channels, raw_sample_rate;
     int rate; /* -1: keep, 0: auto, others: literal value */
     int downmix; /* -1: none, 1: mono, 2: stereo */
-    int src_mode;
     wchar_t *ifilename, *ofilename, *outdir, *raw_format, *fname_format;
     wchar_t *logfilename;
     bool verbose, is_raw, is_adts, save_stat, nice, native_chanmapper,
@@ -70,7 +68,7 @@ struct Options {
     LibSndfileModule libsndfile;
     FLACModule libflac;
     WavpackModule libwavpack;
-    SpeexResamplerModule libspeexdsp;
+    SoxResamplerModule libsoxrate;
 };
 
 #endif

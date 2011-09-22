@@ -21,7 +21,6 @@ static struct option long_options[] = {
     { L"downmix", required_argument, 0, 'dmix' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
-    { L"resampler-quality", required_argument, 0, 'rspq' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  'Rchn' },
     { L"raw-rate", required_argument, 0,  'Rrat' },
@@ -105,8 +104,6 @@ void usage()
 "--downmix <mono|stereo>    Downmix to mono/stereo\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "--native-resampler     Always use QuickTime built-in resampler\n"
-"--resampler-quality <n>    libspeexdsp resampler quality [0-10]\n"
-"                       10 is best, 0 is fastest, default 10\n"
 "--adts                 ADTS(raw AAC)output, instead of m4a(AAC only)\n"
 "-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
 "-R, --raw              Raw PCM input\n"
@@ -183,12 +180,6 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	}
 	else if (ch == 'nsmp')
 	    this->native_resampler = true;
-	else if (ch == 'rspq') {
-	    if (std::swscanf(optarg, L"%d", &this->src_mode) != 1) {
-		std::fputs("Resampler quailty must be an integer\n", stderr);
-		return false;
-	    }
-	}
 	else if (ch == 's')
 	    this->verbose = false;
 	else if (ch == 'S')

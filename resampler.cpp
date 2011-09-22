@@ -7,7 +7,7 @@
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
     while (0)
 
-SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
+SoxResamplerModule::SoxResamplerModule(const std::wstring &path)
 {
     HMODULE hDll;
     hDll = LoadLibraryW(path.c_str());
@@ -15,15 +15,11 @@ SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
     if (!m_loaded)
 	return;
     try {
-	CHECK(init = ProcAddress(hDll, "speex_resampler_init"));
-	CHECK(destroy = ProcAddress(hDll, "speex_resampler_destroy"));
-	CHECK(process_interleaved_float = ProcAddress(hDll,
-		    "speex_resampler_process_interleaved_float"));
-	CHECK(skip_zeros = ProcAddress(hDll, "speex_resampler_skip_zeros"));
-	CHECK(reset_mem = ProcAddress(hDll, "speex_resampler_reset_mem"));
-	CHECK(strerror = ProcAddress(hDll, "speex_resampler_strerror"));
-	/* XXX: not officialy exported function */
-	get_input_latency = ProcAddress(hDll, "speex_resampler_get_input_latency");
+	CHECK(create = ProcAddress(hDll, "lsx_rate_create"));
+	CHECK(close = ProcAddress(hDll, "lsx_rate_close"));
+	CHECK(config = ProcAddress(hDll, "lsx_rate_config"));
+	CHECK(start = ProcAddress(hDll, "lsx_rate_start"));
+	CHECK(process = ProcAddress(hDll, "lsx_rate_process"));
     } catch (...) {
 	FreeLibrary(hDll);
 	m_loaded = false;
@@ -32,7 +28,7 @@ SpeexResamplerModule::SpeexResamplerModule(const std::wstring &path)
     m_module = module_t(hDll, FreeLibrary);
 }
 
-SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
+SoxResampler::SoxResampler(const SoxResamplerModule &module,
 	const x::shared_ptr<ISource> &src, uint32_t rate, int quality)
     : DelegatingSource(src), m_module(module), m_length(0), m_samples_read(0),
       m_peak(0.0), m_end_of_input(false), m_input_frames(0)
@@ -45,26 +41,22 @@ SpeexResampler::SpeexResampler(const SpeexResamplerModule &module,
 
     m_format = SampleFormat("F32LE", srcFormat.m_nchannels, rate);
 
-    int error;
-    SpeexResamplerState *converter = m_module.init(
-	    m_format.m_nchannels, srcFormat.m_rate, rate, quality, &error);
+    lsx_rate_t *converter = m_module.create(
+	    m_format.m_nchannels, srcFormat.m_rate, rate);
     if (!converter)
-	throw std::runtime_error(
-	    format("SpeexResampler: %s", m_module.strerror(error)));
-    m_converter = x::shared_ptr<SpeexResamplerState>(converter,
-		m_module.destroy);
-    m_module.skip_zeros(converter);
+	throw std::runtime_error("ERROR: SoxResampler");
+    m_module.config(converter, SOX_RATE_QUALITY, quality);
+    m_converter = x::shared_ptr<lsx_rate_t>(converter, m_module.close);
+    m_module.start(converter);
 
     m_src_buffer.resize(4096 * srcFormat.m_nchannels);
     m_ibuffer.resize(m_src_buffer.size() * srcFormat.bytesPerFrame());
 
     FILE *tmpfile = win32_tmpfile(L"qaac.SRC");
     m_tmpfile = x::shared_ptr<FILE>(tmpfile, std::fclose);
-
-    m_latency_detector.set_sample_rates(srcFormat.m_rate, rate);
 }
 
-size_t SpeexResampler::convertSamples(size_t nsamples)
+size_t SoxResampler::convertSamples(size_t nsamples)
 {
     std::vector<float> buff(nsamples* m_format.m_nchannels);
     size_t nc;
@@ -78,7 +70,7 @@ size_t SpeexResampler::convertSamples(size_t nsamples)
     return nc;
 }
 
-size_t SpeexResampler::readSamples(void *buffer, size_t nsamples)
+size_t SoxResampler::readSamples(void *buffer, size_t nsamples)
 {
     size_t nc = std::fread(buffer, sizeof(float),
  	    nsamples * m_format.m_nchannels, m_tmpfile.get());
@@ -92,33 +84,24 @@ size_t SpeexResampler::readSamples(void *buffer, size_t nsamples)
     return nc / m_format.m_nchannels;
 }
 
-size_t SpeexResampler::doConvertSamples(float *buffer, size_t nsamples)
+size_t SoxResampler::doConvertSamples(float *buffer, size_t nsamples)
 {
     float *src = &m_src_buffer[0];
     float *dst = buffer;
 
     while (nsamples > 0) {
 	if (m_input_frames == 0 && !m_end_of_input) {
-	    if (!underflow()) {
+	    if (!underflow())
 		m_end_of_input = true;
-		m_input_frames = m_module.get_input_latency
-		    ? m_module.get_input_latency(m_converter.get())
-		    : m_latency_detector.guess_input_latency();
-		std::fill(m_src_buffer.begin(), m_src_buffer.end(), 0.0f);
-	    }
 	    src = &m_src_buffer[0];
 	}
-	if (m_input_frames == 0)
-	    break;
 	uint32_t ilen = m_input_frames;
 	uint32_t olen = nsamples;
-	m_module.process_interleaved_float(m_converter.get(), src,
-		&ilen, dst, &olen);
-	m_latency_detector.update(ilen, olen);
+	m_module.process(m_converter.get(), src, dst, &ilen, &olen);
 	nsamples -= olen;
 	m_input_frames -= ilen;
 	src += ilen * m_format.m_nchannels;
-	if (olen == 0)
+	if (m_end_of_input && olen == 0)
 	    break;
 	double peak = m_peak;
 	for (float *fp = dst; fp != dst + olen * m_format.m_nchannels; ++fp)
@@ -136,7 +119,7 @@ size_t SpeexResampler::doConvertSamples(float *buffer, size_t nsamples)
     return (dst - buffer) / m_format.m_nchannels;
 }
 
-bool SpeexResampler::underflow()
+bool SoxResampler::underflow()
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
     size_t nsamples = m_src_buffer.size() / m_format.m_nchannels;

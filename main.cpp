@@ -498,13 +498,9 @@ x::shared_ptr<ISource> do_resample(
     const x::shared_ptr<ISource> &src, const Options &opts,
     uint32_t rate)
 {
-    LOG("Resampling with libspeexdsp, quality %d\n", opts.src_mode);
-    if (!opts.libspeexdsp.get_input_latency) {
-	LOG("WARNING: lacking speex_resampler_get_input_latency().\n"
-	    "Using guess... might not be quite acculate\n");
-    }
-    SpeexResampler *resampler = new SpeexResampler(opts.libspeexdsp, src,
-	    rate, opts.src_mode);
+    LOG("Resampling with libsoxrate\n");
+    SoxResampler *resampler = new SoxResampler(opts.libsoxrate, src,
+	    rate, 2);
     x::shared_ptr<ISource> new_src(resampler);
     uint64_t n = 0, rc;
     PeriodicDisplay disp(100, opts.verbose);
@@ -592,7 +588,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	}
     }
     if (iasbd.mSampleRate != oasbd.mSampleRate &&
-	    opts.libspeexdsp.loaded() && !opts.native_resampler) {
+	    opts.libsoxrate.loaded() && !opts.native_resampler) {
 	x::shared_ptr<ISource> srcx
 	    = do_resample(src, opts, oasbd.mSampleRate);
 	encode_file(srcx, ofilename, opts, true);
@@ -779,9 +775,7 @@ void load_modules(Options &opts)
     opts.libsndfile = LibSndfileModule(L"libsndfile-1.dll");
     opts.libflac = FLACModule(L"libFLAC.dll");
     opts.libwavpack = WavpackModule(L"wavpackdll.dll");
-    opts.libspeexdsp = SpeexResamplerModule(L"libspeexdsp_vc10.dll");
-    if (!opts.libspeexdsp.loaded())
-	opts.libspeexdsp = SpeexResamplerModule(L"libspeexdsp.dll");
+    opts.libsoxrate = SoxResamplerModule(L"libsoxrate.dll");
 }
 
 extern void OverrideRegistryWith(const x::shared_ptr<FILE> &fp);
@@ -863,8 +857,8 @@ int wmain1(int argc, wchar_t **argv)
 	    uint32_t codecs[] = { 'aac ', 'aach', 'alac', 0 };
 	    for (uint32_t *p = codecs; *p; ++p)
 		LOG("%s\n", get_codec_version(*p));
-	    if (opts.libspeexdsp.loaded())
-		LOG("libspeexdsp loaded\n");
+	    if (opts.libsoxrate.loaded())
+		LOG("libsoxrate loaded\n");
 	    if (opts.libsndfile.loaded())
 		LOG("libsndfile loaded\n");
 	    if (opts.libflac.loaded())
