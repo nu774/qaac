@@ -25,7 +25,8 @@ struct Options {
 	logfilename(0),
 	verbose(true), is_raw(false), is_adts(false), save_stat(false),
        	nice(false), native_chanmapper(false), ignore_length(false),
-	no_optimize(false), native_resampler(false), check_only(false)
+	no_optimize(false), native_resampler(false), check_only(false),
+	normalize(false)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -59,7 +60,8 @@ struct Options {
     wchar_t *ifilename, *ofilename, *outdir, *raw_format, *fname_format;
     wchar_t *logfilename;
     bool verbose, is_raw, is_adts, save_stat, nice, native_chanmapper,
-	 ignore_length, no_optimize, native_resampler, check_only;
+	 ignore_length, no_optimize, native_resampler, check_only,
+	 normalize;
     std::map<uint32_t, std::wstring> tagopts;
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;

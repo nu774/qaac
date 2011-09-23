@@ -29,9 +29,10 @@ SoxResamplerModule::SoxResamplerModule(const std::wstring &path)
 }
 
 SoxResampler::SoxResampler(const SoxResamplerModule &module,
-	const x::shared_ptr<ISource> &src, uint32_t rate, int quality)
-    : DelegatingSource(src), m_module(module), m_length(0), m_samples_read(0),
-      m_peak(0.0), m_end_of_input(false), m_input_frames(0)
+	const x::shared_ptr<ISource> &src, uint32_t rate, bool normalize)
+    : DelegatingSource(src), m_module(module), m_normalize(normalize),
+      m_length(0), m_samples_read(0), m_peak(0.0),
+      m_end_of_input(false), m_input_frames(0)
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
     if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
@@ -45,15 +46,18 @@ SoxResampler::SoxResampler(const SoxResamplerModule &module,
 	    m_format.m_nchannels, srcFormat.m_rate, rate);
     if (!converter)
 	throw std::runtime_error("ERROR: SoxResampler");
-    m_module.config(converter, SOX_RATE_QUALITY, quality);
     m_converter = x::shared_ptr<lsx_rate_t>(converter, m_module.close);
-    m_module.start(converter);
+    if (m_module.start(converter) < 0)
+	throw std::runtime_error("ERROR: SoxResampler");
 
     m_src_buffer.resize(4096 * srcFormat.m_nchannels);
     m_ibuffer.resize(m_src_buffer.size() * srcFormat.bytesPerFrame());
 
-    FILE *tmpfile = win32_tmpfile(L"qaac.SRC");
-    m_tmpfile = x::shared_ptr<FILE>(tmpfile, std::fclose);
+    if (normalize) {
+	FILE *tmpfile = win32_tmpfile(L"qaac.SRC");
+	m_tmpfile = x::shared_ptr<FILE>(tmpfile, std::fclose);
+    } else
+	m_length = -1;
 }
 
 size_t SoxResampler::convertSamples(size_t nsamples)
@@ -72,6 +76,8 @@ size_t SoxResampler::convertSamples(size_t nsamples)
 
 size_t SoxResampler::readSamples(void *buffer, size_t nsamples)
 {
+    if (!m_normalize)
+	return doConvertSamples(reinterpret_cast<float*>(buffer), nsamples);
     size_t nc = std::fread(buffer, sizeof(float),
  	    nsamples * m_format.m_nchannels, m_tmpfile.get());
     float *fp = reinterpret_cast<float*>(buffer);

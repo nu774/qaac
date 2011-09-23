@@ -18,7 +18,7 @@ public:
     lsx_rate_t * (*create)(unsigned, unsigned, unsigned);
     void (*close)(lsx_rate_t *);
     int (*config)(lsx_rate_t *, lsx_rate_config_e, ...);
-    void (*start)(lsx_rate_t *);
+    int (*start)(lsx_rate_t *);
     size_t (*process)(lsx_rate_t *, const float *, float *, size_t *, size_t *);
 };
 
@@ -26,6 +26,7 @@ class SoxResampler: public DelegatingSource {
     SoxResamplerModule m_module;
     SampleFormat m_format;
     x::shared_ptr<lsx_rate_t> m_converter;
+    bool m_normalize;
     uint64_t m_length;
     uint64_t m_samples_read;
     double m_peak;
@@ -38,7 +39,7 @@ class SoxResampler: public DelegatingSource {
 public:
     SoxResampler(const SoxResamplerModule &module,
 	    const x::shared_ptr<ISource> &src,
-	    uint32_t rate, int quality=2);
+	    uint32_t rate, bool normalize=true);
     uint64_t length() const { return m_length; }
     const SampleFormat &getSampleFormat() const { return m_format; }
     size_t readSamples(void *buffer, size_t nsamples);

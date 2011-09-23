@@ -21,6 +21,7 @@ static struct option long_options[] = {
     { L"downmix", required_argument, 0, 'dmix' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
+    { L"normalize", no_argument, 0, 'N' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  'Rchn' },
     { L"raw-rate", required_argument, 0,  'Rrat' },
@@ -104,6 +105,8 @@ void usage()
 "--downmix <mono|stereo>    Downmix to mono/stereo\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "--native-resampler     Always use QuickTime built-in resampler\n"
+"-N, --normalize        Normalize after resample (works in two-pass)\n"
+"                       Normalize is done only when rate conversion occurs\n"
 "--adts                 ADTS(raw AAC)output, instead of m4a(AAC only)\n"
 "-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
 "-R, --raw              Raw PCM input\n"
@@ -147,7 +150,7 @@ void usage()
 bool Options::parse(int &argc, wchar_t **&argv)
 {
     int ch, pos;
-    while ((ch = getopt_long(argc, argv, L"hAo:d:a:V:v:c:q:r:insRS",
+    while ((ch = getopt_long(argc, argv, L"hAo:d:a:V:v:c:q:r:insRSN",
 		    long_options, 0)) != EOF)
     {
 	if (ch == 'h')
@@ -180,6 +183,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	}
 	else if (ch == 'nsmp')
 	    this->native_resampler = true;
+	else if (ch == 'N')
+	    this->normalize = true;
 	else if (ch == 's')
 	    this->verbose = false;
 	else if (ch == 'S')

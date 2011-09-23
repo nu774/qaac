@@ -500,8 +500,10 @@ x::shared_ptr<ISource> do_resample(
 {
     LOG("Resampling with libsoxrate\n");
     SoxResampler *resampler = new SoxResampler(opts.libsoxrate, src,
-	    rate, 2);
+	    rate, opts.normalize);
     x::shared_ptr<ISource> new_src(resampler);
+    if (!opts.normalize) return new_src;
+
     uint64_t n = 0, rc;
     PeriodicDisplay disp(100, opts.verbose);
     uint32_t srate = src->getSampleFormat().m_rate;
