@@ -29,34 +29,6 @@
 
 #include <crtdbg.h>
 
-class PeriodicDisplay {
-    uint32_t m_interval;
-    uint32_t m_last_tick;
-    std::string m_message;
-    bool m_verbose;
-public:
-    PeriodicDisplay(uint32_t interval, bool verbose=true)
-	: m_interval(interval),
-	  m_verbose(verbose),
-	  m_last_tick(0)
-    {}
-    void put(const std::string &message) {
-	m_message = message;
-	uint32_t tick = GetTickCount();
-	if (tick - m_last_tick > m_interval) {
-	    flush();
-	    m_last_tick = tick;
-	}
-    }
-    void flush() {
-	if (m_verbose) std::fputs(m_message.c_str(), stderr);
-	std::vector<char> s(m_message.size() + 1);
-	std::strcpy(&s[0], m_message.c_str());
-	squeeze(&s[0], "\r");
-	SetConsoleTitleA(format("qaac %s", &s[0]).c_str());
-    }
-};
-
 static
 void parameter_not_supported(const wchar_t *name,
 	const CFArrayT<CFStringRef> &menu, size_t base=0)
@@ -312,6 +284,74 @@ public:
     }
 };
 
+class PeriodicDisplay {
+    uint32_t m_interval;
+    uint32_t m_last_tick;
+    std::string m_message;
+    bool m_verbose;
+public:
+    PeriodicDisplay(uint32_t interval, bool verbose=true)
+	: m_interval(interval),
+	  m_verbose(verbose),
+	  m_last_tick(0)
+    {}
+    void put(const std::string &message) {
+	m_message = message;
+	uint32_t tick = GetTickCount();
+	if (tick - m_last_tick > m_interval) {
+	    flush();
+	    m_last_tick = tick;
+	}
+    }
+    void flush() {
+	if (m_verbose) std::fputs(m_message.c_str(), stderr);
+	std::vector<char> s(m_message.size() + 1);
+	std::strcpy(&s[0], m_message.c_str());
+	squeeze(&s[0], "\r");
+	SetConsoleTitleA(format("qaac %s", &s[0]).c_str());
+    }
+};
+
+class Progress {
+    PeriodicDisplay m_disp;
+    bool m_verbose;
+    uint64_t m_total;
+    uint32_t m_rate;
+    std::string m_tstamp;
+    Timer m_timer;
+public:
+    Progress(bool verbosity, uint64_t total, uint32_t rate)
+	: m_disp(100, verbosity), m_verbose(verbosity),
+	  m_total(total), m_rate(rate)
+    {
+	if (total != -1)
+	    m_tstamp = formatSeconds(static_cast<double>(total) / rate);
+    }
+    void update(uint64_t current)
+    {
+	double fcurrent = current;
+	double percent = 100.0 * fcurrent / m_total;
+	double seconds = fcurrent / m_rate;
+	double ellapsed = m_timer.ellapsed();
+	double eta = ellapsed * (m_total / fcurrent - 1);
+	if (m_total == -1)
+	    m_disp.put(format("\r%s (%.1fx)   ",
+		formatSeconds(seconds).c_str(), seconds / ellapsed));
+	else
+	    m_disp.put(format("\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
+		percent, formatSeconds(seconds).c_str(), m_tstamp.c_str(),
+		seconds / ellapsed, formatSeconds(eta).c_str()));
+    }
+    void finish(uint64_t current)
+    {
+	m_disp.flush();
+	if (m_verbose) fputc('\n', stderr);
+	double ellapsed = m_timer.ellapsed();
+	LOG("%" PRId64 "/%" PRId64 " samples processed in %s\n",
+		current, m_total, formatSeconds(ellapsed).c_str());
+    }
+};
+
 static
 void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	const Options &opts)
@@ -344,38 +384,15 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
 	statfp = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
-    PeriodicDisplay disp(100, opts.verbose);
-    uint32_t rate = encoder.getInputBasicDescription().mSampleRate;
-    uint64_t tsamples = encoder.src()->length();
-    double tseconds = static_cast<double>(tsamples) / rate;
-    std::string tstamp = tsamples == -1 ? "-" : formatSeconds(tseconds);
-
+    Progress progress(opts.verbose, encoder.src()->length(),
+	    encoder.getInputBasicDescription().mSampleRate);
     try {
-	Timer timer;
 	while (encoder.encodeChunk(1)) {
-	    double processed = encoder.samplesRead();
-	    double percent = 100.0 * processed / tsamples;
-	    double pseconds = processed / rate;
-	    double ellapsed = timer.ellapsed();
-	    double eta = ellapsed * (tsamples/processed - 1);
-
-	    disp.put(format("\r%s%s/%s (%.1fx), ETA %s   ",
-		tsamples == -1 ? "" : format("[%.1f%%] ", percent).c_str(),
-		formatSeconds(pseconds).c_str(),
-		tstamp.c_str(),
-		pseconds / ellapsed,
-		tsamples == -1 ? "-" : formatSeconds(eta).c_str()));
+	    progress.update(encoder.samplesRead());
 	    if (statfp.get())
 		std::fprintf(statfp.get(), "%g\n", encoder.currentBitrate());
 	}
-	uint64_t processed = encoder.samplesRead();
-	double pseconds = static_cast<double>(processed) / rate;
-	double ellapsed = timer.ellapsed();
-	disp.flush();
-	if (opts.verbose) fputc('\n', stderr);
-	LOG("%" PRId64 "/%" PRId64 " samples processed\n", processed, tsamples);
-	LOG("Encoding finished in %s (%.1fx)\n",
-		formatSeconds(ellapsed).c_str(), pseconds / ellapsed);
+	progress.finish(encoder.samplesRead());
     } catch (const std::exception &e) {
 	LOG("\n%s\n", e.what());
     }
@@ -505,31 +522,13 @@ x::shared_ptr<ISource> do_resample(
     if (!opts.normalize) return new_src;
 
     uint64_t n = 0, rc;
-    PeriodicDisplay disp(100, opts.verbose);
-    uint32_t srate = src->getSampleFormat().m_rate;
-    uint64_t tsamples = src->length();
-    double tseconds = static_cast<double>(tsamples) / srate;
-    std::string tstamp = tsamples == -1 ? "-" : formatSeconds(tseconds);
-    Timer timer;
-
+    Progress progress(opts.verbose, src->length(),
+	    src->getSampleFormat().m_rate);
     while ((rc = resampler->convertSamples(4096)) > 0) {
 	n += rc;
-	double processed = resampler->samplesRead();
-	double percent = 100.0 * processed / tsamples;
-	double pseconds = processed / srate;
-	double ellapsed = timer.ellapsed();
-	double eta = ellapsed * (tsamples/processed - 1);
-
-	disp.put(format("\r%s%s/%s (%.1fx), ETA %s [resampling]  ",
-	    tsamples == -1 ? "" : format("[%.1f%%] ", percent).c_str(),
-	    formatSeconds(pseconds).c_str(),
-	    tstamp.c_str(),
-	    pseconds / ellapsed,
-	    tsamples == -1 ? "-" : formatSeconds(eta).c_str()));
+	progress.update(resampler->samplesRead());
     }
-    disp.flush();
-    if (opts.verbose) fputc('\n', stderr);
-    LOG("Done rate conversion.\n");
+    progress.finish(resampler->samplesRead());
     if (resampler->getPeak() > 1.0) {
 	LOG("Peak value %g > 1.0, gain compressed.\n",
 	    resampler->getPeak());
