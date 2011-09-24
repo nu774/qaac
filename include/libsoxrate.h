@@ -40,9 +40,15 @@ enum lsx_rate_config_e {
     SOX_RATE_ALLOW_ALIASING, /* 0:deny, 1:allow */
 };
 
+/*
+ * returns 0 on error.
+ */
 lsx_rate_t *lsx_rate_create(unsigned nchannels,
 	unsigned in_rate, unsigned out_rate);
-void lsx_rate_close(lsx_rate_t *state);
+/*
+ * returns 0 on success, -1 on error.
+ */
+int lsx_rate_close(lsx_rate_t *state);
 
 /*
  * lsx_rate_config() must be called before lsx_rate_start().
@@ -65,6 +71,7 @@ int lsx_rate_start(lsx_rate_t *state);
 /*
  * Actual rate conversion routine.
  *
+ * returns 0 on success, -1 on error.
  * ilen and olen are bidirectional parameter (I/O).
  * When calling this, you set number of samples in ibuf into ilen,
  * and capacity of obuf (counted in number of samples) into olen.
@@ -79,7 +86,7 @@ int lsx_rate_start(lsx_rate_t *state);
  *
  * Audio samples in ibuf must be interleaved.
  */
-size_t lsx_rate_process(lsx_rate_t *state, const float *ibuf, float *obuf,
+int lsx_rate_process(lsx_rate_t *state, const float *ibuf, float *obuf,
 	size_t *ilen, size_t *olen);
 
 #ifdef __cplusplus
