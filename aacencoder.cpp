@@ -89,6 +89,13 @@ void AACEncoder::getGaplessInfo(GaplessInfo *info) const
 	    m_frames_written * frame_length - info->delay - info->samples);
 }
 
+/*
+ * Workaround for QT >=7.6.9 channel mapping problem.
+ * QT doesn't automatically re-arrange channels now, therefore
+ * we have to manually map to AAC order.
+ * Basically we re-arrange the channels at the source level,
+ * an tell QT that it's layout is already in AAC order.
+ */
 void AACEncoder::forceAACChannelMapping()
 {
     AudioChannelLayoutX layout;
@@ -99,6 +106,8 @@ void AACEncoder::forceAACChannelMapping()
     if (!newtag) return;
     layout->mChannelLayoutTag = newtag;
     setInputChannelLayout(layout);
+    /* We need this here: see comment in EncoderBase::EncoderBase() */
+    setChannelLayout(layout);
     x::shared_ptr<ISource> newsrc(new ChannelMapper(m_src, chanmap));
     m_src = newsrc;
 }
