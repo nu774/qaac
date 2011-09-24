@@ -3,6 +3,7 @@
 
 #include "iointer.h"
 
+uint32_t LayoutToChannelMask(const std::vector<uint32_t>& chanmap);
 uint32_t
 GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap);
 
@@ -10,8 +11,8 @@ GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap);
  * Workaround for CoreAudioToolbox >= 7.9.4.0 bug.
  * returns new layout tag and original -> AAC channel transform map.
  */
-uint32_t GetAACChannelMapFromLayoutTag(
-	uint32_t tag, std::vector<uint32_t> *result);
+uint32_t GetAACChannelMap(const AudioChannelLayout *layout,
+	std::vector<uint32_t> *result);
 
 class ChannelMapper: public DelegatingSource {
     std::vector<uint32_t> m_chanmap;

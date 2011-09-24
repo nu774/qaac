@@ -67,6 +67,9 @@ public:
     {
 	AudioChannelLayoutX layout;
 	layout->mChannelLayoutTag = GetChannelLayoutTagFromChannelMap(map);
+	if (layout->mChannelLayoutTag
+		== kAudioChannelLayoutTag_UseChannelBitmap)
+	    layout->mChannelBitmap = LayoutToChannelMask(map);
 	return layout;
     }
 private:

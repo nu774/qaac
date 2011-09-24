@@ -101,10 +101,10 @@ void AACEncoder::forceAACChannelMapping()
     AudioChannelLayoutX layout;
     getInputChannelLayout(&layout);
     std::vector<uint32_t> chanmap;
-    uint32_t newtag = 
-	GetAACChannelMapFromLayoutTag(layout->mChannelLayoutTag, &chanmap);
+    uint32_t newtag = GetAACChannelMap(layout, &chanmap);
     if (!newtag) return;
     layout->mChannelLayoutTag = newtag;
+    layout->mChannelBitmap = 0;
     setInputChannelLayout(layout);
     /* We need this here: see comment in EncoderBase::EncoderBase() */
     setChannelLayout(layout);

@@ -40,10 +40,8 @@ EncoderBase::EncoderBase(
 	chanmap ? AudioChannelLayoutX::FromChannelMap(*chanmap)
 	        : AudioChannelLayoutX::CreateBasic(nchannels);
     setInputChannelLayout(layout);
-    uint32_t newtag = 
-	GetAACChannelMapFromLayoutTag(layout->mChannelLayoutTag, 0);
+    uint32_t newtag = GetAACChannelMap(layout, 0);
     if (newtag) {
-	layout->mChannelLayoutTag = newtag;
 	/*
 	 * Basically, channel layout of output is automatically selected by QT.
 	 * However, this "default" behavior seems to take
@@ -51,6 +49,8 @@ EncoderBase::EncoderBase(
 	 * (For example, even if input is C L R Cs, L R Ls Rs is selected).
 	 * Therefore, we must explicitly reset output layout here.
 	 */
+	layout->mChannelLayoutTag = newtag;
+	layout->mChannelBitmap = 0;
 	setChannelLayout(layout);
     }
     AudioStreamBasicDescription oasbd = { 0 };
