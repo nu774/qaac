@@ -55,17 +55,17 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     setInputChannelLayout(layout);
     uint32_t newtag = GetAACChannelMap(layout, 0);
     if (newtag) {
-	/*
-	 * Basically, channel layout of output is automatically selected by QT.
-	 * However, this "default" behavior seems to take
-	 * only number of channels into account.
-	 * (For example, even if input is C L R Cs, L R Ls Rs is selected).
-	 * Therefore, we must explicitly reset output layout here.
-	 */
 	layout->mChannelLayoutTag = newtag;
 	layout->mChannelBitmap = 0;
-	setChannelLayout(layout);
     }
+    /*
+     * Basically, channel layout of output is automatically selected by QT.
+     * However, this "default" behavior seems to take
+     * only number of channels into account.
+     * (For example, even if input is C L R Cs, L R Ls Rs is selected).
+     * Therefore, we must explicitly reset output layout here.
+     */
+    setChannelLayout(layout);
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mChannelsPerFrame = (nchannels == 3) ? 2 : nchannels;
     oasbd.mFormatID = formatID;
