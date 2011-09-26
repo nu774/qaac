@@ -4,9 +4,6 @@
 uint32_t
 LayoutToChannelMask(const std::vector<uint32_t>& chanmap)
 {
-    if (chanmap.size() == 1) return 1;
-    else if (chanmap.size() == 2) return 3;
-
     uint32_t result = 0;
     for (size_t i = 0; i < chanmap.size(); ++i)
 	result |= (1 << (chanmap[i] - 1));
@@ -21,34 +18,43 @@ GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap)
 	if (chanmap[i-1] >= chanmap[i])
 	    throw std::runtime_error("Not supported channel layout");
 
-    switch (LayoutToChannelMask(chanmap)) {
-    case 0x1: case 0x4:
+    uint32_t mask = LayoutToChannelMask(chanmap);
+    switch (mask) {
+    case 0x4: // FC
 	return kAudioChannelLayoutTag_Mono;
-    case 0x3:
+    case 0x3: // FL FR
 	return kAudioChannelLayoutTag_Stereo;
-    case 0x7:
+    case 0x7: // FL FR FC
 	return kAudioChannelLayoutTag_MPEG_3_0_A;
-    case 0x33: case 0x603:
+    case 0x33: // FL FR BL BR
 	return kAudioChannelLayoutTag_Quadraphonic;
-    case 0x107:
+    case 0x603: // FL FR SL SR
+	return kAudioChannelLayoutTag_UseChannelBitmap;
+    case 0x107: // FL FR FC BC
 	return kAudioChannelLayoutTag_MPEG_4_0_A;
-    case 0x1c4: // 4ch, FC FLC FRC BC
+    case 0x1c4: // FC FLC FRC BC
 	return kAudioChannelLayoutTag_UseChannelBitmap;
-    case 0x37: case 0x607:
+    case 0x37: // FL FR FC BL BR
 	return kAudioChannelLayoutTag_MPEG_5_0_A;
-    case 0x3f: case 0x60f:
+    case 0x607: // FL FR FC SL SR
+	return kAudioChannelLayoutTag_UseChannelBitmap;
+    case 0x3f: // FL FR FC LFE BL BR
 	return kAudioChannelLayoutTag_MPEG_5_1_A;
-    case 0x137: // 6ch
+    case 0x60f: // FL FR FC LFE SL SR
 	return kAudioChannelLayoutTag_UseChannelBitmap;
-    case 0x13f:
+    case 0x137: // FL FR FC BL BR BC
+	return kAudioChannelLayoutTag_UseChannelBitmap;
+    case 0x13f: // FL FR FC LFE BL BR BC
 	return kAudioChannelLayoutTag_MPEG_6_1_A;
-    case 0x637: // 7ch
+    case 0x70f: // FL FR FC LFE BC SL SR
 	return kAudioChannelLayoutTag_UseChannelBitmap;
-    case 0xff:
+    case 0x637: // FL FR FC BL BR BC SL SR
+	return kAudioChannelLayoutTag_UseChannelBitmap;
+    case 0xff: // FL FR FC LFE BL BR FLC FRC
 	return kAudioChannelLayoutTag_MPEG_7_1_A;
-    case 0x63f:
-	return kAudioChannelLayoutTag_MPEG_7_1_C;
-    case 0x737: // 8ch
+    case 0x63f: // FL FR FC LFE BL BR SL SR
+	return kAudioChannelLayoutTag_UseChannelBitmap;
+    case 0x737: // FL FR FC BL BR BC SL SR
 	return kAudioChannelLayoutTag_UseChannelBitmap;
     }
     throw std::runtime_error("Not supported channel layout");
@@ -59,17 +65,20 @@ uint32_t GetAACChannelMap(const AudioChannelLayout *layout,
 {
     static const uint32_t a30[] = { 3, 1, 2, 0 };
     static const uint32_t a40[] = { 3, 1, 2, 4, 0 };
-    static const uint32_t a40a[] = { 1, 2, 3, 4, 0 };
+    static const uint32_t a40pt[] = { 1, 2, 3, 4, 0 };
     static const uint32_t a50[] = { 3, 1, 2, 4, 5, 0 };
     static const uint32_t a51[] = { 3, 1, 2, 5, 6, 4, 0 };
     static const uint32_t a60[] = { 3, 1, 2, 4, 5, 6, 0 };
     static const uint32_t a61[] = { 3, 1, 2, 5, 6, 7, 4, 0 };
-    static const uint32_t a70[] = { 3, 1, 2, 4, 5, 6, 7, 0 };
+    static const uint32_t a61b[] = { 3, 1, 2, 6, 7, 5, 4, 0 };
+    static const uint32_t a70[] = { 3, 1, 2, 6, 7, 4, 5, 0 };
     static const uint32_t a71a[] = { 3, 7, 8, 1, 2, 5, 6, 4, 0 };
     static const uint32_t a71c[] = { 3, 1, 2, 7, 8, 5, 6, 4, 0 };
-    static const uint32_t a80[] = { 3, 1, 2, 4, 5, 7, 8, 6, 0 };
+    static const uint32_t a80[] = { 3, 1, 2, 7, 8, 4, 5, 6, 0 };
+
     const uint32_t *a = 0;
     uint32_t newtag = 0;
+
     switch (layout->mChannelLayoutTag) {
     case kAudioChannelLayoutTag_MPEG_3_0_A:
 	a = a30; newtag = kAudioChannelLayoutTag_AAC_3_0; break;
@@ -83,17 +92,26 @@ uint32_t GetAACChannelMap(const AudioChannelLayout *layout,
 	a = a61; newtag = kAudioChannelLayoutTag_AAC_6_1; break;
     case kAudioChannelLayoutTag_MPEG_7_1_A:
 	a = a71a; newtag = kAudioChannelLayoutTag_AAC_7_1; break;
-    case kAudioChannelLayoutTag_MPEG_7_1_C:
-	a = a71c; newtag = kAudioChannelLayoutTag_AAC_7_1; break;
     case kAudioChannelLayoutTag_UseChannelBitmap:
-	if (layout->mChannelBitmap == 0x1c4) {
-	    a = a40a; newtag = kAudioChannelLayoutTag_AAC_4_0;
-	} else if (layout->mChannelBitmap == 0x137) {
-	    a = a60; newtag = kAudioChannelLayoutTag_AAC_6_0;
-	} else if (layout->mChannelBitmap == 0x637) {
-	    a = a70; newtag = kAudioChannelLayoutTag_AAC_7_0;
-	} else if (layout->mChannelBitmap == 0x737) {
-	    a = a80; newtag = kAudioChannelLayoutTag_AAC_Octagonal;
+	switch (layout->mChannelBitmap) {
+	case 0x1c4:
+	    a = a40pt; newtag = kAudioChannelLayoutTag_AAC_4_0; break;
+	case 0x603:
+	    a = a40pt; newtag = kAudioChannelLayoutTag_AAC_Quadraphonic; break;
+	case 0x607:
+	    a = a50; newtag = kAudioChannelLayoutTag_AAC_5_0; break;
+	case 0x60f:
+	    a = a51; newtag = kAudioChannelLayoutTag_AAC_5_1; break;
+	case 0x137:
+	    a = a60; newtag = kAudioChannelLayoutTag_AAC_6_0; break;
+	case 0x70f:
+	    a = a61b; newtag = kAudioChannelLayoutTag_AAC_6_1; break;
+	case 0x637:
+	    a = a70; newtag = kAudioChannelLayoutTag_AAC_7_0; break;
+	case 0x63f:
+	    a = a71c; newtag = kAudioChannelLayoutTag_AAC_7_1; break;
+	case 0x737:
+	    a = a80; newtag = kAudioChannelLayoutTag_AAC_Octagonal; break;
 	}
 	break;
     }

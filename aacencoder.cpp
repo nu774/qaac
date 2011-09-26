@@ -107,7 +107,9 @@ void AACEncoder::forceAACChannelMapping()
     layout->mChannelBitmap = 0;
     setInputChannelLayout(layout);
     /* We need this here: see comment in EncoderBase::EncoderBase() */
-    setChannelLayout(layout);
+    if (getOutputBasicDescription().mChannelsPerFrame ==
+	getInputBasicDescription().mChannelsPerFrame)
+        setChannelLayout(layout);
     x::shared_ptr<ISource> newsrc(new ChannelMapper(m_src, chanmap));
     m_src = newsrc;
 }

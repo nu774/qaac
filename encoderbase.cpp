@@ -65,7 +65,7 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
      * (For example, even if input is C L R Cs, L R Ls Rs is selected).
      * Therefore, we must explicitly reset output layout here.
      */
-    setChannelLayout(layout);
+    if (nchannels > 3) setChannelLayout(layout);
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mChannelsPerFrame = (nchannels == 3) ? 2 : nchannels;
     oasbd.mFormatID = formatID;

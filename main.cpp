@@ -551,9 +551,8 @@ void encode_file(const x::shared_ptr<ISource> &src,
     AACEncoder encoder(srcx, opts.output_format, opts.chanmask);
     encoder.setRenderQuality(kQTAudioRenderQuality_Max);
 
-    if (opts.isAAC() && !opts.native_chanmapper && opts.downmix <= 0)
+    if (opts.isAAC() && !opts.native_chanmapper)
 	encoder.forceAACChannelMapping();
-
     AudioStreamBasicDescription iasbd, oasbd;
     iasbd = encoder.getInputBasicDescription();
     oasbd = encoder.getOutputBasicDescription();
