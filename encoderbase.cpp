@@ -23,8 +23,8 @@ AudioStreamBasicDescription BuildBasicDescription(const SampleFormat &format)
     return desc;
 }
 
-EncoderBase::EncoderBase(
-	const x::shared_ptr<ISource> &src, uint32_t formatID) :
+EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
+    uint32_t formatID, int chanmask) :
 	m_src(src),
 	m_samples_read(0),
 	m_frames_written(0),
@@ -36,9 +36,22 @@ EncoderBase::EncoderBase(
     setInputBasicDescription(m_input_desc);
     uint32_t nchannels = m_input_desc.mChannelsPerFrame;
     const std::vector<uint32_t> *chanmap = src->getChannelMap();
-    AudioChannelLayoutX layout =
-	chanmap ? AudioChannelLayoutX::FromChannelMap(*chanmap)
-	        : AudioChannelLayoutX::CreateBasic(nchannels);
+    AudioChannelLayoutX layout;
+    if (chanmask == 0 || (chanmask < 0 && !chanmap))
+	layout = AudioChannelLayoutX::CreateBasic(nchannels);
+    else {
+	std::vector<uint32_t> new_chanmap;
+	if (chanmask > 0) {
+	    uint32_t y = chanmask;
+	    if (bitcount(y) != nchannels)
+		throw std::runtime_error(
+		    "Specified chanmask differs from input number of channels");
+	    for (size_t i = 0; i < 32; ++i, y >>= 1)
+		if (y & 1) new_chanmap.push_back(i + 1);
+	    chanmap = &new_chanmap;
+	}
+	layout = AudioChannelLayoutX::FromChannelMap(*chanmap);
+    }
     setInputChannelLayout(layout);
     uint32_t newtag = GetAACChannelMap(layout, 0);
     if (newtag) {

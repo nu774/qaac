@@ -19,6 +19,7 @@ static struct option long_options[] = {
     { L"native-chanmapper", no_argument, 0, 'nchm' },
     { L"chanmap", required_argument, 0, 'cmap' },
     { L"downmix", required_argument, 0, 'dmix' },
+    { L"chanmask", required_argument, 0, 'mask' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
     { L"normalize", no_argument, 0, 'N' },
@@ -103,6 +104,10 @@ void usage()
 "                       you want.\n"
 "                       For example, \"--chanmap 2,1\" swaps left and right\n"
 "--downmix <mono|stereo>    Downmix to mono/stereo\n"
+"--chanmask <n>         Force specified value as input channel mask(bitmap).\n"
+"                       If --chanmask 0 is specified, qaac treats it as if\n"
+"                       no channel mask is present in the source, and pick\n"
+"                       default layout.\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "--native-resampler     Always use QuickTime built-in resampler\n"
 "-N, --normalize        Normalize after resample (works in two-pass)\n"
@@ -244,6 +249,12 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		this->rate = -1;
 	    else if (std::swscanf(optarg, L"%u", &this->rate) != 1) {
 		std::fputs("Invalid rate value\n", stderr);
+		return false;
+	    }
+	}
+	else if (ch == 'mask') {
+	    if (std::swscanf(optarg, L"%i", &this->chanmask) != 1) {
+		std::fputs("Integer required for channel mask.\n", stderr);
 		return false;
 	    }
 	}

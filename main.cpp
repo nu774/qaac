@@ -548,7 +548,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 		    "nchannels of input and --chanmap spec unmatch");
 	srcx = x::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
     }
-    AACEncoder encoder(srcx, opts.output_format);
+    AACEncoder encoder(srcx, opts.output_format, opts.chanmask);
     encoder.setRenderQuality(kQTAudioRenderQuality_Max);
 
     if (opts.isAAC() && !opts.native_chanmapper && opts.downmix <= 0)

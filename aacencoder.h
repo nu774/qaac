@@ -5,8 +5,9 @@
 
 class AACEncoder : public EncoderBase {
 public:
-    AACEncoder(const x::shared_ptr<ISource> &src, uint32_t formatID)
-	: EncoderBase(src, formatID)
+    AACEncoder(const x::shared_ptr<ISource> &src, uint32_t formatID,
+	    int chanmask = -1)
+	: EncoderBase(src, formatID, chanmask)
     {}
     void getGaplessInfo(GaplessInfo *info) const;
     void setEncoderParameter(const wchar_t *key, int value);
