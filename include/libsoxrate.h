@@ -40,6 +40,8 @@ enum lsx_rate_config_e {
     SOX_RATE_ALLOW_ALIASING, /* 0:deny, 1:allow */
 };
 
+const char *lsx_rate_version_string(void);
+
 /*
  * returns 0 on error.
  */

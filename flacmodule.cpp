@@ -12,6 +12,9 @@ FLACModule::FLACModule(const std::wstring &path)
     if (!m_loaded)
 	return;
     try {
+	void *vp;
+	CHECK(vp = ProcAddress(hDll, "FLAC__VERSION_STRING"));
+	VERSION_STRING = *reinterpret_cast<char**>(vp);
 	CHECK(stream_decoder_new =
 		ProcAddress(hDll, "FLAC__stream_decoder_new"));
 	CHECK(stream_decoder_finish =

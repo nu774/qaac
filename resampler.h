@@ -15,7 +15,8 @@ public:
     SoxResamplerModule(const std::wstring &path);
     bool loaded() const { return m_loaded; }
 
-    lsx_rate_t * (*create)(unsigned, unsigned, unsigned);
+    const char *(*version_string)();
+    lsx_rate_t *(*create)(unsigned, unsigned, unsigned);
     void (*close)(lsx_rate_t *);
     int (*config)(lsx_rate_t *, lsx_rate_config_e, ...);
     int (*start)(lsx_rate_t *);

@@ -586,13 +586,13 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	    if (iasbd.mChannelsPerFrame == 3)
 		LOG("WARNING: Downmixed to 2ch\n");
 	}
-    }
-    if (iasbd.mSampleRate != oasbd.mSampleRate &&
-	    opts.libsoxrate.loaded() && !opts.native_resampler) {
-	x::shared_ptr<ISource> srcx
-	    = do_resample(src, opts, oasbd.mSampleRate);
-	encode_file(srcx, ofilename, opts, true);
-	return;
+	if (iasbd.mSampleRate != oasbd.mSampleRate &&
+		opts.libsoxrate.loaded() && !opts.native_resampler) {
+	    x::shared_ptr<ISource> srcx
+		= do_resample(src, opts, oasbd.mSampleRate);
+	    encode_file(srcx, ofilename, opts, true);
+	    return;
+	}
     }
     do_encode(encoder, ofilename, opts);
     if (encoder.framesWritten())
@@ -858,13 +858,14 @@ int wmain1(int argc, wchar_t **argv)
 	    for (uint32_t *p = codecs; *p; ++p)
 		LOG("%s\n", get_codec_version(*p));
 	    if (opts.libsoxrate.loaded())
-		LOG("libsoxrate loaded\n");
+		LOG("libsoxrate %s\n", opts.libsoxrate.version_string());
 	    if (opts.libsndfile.loaded())
-		LOG("libsndfile loaded\n");
+		LOG("%s\n", opts.libsndfile.version_string());
 	    if (opts.libflac.loaded())
-		LOG("libflac loaded\n");
+		LOG("libflac %s\n", opts.libflac.VERSION_STRING);
 	    if (opts.libwavpack.loaded())
-		LOG("libwavpack loaded\n");
+		LOG("libwavpack %s\n",
+			opts.libwavpack.GetLibraryVersionString());
 	    return 0;
 	}
 

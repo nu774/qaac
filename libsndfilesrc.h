@@ -17,6 +17,7 @@ public:
     LibSndfileModule(const std::wstring &path);
     bool loaded() const { return m_loaded; }
 
+    const char *(*version_string)();
     SNDFILE *(*wchar_open)(const wchar_t *, int, SF_INFO *);
     SNDFILE *(*open_fd)(int, int, SF_INFO *, int);
     int (*close)(SNDFILE *);

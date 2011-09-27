@@ -15,6 +15,7 @@ SoxResamplerModule::SoxResamplerModule(const std::wstring &path)
     if (!m_loaded)
 	return;
     try {
+	CHECK(version_string = ProcAddress(hDll, "lsx_rate_version_string"));
 	CHECK(create = ProcAddress(hDll, "lsx_rate_create"));
 	CHECK(close = ProcAddress(hDll, "lsx_rate_close"));
 	CHECK(config = ProcAddress(hDll, "lsx_rate_config"));

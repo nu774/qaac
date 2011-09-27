@@ -6,6 +6,7 @@ uint32_t convert_chanmap(uint32_t value)
 {
     switch (value) {
 	case SF_CHANNEL_MAP_MONO:
+	    return 3;
 	case SF_CHANNEL_MAP_LEFT: case SF_CHANNEL_MAP_FRONT_LEFT:
 	    return 1;
 	case SF_CHANNEL_MAP_RIGHT: case SF_CHANNEL_MAP_FRONT_RIGHT:
@@ -43,6 +44,7 @@ LibSndfileModule::LibSndfileModule(const std::wstring &path)
     if (!m_loaded)
 	return;
     try {
+	CHECK(version_string = ProcAddress(hDll, "sf_version_string"));
 	CHECK(wchar_open = ProcAddress(hDll, "sf_wchar_open"));
 	CHECK(open_fd = ProcAddress(hDll, "sf_open_fd"));
 	CHECK(close = ProcAddress(hDll, "sf_close"));

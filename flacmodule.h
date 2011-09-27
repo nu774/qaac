@@ -15,6 +15,7 @@ public:
     explicit FLACModule(const std::wstring &path);
     bool loaded() const { return m_loaded; }
 
+    const char *VERSION_STRING;
     /* decoder interfaces */
     FLAC__StreamDecoder *(*stream_decoder_new)();
     FLAC__bool (*stream_decoder_finish)(FLAC__StreamDecoder *);

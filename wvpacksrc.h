@@ -21,6 +21,7 @@ public:
     explicit WavpackModule(const std::wstring &path);
     bool loaded() const { return m_loaded; }
 
+    const char *(*GetLibraryVersionString)();
     WavpackContext *(*OpenFileInputEx)(void *,
 	    void *, void *, char *, int, int);
     WavpackContext *(*CloseFile)(WavpackContext *);

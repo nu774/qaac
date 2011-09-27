@@ -17,6 +17,8 @@ WavpackModule::WavpackModule(const std::wstring &path)
     if (!m_loaded)
 	return;
     try {
+	CHECK(GetLibraryVersionString =
+		ProcAddress(hDll, "WavpackGetLibraryVersionString"));
 	CHECK(OpenFileInputEx = ProcAddress(hDll, "WavpackOpenFileInputEx"));
 	CHECK(CloseFile = ProcAddress(hDll, "WavpackCloseFile"));
 	CHECK(GetMode = ProcAddress(hDll, "WavpackGetMode"));
