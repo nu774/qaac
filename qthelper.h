@@ -49,27 +49,16 @@ public:
     static AudioChannelLayoutX CreateBasic(unsigned nchannel)
     {
 	AudioChannelLayoutX layout;
-	static const uint32_t tab[] = {
-	    kAudioChannelLayoutTag_Mono,
-	    kAudioChannelLayoutTag_Stereo,
-	    kAudioChannelLayoutTag_MPEG_3_0_A,
-	    kAudioChannelLayoutTag_Quadraphonic,
-	    kAudioChannelLayoutTag_MPEG_5_0_A,
-	    kAudioChannelLayoutTag_MPEG_5_1_A,
-	    kAudioChannelLayoutTag_MPEG_6_1_A,
-	    kAudioChannelLayoutTag_MPEG_7_1_C
-	};
-	assert(nchannel <= array_size(tab));
-	layout->mChannelLayoutTag = tab[nchannel - 1];
+	GetDefaultChannelLayout(layout, nchannel);
 	return layout;
     }
     static AudioChannelLayoutX FromChannelMap(const std::vector<uint32_t> &map)
     {
 	AudioChannelLayoutX layout;
-	layout->mChannelLayoutTag = GetChannelLayoutTagFromChannelMap(map);
+	layout->mChannelLayoutTag = GetLayoutTag(map);
 	if (layout->mChannelLayoutTag
 		== kAudioChannelLayoutTag_UseChannelBitmap)
-	    layout->mChannelBitmap = LayoutToChannelMask(map);
+	    layout->mChannelBitmap = GetChannelMask(map);
 	return layout;
     }
 private:

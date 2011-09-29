@@ -1,8 +1,6 @@
-#include <CoreAudioTypes.h>
 #include "chanmap.h"
 
-uint32_t
-LayoutToChannelMask(const std::vector<uint32_t>& chanmap)
+uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap)
 {
     uint32_t result = 0;
     for (size_t i = 0; i < chanmap.size(); ++i)
@@ -10,15 +8,31 @@ LayoutToChannelMask(const std::vector<uint32_t>& chanmap)
     return result;
 }
 
-uint32_t
-GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap)
+void GetDefaultChannelLayout(AudioChannelLayout *layout,
+	const uint32_t nchannels)
+{
+    static const uint32_t tab[] = {
+	kAudioChannelLayoutTag_Mono,
+	kAudioChannelLayoutTag_Stereo,
+	kAudioChannelLayoutTag_MPEG_3_0_A,
+	kAudioChannelLayoutTag_Quadraphonic,
+	kAudioChannelLayoutTag_MPEG_5_0_A,
+	kAudioChannelLayoutTag_MPEG_5_1_A,
+	kAudioChannelLayoutTag_MPEG_6_1_A,
+	kAudioChannelLayoutTag_UseChannelBitmap
+    };
+    layout->mChannelLayoutTag = tab[nchannels - 1];
+    if (nchannels == 8) layout->mChannelBitmap = 0x63f;
+}
+
+uint32_t GetLayoutTag(const std::vector<uint32_t>& chanmap)
 {
     /* only accept usb order */
     for (size_t i = 1; i < chanmap.size(); ++i)
 	if (chanmap[i-1] >= chanmap[i])
 	    throw std::runtime_error("Not supported channel layout");
 
-    uint32_t mask = LayoutToChannelMask(chanmap);
+    uint32_t mask = GetChannelMask(chanmap);
     switch (mask) {
     case 0x4: // FC
 	return kAudioChannelLayoutTag_Mono;

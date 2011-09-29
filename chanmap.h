@@ -1,11 +1,12 @@
 #ifndef _CHANMAP_H
 #define _CHANMAP_H
 
+#include <CoreAudioTypes.h>
 #include "iointer.h"
 
-uint32_t LayoutToChannelMask(const std::vector<uint32_t>& chanmap);
-uint32_t
-GetChannelLayoutTagFromChannelMap(const std::vector<uint32_t>& chanmap);
+uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap);
+uint32_t GetLayoutTag(const std::vector<uint32_t>& chanmap);
+void GetDefaultChannelLayout(AudioChannelLayout *layout, uint32_t nchannels);
 
 /*
  * Workaround for CoreAudioToolbox >= 7.9.4.0 bug.
