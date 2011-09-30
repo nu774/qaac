@@ -72,7 +72,7 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
 	}
 	setChannelLayout(layout);
     }
-    if (formatID == 'alac' && nchannels != 2)
+    if (formatID == 'alac' && nchannelsOut != 2)
 	throw std::runtime_error("Only stereo is supported for ALAC");
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mChannelsPerFrame = nchannelsOut;
