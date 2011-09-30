@@ -24,7 +24,7 @@ AudioStreamBasicDescription BuildBasicDescription(const SampleFormat &format)
 }
 
 EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
-    uint32_t formatID, int chanmask) :
+    uint32_t formatID, int nchannelsOut, int chanmask) :
 	m_src(src),
 	m_samples_read(0),
 	m_frames_written(0),
@@ -37,22 +37,14 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     uint32_t nchannels = m_input_desc.mChannelsPerFrame;
     const std::vector<uint32_t> *chanmap = src->getChannelMap();
     AudioChannelLayoutX layout;
-    if (chanmask == 0 || (chanmask < 0 && !chanmap))
-	layout = AudioChannelLayoutX::CreateBasic(nchannels);
-    else {
-	std::vector<uint32_t> new_chanmap;
-	if (chanmask > 0) {
-	    uint32_t y = chanmask;
-	    if (bitcount(y) != nchannels)
-		throw std::runtime_error(
-		    "Specified chanmask differs from input number of channels");
-	    for (size_t i = 0; i < 32; ++i, y >>= 1)
-		if (y & 1) new_chanmap.push_back(i + 1);
-	    chanmap = &new_chanmap;
-	}
+    if (chanmask > 0)
+	layout = AudioChannelLayoutX::FromBitmap(chanmask);
+    else if (chanmask == 0 || !chanmap)
+	layout = AudioChannelLayoutX::CreateDefault(nchannels);
+    else
 	layout = AudioChannelLayoutX::FromChannelMap(*chanmap);
-    }
     setInputChannelLayout(layout);
+
     uint32_t newtag = GetAACChannelMap(layout, 0);
     if (newtag) {
 	layout->mChannelLayoutTag = newtag;
@@ -65,9 +57,25 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
      * (For example, even if input is C L R Cs, L R Ls Rs is selected).
      * Therefore, we must explicitly reset output layout here.
      */
-    if (nchannels > 3) setChannelLayout(layout);
+    if (formatID != 'alac' && nchannels == nchannelsOut) {
+	if (formatID == 'aach') {
+	    const static uint32_t supported[] = {
+		kAudioChannelLayoutTag_Mono,
+		kAudioChannelLayoutTag_Stereo,
+		kAudioChannelLayoutTag_Quadraphonic,
+		kAudioChannelLayoutTag_AAC_5_1,
+		kAudioChannelLayoutTag_AAC_7_1
+	    };
+	    const uint32_t *endp = supported + array_size(supported);
+	    if (std::find(supported, endp, layout->mChannelLayoutTag) == endp)
+		throw std::runtime_error("Not supported channel layout for HE");
+	}
+	setChannelLayout(layout);
+    }
+    if (formatID == 'alac' && nchannels != 2)
+	throw std::runtime_error("Only stereo is supported for ALAC");
     AudioStreamBasicDescription oasbd = { 0 };
-    oasbd.mChannelsPerFrame = (nchannels == 3) ? 2 : nchannels;
+    oasbd.mChannelsPerFrame = nchannelsOut;
     oasbd.mFormatID = formatID;
     setBasicDescription(oasbd);
     getBasicDescription(&m_output_desc);

@@ -548,19 +548,22 @@ void encode_file(const x::shared_ptr<ISource> &src,
 		    "nchannels of input and --chanmap spec unmatch");
 	srcx = x::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
     }
-    AACEncoder encoder(srcx, opts.output_format, opts.chanmask);
+    int nchannelsOut = src->getSampleFormat().m_nchannels;
+    if (opts.downmix > 0)
+	nchannelsOut = opts.downmix;
+    else if (nchannelsOut == 3)
+	nchannelsOut = 2;
+    AACEncoder encoder(srcx, opts.output_format, nchannelsOut, opts.chanmask);
     encoder.setRenderQuality(kQTAudioRenderQuality_Max);
 
     AudioStreamBasicDescription iasbd, oasbd;
     iasbd = encoder.getInputBasicDescription();
     oasbd = encoder.getOutputBasicDescription();
 
-    if (opts.downmix > 0)
-	oasbd.mChannelsPerFrame = opts.downmix;
-    if (!opts.isAAC() && opts.rate > 0)
+    if (!opts.isAAC() && opts.rate > 0) {
 	oasbd.mSampleRate = opts.rate;
-    encoder.setOutputBasicDescription(oasbd);
-
+	encoder.setOutputBasicDescription(oasbd);
+    }
     if (!opts.native_chanmapper)
 	encoder.forceAACChannelMapping();
 
@@ -568,8 +571,6 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	set_codec_options(encoder, opts);
 	oasbd = encoder.getOutputBasicDescription();
     } else {
-	if (oasbd.mChannelsPerFrame != 2)
-	    throw std::runtime_error("Only 2ch encoding is supported for ALAC");
 	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)
 	    LOG("WARNING: Only 16/24bit format is supported for ALAC\n");
     }

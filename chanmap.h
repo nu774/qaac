@@ -5,8 +5,8 @@
 #include "iointer.h"
 
 uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap);
-uint32_t GetLayoutTag(const std::vector<uint32_t>& chanmap);
-void GetDefaultChannelLayout(AudioChannelLayout *layout, uint32_t nchannels);
+uint32_t GetLayoutTag(uint32_t chanmask);
+uint32_t GetDefaultChannelMask(uint32_t nchannels);
 
 /*
  * Workaround for CoreAudioToolbox >= 7.9.4.0 bug.

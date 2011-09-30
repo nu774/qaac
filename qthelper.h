@@ -46,19 +46,21 @@ public:
     AudioChannelLayout *operator->() { return m_instance.get(); }
     ByteCount size() { return AudioChannelLayout_length(m_instance.get()); }
 
-    static AudioChannelLayoutX CreateBasic(unsigned nchannel)
+    static AudioChannelLayoutX CreateDefault(unsigned nchannels)
     {
-	AudioChannelLayoutX layout;
-	GetDefaultChannelLayout(layout, nchannel);
-	return layout;
+	return FromBitmap(GetDefaultChannelMask(nchannels));
     }
     static AudioChannelLayoutX FromChannelMap(const std::vector<uint32_t> &map)
     {
+	return FromBitmap(GetChannelMask(map));
+    }
+    static AudioChannelLayoutX FromBitmap(uint32_t bitmap)
+    {
 	AudioChannelLayoutX layout;
-	layout->mChannelLayoutTag = GetLayoutTag(map);
+	layout->mChannelLayoutTag = GetLayoutTag(bitmap);
 	if (layout->mChannelLayoutTag
 		== kAudioChannelLayoutTag_UseChannelBitmap)
-	    layout->mChannelBitmap = GetChannelMask(map);
+	    layout->mChannelBitmap = bitmap;
 	return layout;
     }
 private:

@@ -15,7 +15,7 @@ protected:
     AudioStreamBasicDescription m_input_desc, m_output_desc;
 public:
     EncoderBase(const x::shared_ptr<ISource> &src, uint32_t formatID,
-	    int chanmask=-1);
+	    int nchannelsOut, int chanmask=-1);
     void setSink(const x::shared_ptr<ISink> &sink) { m_sink = sink; }
 
     uint64_t samplesRead() const { return m_samples_read; }
