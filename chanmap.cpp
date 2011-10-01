@@ -100,11 +100,11 @@ uint32_t GetAACChannelMap(const AudioChannelLayout *layout,
 	    a = a50; newtag = kAudioChannelLayoutTag_AAC_5_0; break;
 	case 0x60f: // FL FR FC LFE SL SR
 	    a = a51; newtag = kAudioChannelLayoutTag_AAC_5_1; break;
-	case 0x137: // FL FR FC LFE BL BR BC
+	case 0x137: // FL FR FC BL BR BC
 	    a = a60; newtag = kAudioChannelLayoutTag_AAC_6_0; break;
 	case 0x70f: // FL FR FC LFE BC SL SR
 	    a = a61b; newtag = kAudioChannelLayoutTag_AAC_6_1; break;
-	case 0x637: // FL FR FC BL BR BC SL SR
+	case 0x637: // FL FR FC BL BR SL SR
 	    a = a70; newtag = kAudioChannelLayoutTag_AAC_7_0; break;
 	case 0x63f: // FL FR FC LFE BL BR SL SR
 	    a = a71c; newtag = kAudioChannelLayoutTag_AAC_7_1; break;
