@@ -559,9 +559,10 @@ void encode_file(const x::shared_ptr<ISource> &src,
     iasbd = encoder.getInputBasicDescription();
     oasbd = encoder.getOutputBasicDescription();
 
-    if (!opts.isAAC() && opts.rate > 0) {
-	oasbd.mSampleRate = opts.rate;
-	encoder.setOutputBasicDescription(oasbd);
+    if (opts.rate > 0 && !resampled) {
+	iasbd.mSampleRate = opts.rate;
+	encoder.setInputBasicDescription(iasbd);
+	oasbd = encoder.getOutputBasicDescription();
     }
     if (!opts.native_chanmapper)
 	encoder.forceAACChannelMapping();
@@ -587,7 +588,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	    if (iasbd.mChannelsPerFrame == 3)
 		LOG("WARNING: Downmixed to 2ch\n");
 	}
-	if (iasbd.mSampleRate != oasbd.mSampleRate &&
+	if (src->getSampleFormat().m_rate != oasbd.mSampleRate &&
 		opts.libsoxrate.loaded() && !opts.native_resampler) {
 	    x::shared_ptr<ISource> srcx
 		= do_resample(src, opts, oasbd.mSampleRate);

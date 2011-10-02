@@ -37,10 +37,16 @@ public:
     {
 	return m_output_desc;
     }
+    void setInputBasicDescription(const AudioStreamBasicDescription &desc)
+    {
+	StdAudioComponentX::setInputBasicDescription(desc);
+	m_input_desc = desc;
+	getBasicDescription(&m_output_desc);
+    }
     void setOutputBasicDescription(const AudioStreamBasicDescription &desc)
     {
 	setBasicDescription(desc);
-	m_output_desc = desc;
+	getBasicDescription(&m_output_desc);
     }
     ISource *src() { return m_src.get(); }
     ISink *sink() { return m_sink.get(); }
