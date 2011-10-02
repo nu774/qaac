@@ -45,11 +45,33 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
 	layout = AudioChannelLayoutX::FromChannelMap(*chanmap);
     setInputChannelLayout(layout);
 
+    // Obtain layout for output
     uint32_t newtag = GetAACChannelMap(layout, 0);
     if (newtag) {
 	layout->mChannelLayoutTag = newtag;
 	layout->mChannelBitmap = 0;
     }
+    if (formatID == 'alac' && nchannelsOut != 2)
+	throw std::runtime_error("Only stereo is supported for ALAC");
+
+    AudioStreamBasicDescription oasbd = { 0 };
+    oasbd.mFormatID = formatID;
+    // Set temporary dummy value to obtain AvailableChannelLayoutTagList
+    // for the format
+    oasbd.mChannelsPerFrame = 2;
+    setBasicDescription(oasbd);
+
+    if (nchannels == nchannelsOut) {
+	std::vector<UInt32> avails;
+	getAvailableChannelLayoutTagList(&avails);
+	if (std::find(avails.begin(), avails.end(),
+		      layout->mChannelLayoutTag) == avails.end())
+	    throw std::runtime_error("Not supported channel layout");
+    }
+    // Now we set real number of channels
+    oasbd.mChannelsPerFrame = nchannelsOut;
+    setBasicDescription(oasbd);
+    getBasicDescription(&m_output_desc);
     /*
      * Basically, channel layout of output is automatically selected by QT.
      * However, this "default" behavior seems to take
@@ -57,28 +79,8 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
      * (For example, even if input is C L R Cs, L R Ls Rs is selected).
      * Therefore, we must explicitly reset output layout here.
      */
-    if (formatID != 'alac' && nchannels == nchannelsOut) {
-	if (formatID == 'aach') {
-	    const static uint32_t supported[] = {
-		kAudioChannelLayoutTag_Mono,
-		kAudioChannelLayoutTag_Stereo,
-		kAudioChannelLayoutTag_Quadraphonic,
-		kAudioChannelLayoutTag_AAC_5_1,
-		kAudioChannelLayoutTag_AAC_7_1
-	    };
-	    const uint32_t *endp = supported + array_size(supported);
-	    if (std::find(supported, endp, layout->mChannelLayoutTag) == endp)
-		throw std::runtime_error("Not supported channel layout for HE");
-	}
+    if (nchannels == nchannelsOut)
 	setChannelLayout(layout);
-    }
-    if (formatID == 'alac' && nchannelsOut != 2)
-	throw std::runtime_error("Only stereo is supported for ALAC");
-    AudioStreamBasicDescription oasbd = { 0 };
-    oasbd.mChannelsPerFrame = nchannelsOut;
-    oasbd.mFormatID = formatID;
-    setBasicDescription(oasbd);
-    getBasicDescription(&m_output_desc);
 }
 
 bool EncoderBase::encodeChunk(UInt32 nframes)

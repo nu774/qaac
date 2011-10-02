@@ -26,7 +26,6 @@
 #include "resampler.h"
 #include "logging.h"
 #include "reg.h"
-
 #include <crtdbg.h>
 
 static
