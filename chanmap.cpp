@@ -62,6 +62,7 @@ uint32_t GetAACChannelMap(const AudioChannelLayout *layout,
     static const uint32_t a50[] = { 3, 1, 2, 4, 5, 0 };
     static const uint32_t a51[] = { 3, 1, 2, 5, 6, 4, 0 };
     static const uint32_t a60[] = { 3, 1, 2, 4, 5, 6, 0 };
+    static const uint32_t a60b[] = { 3, 1, 2, 5, 6, 4, 0 };
     static const uint32_t a61[] = { 3, 1, 2, 5, 6, 7, 4, 0 };
     static const uint32_t a61b[] = { 3, 1, 2, 6, 7, 5, 4, 0 };
     static const uint32_t a70[] = { 3, 1, 2, 6, 7, 4, 5, 0 };
@@ -102,6 +103,8 @@ uint32_t GetAACChannelMap(const AudioChannelLayout *layout,
 	    a = a51; newtag = kAudioChannelLayoutTag_AAC_5_1; break;
 	case 0x137: // FL FR FC BL BR BC
 	    a = a60; newtag = kAudioChannelLayoutTag_AAC_6_0; break;
+	case 0x707: // FL FR FC BC SL SR
+	    a = a60b; newtag = kAudioChannelLayoutTag_AAC_6_0; break;
 	case 0x70f: // FL FR FC LFE BC SL SR
 	    a = a61b; newtag = kAudioChannelLayoutTag_AAC_6_1; break;
 	case 0x637: // FL FR FC BL BR SL SR
