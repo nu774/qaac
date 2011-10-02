@@ -98,6 +98,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\aacconfig.cpp" />
     <ClCompile Include="..\..\aacencoder.cpp" />
     <ClCompile Include="..\..\alacsink.cpp" />
     <ClCompile Include="..\..\cfhelper.cpp" />

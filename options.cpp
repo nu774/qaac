@@ -5,6 +5,7 @@
 static struct option long_options[] = {
     { L"help", no_argument, 0, 'h' },
     { L"check", no_argument, 0, 'chck' },
+    { L"formats", no_argument, 0, 'fmts' },
     { L"abr", required_argument, 0, 'a' },
     { L"tvbr", required_argument, 0, 'V' },
     { L"cvbr", required_argument, 0, 'v' },
@@ -77,6 +78,7 @@ void usage()
 "\n"
 "Main options:\n"
 "--check                Show QT version etc, and exit\n"
+"--formats              Print available AAC formats, and exit\n"
 "-d <dirname>           Output directory, default is cwd\n"
 "-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
 "-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
@@ -162,6 +164,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    return usage(), false;
 	else if (ch == 'chck')
 	    this->check_only = true;
+	else if (ch == 'fmts')
+	    this->print_available_formats = true;
 	else if (ch == 'o')
 	    this->ofilename = optarg;
 	else if (ch == 'd')
@@ -179,8 +183,6 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->output_format = 'aach';
 	}
 	else if (ch == 'q') {
-	    if (this->output_format && !isAAC())
-		return usage(), false;
 	    if (std::swscanf(optarg, L"%u", &this->quality) != 1) {
 		std::fputs("Quality value must be an integer\n", stderr);
 		return false;
@@ -292,7 +294,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
     argc -= optind;
     argv += optind;
 
-    if (!argc && !check_only)
+    if (!argc && !this->check_only && !this->print_available_formats)
 	return usage(), false;
     if (argc > 1 && (this->ofilename || this->tagopts.size())) {
 	this->ofilename = 0;
@@ -313,5 +315,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		stderr);
 	return false;
     }
+    if (isALAC() && this->quality >= 0) {
+	std::fputs("Quality is only available for AAC\n", stderr);
+	return false;
+    }
+    if (this->quality == -1)
+	this->quality = 2;
     return true;
 }

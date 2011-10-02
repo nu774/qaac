@@ -1,76 +1,16 @@
 #include "aacencoder.h"
-
-static
-CFArrayRef GetParametersFromSettings(CFArrayRef settings)
-{
-    CFDictionaryRef dict
-	= SearchCFDictArray(settings,
-		CFSTR("converter"), CFSTR("CodecConverter"));
-    if (!dict)
-	throw std::runtime_error("GetPrametersFromSettings: "
-		"CodecConverter not found");
-    return CFDictionaryGetValueT<CFArrayRef>(dict, CFSTR("parameters"));
-}
-
-static
-CFDictionaryRef GetParameterDictFromSettings(CFArrayRef settings,
-	const wchar_t *key)
-{
-    CFArrayRef parameters = GetParametersFromSettings(settings);
-    CFDictionaryRef dict =
-	SearchCFDictArray(parameters, CFSTR("key"), W2CF(key));
-    if (!dict)
-	throw std::runtime_error(format("Key not found: %ls", key));
-    return dict;
-}
+#include "aacconfig.h"
 
 void AACEncoder::setEncoderParameter(const wchar_t *key, int value)
 {
-    CFArrayT<CFDictionaryRef> settings;
-    getCodecSpecificSettingsArray(&settings);
-    CFMutableArrayRef newSettings =
-	(CFMutableArrayRef)(CloneCFObject(settings));
-    x::shared_ptr<__CFArray> newSettings__(newSettings, CFRelease);
-
-    CFDictionaryRef dict = GetParameterDictFromSettings(newSettings, key);
-    CFStringRef value_key = CFSTR("current value");
-    if (!std::wcscmp(key, L"Bit Rate")
-	    && CFDictionaryGetValue(dict, CFSTR("slider value")))
-	value_key = CFSTR("slider value");
-    CFDictionaryReplaceValue(const_cast<CFMutableDictionaryRef>(dict),
-	    value_key, CFNumberCreateT(value));
-    setCodecSpecificSettingsArray(newSettings);
+    aac::SetParameter(this, key, value);
     getBasicDescription(&m_output_desc);
 }
 
 int AACEncoder::getParameterRange(const wchar_t *key,
 	CFArrayT<CFStringRef> *result, CFArrayT<CFStringRef> *limits)
 {
-    int n;
-    CFArrayT<CFDictionaryRef> settings;
-    getCodecSpecificSettingsArray(&settings);
-    CFDictionaryRef dict = GetParameterDictFromSettings(settings, key);
-    if (!std::wcscmp(key, L"Bit Rate")) {
-	try {
-	    CFNumberRef v = CFDictionaryGetValueT<CFNumberRef>(
-		dict, CFSTR("slider value"));
-	    *result = CFArrayT<CFStringRef>();
-	    CFNumberGetValue(v, kCFNumberSInt32Type, &n);
-	    return n;
-	} catch (const std::exception &) {}
-    } 
-    CFArrayRef v = CFDictionaryGetValueT<CFArrayRef>(
-		    dict, CFSTR("available values"));
-    *result = CFArrayT<CFStringRef>((CFArrayRef)CFRetain(v));
-    if (limits) {
-	v = CFDictionaryGetValueT<CFArrayRef>(
-		dict, CFSTR("limited values"));
-	*limits = CFArrayT<CFStringRef>((CFArrayRef)CFRetain(v));
-    }
-    CFNumberRef nr =
-	CFDictionaryGetValueT<CFNumberRef>(dict, CFSTR("current value"));
-    CFNumberGetValue(nr, kCFNumberSInt32Type, &n);
-    return n;
+    return aac::GetParameterRange(this, key, result, limits);
 }
 
 void AACEncoder::getGaplessInfo(GaplessInfo *info) const

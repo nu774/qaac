@@ -26,6 +26,7 @@
 #include "resampler.h"
 #include "logging.h"
 #include "reg.h"
+#include "aacconfig.h"
 #include <crtdbg.h>
 
 static
@@ -780,8 +781,6 @@ void load_modules(Options &opts)
     opts.libsoxrate = SoxResamplerModule(L"libsoxrate.dll");
 }
 
-extern void OverrideRegistryWith(const x::shared_ptr<FILE> &fp);
-
 static
 void override_registry()
 {
@@ -804,6 +803,24 @@ void override_registry()
     }
     action.show();
     action.realize();
+}
+
+void show_available_aac_settings()
+{
+    std::vector<CodecSetting> settings;
+    aac::GetAvailableSettings(&settings);
+    for (size_t i = 0; i < settings.size(); ++i) {
+	std::printf("%s %dHz %ls --",
+		settings[i].m_codec == 'aac ' ? "LC" : "HE",
+		settings[i].m_sample_rate,
+		settings[i].m_channel_layout.c_str());
+	std::vector<uint32_t> &bitrates = settings[i].m_bitrates;
+	for (size_t j = 0; j < bitrates.size(); ++j) {
+	    int delim = j == 0 ? ' ' : ',';
+	    std::printf("%c%d", delim, bitrates[j]);
+	}
+	std::printf("\n");
+    }
 }
 
 #ifdef _MSC_VER
@@ -829,9 +846,9 @@ int wmain1(int argc, wchar_t **argv)
     if (!opts.parse(argc, argv))
 	return 1;
     try {
-	if (opts.verbose)
+	if (opts.verbose && !opts.print_available_formats)
 	    Log::instance()->enable_stderr();
-	if (opts.logfilename)
+	if (opts.logfilename && !opts.print_available_formats)
 	    Log::instance()->enable_file(opts.logfilename);
 
 	if (opts.nice)
@@ -851,14 +868,14 @@ int wmain1(int argc, wchar_t **argv)
 	opts.encoder_name = widen(encoder_name);
 	LOG("%s\n", encoder_name.c_str());
 
-	if (opts.isSBR() || opts.check_only)
+	if (opts.isSBR() || opts.check_only || opts.print_available_formats)
 	    install_aach_codec();
 	load_modules(opts);
 
 	if (opts.check_only) {
 	    uint32_t codecs[] = { 'aac ', 'aach', 'alac', 0 };
 	    for (uint32_t *p = codecs; *p; ++p)
-		LOG("%s\n", get_codec_version(*p));
+		LOG("%s\n", get_codec_version(*p).c_str());
 	    if (opts.libsoxrate.loaded())
 		LOG("libsoxrate %s\n", opts.libsoxrate.version_string());
 	    if (opts.libsndfile.loaded())
@@ -868,6 +885,10 @@ int wmain1(int argc, wchar_t **argv)
 	    if (opts.libwavpack.loaded())
 		LOG("libwavpack %s\n",
 			opts.libwavpack.GetLibraryVersionString());
+	    return 0;
+	}
+	if (opts.print_available_formats) {
+	    show_available_aac_settings();
 	    return 0;
 	}
 
@@ -890,6 +911,8 @@ int wmain1(int argc, wchar_t **argv)
 	    }
 	}
     } catch (const std::exception &e) {
+	if (opts.print_available_formats)
+	    Log::instance()->enable_stderr();
 	LOG("%s\n", e.what());
 	result = 2;
     }

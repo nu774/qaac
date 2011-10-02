@@ -15,7 +15,7 @@ struct Options {
     Options() :
 	output_format(0),
 	method(-1),
-	bitrate(-1), quality(2),
+	bitrate(-1), quality(-1),
 	raw_channels(2), raw_sample_rate(44100),
 	rate(-1),
 	downmix(-1),
@@ -27,7 +27,7 @@ struct Options {
 	verbose(true), is_raw(false), is_adts(false), save_stat(false),
        	nice(false), native_chanmapper(false), ignore_length(false),
 	no_optimize(false), native_resampler(false), check_only(false),
-	normalize(false)
+	normalize(false), print_available_formats(false)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -65,7 +65,7 @@ struct Options {
     wchar_t *logfilename;
     bool verbose, is_raw, is_adts, save_stat, nice, native_chanmapper,
 	 ignore_length, no_optimize, native_resampler, check_only,
-	 normalize;
+	 normalize, print_available_formats;
     std::map<uint32_t, std::wstring> tagopts;
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;
