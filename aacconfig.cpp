@@ -1,5 +1,4 @@
 #include "aacconfig.h"
-#include <set>
 
 static
 CFArrayRef GetParametersFromSettings(CFArrayRef settings)
@@ -44,21 +43,11 @@ void GetAvailableSettingsForCodec(uint32_t format,
     CFArrayT<CFStringRef> names;
     scaudio.getAvailableChannelLayoutTagNamesList(&names);
 
-    std::set<uint32_t> available_channels;
-    for (size_t i = 0; i < layouts.size(); ++i)
-	available_channels.insert(
-		AudioChannelLayoutTag_GetNumberOfChannels(layouts[i]));
-
     for (size_t i = 0; i < rates.size(); ++i) {
-	/*
-	for (std::set<uint32_t>::iterator it = available_channels.begin();
-		it != available_channels.end(); ++it) {
-	*/
 	for (size_t j = 0; j < layouts.size(); ++j) {
 	    uint32_t nchannels =
 		AudioChannelLayoutTag_GetNumberOfChannels(layouts[j]);
 	    asbd.mSampleRate = rates[i].mMinimum;
-	    //asbd.mChannelsPerFrame = *it;
 	    asbd.mChannelsPerFrame = nchannels;
 	    scaudio.setBasicDescription(asbd);
 	    AudioChannelLayoutX layout;
@@ -70,7 +59,6 @@ void GetAvailableSettingsForCodec(uint32_t format,
 	    CodecSetting setting;
 	    setting.m_codec = format;
 	    setting.m_sample_rate = asbd.mSampleRate;
-	    //setting.m_nchannels = *it;
 	    setting.m_nchannels = nchannels;
 	    setting.m_channel_layout = CF2W(names.at(j));
 	    for (size_t m = 0; m < limits.size(); ++m) {
