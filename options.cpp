@@ -315,7 +315,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		stderr);
 	return false;
     }
-    if (isALAC() && this->quality >= 0) {
+    if (isALAC() && this->quality != -1) {
 	std::fputs("Quality is only available for AAC\n", stderr);
 	return false;
     }
