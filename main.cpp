@@ -609,13 +609,13 @@ void encode_file(const x::shared_ptr<ISource> &src,
     }
 }
 
-std::wstring load_cue_sheet(const wchar_t *name)
+std::wstring load_text_file(const wchar_t *name)
 {
     StdioChannel channel(name);
     InputStream stream(channel);
     int64_t size = stream.size();
     if (size > 0x100000)
-	throw std::runtime_error("Cuesheet is too big");
+	throw std::runtime_error(format("%ls: file too large", name));
     std::vector<char> buffer(size + 2);
     stream.read(&buffer[0], size);
     buffer[size] = buffer[size+1] = 0;
@@ -673,7 +673,7 @@ void handle_cue_sheet(Options &opts)
     const wchar_t *p = std::wcsrchr(cuepath.c_str(), L'\\');
     if (p) cuedir = cuepath.substr(0, p - cuepath.c_str());
 
-    std::wstringbuf istream(load_cue_sheet(opts.ifilename));
+    std::wstringbuf istream(load_text_file(opts.ifilename));
     CueSheet cue;
     cue.parse(&istream);
     typedef std::map<uint32_t, std::wstring> meta_t;
@@ -734,6 +734,15 @@ void handle_cue_sheet(Options &opts)
 	LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
 	encode_file(source, ofilename, opts);
     }
+}
+
+static
+void load_lyrics_file(Options *opts)
+{
+    std::map<uint32_t, std::wstring>::iterator it
+	= opts->tagopts.find(Tag::kLyrics);
+    if (it != opts->tagopts.end())
+	it->second = load_text_file(it->second.c_str());
 }
 
 static
@@ -853,6 +862,8 @@ int wmain1(int argc, wchar_t **argv)
 
 	if (opts.nice)
 	    SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+
+	load_lyrics_file(&opts);
 
 	override_registry();
 	LOG("initializing QTML...");

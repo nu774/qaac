@@ -62,6 +62,28 @@ inline std::wstring widen(const std::string& s)
     return result;
 }
 
+template <typename T>
+std::basic_string<T> normalize_crlf(const T *s, const T *delim)
+{
+    std::basic_string<T> result;
+    const T *p;
+    int c;
+    while ((c = *s++)) {
+	if (c == '\r') {
+	    for (p = delim; *p; ++p)
+		result.push_back(*p);
+	    if (*s && (c = *s++) != '\n')
+		result.push_back(c);
+	}
+	else if (c == '\n')
+	    for (p = delim; *p; ++p)
+		result.push_back(*p);
+	else
+	    result.push_back(c);
+    }
+    return result;
+}
+
 struct fourcc {
     uint32_t nvalue;
     char svalue[5];

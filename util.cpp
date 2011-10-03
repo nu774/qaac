@@ -82,3 +82,4 @@ std::wstring format(const wchar_t *fmt, ...)
     return std::wstring(&buffer[0], &buffer[rc]);
 }
 #endif
+

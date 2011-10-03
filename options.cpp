@@ -44,6 +44,7 @@ static struct option long_options[] = {
     { L"track", required_argument, 0, Tag::kTrack },
     { L"disk", required_argument, 0, Tag::kDisk },
     { L"compilation", no_argument, 0, Tag::kCompilation },
+    { L"lyrics", required_argument, 0, Tag::kLyrics },
     { L"artwork", required_argument, 0, Tag::kArtwork },
     { 0, 0, 0, 0 }
 };
@@ -61,6 +62,7 @@ static const uint32_t tag_keys[] = {
     Tag::kDisk,
     Tag::kCompilation,
     Tag::kArtwork,
+    Tag::kLyrics
 };
 const uint32_t * const tag_keys_end = tag_keys + array_size(tag_keys);
 
@@ -150,6 +152,7 @@ void usage()
 "--track <number[/total]>\n"
 "--disk <number[/total]>\n"
 "--compilation\n"
+"--lyrics <filename>\n"
 "--artwork <filename>\n"
     );
 }

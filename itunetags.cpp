@@ -42,6 +42,9 @@ public:
 	} else if (key == Tag::kGenreID3) {
 	    if (std::sscanf(vp, "%d", &n) == 1)
 		m_file.SetMetadataGenre(fourcc(key).svalue, n);
+	} else if (key == Tag::kLyrics) {
+	    std::string s = normalize_crlf(vp, "\r\n");
+	    m_file.SetMetadataString(fourcc(key).svalue, s.c_str());
 	} else
 	    m_file.SetMetadataString(fourcc(key).svalue, vp);
     }
@@ -156,6 +159,7 @@ namespace ID3 {
 	{ "TBPM", Tag::kTempo },
 	{ "TCOP", Tag::kCopyright },
 	{ "TCMP", Tag::kCompilation },
+	{ "USLT", Tag::kLyrics },
 	{ 0, 0 }
     };
     uint32_t GetIDFromTagName(const char *name) {
