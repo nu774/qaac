@@ -52,6 +52,7 @@ wavsource.o \
 win32util.o
 
 QOBJS=\
+aacconfig.o \
 aacencoder.o \
 alacsink.o \
 cuesheet.o \
@@ -78,8 +79,8 @@ INCLUDES=-Iinclude -I "$(QTSDKDir)/CIncludes" -Imp4v2 -Imp4v2/include \
 	 -Itaglib/mpeg/id3v2 -Itaglib/riff -Itaglib/riff/aiff
 
 CPPFLAGS =-DMP4V2_USE_STATIC_LIB -DTAGLIB_STATIC $(INCLUDES)
-CXXFLAGS =-O -Wno-multichar -Wall 
-CFLAGS = -O -Wall
+CFLAGS = -O2 -Wall -Wno-multichar
+CXXFLAGS =$(CFLAGS)
 LDFLAGS = -static-libgcc -static-libstdc++ -lshlwapi -luuid -lmp4v2 $(LIBPATH)
 
 all: qaac alacdec
