@@ -39,17 +39,9 @@ ConvertFromBasicDescription(const AudioStreamBasicDescription &asbd)
     return format;
 }
 
-QTMovieSource::QTMovieSource(const std::wstring &path, bool alac_only)
+QTMovieSource::QTMovieSource(const std::wstring &path)
     : m_extraction_complete(false)
 {
-    try {
-	M4ATagParser parser(GetFullPathNameX(path.c_str()));
-	if (alac_only && !parser.isALAC())
-	    throw std::runtime_error("Not an ALAC file");
-	m_tags = parser.getTags();
-    } catch (const std::exception&) {
-	if (alac_only) throw;
-    }
     MovieX movie = MovieX::FromFile(path);
     Track track = GetSoundTrack(movie);
     /*
@@ -63,6 +55,19 @@ QTMovieSource::QTMovieSource(const std::wstring &path, bool alac_only)
     SetMovieTimeScale(movie, GetMediaTimeScale(media));
     InsertMediaIntoTrack(track, 0, 0, GetMediaDuration(media), fixed1);
 
+    SoundDescriptionX sd;
+    GetMediaSampleDescription(media, 1,
+	    reinterpret_cast<SampleDescriptionHandle>(
+		static_cast<SoundDescriptionHandle>(sd)));
+    AudioStreamBasicDescription asbd;
+    sd.getAudioStreamBasicDescription(&asbd);
+    if (asbd.mFormatID != 'lpcm' && asbd.mFormatID != 'alac')
+	throw std::runtime_error("QTMovieSource: Not supported input format");
+
+    if (asbd.mFormatID == 'alac') {
+	M4ATagParser parser(GetFullPathNameX(path.c_str()));
+	m_tags = parser.getTags();
+    }
     m_session = MovieAudioExtractionX::Begin(movie, 0);
     m_session.getAudioStreamBasicDescription(&m_description);
     m_session.getAudioChannelLayout(&m_layout);

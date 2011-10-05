@@ -17,7 +17,7 @@ class QTMovieSource:
     bool m_extraction_complete;
     std::map<uint32_t, std::wstring> m_tags;
 public:
-    explicit QTMovieSource(const std::wstring &path, bool alac_only=false);
+    explicit QTMovieSource(const std::wstring &path);
     uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannelMap() const

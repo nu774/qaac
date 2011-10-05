@@ -29,7 +29,7 @@ void noop(void *) {}
 void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
 	bool flac=false)
 {
-    QTMovieSource source(ifile, true);
+    QTMovieSource source(ifile);
     const SampleFormat &fmt = source.getSampleFormat();
 
     std::wstring ofilename;
@@ -51,10 +51,8 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
     }
     ISink *sink = 0;
     if (flac) {
-	std::wstring selfpath = GetModuleFileNameX();
-	const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
-	std::wstring selfdir = selfpath.substr(0, fpos - selfpath.c_str());
-	FLACModule libflac(selfdir + L"libFLAC.dll");
+	SetDllDirectoryW(L"");
+	FLACModule libflac(L"libFLAC.dll");
 	if (!libflac.loaded())
 	    throw std::runtime_error("libflac is not loaded");
 	sink = new FLACSink(ofp.get(), source.length(), fmt,
@@ -111,7 +109,7 @@ int wmain1(int argc, wchar_t **argv)
 
     std::cerr << "initializing QTML..." << std::flush;
     QTInitializer __quicktime__;
-    std::cerr << "done" << std::endl << std::endl;
+    std::cerr << "done" << std::endl;
 
     mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
     try {

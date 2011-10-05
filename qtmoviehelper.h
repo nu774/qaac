@@ -119,7 +119,9 @@ class SoundDescriptionX : public PropertySupport<SoundDescriptionX> {
     };
     x::shared_ptr<SoundDescriptionPtr> m_instance;
 public:
-    SoundDescriptionX() {}
+    SoundDescriptionX():
+   	m_instance(reinterpret_cast<SoundDescriptionHandle>(NewHandle(0)),
+		DisposeHandleX) {}
     SoundDescriptionX(SoundDescriptionHandle handle):
 	m_instance(handle, DisposeHandleX) {}
     operator SoundDescriptionHandle() { return m_instance.get(); }

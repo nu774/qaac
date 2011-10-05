@@ -449,8 +449,7 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 	}
     }
     try {
-	return x::shared_ptr<ISource>(
-		new QTMovieSource(opts.ifilename, true));
+	return x::shared_ptr<ISource>(new QTMovieSource(opts.ifilename));
     } catch (const std::runtime_error&) {
 	stream.rewind();
 	throw;
