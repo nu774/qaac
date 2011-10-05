@@ -322,6 +322,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	std::fputs("Quality is only available for AAC\n", stderr);
 	return false;
     }
+    if (this->ignore_length && this->is_raw) {
+	std::fputs("Can't use --ignorelength and --raw at the same time\n",
+		stderr);
+	return false;
+    }
     if (this->quality == -1)
 	this->quality = 2;
     return true;
