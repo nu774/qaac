@@ -82,10 +82,11 @@ void WaveSource::fetchWaveFormat()
 	wav::want(x == m_format.m_bitsPerSample);
 	// dwChannelMask
 	check_eof(read32le(&y));
-	wav::want(bitcount(y) == nchannels);
-	for (size_t i = 0; i < 32; ++i, y >>= 1)
-	    if (y & 1) m_chanmap.push_back(i + 1);
-
+	if (y > 0) {
+	    wav::want(bitcount(y) == nchannels);
+	    for (size_t i = 0; i < 32; ++i, y >>= 1)
+		if (y & 1) m_chanmap.push_back(i + 1);
+	}
 	// SubFormat
 	wav::myGUID subFormat;
 	check_eof(read32le(&subFormat.Data1));
