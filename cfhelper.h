@@ -27,6 +27,8 @@ inline void TryF(int err, const char *msg, const std::wstring &filename)
 	syserr = "I/O error";
     else if (err == pathTooLongErr)
 	syserr = "Filename too long";
+    else if (err == noMovieFound)
+	syserr = "Unknown input format";
 
     if (syserr)
 	s = format("Error: %ls: %s: %s", filename.c_str(), syserr, msg);
