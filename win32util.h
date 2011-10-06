@@ -97,7 +97,9 @@ inline
 std::wstring get_prefixed_fullpath(const wchar_t *path)
 {
     std::wstring fullpath = GetFullPathNameX(path);
-    if (fullpath.size() > 2 && fullpath.substr(2) == L"\\\\")
+    if (fullpath.size() < 256)
+	return fullpath;
+    if (fullpath.size() > 2 && fullpath.substr(0, 2) == L"\\\\")
 	fullpath.insert(2, L"?\\UNC\\");
     else
 	fullpath.insert(0, L"\\\\?\\");
