@@ -112,7 +112,6 @@ int RegParser::value(int c)
     if (c != '@')
 	c = valueName(get());
     else {
-	put(c);
 	onValueName();
 	expect('=');
     }
