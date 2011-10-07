@@ -68,46 +68,6 @@ private:
     template <class MemorySink>
     size_t readSamplesT(void *buffer, size_t nsamples);
     void fetchTags();
-    static int32_t f_read(void *cookie, void *data, int32_t count)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->read(data, count);
-    }
-    static uint32_t f_tell(void *cookie)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return static_cast<uint32_t>(pT->tell());
-    }
-    static int f_seek_abs(void *cookie, uint32_t pos)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seek(pos, ISeekable::kBegin) >= 0 ? 0 : -1;
-    }
-    static int f_seek(void *cookie, int32_t off, int whence)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seek(off, whence) >= 0 ? 0 : -1;
-    }
-    static int f_pushback(void *cookie, int c)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	pT->pushback(c);
-	return c;
-    }
-    static uint32_t f_size(void *cookie)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	int64_t curpos = pT->tell();
-	int32_t size = static_cast<int32_t>(pT->seek(0, ISeekable::kEnd));
-	pT->seek(curpos, ISeekable::kBegin);
-	return size;
-    }
-    static int f_seekable(void *cookie)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seekable();
-    }
-    static int32_t f_write(void *, void *, int32_t) { return -1; }
 };
 
 #endif

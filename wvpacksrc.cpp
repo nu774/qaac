@@ -42,14 +42,65 @@ WavpackModule::WavpackModule(const std::wstring &path)
     m_module = module_t(hDll, FreeLibrary);
 }
 
+namespace wavpack {
+    int32_t read(void *cookie, void *data, int32_t count)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->read(data, count);
+    }
+    uint32_t tell(void *cookie)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return static_cast<uint32_t>(pT->tell());
+    }
+    int seek_abs(void *cookie, uint32_t pos)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->seek(pos, ISeekable::kBegin) >= 0 ? 0 : -1;
+    }
+    int seek(void *cookie, int32_t off, int whence)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->seek(off, whence) >= 0 ? 0 : -1;
+    }
+    int pushback(void *cookie, int c)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	pT->pushback(c);
+	return c;
+    }
+    uint32_t size(void *cookie)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->size();
+    }
+    int seekable(void *cookie)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->seekable();
+    }
+    int32_t write(void *, void *, int32_t) { return -1; }
+}
+
+struct WavpackStreamReaderImpl: public WavpackStreamReader
+{
+    WavpackStreamReaderImpl()
+    {
+	static WavpackStreamReader t = {
+	    wavpack::read, wavpack::tell, wavpack::seek_abs, wavpack::seek,
+	    wavpack::pushback, wavpack::size, wavpack::seekable, wavpack::write
+	};
+	std::memcpy(this, &t, sizeof(WavpackStreamReader));
+    }
+};
+
 WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream)
     : m_module(module), m_stream(stream)
 {
-    static WavpackStreamReader reader = {
-	f_read, f_tell, f_seek_abs, f_seek,
-	f_pushback, f_size, f_seekable, f_write
-    };
     char error[0x100];
+    /* wavpack doesn't copy WavpackStreamReader into their context, therefore
+     * must be kept in the memory */
+    static WavpackStreamReaderImpl reader;
     WavpackContext *wpc = m_module.OpenFileInputEx(&reader,
 	    &m_stream, 0, error, OPEN_TAGS | OPEN_NORMALIZE, 0);
     if (!wpc)
