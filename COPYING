@@ -6,7 +6,7 @@ svn-r485
 
 Files under taglib:
 These are part of TagLib (http://developer.kde.org/~wheeler/taglib.html),
-version 1.6.3
+version 1.7.0
 
 include/fp.h, include/Math64.h:
 These are part of QuickTimeSDK, and slightly modified for gcc compatibility.

@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
- *   USA                                                                   *
+ *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
+ *   02110-1301  USA                                                       *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -210,8 +210,6 @@ void AttachedPictureFrameV22::parseFields(const ByteVector &data)
 
 AttachedPictureFrameV22::AttachedPictureFrameV22(const ByteVector &data, Header *h)
 {
-  d = new AttachedPictureFramePrivate;
-
   // set v2.2 header to make fieldData work correctly
   setHeader(h, true);
 
@@ -220,5 +218,5 @@ AttachedPictureFrameV22::AttachedPictureFrameV22(const ByteVector &data, Header 
   // now set the v2.4 header
   Frame::Header *newHeader = new Frame::Header("APIC");
   newHeader->setFrameSize(h->frameSize());
-  setHeader(newHeader, false);
+  setHeader(newHeader, true);
 }

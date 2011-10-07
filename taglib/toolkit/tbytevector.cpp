@@ -15,15 +15,15 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
- *   USA                                                                   *
+ *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
+ *   02110-1301  USA                                                       *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#include <iostream>
+#include <ostream>
 
 #include <tstring.h>
 #include <tdebug.h>
@@ -42,6 +42,8 @@
 #define DATA(x) (&(x->data[0]))
 
 namespace TagLib {
+  static const char hexTable[17] = "0123456789abcdef";
+
   static const uint crcTable[256] = {
     0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b,
     0x1a864db2, 0x1e475005, 0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61,
@@ -563,6 +565,11 @@ short ByteVector::toShort(bool mostSignificantByteFirst) const
   return toNumber<unsigned short>(d->data, mostSignificantByteFirst);
 }
 
+unsigned short ByteVector::toUShort(bool mostSignificantByteFirst) const
+{
+  return toNumber<unsigned short>(d->data, mostSignificantByteFirst);
+}
+
 long long ByteVector::toLongLong(bool mostSignificantByteFirst) const
 {
   return toNumber<unsigned long long>(d->data, mostSignificantByteFirst);
@@ -651,6 +658,20 @@ ByteVector &ByteVector::operator=(const char *data)
 {
   *this = ByteVector(data);
   return *this;
+}
+
+ByteVector ByteVector::toHex() const
+{
+  ByteVector encoded(size() * 2);
+
+  uint j = 0;
+  for(uint i = 0; i < size(); i++) {
+    unsigned char c = d->data[i];
+    encoded[j++] = hexTable[(c >> 4) & 0x0F];
+    encoded[j++] = hexTable[(c     ) & 0x0F];
+  }
+
+  return encoded;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

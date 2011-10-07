@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
- *   USA                                                                   *
+ *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
+ *   02110-1301  USA                                                       *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -30,7 +30,7 @@
 #include "taglib_export.h"
 
 #include <vector>
-#include <iostream>
+#include <ostream>
 
 namespace TagLib {
 
@@ -267,6 +267,17 @@ namespace TagLib {
     short toShort(bool mostSignificantByteFirst = true) const;
 
     /*!
+     * Converts the first 2 bytes of the vector to a unsigned short.
+     *
+     * If \a mostSignificantByteFirst is true this will operate left to right
+     * evaluating the integer.  For example if \a mostSignificantByteFirst is
+     * true then $00 $01 == 0x0001 == 1, if false, $01 00 == 0x01000000 == 1.
+     *
+     * \see fromShort()
+     */
+    unsigned short toUShort(bool mostSignificantByteFirst = true) const;
+
+    /*!
      * Converts the first 8 bytes of the vector to a (signed) long long.
      *
      * If \a mostSignificantByteFirst is true this will operate left to right
@@ -384,6 +395,11 @@ namespace TagLib {
      * an empty or "null" value does not require instantiating a new ByteVector).
      */
     static ByteVector null;
+
+    /*!
+	   * Returns a hex-encoded copy of the byte vector.
+	   */
+    ByteVector toHex() const;
 
   protected:
     /*

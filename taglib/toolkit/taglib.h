@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
- *   USA                                                                   *
+ *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
+ *   02110-1301  USA                                                       *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -27,13 +27,19 @@
 #define TAGLIB_H
 
 #define TAGLIB_MAJOR_VERSION 1
-#define TAGLIB_MINOR_VERSION 6
-#define TAGLIB_PATCH_VERSION 3
+#define TAGLIB_MINOR_VERSION 7
+#define TAGLIB_PATCH_VERSION 0
 
 #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 1))
 #define TAGLIB_IGNORE_MISSING_DESTRUCTOR _Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
 #else
 #define TAGLIB_IGNORE_MISSING_DESTRUCTOR
+#endif
+
+#if (defined(_MSC_VER) && _MSC_VER >= 1600)
+#define TAGLIB_CONSTRUCT_BITSET(x) static_cast<unsigned long long>(x)
+#else
+#define TAGLIB_CONSTRUCT_BITSET(x) static_cast<unsigned long>(x)
 #endif
 
 #include <string>
@@ -128,12 +134,9 @@ namespace TagLib {
  * Please see the <a href="http://developer.kde.org/~wheeler/taglib.html">TagLib website</a> for the latest
  * downloads.
  *
- * Instructions for installing TagLib vary per platform, but generally speaking on UNIX standard configure and
- * make commands are provided.  TagLib installs a taglib-config and package-config file to make it easier to
- * integrate into various build systems.  Note that TagLib's include install directory \e must be included in
- * the header include path.  Simply adding <taglib/tag.h> will \e not work.
- *
- * On Windows, TagLib can be built using the CMake build systems.
+ * TagLib can be built using the CMake build system. TagLib installs a taglib-config and pkg-config file to
+ * make it easier to integrate into various build systems.  Note that TagLib's include install directory \e must
+ * be included in the header include path. Simply adding <taglib/tag.h> will \e not work.
  *
  * \section start Getting Started
  *
