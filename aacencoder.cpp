@@ -43,13 +43,10 @@ void AACEncoder::forceAACChannelMapping()
     std::vector<uint32_t> chanmap;
     uint32_t newtag = GetAACChannelMap(layout, &chanmap);
     if (!newtag) return;
-    layout->mChannelLayoutTag = newtag;
-    layout->mChannelBitmap = 0;
-    setInputChannelLayout(layout);
-    /* We need this here: see comment in EncoderBase::EncoderBase() */
-    if (getOutputBasicDescription().mChannelsPerFrame ==
-	getInputBasicDescription().mChannelsPerFrame)
-        setChannelLayout(layout);
+
+    AudioChannelLayoutX newLayout;
+    newLayout->mChannelLayoutTag = newtag;
+    setInputChannelLayout(newLayout);
     x::shared_ptr<ISource> newsrc(new ChannelMapper(m_src, chanmap));
     m_src = newsrc;
 }

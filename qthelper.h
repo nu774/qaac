@@ -45,7 +45,17 @@ public:
     operator const AudioChannelLayout *() const { return m_instance.get(); }
     AudioChannelLayout *operator->() { return m_instance.get(); }
     ByteCount size() { return AudioChannelLayout_length(m_instance.get()); }
-
+    unsigned numChannels() const
+    {
+	switch (m_instance->mChannelLayoutTag) {
+	case kAudioChannelLayoutTag_UseChannelDescriptions:
+	    return m_instance->mNumberChannelDescriptions;
+	case kAudioChannelLayoutTag_UseChannelBitmap:
+	    return bitcount(m_instance->mChannelBitmap);
+	}
+	return AudioChannelLayoutTag_GetNumberOfChannels(
+		m_instance->mChannelLayoutTag);
+    }
     static AudioChannelLayoutX CreateDefault(unsigned nchannels)
     {
 	return FromBitmap(GetDefaultChannelMask(nchannels));

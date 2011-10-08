@@ -548,11 +548,10 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	srcx = x::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
     }
     int nchannelsOut = src->getSampleFormat().m_nchannels;
-    if (opts.downmix > 0)
-	nchannelsOut = opts.downmix;
-    else if (nchannelsOut == 3)
-	nchannelsOut = 2;
-    AACEncoder encoder(srcx, opts.output_format, nchannelsOut, opts.chanmask);
+    uint32_t layout = opts.remix;
+    if (!layout && nchannelsOut == 3)
+	layout = kAudioChannelLayoutTag_Stereo;
+    AACEncoder encoder(srcx, opts.output_format, layout, opts.chanmask);
     encoder.setRenderQuality(kQTAudioRenderQuality_Max);
 
     AudioStreamBasicDescription iasbd, oasbd;

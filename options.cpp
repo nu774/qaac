@@ -1,3 +1,4 @@
+#include <CoreAudioTypes.h>
 #include "options.h"
 #include "getopt.h"
 #include "itunetags.h"
@@ -18,8 +19,8 @@ static struct option long_options[] = {
     { L"stat", no_argument, 0, 'S' },
     { L"nice", no_argument, 0, 'n' },
     { L"native-chanmapper", no_argument, 0, 'nchm' },
+    { L"remix", required_argument, 0, 'rmix' },
     { L"chanmap", required_argument, 0, 'cmap' },
-    { L"downmix", required_argument, 0, 'dmix' },
     { L"chanmask", required_argument, 0, 'mask' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
@@ -98,20 +99,26 @@ void usage()
 "                       keep: Try to preserve the original rate\n"
 "                       auto: Let QuickTime choose the optimal one\n"
 "                       <number>: Literal rate in Hz\n"
-"-s, --silent           Don't be verbose\n"
+"-s, --silent           Suppress console messages\n"
 "-n, --nice             Give lower process priority\n"
-"--native-chanmapper    Use QuickTime native channel mapper\n"
-"                       Don't set this when using buggy versions\n"
-"--chanmap <n1,n2...>   Remap channel order\n"
-"                       For Nch input, you take numbers 1,2..N, and\n"
-"                       re-order them with comma seperated, to the order\n"
+"--remix <layout>       Remix to the specify output channel layout.\n"
+"                       \"layout\" is one of the following:\n"
+"                       auto, mono, stereo, quad,\n"
+"                       4.0, 5.0, 5.1, 6.0, 6.1, 7.0, 7.1, 8.0\n"
+"                       \"auto\" means automatically remix to stereo or 5.1\n"
+"                       You can't increase number of channels from input,\n"
+"                       except for mono -> stereo case.\n"
+"--chanmap <n1,n2...>   Re-arrange channels to the specified order.\n"
+"                       For N-ch input, you take numbers 1,2..N, and\n"
+"                       arrange them with comma-seperated, to the order\n"
 "                       you want.\n"
 "                       For example, \"--chanmap 2,1\" swaps left and right\n"
-"--downmix <mono|stereo>    Downmix to mono/stereo\n"
 "--chanmask <n>         Force specified value as input channel mask(bitmap).\n"
 "                       If --chanmask 0 is specified, qaac treats it as if\n"
 "                       no channel mask is present in the source, and pick\n"
 "                       default layout.\n"
+"--native-chanmapper    Use QuickTime native channel mapper.\n"
+"                       Don't use this.\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "--native-resampler     Always use QuickTime built-in resampler\n"
 "-N, --normalize        Normalize after resample (works in two-pass)\n"
@@ -236,14 +243,33 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return false;
 	    }
 	}
-	else if (ch == 'dmix') {
-	    if (!std::wcscmp(optarg, L"mono"))
-		this->downmix = 1;
-	    else if (!std::wcscmp(optarg, L"stereo"))
-		this->downmix = 2;
-	    else {
-		std::fputs("Only \"mono\" or \"stereo\""
-			" is allowed for downmixing\n", stderr);
+	else if (ch == 'rmix') {
+	    struct channel_layout {
+		const wchar_t *name;
+		uint32_t tag;
+	    } tbl[] = {
+		{ L"mono", kAudioChannelLayoutTag_Mono },
+		{ L"stereo", kAudioChannelLayoutTag_Stereo },
+		{ L"quad", kAudioChannelLayoutTag_Quadraphonic },
+		{ L"4.0", kAudioChannelLayoutTag_AAC_4_0 },
+		{ L"5.0", kAudioChannelLayoutTag_AAC_5_0 },
+		{ L"5.1", kAudioChannelLayoutTag_AAC_5_1 },
+		{ L"6.0", kAudioChannelLayoutTag_AAC_6_0 },
+		{ L"6.1", kAudioChannelLayoutTag_AAC_6_1 },
+		{ L"7.0", kAudioChannelLayoutTag_AAC_7_0 },
+		{ L"7.1", kAudioChannelLayoutTag_AAC_7_1 },
+		{ L"8.0", kAudioChannelLayoutTag_AAC_Octagonal },
+		{ L"auto", 0xffffffff },
+		{ 0, 0 }
+	    }, *p;
+	    for (p = tbl; p->name; ++p) {
+		if (!std::wcsncmp(optarg, p->name, wcslen(p->name))) {
+		    this->remix = p->tag;
+		    break;
+		}
+	    }
+	    if (!p->name) {
+		std::fputs("Invalid remix optarg\n", stderr);
 		return false;
 	    }
 	}

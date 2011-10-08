@@ -24,7 +24,7 @@ AudioStreamBasicDescription BuildBasicDescription(const SampleFormat &format)
 }
 
 EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
-    uint32_t formatID, int nchannelsOut, int chanmask) :
+    uint32_t formatID, uint32_t remix, int chanmask) :
 	m_src(src),
 	m_samples_read(0),
 	m_frames_written(0),
@@ -36,20 +36,41 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     setInputBasicDescription(m_input_desc);
     uint32_t nchannels = m_input_desc.mChannelsPerFrame;
     const std::vector<uint32_t> *chanmap = src->getChannelMap();
-    AudioChannelLayoutX layout;
-    if (chanmask > 0)
-	layout = AudioChannelLayoutX::FromBitmap(chanmask);
-    else if (chanmask == 0 || !chanmap)
-	layout = AudioChannelLayoutX::CreateDefault(nchannels);
-    else
-	layout = AudioChannelLayoutX::FromChannelMap(*chanmap);
+    if (chanmask < 0)
+	chanmask = chanmap ? GetChannelMask(*chanmap) : 0;
+    AudioChannelLayoutX layout =
+	chanmask ? AudioChannelLayoutX::FromBitmap(chanmask)
+	         : AudioChannelLayoutX::CreateDefault(nchannels);
     setInputChannelLayout(layout);
 
-    // Obtain layout for output
     uint32_t newtag = GetAACChannelMap(layout, 0);
-    if (newtag) {
-	layout->mChannelLayoutTag = newtag;
-	layout->mChannelBitmap = 0;
+    uint32_t ilayoutAAC = newtag ? newtag : layout->mChannelLayoutTag;
+
+    // get output channel layout
+    AudioChannelLayoutX olayout;
+    if (remix == 0xffffffff) { // --remix auto
+	olayout->mChannelLayoutTag = kAudioChannelLayoutTag_AAC_5_1;
+	/* 6.0 -> 5.1 remix by QT is buggy, therefore treat it specially */
+	if (nchannels < 6 || newtag == kAudioChannelLayoutTag_AAC_6_0)
+	    olayout->mChannelLayoutTag = kAudioChannelLayoutTag_Stereo;
+    }
+    else if (remix)
+	olayout->mChannelLayoutTag = remix;
+    else
+	olayout->mChannelLayoutTag = ilayoutAAC;
+
+    unsigned nchannelsOut = olayout.numChannels();
+    if (nchannelsOut > nchannels && nchannelsOut != 2)
+	throw std::runtime_error(
+	    "Increasing number of channels with remix is not allowed");
+    if (remix && nchannels == nchannelsOut) {
+	/*
+	 * This is allowed by QT, but is buggy.
+	 * Therefore we don't allow it.
+	 */
+	if (ilayoutAAC != olayout->mChannelLayoutTag)
+	    throw std::runtime_error(
+	    "Remixing to a layout with same number of channels is not allowed");
     }
     if (formatID == 'alac' && nchannelsOut != 2)
 	throw std::runtime_error("Only stereo is supported for ALAC");
@@ -61,13 +82,11 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     oasbd.mChannelsPerFrame = 2;
     setBasicDescription(oasbd);
 
-    if (nchannels == nchannelsOut) {
-	std::vector<UInt32> avails;
-	getAvailableChannelLayoutTagList(&avails);
-	if (std::find(avails.begin(), avails.end(),
-		      layout->mChannelLayoutTag) == avails.end())
-	    throw std::runtime_error("Not supported channel layout");
-    }
+    std::vector<UInt32> avails;
+    getAvailableChannelLayoutTagList(&avails);
+    if (std::find(avails.begin(), avails.end(),
+		      olayout->mChannelLayoutTag) == avails.end())
+	throw std::runtime_error("Not available output channel layout");
     // Now we set real number of channels
     oasbd.mChannelsPerFrame = nchannelsOut;
     setBasicDescription(oasbd);
@@ -79,8 +98,14 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
      * (For example, even if input is C L R Cs, L R Ls Rs is selected).
      * Therefore, we must explicitly reset output layout here.
      */
-    if (nchannels == nchannelsOut)
-	setChannelLayout(layout);
+    try {
+	setChannelLayout(olayout);
+    } catch (...) {
+	if (remix)
+	    throw std::runtime_error("Can't remix into the specified layout");
+	else
+	    throw;
+    }
 }
 
 bool EncoderBase::encodeChunk(UInt32 nframes)
