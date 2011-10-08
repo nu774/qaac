@@ -35,6 +35,10 @@ This is a header file of WavPack (http://www.wavpack.com/),
 version 4.50.1
 Slightly modified due to incompatibility with QuickTime's stdint.h.
 
+include/tak_deco_lib.h:
+This is a header file of TAK (http://www.thbeck.de/Tak/Tak.html),
+version 2.2.0
+
 include/libsoxrate.h:
 This is a header file of libsoxrate.
 Minimized DLL version made out of sox 14.3.2 (rate effect only).

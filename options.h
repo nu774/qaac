@@ -6,6 +6,7 @@
 #include "libsndfilesrc.h"
 #include "flacsrc.h"
 #include "wvpacksrc.h"
+#include "taksrc.h"
 #include "itunetags.h"
 #include "resampler.h"
 
@@ -75,6 +76,7 @@ struct Options {
     FLACModule libflac;
     WavpackModule libwavpack;
     SoxResamplerModule libsoxrate;
+    TakModule libtak;
 };
 
 #endif

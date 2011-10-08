@@ -15,6 +15,7 @@
 #include "libsndfilesrc.h"
 #include "flacsrc.h"
 #include "wvpacksrc.h"
+#include "taksrc.h"
 #include "qtmoviesource.h"
 #include "alacsink.h"
 #include "options.h"
@@ -440,6 +441,14 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 	    stream.rewind();
 	}
     }
+    if (opts.libtak.loaded() && opts.libtak.compatible()) {
+	try {
+	    return x::shared_ptr<ISource>(
+		    new TakSource(opts.libtak, stream));
+	} catch (const std::runtime_error&) {
+	    stream.rewind();
+	}
+    }
     if (opts.libsndfile.loaded()) {
 	try {
 	    return x::shared_ptr<ISource>(
@@ -785,6 +794,7 @@ void load_modules(Options &opts)
     opts.libsndfile = LibSndfileModule(L"libsndfile-1.dll");
     opts.libflac = FLACModule(L"libFLAC.dll");
     opts.libwavpack = WavpackModule(L"wavpackdll.dll");
+    opts.libtak = TakModule(L"tak_deco_lib.dll");
     opts.libsoxrate = SoxResamplerModule(L"libsoxrate.dll");
 }
 
@@ -890,10 +900,18 @@ int wmain1(int argc, wchar_t **argv)
 	    if (opts.libsndfile.loaded())
 		LOG("%s\n", opts.libsndfile.version_string());
 	    if (opts.libflac.loaded())
-		LOG("libflac %s\n", opts.libflac.VERSION_STRING);
+		LOG("libFLAC %s\n", opts.libflac.VERSION_STRING);
 	    if (opts.libwavpack.loaded())
-		LOG("libwavpack %s\n",
+		LOG("wavpackdll %s\n",
 			opts.libwavpack.GetLibraryVersionString());
+	    if (opts.libtak.loaded()) {
+		TtakInt32 var, comp;
+		opts.libtak.GetLibraryVersion(&var, &comp);
+		LOG("tak_deco_lib %d.%d.%d %s\n",
+			var >> 16, (var >> 8) & 0xff, var & 0xff,
+			opts.libtak.compatible() ? "compatible"
+			                         : "incompatible");
+	    }
 	    return 0;
 	}
 	if (opts.print_available_formats) {

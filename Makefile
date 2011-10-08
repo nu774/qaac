@@ -65,6 +65,7 @@ options.o \
 reg.o \
 resampler.o \
 sink.o \
+taksrc.o \
 version.o \
 wvpacksrc.o
 

@@ -113,6 +113,7 @@
     <ClCompile Include="..\..\reg.cpp" />
     <ClCompile Include="..\..\resampler.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
+    <ClCompile Include="..\..\taksrc.cpp" />
     <ClCompile Include="..\..\version.cpp" />
     <ClCompile Include="..\..\wvpacksrc.cpp" />
   </ItemGroup>
