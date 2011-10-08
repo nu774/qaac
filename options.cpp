@@ -101,7 +101,7 @@ void usage()
 "                       <number>: Literal rate in Hz\n"
 "-s, --silent           Suppress console messages\n"
 "-n, --nice             Give lower process priority\n"
-"--remix <layout>       Remix to the specify output channel layout.\n"
+"--remix <layout>       Remix to the specifed output channel layout.\n"
 "                       \"layout\" is one of the following:\n"
 "                       auto, mono, stereo, quad,\n"
 "                       4.0, 5.0, 5.1, 6.0, 6.1, 7.0, 7.1, 8.0\n"
