@@ -38,10 +38,8 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     const std::vector<uint32_t> *chanmap = src->getChannelMap();
     if (chanmask < 0)
 	chanmask = chanmap ? GetChannelMask(*chanmap) : 0;
-    AudioChannelLayoutX layout =
-	chanmask ? AudioChannelLayoutX::FromBitmap(chanmask)
-	         : AudioChannelLayoutX::CreateDefault(nchannels);
-    setInputChannelLayout(layout);
+    if (!chanmask) chanmask = GetDefaultChannelMask(nchannels);
+    AudioChannelLayoutX layout = AudioChannelLayoutX::FromBitmap(chanmask);
 
     uint32_t aacTag = GetAACLayoutTag(layout);
     // get output channel layout
@@ -56,6 +54,10 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
 	olayout->mChannelLayoutTag = remix;
     else
 	olayout->mChannelLayoutTag = aacTag;
+
+    AdjustChannelLabel(&layout->mChannelDescriptions[0], chanmask,
+	    olayout->mChannelLayoutTag);
+    setInputChannelLayout(layout);
 
     unsigned nchannelsOut = olayout.numChannels();
     if (nchannelsOut > nchannels && nchannelsOut != 2)
@@ -89,6 +91,7 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     oasbd.mChannelsPerFrame = nchannelsOut;
     setBasicDescription(oasbd);
     getBasicDescription(&m_output_desc);
+
     /*
      * Basically, channel layout of output is automatically selected by QT.
      * However, this "default" behavior seems to take

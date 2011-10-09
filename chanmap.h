@@ -5,6 +5,8 @@
 #include "iointer.h"
 
 void MapChannelLabel(AudioChannelDescription *desc, uint32_t bitmap);
+void AdjustChannelLabel(AudioChannelDescription *desc, uint32_t bitmap,
+	uint32_t outLayoutTag);
 uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap);
 uint32_t GetDefaultChannelMask(uint32_t nchannels);
 uint32_t GetLayoutTag(uint32_t chanmask);

@@ -35,6 +35,36 @@ void MapChannelLabel(AudioChannelDescription *desc, uint32_t bitmap)
     }
 }
 
+/*
+ * adjust channel labels depending on the desired output layout
+ */
+void AdjustChannelLabel(AudioChannelDescription *desc, uint32_t bitmap,
+	uint32_t outLayoutTag)
+{
+    if (outLayoutTag != kAudioChannelLayoutTag_AAC_7_0
+     && outLayoutTag != kAudioChannelLayoutTag_AAC_Octagonal)
+	return;
+    bool back_in_use = ((bitmap & 0x30) == 0x30);
+    bool side_in_use = ((bitmap & 0x600) == 0x600);
+    if (!back_in_use || !side_in_use)
+	return;
+
+    for (size_t i = 0; i < 8; ++i) {
+	uint32_t newlabel = desc[i].mChannelLabel;
+	switch (newlabel) {
+	case kAudioChannelLabel_LeftSurround:
+	    newlabel = kAudioChannelLabel_RearSurroundLeft; break;
+	case kAudioChannelLabel_RightSurround:
+	    newlabel = kAudioChannelLabel_RearSurroundRight; break;
+	case kAudioChannelLabel_LeftWide:
+	    newlabel = kAudioChannelLabel_LeftSurround; break;
+	case kAudioChannelLabel_RightWide:
+	    newlabel = kAudioChannelLabel_RightSurround; break;
+	}
+	desc[i].mChannelLabel = newlabel;
+    }
+}
+
 uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap)
 {
     /* only accept usb order */
@@ -183,11 +213,7 @@ void GetAACChannelMap(const AudioChannelLayout *layout,
 	break;
     default: throw std::runtime_error("Not supported channel layout");
     }
-    if (!a) {
-	for (size_t i = 1; i <= nchannels; ++i)
-	    result->push_back(i);
-    } else
-	while (*a) result->push_back(*a++);
+    while (a && *a) result->push_back(*a++);
 }
 
 size_t ChannelMapper::readSamples(void *buffer, size_t nsamples)
