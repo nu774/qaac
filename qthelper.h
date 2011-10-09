@@ -66,11 +66,13 @@ public:
     }
     static AudioChannelLayoutX FromBitmap(uint32_t bitmap)
     {
-	AudioChannelLayoutX layout;
+	size_t nc = bitcount(bitmap);
+	AudioChannelLayoutX layout(nc);
 	layout->mChannelLayoutTag = GetLayoutTag(bitmap);
 	if (layout->mChannelLayoutTag
 		== kAudioChannelLayoutTag_UseChannelBitmap)
 	    layout->mChannelBitmap = bitmap;
+	MapChannelLabel(&layout->mChannelDescriptions[0], bitmap);
 	return layout;
     }
 private:

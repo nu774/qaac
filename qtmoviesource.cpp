@@ -91,8 +91,10 @@ QTMovieSource::QTMovieSource(const std::wstring &path)
     }
     m_session.setAudioStreamBasicDescription(m_description);
     m_format = ConvertFromBasicDescription(m_description);
-    for (size_t i = 0; i < m_layout->mNumberChannelDescriptions; ++i)
-	m_chanmap.push_back(m_layout->mChannelDescriptions[i].mChannelLabel);
+    for (size_t i = 0; i < m_layout->mNumberChannelDescriptions; ++i) {
+	AudioChannelDescription &desc = m_layout->mChannelDescriptions[i];
+	m_chanmap.push_back(desc.mChannelLabel);
+    }
 
     setRange(0, static_cast<uint64_t>(GetMediaDuration(media))
        	* m_description.mSampleRate / GetMediaTimeScale(media));

@@ -40,13 +40,21 @@ void AACEncoder::forceAACChannelMapping()
 {
     AudioChannelLayoutX layout;
     getInputChannelLayout(&layout);
-    std::vector<uint32_t> chanmap;
-    uint32_t newtag = GetAACChannelMap(layout, &chanmap);
-    if (!newtag) return;
+    size_t nchannels = layout.numChannels();
+    AudioChannelLayoutX newLayout(nchannels);
+    newLayout->mChannelLayoutTag = GetAACLayoutTag(layout);
 
-    AudioChannelLayoutX newLayout;
-    newLayout->mChannelLayoutTag = newtag;
+    std::vector<uint32_t> chanmap;
+    GetAACChannelMap(layout, nchannels, &chanmap);
+    AudioChannelDescription *origDesc = layout->mChannelDescriptions;
+    AudioChannelDescription *newDesc = newLayout->mChannelDescriptions;
+    for (size_t i = 0; i < nchannels; ++i) {
+	size_t n = chanmap.size() ? chanmap[i] - 1: i;
+	newDesc[i].mChannelLabel = origDesc[n].mChannelLabel;
+    }
     setInputChannelLayout(newLayout);
-    x::shared_ptr<ISource> newsrc(new ChannelMapper(m_src, chanmap));
-    m_src = newsrc;
+    if (chanmap.size()) {
+	x::shared_ptr<ISource> newsrc(new ChannelMapper(m_src, chanmap));
+	m_src = newsrc;
+    }
 }

@@ -43,21 +43,19 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
 	         : AudioChannelLayoutX::CreateDefault(nchannels);
     setInputChannelLayout(layout);
 
-    uint32_t newtag = GetAACChannelMap(layout, 0);
-    uint32_t ilayoutAAC = newtag ? newtag : layout->mChannelLayoutTag;
-
+    uint32_t aacTag = GetAACLayoutTag(layout);
     // get output channel layout
     AudioChannelLayoutX olayout;
     if (remix == 0xffffffff) { // --remix auto
 	olayout->mChannelLayoutTag = kAudioChannelLayoutTag_AAC_5_1;
 	/* 6.0 -> 5.1 remix by QT is buggy, therefore treat it specially */
-	if (nchannels < 6 || newtag == kAudioChannelLayoutTag_AAC_6_0)
+	if (nchannels < 6 || aacTag == kAudioChannelLayoutTag_AAC_6_0)
 	    olayout->mChannelLayoutTag = kAudioChannelLayoutTag_Stereo;
     }
     else if (remix)
 	olayout->mChannelLayoutTag = remix;
     else
-	olayout->mChannelLayoutTag = ilayoutAAC;
+	olayout->mChannelLayoutTag = aacTag;
 
     unsigned nchannelsOut = olayout.numChannels();
     if (nchannelsOut > nchannels && nchannelsOut != 2)
@@ -68,7 +66,7 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
 	 * This is allowed by QT, but is buggy.
 	 * Therefore we don't allow it.
 	 */
-	if (ilayoutAAC != olayout->mChannelLayoutTag)
+	if (aacTag != olayout->mChannelLayoutTag)
 	    throw std::runtime_error(
 	    "Remixing to a layout with same number of channels is not allowed");
     }
