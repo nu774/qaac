@@ -9,59 +9,21 @@ void MapChannelLabel(AudioChannelDescription *desc, uint32_t bitmap)
 {
     std::vector<uint32_t> labels;
     bool back_in_use = ((bitmap & 0x30) == 0x30);
+    bool side_in_use = ((bitmap & 0x600) == 0x600);
 
     for (size_t n = 0, t = bitmap; n < 32; ++n, t >>= 1)
 	if (t & 1) labels.push_back(n + 1);
-    /*
-     * Basically, we set the same channel label as the original.
-     * However, QT doesn't handle SL/SR correctly.
-     * (When input has SL/SR, they disappear from remixed result).
-     *
-     * Therefore, we treats SL/SR specially here:
-     * 1) If input doesn't have BL/BR, label SL/SR as BL/BR.
-     * 2) If input has BL/BR, label SL/SR as LeftWide, RightWide.
-     */
     for (size_t i = 0; i < labels.size(); ++i) {
 	if (labels[i] == kAudioChannelLabel_LeftSurroundDirect)
-	    desc[i].mChannelLabel
-		= back_in_use ? kAudioChannelLabel_LeftWide
-			      : kAudioChannelLabel_LeftSurround;
+	    desc[i].mChannelLabel = kAudioChannelLabel_LeftSurround;
 	else if (labels[i] == kAudioChannelLabel_RightSurroundDirect)
-	    desc[i].mChannelLabel
-		= back_in_use ? kAudioChannelLabel_RightWide
-		              : kAudioChannelLabel_RightSurround;
+	    desc[i].mChannelLabel = kAudioChannelLabel_RightSurround;
+	else if (side_in_use && labels[i] == kAudioChannelLabel_LeftSurround)
+	    desc[i].mChannelLabel = kAudioChannelLabel_RearSurroundLeft;
+	else if (side_in_use && labels[i] == kAudioChannelLabel_RightSurround)
+	    desc[i].mChannelLabel = kAudioChannelLabel_RearSurroundRight;
 	else
 	    desc[i].mChannelLabel = labels[i];
-    }
-}
-
-/*
- * adjust channel labels depending on the desired output layout
- */
-void AdjustChannelLabel(AudioChannelDescription *desc, uint32_t bitmap,
-	uint32_t outLayoutTag)
-{
-    if (outLayoutTag != kAudioChannelLayoutTag_AAC_7_0
-     && outLayoutTag != kAudioChannelLayoutTag_AAC_Octagonal)
-	return;
-    bool back_in_use = ((bitmap & 0x30) == 0x30);
-    bool side_in_use = ((bitmap & 0x600) == 0x600);
-    if (!back_in_use || !side_in_use)
-	return;
-
-    for (size_t i = 0; i < 8; ++i) {
-	uint32_t newlabel = desc[i].mChannelLabel;
-	switch (newlabel) {
-	case kAudioChannelLabel_LeftSurround:
-	    newlabel = kAudioChannelLabel_RearSurroundLeft; break;
-	case kAudioChannelLabel_RightSurround:
-	    newlabel = kAudioChannelLabel_RearSurroundRight; break;
-	case kAudioChannelLabel_LeftWide:
-	    newlabel = kAudioChannelLabel_LeftSurround; break;
-	case kAudioChannelLabel_RightWide:
-	    newlabel = kAudioChannelLabel_RightSurround; break;
-	}
-	desc[i].mChannelLabel = newlabel;
     }
 }
 

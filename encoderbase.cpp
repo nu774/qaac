@@ -55,8 +55,6 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     else
 	olayout->mChannelLayoutTag = aacTag;
 
-    AdjustChannelLabel(&layout->mChannelDescriptions[0], chanmask,
-	    olayout->mChannelLayoutTag);
     setInputChannelLayout(layout);
 
     unsigned nchannelsOut = olayout.numChannels();
