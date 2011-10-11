@@ -17,6 +17,18 @@ Track GetSoundTrack(Movie movie)
     throw std::runtime_error("Movie contains no sound track");
 }
 
+static
+void DisableOtherTracks(Movie movie, Track track)
+{
+    long id = GetTrackID(track);
+    size_t count = GetMovieTrackCount(movie);
+    for (size_t i = 0; i < count; ++i) {
+	track = GetMovieIndTrack(movie, i + 1);
+	if (GetTrackID(track) != id)
+	    SetTrackEnabled(track, false);
+    }
+}
+
 static SampleFormat
 ConvertFromBasicDescription(const AudioStreamBasicDescription &asbd)
 {
@@ -44,11 +56,10 @@ QTMovieSource::QTMovieSource(const std::wstring &path)
 {
     MovieX movie = MovieX::FromFile(path);
     Track track = GetSoundTrack(movie);
+    DisableOtherTracks(movie, track);
     /*
-     * By default, Movie's time scale is not accurate enough, and
-     * MovieAudioExtraction produces fewer samples than the original,
-     * even if it is just a raw PCM source.
-     * So, we must reset the time scale to get accurate extraction.
+     *  In order to get sample accurate extraction,
+     *	we have to set movie timescale := media timescale (= sample rate)
      */
     DeleteTrackSegment(track, 0, GetTrackDuration(track));
     Media media = GetTrackMedia(track);
@@ -64,13 +75,32 @@ QTMovieSource::QTMovieSource(const std::wstring &path)
     if (asbd.mFormatID != 'lpcm' && asbd.mFormatID != 'alac')
 	throw std::runtime_error("QTMovieSource: Not supported input format");
 
+    AudioChannelLayoutX layout, layoutm;
+    TrackX(track).getChannelLayout(&layout);
+    movie.getSummaryChannelLayout(&layoutm);
+    if (layoutm->mChannelLayoutTag == layout->mChannelLayoutTag) {
+	if (layout->mNumberChannelDescriptions == asbd.mChannelsPerFrame)
+	    for (size_t i = 0; i < asbd.mChannelsPerFrame; ++i)
+		m_chanmap.push_back(
+			layout->mChannelDescriptions[i].mChannelLabel);
+    }
     if (asbd.mFormatID == 'alac') {
+	if (asbd.mChannelsPerFrame > 2)
+	    throw std::runtime_error("Can't decode multichannel ALAC");
 	M4ATagParser parser(GetFullPathNameX(path.c_str()));
 	m_tags = parser.getTags();
     }
     m_session = MovieAudioExtractionX::Begin(movie, 0);
+    m_session.setRenderQuality(kQTAudioRenderQuality_Max);
+    /*
+     * Without this, MovieAudioExtraction automatically remix
+     * multi-channel input into mono.
+     * However, as a side effect, AudioChannelLayout will be always tagged as
+     * kAudioChannelLayoutTag_DiscreteInOrder. m_ChannelDescriptions array
+     * will be also gets non-sense.
+     */
+    m_session.setAllChannelsDiscrete(1);
     m_session.getAudioStreamBasicDescription(&m_description);
-    m_session.getAudioChannelLayout(&m_layout);
 
     /*
      * MovieAudioExtraction produces non-interleaved PCM by default.
@@ -91,10 +121,6 @@ QTMovieSource::QTMovieSource(const std::wstring &path)
     }
     m_session.setAudioStreamBasicDescription(m_description);
     m_format = ConvertFromBasicDescription(m_description);
-    for (size_t i = 0; i < m_layout->mNumberChannelDescriptions; ++i) {
-	AudioChannelDescription &desc = m_layout->mChannelDescriptions[i];
-	m_chanmap.push_back(desc.mChannelLabel);
-    }
 
     setRange(0, static_cast<uint64_t>(GetMediaDuration(media))
        	* m_description.mSampleRate / GetMediaTimeScale(media));

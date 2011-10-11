@@ -27,7 +27,15 @@ public:
     OSType getType() const { return m_type; }
 };
 
-class MovieX {
+class MovieX: public PropertySupport<MovieX> {
+    enum { kAudio = kQTPropertyClass_Audio };
+    enum {
+	kRenderQuality = kQTAudioPropertyID_RenderQuality,
+	kSummaryChannelLayout = kQTAudioPropertyID_SummaryChannelLayout,
+	kDeviceChannelLayout = kQTAudioPropertyID_DeviceChannelLayout,
+	kDeviceASBD = kQTAudioPropertyID_DeviceASBD,
+	kSummaryASBD = kQTAudioPropertyID_SummaryASBD,
+    };
     x::shared_ptr<MovieType *> m_instance;
 public:
     MovieX() {}
@@ -50,6 +58,122 @@ public:
 	 * cf. scaudiocompress sample
 	 */
 	return movie;
+    }
+    void getSummaryChannelLayout(AudioChannelLayoutX *result)
+    {
+	AudioChannelLayoutX::owner_t value;
+	getPointerProperty(kAudio, kSummaryChannelLayout, &value);
+	*result = value.get();
+    }
+
+    /* for PropertySupport */
+    long _getPropertyInfo(
+		OSType inPropClass,
+		OSType inPropID,
+		OSType *outPropType,
+		ByteCount *outPropValueSize,
+		UInt32 *outPropertyFlags) const
+    {
+	return QTGetMoviePropertyInfo(
+		    m_instance.get(),
+		    inPropClass,
+		    inPropID,
+		    outPropType,
+		    outPropValueSize,
+		    outPropertyFlags);
+    }
+    long _getProperty(
+		OSType inPropClass,
+		OSType inPropID,
+		ByteCount inPropValueSize,
+		void *outPropValueAddress,
+		ByteCount *outPropValueSizeUsed) const
+    {
+	return QTGetMovieProperty(
+		    m_instance.get(),
+		    inPropClass,
+		    inPropID,
+		    inPropValueSize,
+		    outPropValueAddress,
+		    outPropValueSizeUsed);
+    }
+    long _setProperty(
+		OSType inPropClass,
+		OSType inPropID,
+		ByteCount inPropValueSize,
+		const void *inPropValueAddress) const
+    {
+	return QTSetMovieProperty(
+		    m_instance.get(),
+		    inPropClass,
+		    inPropID,
+		    inPropValueSize,
+		    inPropValueAddress);
+    }
+};
+
+class TrackX: public PropertySupport<TrackX> {
+    enum { kAudio = kQTPropertyClass_Audio };
+    enum {
+	kRenderQuality = kQTAudioPropertyID_RenderQuality,
+	kChannelLayout = kQTAudioPropertyID_ChannelLayout,
+	kFormatString = kQTAudioPropertyID_FormatString,
+	kChannelLayoutString = kQTAudioPropertyID_ChannelLayoutString
+    };
+    Track m_instance;
+public:
+    TrackX(Track track) : m_instance(track) {}
+    operator Track() { return m_instance; }
+
+    void getChannelLayout(AudioChannelLayoutX *result)
+    {
+	AudioChannelLayoutX::owner_t value;
+	getPointerProperty(kAudio, kChannelLayout, &value);
+	*result = value.get();
+    }
+    /* for PropertySupport */
+    long _getPropertyInfo(
+		OSType inPropClass,
+		OSType inPropID,
+		OSType *outPropType,
+		ByteCount *outPropValueSize,
+		UInt32 *outPropertyFlags) const
+    {
+	return QTGetTrackPropertyInfo(
+		    m_instance,
+		    inPropClass,
+		    inPropID,
+		    outPropType,
+		    outPropValueSize,
+		    outPropertyFlags);
+    }
+    long _getProperty(
+		OSType inPropClass,
+		OSType inPropID,
+		ByteCount inPropValueSize,
+		void *outPropValueAddress,
+		ByteCount *outPropValueSizeUsed) const
+    {
+	return QTGetTrackProperty(
+		    m_instance,
+		    inPropClass,
+		    inPropID,
+		    inPropValueSize,
+		    outPropValueAddress,
+		    outPropValueSizeUsed);
+    }
+    long _setProperty(
+		OSType inPropClass,
+		OSType inPropID,
+		ByteCount inPropValueSize,
+		const void *inPropValueAddress) const
+    {
+	return QTSetTrackProperty(
+		    m_instance,
+		    inPropClass,
+		    inPropID,
+		    inPropValueSize,
+		    inPropValueAddress);
     }
 };
 

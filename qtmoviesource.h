@@ -11,7 +11,6 @@ class QTMovieSource:
 {
     MovieAudioExtractionX m_session;
     AudioStreamBasicDescription m_description;
-    AudioChannelLayoutX m_layout;
     SampleFormat m_format;
     std::vector<uint32_t> m_chanmap;
     bool m_extraction_complete;
