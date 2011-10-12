@@ -61,12 +61,6 @@ namespace wav {
 		if (chanmap)
 		    for (size_t i = 0; i < chanmap->size(); ++i)
 			mask |= (1 << (chanmap->at(i) - 1));
-		else {
-		    static uint32_t default_map[] = {
-			1, 2, 7, 0x107, 0x37, 0x3f, 0x70f, 0x63f
-		    };
-		    mask = default_map[format.m_nchannels - 1];
-		}
 		put(result, mask);
 	    }
 	    // SubFormat

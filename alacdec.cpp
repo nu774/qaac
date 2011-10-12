@@ -31,6 +31,7 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
 {
     QTMovieSource source(ifile);
     const SampleFormat &fmt = source.getSampleFormat();
+    const std::vector<uint32_t> *chanmap = source.getChannelMap();
 
     std::wstring ofilename;
     const wchar_t *ext = flac ? L"flac" : L"wav";
@@ -58,7 +59,7 @@ void decode(const wchar_t *ifile, const wchar_t *ofile, const wchar_t *odir,
 	sink = new FLACSink(ofp.get(), source.length(), fmt,
 		libflac, source.getTags());
     } else
-	sink = new WavSink(ofp.get(), source.length(), fmt);
+	sink = new WavSink(ofp.get(), source.length(), fmt, chanmap);
     std::auto_ptr<ISink> __delete_later__(sink);
 
     const size_t nsamples = 0x1000;
