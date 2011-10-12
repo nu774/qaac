@@ -78,11 +78,11 @@ QTMovieSource::QTMovieSource(const std::wstring &path)
     AudioChannelLayoutX layout, layoutm;
     TrackX(track).getChannelLayout(&layout);
     movie.getSummaryChannelLayout(&layoutm);
-    if (layoutm->mChannelLayoutTag == layout->mChannelLayoutTag) {
-	if (layout->mNumberChannelDescriptions == asbd.mChannelsPerFrame)
+    if (layoutm.numChannels() == layout.numChannels()) {
+	if (layoutm->mNumberChannelDescriptions == asbd.mChannelsPerFrame)
 	    for (size_t i = 0; i < asbd.mChannelsPerFrame; ++i)
 		m_chanmap.push_back(
-			layout->mChannelDescriptions[i].mChannelLabel);
+			layoutm->mChannelDescriptions[i].mChannelLabel);
     }
     if (asbd.mFormatID == 'alac') {
 	if (asbd.mChannelsPerFrame > 2)
