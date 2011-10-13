@@ -9,12 +9,13 @@
 class QTMovieSource:
     public ISource, public ITagParser, public PartialSource<QTMovieSource>
 {
-    MovieAudioExtractionX m_session;
-    AudioStreamBasicDescription m_description;
-    SampleFormat m_format;
-    std::vector<uint32_t> m_chanmap;
     bool m_extraction_complete;
+    std::vector<uint32_t> m_chanmap;
+    std::vector<uint32_t> m_channel_conversion_map;
     std::map<uint32_t, std::wstring> m_tags;
+    MovieAudioExtractionX m_session;
+    SampleFormat m_format;
+    AudioStreamBasicDescription m_description;
 public:
     explicit QTMovieSource(const std::wstring &path);
     uint64_t length() const { return getDuration(); }

@@ -80,6 +80,71 @@ uint32_t GetLayoutTag(uint32_t channelMask)
     return kAudioChannelLayoutTag_UseChannelBitmap;
 }
 
+uint32_t GetALACLayoutTag(uint32_t nchannels)
+{
+    static const uint32_t tab[] = {
+	kAudioChannelLayoutTag_Mono,
+	kAudioChannelLayoutTag_Stereo,
+	kAudioChannelLayoutTag_AAC_3_0,
+	kAudioChannelLayoutTag_AAC_4_0,
+	kAudioChannelLayoutTag_AAC_5_0,
+	kAudioChannelLayoutTag_AAC_5_1,
+	kAudioChannelLayoutTag_AAC_6_1,
+	kAudioChannelLayoutTag_AAC_7_1
+    };
+    return tab[nchannels];
+}
+
+uint32_t GetAACReversedChannelMap(uint32_t layoutTag,
+	std::vector<uint32_t> *result)
+{
+    static const uint32_t a30[] = { 2, 3, 1, 0 };
+    static const uint32_t a40[] = { 2, 3, 1, 4, 0 };
+    static const uint32_t a50[] = { 2, 3, 1, 4, 5, 0 };
+    static const uint32_t a51[] = { 2, 3, 1, 6, 4, 5, 0 };
+    static const uint32_t a60[] = { 2, 3, 1, 4, 5, 6, 0 };
+    static const uint32_t a61[] = { 2, 3, 1, 7, 4, 5, 6, 0 };
+    static const uint32_t a70[] = { 2, 3, 1, 6, 7, 4, 5, 0 };
+    static const uint32_t a71[] = { 4, 5, 1, 8, 6, 7, 2, 3, 0 };
+    static const uint32_t a80[] = { 2, 3, 1, 6, 7, 8, 4, 5, 0 };
+
+    const uint32_t *a = 0;
+    uint32_t bitmap = 0;
+
+    switch (layoutTag) {
+    case kAudioChannelLayoutTag_Mono:
+	bitmap = 0x4; break;
+    case kAudioChannelLayoutTag_Stereo:
+	bitmap = 0x3; break;
+    case kAudioChannelLayoutTag_AAC_3_0:
+	bitmap = 0x7; a = a30; break;
+    case kAudioChannelLayoutTag_Quadraphonic:
+	bitmap = 0x33; break;
+    case kAudioChannelLayoutTag_AAC_4_0:
+	bitmap = 0x107; a = a40; break;
+    case kAudioChannelLayoutTag_AAC_5_0:
+	bitmap = 0x37; a = a50; break;
+    case kAudioChannelLayoutTag_AAC_5_1:
+	bitmap = 0x3f; a = a51; break;
+    case kAudioChannelLayoutTag_AAC_6_0:
+	bitmap = 0x137; a = a60; break;
+    case kAudioChannelLayoutTag_AAC_6_1:
+	bitmap = 0x13f; a = a61; break;
+    case kAudioChannelLayoutTag_AAC_7_0:
+	bitmap = 0x637; a = a70; break;
+    case kAudioChannelLayoutTag_AAC_7_1:
+	bitmap = 0xff; a = a71; break;
+    case kAudioChannelLayoutTag_AAC_Octagonal:
+	bitmap = 0x737; a = a80; break;
+    default:
+	throw std::runtime_error("GetAACReversedLayoutTag: unknown AAC layout");
+    }
+    std::vector<uint32_t > vec;
+    while (a && *a) vec.push_back(*a++);
+    if (result) result->swap(vec);
+    return bitmap;
+}
+
 uint32_t GetAACLayoutTag(const AudioChannelLayout *layout)
 {
     switch (layout->mChannelLayoutTag) {

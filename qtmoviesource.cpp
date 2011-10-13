@@ -78,28 +78,28 @@ QTMovieSource::QTMovieSource(const std::wstring &path)
     AudioChannelLayoutX layout, layoutm;
     TrackX(track).getChannelLayout(&layout);
     movie.getSummaryChannelLayout(&layoutm);
-    if (layoutm.numChannels() == layout.numChannels()) {
+
+    if (asbd.mFormatID == 'alac') {
+	uint32_t tag = layoutm->mChannelLayoutTag;
+	if (layoutm.numChannels() != asbd.mChannelsPerFrame)
+	    tag = GetALACLayoutTag(asbd.mChannelsPerFrame);
+	std::vector<uint32_t> cmap;
+	uint32_t bitmap = GetAACReversedChannelMap(tag, &cmap);
+	for (size_t i = 0; i < cmap.size(); ++i)
+	    m_channel_conversion_map.push_back(cmap[i] - 1);
+	for (size_t i = 1; i <= 32; ++i, bitmap >>= 1)
+	    if (bitmap & 1) m_chanmap.push_back(i);
+	M4ATagParser parser(GetFullPathNameX(path.c_str()));
+	m_tags = parser.getTags();
+    } else {
 	if (layoutm->mNumberChannelDescriptions == asbd.mChannelsPerFrame)
 	    for (size_t i = 0; i < asbd.mChannelsPerFrame; ++i)
 		m_chanmap.push_back(
 			layoutm->mChannelDescriptions[i].mChannelLabel);
     }
-    if (asbd.mFormatID == 'alac') {
-	if (asbd.mChannelsPerFrame > 2)
-	    throw std::runtime_error("Can't decode multichannel ALAC");
-	M4ATagParser parser(GetFullPathNameX(path.c_str()));
-	m_tags = parser.getTags();
-    }
     m_session = MovieAudioExtractionX::Begin(movie, 0);
     m_session.setRenderQuality(kQTAudioRenderQuality_Max);
-    /*
-     * Without this, MovieAudioExtraction automatically remix
-     * multi-channel input into mono.
-     * However, as a side effect, AudioChannelLayout will be always tagged as
-     * kAudioChannelLayoutTag_DiscreteInOrder. m_ChannelDescriptions array
-     * will be also gets non-sense.
-     */
-    m_session.setAllChannelsDiscrete(1);
+    m_session.setAllChannelsDiscrete(true);
     m_session.getAudioStreamBasicDescription(&m_description);
 
     /*
@@ -155,6 +155,21 @@ size_t QTMovieSource::readSamples(void *buffer, size_t nsamples)
     UInt32 npackets = nsamples;
     flags = 0;
     TRYE(MovieAudioExtractionFillBuffer(m_session, &npackets, &abl, &flags));
+#if 1
+    if (m_channel_conversion_map.size() && npackets) {
+	size_t width = m_description.mBitsPerChannel >> 3;
+	size_t framelen = m_description.mBytesPerFrame;
+	std::vector<char> tmp(framelen);
+	char *bp = reinterpret_cast<char*>(buffer);
+	const uint32_t *cmap = &m_channel_conversion_map[0];
+	for (size_t i = 0; i < npackets ; ++i, bp += framelen) {
+	    std::memcpy(&tmp[0], bp, framelen);
+	    for (size_t j = 0; j < m_chanmap.size(); ++j) {
+		std::memcpy(bp + width * j, &tmp[0] + width * cmap[j], width);
+	    }
+	}
+    }
+#endif
     if (flags & kQTMovieAudioExtractionComplete)
 	m_extraction_complete = true;
     addSamplesRead(npackets);

@@ -10,7 +10,10 @@ void AdjustChannelLabel(AudioChannelDescription *desc, uint32_t bitmap,
 uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap);
 uint32_t GetDefaultChannelMask(uint32_t nchannels);
 uint32_t GetLayoutTag(uint32_t chanmask);
+uint32_t GetALACLayoutTag(uint32_t nchannels);
 
+uint32_t GetAACReversedChannelMap(uint32_t layoutTag,
+	std::vector<uint32_t> *result);
 /*
  * Workaround for CoreAudioToolbox >= 7.9.4.0 bug.
  * returns new layout tag and original -> AAC channel transform map.
