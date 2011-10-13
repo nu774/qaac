@@ -43,10 +43,11 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
     static const char * const compatibleBrands[] = { "M4A ", "mp42" };
     void (MP4FileX::*create)(const char *, uint32_t, int, int,
 	    char*, uint32_t, char **, uint32_t);
+    if (temp) m_filename = L"qaac.int";
     try {
 	create = temp ? &MP4FileX::CreateTemp : &MP4FileX::Create;
 	(m_mp4file.*create)(
-		    w2m(path, utf8_codecvt_facet()).c_str(),
+		    w2m(m_filename, utf8_codecvt_facet()).c_str(),
 		    0, // flags
 		    1, // add_ftypes
 		    0, // add_iods

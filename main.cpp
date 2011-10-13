@@ -367,15 +367,12 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 #endif
     ISink *sink;
 
-    std::wstring ofilenamex = ofilename;
-    if (!opts.no_optimize) ofilenamex = L"qaac.int";
-
     if (opts.is_adts)
 	sink = new ADTSSink(ofilename, encoder);
     else if (opts.isALAC())
-	sink = new ALACSink(ofilenamex, encoder, !opts.no_optimize);
+	sink = new ALACSink(ofilename, encoder, !opts.no_optimize);
     else if (opts.isAAC())
-	sink = new MP4Sink(ofilenamex, encoder, !opts.no_optimize);
+	sink = new MP4Sink(ofilename, encoder, !opts.no_optimize);
     x::shared_ptr<ISink> sinkp(sink);
     encoder.setSink(sinkp);
 
