@@ -466,7 +466,7 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 }
 
 static
-void write_tags(MP4SinkBase *sink,
+void write_tags(MP4FileX *mp4file,
 	const Options &opts, AACEncoder &encoder,
 	const std::wstring &encoder_config)
 {
@@ -495,7 +495,7 @@ void write_tags(MP4SinkBase *sink,
     }
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
-    sink->saveTags(editor);
+    editor.save(*mp4file);
 }
 
 static void do_optimize(MP4FileX *file,
@@ -610,7 +610,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 
     MP4SinkBase *sink = dynamic_cast<MP4SinkBase*>(encoder.sink());
     if (sink) {
-	write_tags(sink, opts, encoder, encoder_config);
+	write_tags(sink->getFile(), opts, encoder, encoder_config);
 	if (!opts.no_optimize)
 	    do_optimize(sink->getFile(), ofilename, opts);
     }

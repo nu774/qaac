@@ -16,9 +16,8 @@ protected:
 public:
     MP4SinkBase(const std::wstring &path, bool temp=false);
     ~MP4SinkBase() { close(); }
-    void close();
-    void saveTags(TagEditor &editor) { editor.save(m_mp4file); }
     MP4FileX *getFile() { return &m_mp4file; }
+    void close();
 };
 
 class MP4Sink: public ISink, public MP4SinkBase {
