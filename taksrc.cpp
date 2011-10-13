@@ -108,7 +108,7 @@ TakSource::TakSource(const TakModule &module, InputStream &stream)
     : m_module(module), m_stream(stream)
 {
     static TakStreamIoInterfaceImpl io;
-    TtakSSDOptions options = { 0, 0 };
+    TtakSSDOptions options = { tak_Cpu_Any, 0 };
     if (!stream.seekable())
 	options.Flags |= tak_ssd_opt_SequentialRead;
     TtakSeekableStreamDecoder ssd = m_module.SSD_Create_FromStream(
