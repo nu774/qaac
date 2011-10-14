@@ -6,6 +6,7 @@
 
 class EncoderBase : public StdAudioComponentX {
 protected:
+    uint32_t m_chanmask;
     x::shared_ptr<ISource> m_src;
     x::shared_ptr<ISink> m_sink;
     std::vector<AudioStreamPacketDescription> m_packet_desc;

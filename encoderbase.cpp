@@ -39,7 +39,9 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     if (chanmask < 0)
 	chanmask = chanmap ? GetChannelMask(*chanmap) : 0;
     if (!chanmask) chanmask = GetDefaultChannelMask(nchannels);
+    m_chanmask = chanmask;
     AudioChannelLayoutX layout = AudioChannelLayoutX::FromBitmap(chanmask);
+    setInputChannelLayout(layout);
 
     uint32_t aacTag = GetAACLayoutTag(layout);
     // get output channel layout
@@ -54,8 +56,6 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
 	olayout->mChannelLayoutTag = remix;
     else
 	olayout->mChannelLayoutTag = aacTag;
-
-    setInputChannelLayout(layout);
 
     unsigned nchannelsOut = olayout.numChannels();
     if (nchannelsOut > nchannels && nchannelsOut != 2)

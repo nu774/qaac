@@ -182,6 +182,8 @@ uint32_t GetAACLayoutTag(const AudioChannelLayout *layout)
 	    return kAudioChannelLayoutTag_AAC_6_1;
 	case 0x637: // FL FR FC BL BR SL SR
 	    return kAudioChannelLayoutTag_AAC_7_0;
+	case 0x6cf: // FL FR FC LFE FLC FRC SL SR
+	    return kAudioChannelLayoutTag_AAC_7_1;
 	case 0x63f: // FL FR FC LFE BL BR SL SR
 	    return kAudioChannelLayoutTag_AAC_7_1;
 	case 0x737: // FL FR FC BL BR BC SL SR
@@ -204,7 +206,8 @@ void GetAACChannelMap(const AudioChannelLayout *layout,
     static const uint32_t a61b[] = { 3, 1, 2, 6, 7, 5, 4, 0 };
     static const uint32_t a70[] = { 3, 1, 2, 6, 7, 4, 5, 0 };
     static const uint32_t a71a[] = { 3, 7, 8, 1, 2, 5, 6, 4, 0 };
-    static const uint32_t a71b[] = { 3, 1, 2, 7, 8, 5, 6, 4, 0 };
+    static const uint32_t a71b[] = { 3, 5, 6, 1, 2, 7, 8, 4, 0 };
+    static const uint32_t a71c[] = { 3, 1, 2, 7, 8, 5, 6, 4, 0 };
     static const uint32_t a80[] = { 3, 1, 2, 7, 8, 4, 5, 6, 0 };
 
     const uint32_t *a = 0;
@@ -227,14 +230,15 @@ void GetAACChannelMap(const AudioChannelLayout *layout,
 	case 0x603: // FL FR SL SR
 	/* these are pass-through, remapping not required */
 	    break;
-	case 0x607: a = a50; break; // FL FR FC SL SR;
-	case 0x60f: a = a51; break; // FL FR FC LFE SL SR;
-	case 0x137: a = a60a; break; // FL FR FC BL BR BC;
-	case 0x707: a = a60b; break; // FL FR FC BC SL SR;
-	case 0x70f: a = a61b; break; // FL FR FC LFE BC SL SR;
-	case 0x637: a = a70; break; // FL FR FC BL BR SL SR;
-	case 0x63f: a = a71b; break; // FL FR FC LFE BL BR SL SR;
-	case 0x737: a = a80; break; // FL FR FC BL BR BC SL SR;
+	case 0x607: a = a50; break; // FL FR FC SL SR
+	case 0x60f: a = a51; break; // FL FR FC LFE SL SR
+	case 0x137: a = a60a; break; // FL FR FC BL BR BC
+	case 0x707: a = a60b; break; // FL FR FC BC SL SR
+	case 0x70f: a = a61b; break; // FL FR FC LFE BC SL SR
+	case 0x637: a = a70; break; // FL FR FC BL BR SL SR
+	case 0x6cf: a = a71b; break; // FL FR FC LFE FLC FRC SL SR
+	case 0x63f: a = a71c; break; // FL FR FC LFE BL BR SL SR
+	case 0x737: a = a80; break; // FL FR FC BL BR BC SL SR
 	default: throw std::runtime_error("Not supported channel layout");
 	}
 	break;
