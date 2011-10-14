@@ -13,8 +13,12 @@ struct QTInitializer {
     QTInitializer() {
 	DirectorySaver __saver__;
 	InitializeQTML(0);
+	EnterMovies();
     }
-    ~QTInitializer() { /*TerminateQTML();*/ }
+    ~QTInitializer() {
+	ExitMovies();
+	TerminateQTML();
+    }
 };
 
 inline ByteCount AudioChannelLayout_length(const AudioChannelLayout *acl)
