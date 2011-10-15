@@ -2,6 +2,7 @@
 #define _AACENCODER_H
 
 #include "encoderbase.h"
+#include "aacconfig.h"
 
 class AACEncoder : public EncoderBase {
 public:
@@ -9,10 +10,9 @@ public:
 	    int nchannelsOut, int chanmask = -1)
 	: EncoderBase(src, formatID, nchannelsOut, chanmask)
     {}
+    void getCodecConfigArray(CFArrayT<CFDictionaryRef> *result);
+    void setParameters(const std::vector<aac::Config> &params);
     void getGaplessInfo(GaplessInfo *info) const;
-    void setEncoderParameter(const wchar_t *key, int value);
-    int getParameterRange(const wchar_t *key,
-	    CFArrayT<CFStringRef> *avails, CFArrayT<CFStringRef> *limits=0);
     void forceAACChannelMapping();
 };
 

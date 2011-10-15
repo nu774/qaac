@@ -31,47 +31,14 @@
 #include <crtdbg.h>
 
 static
-void parameter_not_supported(const wchar_t *name,
+void parameter_not_supported(aac::ParamType param,
 	const CFArrayT<CFStringRef> &menu, size_t base=0)
 {
     LOG("Specified %ls value is not supported.\n"
-	"Available values are:\n", name);
+	"Available values are:\n", aac::GetParamName(param));
     for (size_t i = base; i < menu.size(); ++i)
 	LOG("%d: %ls\n", i, CF2W(menu.at(i)).c_str());
     throw std::runtime_error("");
-}
-
-namespace Param {
-    const wchar_t * const kMethod = L"Target Format";
-    const wchar_t * const kBitRate = L"Bit Rate";
-    const wchar_t * const kQuality = L"Quality";
-    const wchar_t * const kSampleRate = L"Sample Rate";
-}
-
-static
-int get_bitrate_index(const CFArrayT<CFStringRef> &menu, int rate)
-{
-    for (int i = menu.size() - 1; i >= 0; --i) {
-	std::wstring s = CF2W(menu.at(i));
-	int low, high;
-	int rc = std::swscanf(s.c_str(), L"%d - %d", &low, &high);
-	if (rc == 1 && rate == low)
-	    return i;
-	else if (rc == 2 && rate >= low && rate <= high)
-	    return i;
-    }
-    return -1;
-}
-
-static
-int get_highest_bitrate(const CFArrayT<CFStringRef> &menu)
-{
-    for (int i = menu.size() - 1; i >= 0; --i) {
-	std::wstring s = CF2W(menu.at(i));
-	int v;
-	if (std::swscanf(s.c_str(), L"%d", &v) == 1) return v;
-    }
-    return 0;
 }
 
 template <typename T>
@@ -83,6 +50,39 @@ struct CloserTo {
 	return std::abs(lhs - value_) < std::abs(rhs - value_);
     }
 };
+
+static
+int get_bitrate_index(const CFArrayT<CFStringRef> &menu,
+		      const CFArrayT<CFStringRef> &limits, int rate)
+{
+    std::vector<int> bitrates;
+    std::vector<int> availables;
+    for (int i = 0; i < limits.size(); ++i) {
+	std::wstring s = CF2W(limits.at(i));
+	int v;
+	if (std::swscanf(s.c_str(), L"%d", &v) == 1)
+	    availables.push_back(v);
+    }
+    std::sort(availables.begin(), availables.end());
+
+    for (int i = 0; i < menu.size(); ++i) {
+	std::wstring s = CF2W(menu.at(i));
+	int v = 0;
+	std::swscanf(s.c_str(), L"%d", &v);
+	bitrates.push_back(v);
+    }
+    if (rate == 0)
+	rate = availables[availables.size() - 1];
+    else {
+	std::vector<int>::iterator it
+	    = std::min_element(availables.begin(),
+		    availables.end(), CloserTo<int>(rate));
+	rate = *it;
+    }
+    std::vector<int>::iterator it
+	= std::find(bitrates.begin(), bitrates.end(), rate);
+    return std::distance(bitrates.begin(), it);
+}
 
 static
 void setup_sample_rate(AACEncoder &encoder, const Options &opts,
@@ -107,66 +107,59 @@ void setup_sample_rate(AACEncoder &encoder, const Options &opts,
 static
 void set_codec_options(AACEncoder &encoder, const Options &opts)
 {
-    CFArrayT<CFStringRef> menu, limits;
-
-    // build sampling rate table
+    // sampling rate
     {
-	encoder.getParameterRange(Param::kSampleRate, &menu, &limits);
-	double v;
+	std::vector<AudioValueRange> rates;
+	encoder.getApplicableSampleRateList(&rates);
 	std::vector<int> sample_rate_table;
-	for (size_t i = 0; i < limits.size(); ++i)
-	    if (std::swscanf(CF2W(limits.at(i)).c_str(), L"%lf", &v) == 1)
-		sample_rate_table.push_back(static_cast<int>(v * 1000));
+	for (size_t i = 0; i < rates.size(); ++i)
+	    sample_rate_table.push_back(rates[i].mMinimum);
 	setup_sample_rate(encoder, opts, sample_rate_table);
     }
-    // encoding method
+    CFArrayT<CFDictionaryRef> currentConfig;
+    CFArrayT<CFStringRef> menu, limits;
+    encoder.getCodecConfigArray(&currentConfig);
+    std::vector<aac::Config> config;
+
+    // encoding strategy
     {
 	unsigned method = opts.method;
 	if (opts.isSBR()) {
 	    int mapping[] = { 1, 0xff, 2, 0 };
 	    method = mapping[opts.method];
 	}
-	encoder.getParameterRange(Param::kMethod, &menu);
+	aac::GetParameterRange(currentConfig, aac::kStrategy, &menu);
 	if (method >= menu.size())
-	    parameter_not_supported(Param::kMethod, menu);
-	else
-	    encoder.setEncoderParameter(Param::kMethod, method);
+	    parameter_not_supported(aac::kStrategy, menu);
+	else {
+	    aac::Config t = { aac::kStrategy, method };
+	    config.push_back(t);
+	}
     }
     // bitrate
     {
-	encoder.getParameterRange(Param::kBitRate, &menu, &limits);
 	if (opts.method == Options::kTVBR) {
-	    if (opts.bitrate > 127)
-		throw std::runtime_error("TVBR parameter too large");
-	    else
-		encoder.setEncoderParameter(Param::kBitRate, opts.bitrate);
+	    aac::Config t = { aac::kTVBRQuality, opts.bitrate };
+	    config.push_back(t);
 	} else  {
-	    int bitrate = opts.bitrate;
-	    if (bitrate == 0) bitrate = get_highest_bitrate(limits);
-	    if (get_bitrate_index(limits, bitrate) < 0)
-		parameter_not_supported(Param::kBitRate, limits, 1);
-	    else {
-		size_t index = get_bitrate_index(menu, bitrate);
-		encoder.setEncoderParameter(Param::kBitRate, index);
-	    }
+	    aac::GetParameterRange(currentConfig,
+		    aac::kBitRate, &menu, &limits);
+	    size_t index = get_bitrate_index(menu, limits, opts.bitrate);
+	    aac::Config t = { aac::kBitRate, index };
+	    config.push_back(t);
 	}
     }
     // quality
     {
-	encoder.getParameterRange(Param::kQuality, &menu);
+	aac::GetParameterRange(currentConfig, aac::kQuality, &menu);
 	if (opts.quality >= menu.size())
-	    parameter_not_supported(Param::kQuality, menu);
-	else
-	    encoder.setEncoderParameter(Param::kQuality, opts.quality);
+	    parameter_not_supported(aac::kQuality, menu);
+	else {
+	    aac::Config t = { aac::kQuality, opts.quality };
+	    config.push_back(t);
+	}
     }
-#if 0
-    {
-	extern void dump_object(CFTypeRef ref, std::ostream &os);
-	CFArrayT<CFDictionaryRef> settings;
-	encoder.getCodecSpecificSettingsArray(&settings);
-	dump_object(settings, std::cerr);
-    }
-#endif
+    encoder.setParameters(config);
 }
 
 static
@@ -213,17 +206,22 @@ std::wstring get_encoder_config(AACEncoder &encoder)
     if (codec != 'aac ' && codec != 'aach')
 	return s;
 
+    CFArrayT<CFDictionaryRef> config;
+    encoder.getCodecConfigArray(&config);
+
     CFArrayT<CFStringRef> menu;
-    int value = encoder.getParameterRange(Param::kMethod, &menu);
+    int value = aac::GetParameterRange(config, aac::kStrategy, &menu);
     s += format(L", %s", CF2W(menu.at(value)).c_str());
-
-    value = encoder.getParameterRange(Param::kBitRate, &menu);
-    if (menu.size())
-	s += format(L" %skbps", CF2W(menu.at(value)).c_str());
-    else
+    
+    try {
+	value = aac::GetParameterRange(config, aac::kTVBRQuality, &menu);
 	s += format(L" q%d", value);
+    } catch (...) {
+	value = aac::GetParameterRange(config, aac::kBitRate, &menu);
+	s += format(L" %skbps", CF2W(menu.at(value)).c_str());
+    }
 
-    value = encoder.getParameterRange(Param::kQuality, &menu);
+    value = aac::GetParameterRange(config, aac::kQuality, &menu);
     s += format(L", %ls", CF2W(menu.at(value)).c_str());
     return s;
 }
@@ -364,6 +362,20 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 
     encoder.getChannelLayout(&layout);
     LOG("Output Channel Layout: %08x\n", layout->mChannelLayoutTag);
+#if 0
+    {
+	QTAtomContainer settings;
+	SCGetSettingsAsAtomContainer(encoder, &settings);
+	QTAtomContainerX disposer(settings);
+	size_t size = GetHandleSize(settings);
+	std::vector<char> vec(size);
+	QTContainerLockerX lock(settings);
+	std::memcpy(&vec[0], *settings, size);
+	FILE *fp = std::fopen("settings.dat", "wb");
+	std::fwrite(&vec[0], 1, vec.size(), fp);
+	std::fclose(fp);
+    }
+#endif
 #endif
     ISink *sink;
 

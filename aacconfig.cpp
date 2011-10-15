@@ -1,22 +1,32 @@
 #include "aacconfig.h"
 
+struct AACConfigKey {
+    const wchar_t *name;
+    const wchar_t *valueKey;
+};
+
+static const AACConfigKey AACConfigKeyTable[] = {
+    { L"Target Format", L"current value" },
+    { L"Bit Rate", L"current value" },
+    { L"Bit Rate", L"slider value" },
+    { L"Quality", L"current value" },
+    { 0, 0 }
+};
+
 static
-CFArrayRef GetParametersFromSettings(CFArrayRef settings)
+void GetCopyOfCodecSpecificSettingsArray(StdAudioComponentX *encoder,
+	CFArrayT<CFDictionaryRef> *settings)
 {
-    CFDictionaryRef dict
-	= SearchCFDictArray(settings,
-		CFSTR("converter"), CFSTR("CodecConverter"));
-    if (!dict)
-	throw std::runtime_error("GetPrametersFromSettings: "
-		"CodecConverter not found");
-    return CFDictionaryGetValueT<CFArrayRef>(dict, CFSTR("parameters"));
+    CFArrayT<CFDictionaryRef> array;
+    encoder->getCodecSpecificSettingsArray(&array);
+    CFMutableArrayRef copy = (CFMutableArrayRef)(CloneCFObject(array));
+    CFArrayT<CFDictionaryRef> newSettings(copy);
+    settings->swap(newSettings);
 }
 
 static
-CFDictionaryRef GetParameterDictFromSettings(CFArrayRef settings,
-	const wchar_t *key)
+CFDictionaryRef GetParameterDict(CFArrayRef parameters, const wchar_t *key)
 {
-    CFArrayRef parameters = GetParametersFromSettings(settings);
     CFDictionaryRef dict =
 	SearchCFDictArray(parameters, CFSTR("key"), W2CF(key));
     if (!dict)
@@ -55,7 +65,8 @@ void GetAvailableSettingsForCodec(uint32_t format,
 	    scaudio.setChannelLayout(layout);
 
 	    CFArrayT<CFStringRef> available, limits;
-	    aac::GetParameterRange(&scaudio, L"Bit Rate", &available, &limits);
+	    aac::GetParameterRange(&scaudio,
+		    aac::kBitRate, &available, &limits);
 	    CodecSetting setting;
 	    setting.m_codec = format;
 	    setting.m_sample_rate = asbd.mSampleRate;
@@ -74,52 +85,71 @@ void GetAvailableSettingsForCodec(uint32_t format,
 
 namespace aac {
 
-void SetParameter(StdAudioComponentX *encoder, const wchar_t *key, int value)
+const wchar_t *GetParamName(ParamType param)
 {
-    CFArrayT<CFDictionaryRef> settings;
-    encoder->getCodecSpecificSettingsArray(&settings);
-    CFMutableArrayRef newSettings =
-	(CFMutableArrayRef)(CloneCFObject(settings));
-    x::shared_ptr<__CFArray> newSettings__(newSettings, CFRelease);
-
-    CFDictionaryRef dict = GetParameterDictFromSettings(newSettings, key);
-    CFStringRef value_key = CFSTR("current value");
-    if (!std::wcscmp(key, L"Bit Rate")
-	    && CFDictionaryGetValue(dict, CFSTR("slider value")))
-	value_key = CFSTR("slider value");
-    CFDictionaryReplaceValue(const_cast<CFMutableDictionaryRef>(dict),
-	    value_key, CFNumberCreateT(value));
-    encoder->setCodecSpecificSettingsArray(newSettings);
+    return AACConfigKeyTable[param].name;
 }
 
-int GetParameterRange(StdAudioComponentX *encoder, const wchar_t *key,
+CFArrayRef GetParametersFromSettings(CFArrayRef settings)
+{
+    CFDictionaryRef dict
+	= SearchCFDictArray(settings,
+		CFSTR("converter"), CFSTR("CodecConverter"));
+    if (!dict)
+	throw std::runtime_error("GetPrametersFromSettings: "
+		"CodecConverter not found");
+    return CFDictionaryGetValueT<CFArrayRef>(dict, CFSTR("parameters"));
+}
+
+void SetParameters(StdAudioComponentX *encoder,
+		   const std::vector<Config> &params)
+{
+    CFArrayT<CFDictionaryRef> settings;
+    GetCopyOfCodecSpecificSettingsArray(encoder, &settings);
+    CFArrayRef parameters = GetParametersFromSettings(settings);
+
+    std::vector<Config>::const_iterator it;
+    for (it = params.begin(); it != params.end(); ++it) {
+	const AACConfigKey *ent = &AACConfigKeyTable[it->type];
+	CFMutableDictionaryRef dict = const_cast<CFMutableDictionaryRef>(
+		    GetParameterDict(parameters, ent->name));
+	CFDictionarySetValue(dict, W2CF(ent->valueKey),
+			     CFNumberCreateT(it->value));
+    }
+    encoder->setCodecSpecificSettingsArray(settings);
+}
+
+int GetParameterRange(CFArrayRef parameters, ParamType param,
 	CFArrayT<CFStringRef> *result, CFArrayT<CFStringRef> *limits)
 {
-    int n;
-    CFArrayT<CFDictionaryRef> settings;
-    encoder->getCodecSpecificSettingsArray(&settings);
-    CFDictionaryRef dict = GetParameterDictFromSettings(settings, key);
-    if (!std::wcscmp(key, L"Bit Rate")) {
-	try {
-	    CFNumberRef v = CFDictionaryGetValueT<CFNumberRef>(
-		dict, CFSTR("slider value"));
-	    *result = CFArrayT<CFStringRef>();
-	    CFNumberGetValue(v, kCFNumberSInt32Type, &n);
-	    return n;
-	} catch (const std::exception &) {}
-    } 
-    CFArrayRef v = CFDictionaryGetValueT<CFArrayRef>(
-		    dict, CFSTR("available values"));
-    *result = CFArrayT<CFStringRef>((CFArrayRef)CFRetain(v));
-    if (limits) {
-	v = CFDictionaryGetValueT<CFArrayRef>(
-		dict, CFSTR("limited values"));
-	*limits = CFArrayT<CFStringRef>((CFArrayRef)CFRetain(v));
+    const AACConfigKey *ent = &AACConfigKeyTable[param];
+    CFDictionaryRef dict = GetParameterDict(parameters, ent->name);
+    if (param != kTVBRQuality) {
+	CFArrayRef v = CFDictionaryGetValueT<CFArrayRef>(
+			dict, CFSTR("available values"));
+	CFArrayT<CFStringRef> avail(static_cast<CFArrayRef>(CFRetain(v)));
+	result->swap(avail);
+	if (limits) {
+	    v = CFDictionaryGetValueT<CFArrayRef>(
+		    dict, CFSTR("limited values"));
+	    CFArrayT<CFStringRef> limited(static_cast<CFArrayRef>(CFRetain(v)));
+	    limits->swap(limited);
+	}
     }
     CFNumberRef nr =
-	CFDictionaryGetValueT<CFNumberRef>(dict, CFSTR("current value"));
+	CFDictionaryGetValueT<CFNumberRef>(dict, W2CF(ent->valueKey));
+    int n;
     CFNumberGetValue(nr, kCFNumberSInt32Type, &n);
     return n;
+}
+
+int GetParameterRange(StdAudioComponentX *encoder, ParamType param,
+	CFArrayT<CFStringRef> *result, CFArrayT<CFStringRef> *limits)
+{
+    CFArrayT<CFDictionaryRef> settings;
+    encoder->getCodecSpecificSettingsArray(&settings);
+    CFArrayRef parameters = GetParametersFromSettings(settings);
+    return GetParameterRange(parameters, param, result, limits);
 }
 
 void GetAvailableSettings(std::vector<CodecSetting> *settings)

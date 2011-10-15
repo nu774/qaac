@@ -103,7 +103,6 @@
     <ClCompile Include="..\..\alacsink.cpp" />
     <ClCompile Include="..\..\cfhelper.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
-    <ClCompile Include="..\..\dumpcfobj.cpp" />
     <ClCompile Include="..\..\encoderbase.cpp" />
     <ClCompile Include="..\..\flacsrc.cpp" />
     <ClCompile Include="..\..\libsndfilesrc.cpp" />

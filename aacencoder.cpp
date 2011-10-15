@@ -1,16 +1,20 @@
 #include "aacencoder.h"
 #include "aacconfig.h"
 
-void AACEncoder::setEncoderParameter(const wchar_t *key, int value)
+void AACEncoder::getCodecConfigArray(CFArrayT<CFDictionaryRef> *result)
 {
-    aac::SetParameter(this, key, value);
-    getBasicDescription(&m_output_desc);
+    CFArrayT<CFDictionaryRef> settings;
+    getCodecSpecificSettingsArray(&settings);
+    CFArrayRef aref = aac::GetParametersFromSettings(settings);
+    CFArrayT<CFDictionaryRef> array(
+	static_cast<CFArrayRef>(CFRetain(aref)));
+    result->swap(array);
 }
 
-int AACEncoder::getParameterRange(const wchar_t *key,
-	CFArrayT<CFStringRef> *result, CFArrayT<CFStringRef> *limits)
+void AACEncoder::setParameters(const std::vector<aac::Config> &params)
 {
-    return aac::GetParameterRange(this, key, result, limits);
+    aac::SetParameters(this, params);
+    getBasicDescription(&m_output_desc);
 }
 
 void AACEncoder::getGaplessInfo(GaplessInfo *info) const
