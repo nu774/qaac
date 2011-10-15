@@ -85,7 +85,6 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     // Now we set real number of channels
     oasbd.mChannelsPerFrame = nchannelsOut;
     setBasicDescription(oasbd);
-    getBasicDescription(&m_output_desc);
 
     try {
 	setChannelLayout(olayout);
@@ -176,17 +175,16 @@ void EncoderBase::prepareOutputBuffer(size_t nframes)
 {
     if (m_packet_desc.size() < nframes) {
 	m_packet_desc.resize(nframes);
+	/*
+	 * cached values might have been changed after construction,
+	 * therefore refresh them here.
+	 */
+	getInputBasicDescription(&m_input_desc);
 	getBasicDescription(&m_output_desc);
+
 	uint32_t bpp = m_output_desc.mBytesPerPacket;
 	if (!bpp)
 	    bpp = getMaximumOutputPacketSize();
-//	m_output_buffer.resize(nframes * bpp);
-	/*
-	 * XXX
-	 * ScAudioFillBuffer() randomly causes heap corruption
-	 * when ALAC encoding, for some sources.
-	 * Making bigger buffer seems to work.
-	 */
 	m_output_buffer.resize(nframes * bpp * 2);
     }
 }

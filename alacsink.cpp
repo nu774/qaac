@@ -37,8 +37,8 @@ void parseMagicCookieALAC(const std::vector<char> &cookie,
 ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder, bool temp)
 	: MP4SinkBase(path, temp)
 {
-    const AudioStreamBasicDescription &format
-	= encoder.getOutputBasicDescription();
+    AudioStreamBasicDescription format;
+    encoder.getBasicDescription(&format);
     uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
     try {
 	m_mp4file.SetTimeScale(sample_rate);
@@ -49,7 +49,9 @@ ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder, bool temp)
 	   OutputBasicDescription.mBitsPerChannel is always zero for ALAC.
 	   Therefore, we use InputBasicDescription instead.
          */
-	uint32_t bps = encoder.getInputBasicDescription().mBitsPerChannel;
+	AudioStreamBasicDescription idesc;
+	encoder.getInputBasicDescription(&idesc);
+	uint32_t bps = idesc.mBitsPerChannel;
 	m_track_id = m_mp4file.AddAlacAudioTrack(sample_rate,
 		bps > 16 ? 24 : 16,
 		reinterpret_cast<uint8_t*>(&alac[0]),

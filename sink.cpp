@@ -75,8 +75,8 @@ void MP4SinkBase::close()
 MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
 	: MP4SinkBase(path, temp)
 {
-    const AudioStreamBasicDescription &format
-	= encoder.getOutputBasicDescription();
+    AudioStreamBasicDescription format;
+    encoder.getBasicDescription(&format);
     uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
     uint32_t frame_length = format.mFramesPerPacket;
     if (format.mFormatID == 'aach') {
@@ -132,8 +132,8 @@ ADTSSink::ADTSSink(const std::wstring &path, EncoderBase &encoder)
     } else {
 	m_fp = file_ptr_t(wfopenx(path.c_str(), L"wb"), fclose);
     }
-    const AudioStreamBasicDescription &format
-	= encoder.getOutputBasicDescription();
+    AudioStreamBasicDescription format;
+    encoder.getBasicDescription(&format);
     uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
     if (format.mFormatID == 'aach')
 	sample_rate /= 2;

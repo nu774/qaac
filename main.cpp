@@ -90,8 +90,9 @@ void setup_sample_rate(AACEncoder &encoder, const Options &opts,
 {
     int rate = opts.rate;
     if (rate != 0) {
-	int srcrate = static_cast<int>(
-		encoder.getInputBasicDescription().mSampleRate);
+	AudioStreamBasicDescription desc;
+	encoder.getInputBasicDescription(&desc);
+	int srcrate = static_cast<int>(desc.mSampleRate);
 	if (rate < 0)
 	    rate = srcrate;
 	std::vector<int>::const_iterator it
@@ -99,9 +100,10 @@ void setup_sample_rate(AACEncoder &encoder, const Options &opts,
 		    sample_rate_table.end(), CloserTo<int>(rate));
 	rate = *it;
     }
-    AudioStreamBasicDescription oasbd = encoder.getOutputBasicDescription();
+    AudioStreamBasicDescription oasbd;
+    encoder.getBasicDescription(&oasbd);
     oasbd.mSampleRate = rate;
-    encoder.setOutputBasicDescription(oasbd);
+    encoder.setBasicDescription(oasbd);
 }
 
 static
@@ -201,7 +203,9 @@ static
 std::wstring get_encoder_config(AACEncoder &encoder)
 {
     std::wstring s;
-    uint32_t codec = encoder.getOutputBasicDescription().mFormatID;
+    AudioStreamBasicDescription desc;
+    encoder.getBasicDescription(&desc);
+    uint32_t codec = desc.mFormatID;
     s = m2w(get_codec_version(codec));
     if (codec != 'aac ' && codec != 'aach')
 	return s;
@@ -388,8 +392,10 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
 	statfp = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
+    AudioStreamBasicDescription desc;
+    encoder.getInputBasicDescription(&desc);
     Progress progress(opts.verbose, encoder.src()->length(),
-	    encoder.getInputBasicDescription().mSampleRate);
+	    desc.mSampleRate);
     try {
 	while (encoder.encodeChunk(1)) {
 	    progress.update(encoder.samplesRead());
@@ -568,13 +574,13 @@ void encode_file(const x::shared_ptr<ISource> &src,
     std::wstring inputLayout = encoder.getInputChannelLayoutName();
 
     AudioStreamBasicDescription iasbd, oasbd;
-    iasbd = encoder.getInputBasicDescription();
-    oasbd = encoder.getOutputBasicDescription();
+    encoder.getInputBasicDescription(&iasbd);
+    encoder.getBasicDescription(&oasbd);
 
     if (opts.rate > 0 && !resampled) {
 	iasbd.mSampleRate = opts.rate;
 	encoder.setInputBasicDescription(iasbd);
-	oasbd = encoder.getOutputBasicDescription();
+	encoder.getBasicDescription(&oasbd);
     }
     if (!opts.native_chanmapper)
 	encoder.forceAACChannelMapping();
@@ -586,7 +592,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 
     if (opts.isAAC()) {
 	set_codec_options(encoder, opts);
-	oasbd = encoder.getOutputBasicDescription();
+	encoder.getBasicDescription(&oasbd);
     } else {
 	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)
 	    LOG("WARNING: Only 16/24bit format is supported for ALAC\n");

@@ -13,6 +13,7 @@ protected:
     std::vector<char> m_input_buffer, m_output_buffer;
     uint64_t m_samples_read, m_frames_written, m_bytes_written;
     double m_max_bitrate, m_cur_bitrate;
+    /* cache */
     AudioStreamBasicDescription m_input_desc, m_output_desc;
 public:
     EncoderBase(const x::shared_ptr<ISource> &src, uint32_t formatID,
@@ -30,25 +31,6 @@ public:
 		m_output_desc.mFramesPerPacket * m_frames_written);
     }
     bool encodeChunk(UInt32 nframes);
-    const AudioStreamBasicDescription &getInputBasicDescription() const
-    {
-	return m_input_desc;
-    }
-    const AudioStreamBasicDescription &getOutputBasicDescription() const
-    {
-	return m_output_desc;
-    }
-    void setInputBasicDescription(const AudioStreamBasicDescription &desc)
-    {
-	StdAudioComponentX::setInputBasicDescription(desc);
-	m_input_desc = desc;
-	getBasicDescription(&m_output_desc);
-    }
-    void setOutputBasicDescription(const AudioStreamBasicDescription &desc)
-    {
-	setBasicDescription(desc);
-	getBasicDescription(&m_output_desc);
-    }
     ISource *src() { return m_src.get(); }
     ISink *sink() { return m_sink.get(); }
 private:
