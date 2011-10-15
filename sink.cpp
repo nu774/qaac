@@ -105,22 +105,16 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
 
 	std::vector<char> cookie;
 	encoder.getMagicCookie(&cookie);
+	if (cookie.size() < 32 ||
+		std::memcmp(&cookie[26], "\x05\x80\x80\x80", 4))
+	    throw std::runtime_error("Unknown magic cookie format!!!");
+	int config_size = static_cast<unsigned char>(cookie[30]);
+
 	m_mp4file.SetTrackESConfiguration(
 		m_track_id,
 		reinterpret_cast<uint8_t*>(&cookie[31]),
-		cookie.size() - 37);
+		config_size);
 
-	/*
-	MP4Atom *atom = m_mp4file.FindTrackAtom(m_track_id, "udta.name");
-	if (atom) {
-	    for (int i = 0; i < 2; ++i) {
-		MP4Atom *parent = atom->GetParentAtom();
-		parent->DeleteChildAtom(atom);
-		delete atom;
-		atom = parent;
-	    }
-	}
-	*/
     } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
     }
