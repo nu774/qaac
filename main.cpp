@@ -356,12 +356,6 @@ void do_encode(AACEncoder &encoder, const std::wstring &ofilename,
 	const Options &opts)
 {
 #ifdef _DEBUG
-    AudioChannelLayoutX layout;
-    encoder.getInputChannelLayout(&layout);
-    LOG("Input Channel Layout: %08x\n", layout->mChannelLayoutTag);
-
-    encoder.getChannelLayout(&layout);
-    LOG("Output Channel Layout: %08x\n", layout->mChannelLayoutTag);
 #if 0
     {
 	QTAtomContainer settings;
@@ -571,6 +565,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	layout = kAudioChannelLayoutTag_Stereo;
     AACEncoder encoder(srcx, opts.output_format, layout, opts.chanmask);
     encoder.setRenderQuality(kQTAudioRenderQuality_Max);
+    std::wstring inputLayout = encoder.getInputChannelLayoutName();
 
     AudioStreamBasicDescription iasbd, oasbd;
     iasbd = encoder.getInputBasicDescription();
@@ -583,6 +578,11 @@ void encode_file(const x::shared_ptr<ISource> &src,
     }
     if (!opts.native_chanmapper)
 	encoder.forceAACChannelMapping();
+
+    std::wstring outputLayout = encoder.getChannelLayoutName();
+    if (!resampled) {
+	LOG("%ls -> %ls\n", inputLayout.c_str(), outputLayout.c_str());
+    }
 
     if (opts.isAAC()) {
 	set_codec_options(encoder, opts);

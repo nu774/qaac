@@ -34,10 +34,12 @@ class StdAudioComponentX : public ComponentX {
 	    kQTSCAudioPropertyID_BasicDescription,
 	kBitRate = kQTSCAudioPropertyID_BitRate,
 	kChannelLayout = kQTSCAudioPropertyID_ChannelLayout,
+	kChannelLayoutName = kQTSCAudioPropertyID_ChannelLayoutName,
 	kCodecSpecificSettingsArray =
 	    kQTSCAudioPropertyID_CodecSpecificSettingsArray,
 	kInputBasicDescription = kQTSCAudioPropertyID_InputBasicDescription,
 	kInputChannelLayout = kQTSCAudioPropertyID_InputChannelLayout,
+	kInputChannelLayoutName = kQTSCAudioPropertyID_InputChannelLayoutName,
 	kInputMagicCookie = kQTSCAudioPropertyID_InputMagicCookie,
 	kInputSoundDescription = kQTSCAudioPropertyID_InputSoundDescription,
 	kMagicCookie = kQTSCAudioPropertyID_MagicCookie,
@@ -128,6 +130,13 @@ public:
 	ByteCount size = AudioChannelLayout_length(acl);
 	setProperty(kSCAudio, kInputChannelLayout, size, acl);
     }
+    std::wstring getInputChannelLayoutName()
+    {
+	CFStringRef value;
+	getPodProperty(kSCAudio, kInputChannelLayoutName, &value);
+	CFStringX disposer(value);
+	return CF2W(value);
+    }
     void getChannelLayout(AudioChannelLayoutX *result)
     {
 	AudioChannelLayoutX::owner_t value;
@@ -138,6 +147,13 @@ public:
     {
 	ByteCount size = AudioChannelLayout_length(acl);
 	setProperty(kSCAudio, kChannelLayout, size, acl);
+    }
+    std::wstring getChannelLayoutName()
+    {
+	CFStringRef value;
+	getPodProperty(kSCAudio, kChannelLayoutName, &value);
+	CFStringX disposer(value);
+	return CF2W(value);
     }
     void getAvailableChannelLayoutTagList(std::vector<UInt32> *result)
     {
