@@ -28,15 +28,17 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\qaac.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\qaac.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>C:\Program Files (x86)\QuickTime SDK\CIncludes;..\..\include;..\..\mp4v2;..\..\mp4v2\include;..\..\mp4v2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(QTSDKDir)\CIncludes;..\..\include;$(mp4v2Includes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>true</MinimalRebuild>
@@ -52,7 +54,7 @@
     <Link>
       <AdditionalDependencies>QTMLClient.lib;shlwapi.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)alacdec.exe</OutputFile>
-      <AdditionalLibraryDirectories>C:\Program Files (x86)\QuickTime SDK\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(QTSDKDir)\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(OutDir)alacdec.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
@@ -64,7 +66,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Program Files (x86)\QuickTime SDK\CIncludes;..\..\include;..\..\mp4v2;..\..\mp4v2\include;..\..\mp4v2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(QTSDKDir)\CIncludes;..\..\include;$(mp4v2Includes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -78,7 +80,7 @@
     <Link>
       <AdditionalDependencies>QTMLClient.lib;shlwapi.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)alacdec.exe</OutputFile>
-      <AdditionalLibraryDirectories>C:\Program Files (x86)\QuickTime SDK\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(QTSDKDir)\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>

@@ -65,9 +65,11 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\qaac.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\qaac.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
@@ -78,7 +80,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>TAGLIB_STATIC;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(taglibIncludes)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
@@ -96,7 +98,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>TAGLIB_STATIC;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(taglibIncludes)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <WholeProgramOptimization>false</WholeProgramOptimization>

@@ -13,9 +13,6 @@
     <ClCompile Include="..\..\alacsink.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\cfhelper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\cuesheet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

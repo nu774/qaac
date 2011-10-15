@@ -28,15 +28,17 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\qaac.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\qaac.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>C:\Program Files (x86)\QuickTime SDK\CIncludes;..\..\include;..\..\mp4v2;..\..\mp4v2\include;..\..\mp4v2\src;..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(QTSDKDir)\CIncludes;..\..\include;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;TAGLIB_STATIC;_DEBUG;_LIB;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>true</MinimalRebuild>
@@ -55,7 +57,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Program Files (x86)\QuickTime SDK\CIncludes;..\..\include;..\..\mp4v2;..\..\mp4v2\include;..\..\mp4v2\src;..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(QTSDKDir)\CIncludes;..\..\include;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;TAGLIB_STATIC;NDEBUG;_LIB;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
