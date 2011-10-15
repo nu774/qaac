@@ -6,6 +6,7 @@
 
 class EncoderBase : public StdAudioComponentX {
 protected:
+    uint32_t m_formatID;
     uint32_t m_chanmask;
     x::shared_ptr<ISource> m_src;
     x::shared_ptr<ISink> m_sink;
@@ -18,6 +19,8 @@ protected:
 public:
     EncoderBase(const x::shared_ptr<ISource> &src, uint32_t formatID,
 	    uint32_t remix, int chanmask=-1);
+    void setSource(const x::shared_ptr<ISource> &src, uint32_t remix,
+	    int chanmask=-1);
     void setSink(const x::shared_ptr<ISink> &sink) { m_sink = sink; }
 
     uint64_t samplesRead() const { return m_samples_read; }

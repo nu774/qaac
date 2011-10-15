@@ -85,20 +85,45 @@ int get_bitrate_index(const CFArrayT<CFStringRef> &menu,
 }
 
 static
-void setup_sample_rate(AACEncoder &encoder, const Options &opts,
-	const std::vector<int> &sample_rate_table)
+void setup_sample_rate(AACEncoder &encoder, const Options &opts)
 {
+    if (opts.isALAC() && opts.rate <= 0)
+	return;
     int rate = opts.rate;
-    if (rate != 0) {
+    if (opts.isAAC()) {
+	bool upsample = false;
 	AudioStreamBasicDescription desc;
 	encoder.getInputBasicDescription(&desc);
-	int srcrate = static_cast<int>(desc.mSampleRate);
-	if (rate < 0)
-	    rate = srcrate;
-	std::vector<int>::const_iterator it
-	    = std::min_element(sample_rate_table.begin(),
-		    sample_rate_table.end(), CloserTo<int>(rate));
-	rate = *it;
+	if (rate > desc.mSampleRate &&
+	    opts.libsoxrate.loaded() && !opts.native_resampler) {
+	    /*
+	     * Applicable output sample rate is less than input for AAC.
+	     * Therefore, in order to obtain desired rate, we must cheat
+	     * input sample rate here.
+	     */
+	    upsample = true;
+	    desc.mSampleRate = rate;
+	    encoder.setInputBasicDescription(desc);
+	}
+	std::vector<AudioValueRange> rates;
+	encoder.getApplicableSampleRateList(&rates);
+	std::vector<int> sample_rate_table;
+	for (size_t i = 0; i < rates.size(); ++i)
+	    sample_rate_table.push_back(rates[i].mMinimum);
+
+	if (rate != 0) {
+	    int srcrate = static_cast<int>(desc.mSampleRate);
+	    if (rate < 0)
+		rate = srcrate;
+	    std::vector<int>::const_iterator it
+		= std::min_element(sample_rate_table.begin(),
+			sample_rate_table.end(), CloserTo<int>(rate));
+	    rate = *it;
+	    if (upsample && rate != desc.mSampleRate) {
+		desc.mSampleRate = rate;
+		encoder.setInputBasicDescription(desc);
+	    }
+	}
     }
     AudioStreamBasicDescription oasbd;
     encoder.getBasicDescription(&oasbd);
@@ -106,18 +131,10 @@ void setup_sample_rate(AACEncoder &encoder, const Options &opts,
     encoder.setBasicDescription(oasbd);
 }
 
+
 static
 void set_codec_options(AACEncoder &encoder, const Options &opts)
 {
-    // sampling rate
-    {
-	std::vector<AudioValueRange> rates;
-	encoder.getApplicableSampleRateList(&rates);
-	std::vector<int> sample_rate_table;
-	for (size_t i = 0; i < rates.size(); ++i)
-	    sample_rate_table.push_back(rates[i].mMinimum);
-	setup_sample_rate(encoder, opts, sample_rate_table);
-    }
     CFArrayT<CFDictionaryRef> currentConfig;
     CFArrayT<CFStringRef> menu, limits;
     encoder.getCodecConfigArray(&currentConfig);
@@ -555,8 +572,7 @@ x::shared_ptr<ISource> do_resample(
 
 static
 void encode_file(const x::shared_ptr<ISource> &src,
-	const std::wstring &ofilename, const Options &opts,
-	bool resampled=false)
+	const std::wstring &ofilename, const Options &opts)
 {
     x::shared_ptr<ISource> srcx(src);
     if (opts.chanmap.size()) {
@@ -569,56 +585,40 @@ void encode_file(const x::shared_ptr<ISource> &src,
     uint32_t layout = opts.remix;
     if (!layout && nchannelsOut == 3)
 	layout = kAudioChannelLayoutTag_Stereo;
+
     AACEncoder encoder(srcx, opts.output_format, layout, opts.chanmask);
     encoder.setRenderQuality(kQTAudioRenderQuality_Max);
-    std::wstring inputLayout = encoder.getInputChannelLayoutName();
 
+    setup_sample_rate(encoder, opts);
     AudioStreamBasicDescription iasbd, oasbd;
     encoder.getInputBasicDescription(&iasbd);
     encoder.getBasicDescription(&oasbd);
 
-    if (opts.rate > 0 && !resampled) {
-	iasbd.mSampleRate = opts.rate;
-	encoder.setInputBasicDescription(iasbd);
-	encoder.getBasicDescription(&oasbd);
+    if (src->getSampleFormat().m_rate != oasbd.mSampleRate) {
+	LOG("%dHz -> %gHz\n", src->getSampleFormat().m_rate, oasbd.mSampleRate);
+	if (opts.libsoxrate.loaded() && !opts.native_resampler) {
+	    x::shared_ptr<ISource> srcxx
+		= do_resample(srcx, opts, oasbd.mSampleRate);
+	    encoder.setSource(srcxx, layout, opts.chanmask);
+	}
     }
+
+    std::wstring inputLayout = encoder.getInputChannelLayoutName();
     if (!opts.native_chanmapper)
 	encoder.forceAACChannelMapping();
-
     std::wstring outputLayout = encoder.getChannelLayoutName();
-    if (!resampled) {
-	LOG("%ls -> %ls\n", inputLayout.c_str(), outputLayout.c_str());
-    }
+    LOG("%ls -> %ls\n", inputLayout.c_str(), outputLayout.c_str());
 
     if (opts.isAAC()) {
 	set_codec_options(encoder, opts);
-	encoder.getBasicDescription(&oasbd);
     } else {
 	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)
 	    LOG("WARNING: Only 16/24bit format is supported for ALAC\n");
     }
     std::wstring encoder_config = get_encoder_config(encoder);
 
-    if (!resampled) {
-	LOG("%ls\n", encoder_config.c_str());
-	if (opts.rate > 0) {
-	    if (opts.rate != oasbd.mSampleRate)
-		LOG("WARNING: Sample rate will be %gHz\n",
-			oasbd.mSampleRate);
-	} else if (iasbd.mSampleRate != oasbd.mSampleRate)
-	    LOG("WARNING: Resampled to %gHz\n", oasbd.mSampleRate);
-	if (opts.isAAC()) {
-	    if (iasbd.mChannelsPerFrame == 3)
-		LOG("WARNING: Downmixed to 2ch\n");
-	}
-	if (src->getSampleFormat().m_rate != oasbd.mSampleRate &&
-		opts.libsoxrate.loaded() && !opts.native_resampler) {
-	    x::shared_ptr<ISource> srcx
-		= do_resample(src, opts, oasbd.mSampleRate);
-	    encode_file(srcx, ofilename, opts, true);
-	    return;
-	}
-    }
+    LOG("%ls\n", encoder_config.c_str());
+
     do_encode(encoder, ofilename, opts);
     if (encoder.framesWritten())
 	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
