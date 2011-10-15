@@ -91,11 +91,9 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
 	 * According to ISO 14496-12 8.16.3, 
 	 * ChannelCount of AusioSampleEntry is either 1 or 2.
 	 */
-	/*
 	m_mp4file.SetIntegerProperty(
 		"moov.trak.mdia.minf.stbl.stsd.mp4a.channels",
-		format.mChannelsPerFrame);
-	*/
+		format.mChannelsPerFrame == 1 ? 1 : 2);
 
 	uint8_t level;
 	if (format.mChannelsPerFrame < 3)
@@ -105,11 +103,6 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
 
 	//m_mp4file.SetAudioProfileLevel(level);
 
-	/*
-	std::vector<uint8_t> config;
-	getDecoderSpecificInfo(1, sample_rate, layout,
-		format.mFormatID == 'aach', &config);
-	*/
 	std::vector<char> cookie;
 	encoder.getMagicCookie(&cookie);
 	m_mp4file.SetTrackESConfiguration(
@@ -117,6 +110,7 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
 		reinterpret_cast<uint8_t*>(&cookie[31]),
 		cookie.size() - 37);
 
+	/*
 	MP4Atom *atom = m_mp4file.FindTrackAtom(m_track_id, "udta.name");
 	if (atom) {
 	    for (int i = 0; i < 2; ++i) {
@@ -126,6 +120,7 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
 		atom = parent;
 	    }
 	}
+	*/
     } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
     }
