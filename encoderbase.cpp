@@ -58,9 +58,6 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
 	olayout->mChannelLayoutTag = aacTag;
 
     unsigned nchannelsOut = olayout.numChannels();
-    if (nchannelsOut > nchannels && nchannelsOut != 2)
-	throw std::runtime_error(
-	    "Increasing number of channels with remix is not allowed");
     if (remix && nchannels == nchannelsOut) {
 	/*
 	 * This is allowed by QT, but is buggy.
@@ -75,13 +72,13 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
 
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mFormatID = formatID;
-    // Set temporary dummy value to obtain AvailableChannelLayoutTagList
+    // Set temporary dummy value to obtain ApplicableChannelLayoutTagList
     // for the format
     oasbd.mChannelsPerFrame = 2;
     setBasicDescription(oasbd);
 
     std::vector<UInt32> avails;
-    getAvailableChannelLayoutTagList(&avails);
+    getApplicableChannelLayoutTagList(&avails);
     if (std::find(avails.begin(), avails.end(),
 		      olayout->mChannelLayoutTag) == avails.end())
 	throw std::runtime_error("Not available output channel layout");
@@ -90,13 +87,6 @@ EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     setBasicDescription(oasbd);
     getBasicDescription(&m_output_desc);
 
-    /*
-     * Basically, channel layout of output is automatically selected by QT.
-     * However, this "default" behavior seems to take
-     * only number of channels into account.
-     * (For example, even if input is C L R Cs, L R Ls Rs is selected).
-     * Therefore, we must explicitly reset output layout here.
-     */
     try {
 	setChannelLayout(olayout);
     } catch (...) {
