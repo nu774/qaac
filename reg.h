@@ -1,8 +1,17 @@
+#ifndef REG_H
+#define REG_H
+
 #include <cstdio>
 #include <cstring>
 #include <string>
 #include <vector>
 #include <map>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include "shared_ptr.h"
 #include "util.h"
@@ -185,3 +194,5 @@ public:
     void realize();
     void show();
 };
+
+#endif

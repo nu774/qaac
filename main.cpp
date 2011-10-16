@@ -12,10 +12,7 @@
 #include "itunetags.h"
 #include "sink.h"
 #include "rawsource.h"
-#include "libsndfilesrc.h"
 #include "flacsrc.h"
-#include "wvpacksrc.h"
-#include "taksrc.h"
 #include "qtmoviesource.h"
 #include "alacsink.h"
 #include "options.h"
@@ -29,6 +26,7 @@
 #include "reg.h"
 #include "aacconfig.h"
 #include <crtdbg.h>
+#include <QTLoadLibraryUtils.h>
 
 static
 void parameter_not_supported(aac::ParamType param,
@@ -214,6 +212,33 @@ std::string get_codec_version(uint32_t codec)
 	namex = get_codec_name(codec);
     return format("%s %d.%d.%d", namex.c_str(),
 	    (version>>16) & 0xffff, (version>>8) & 0xff, version & 0xff);
+}
+
+static
+void list_audio_encoders()
+{
+    ComponentDescription cd = { 'aenc', 0, 0, 0 };
+    ComponentDescription search = cd;
+    Component component = 0;
+    for (Component component = 0;
+	 component = FindNextComponent(component, &cd);
+	 cd = search)
+    {
+	x::shared_ptr<Ptr> name(NewEmptyHandle(), DisposeHandle);
+	GetComponentInfo(component, &cd, name.get(), 0, 0);
+	ComponentResult version = 
+	    CallComponentVersion(
+		    reinterpret_cast<ComponentInstance>(component));
+	std::string namex;
+	if (*name.get())
+	    namex = p2cstr(reinterpret_cast<StringPtr>(*name.get()));
+	else
+	    namex = format("Unknown(%s)", fourcc(cd.componentSubType).svalue);
+	LOG(format("%s %d.%d.%d\n", namex.c_str(),
+		(version>>16) & 0xffff,
+		(version>>8) & 0xff,
+		version & 0xff).c_str());
+    }
 }
 
 static
@@ -770,28 +795,15 @@ void load_lyrics_file(Options *opts)
 static
 void install_aach_codec()
 {
-    HKEY hKey;
-    LPCWSTR key = L"SOFTWARE\\Apple Computer, Inc.\\QuickTime";
-    HRESULT hr = RegOpenKeyExW(HKEY_LOCAL_MACHINE, key, 0, KEY_READ, &hKey);
-    if (hr != ERROR_SUCCESS)
-	throw_win32_error(format("RegOpenKeyExW: %ls", key), hr);
-    x::shared_ptr<HKEY__> hKey__(hKey, RegCloseKey);
-
-    DWORD size;
-    key = L"QTSysDir";
-    RegQueryValueExW(hKey, key, 0, 0, 0, &size);
-    std::vector<BYTE> buffer(size);
-    RegQueryValueExW(hKey, key, 0, 0, &buffer[0], &size);
-    std::wstring path = format(L"%s\\QuickTimeAudioSupport.qtx", &buffer[0]);
-
-    HMODULE hModule = LoadLibraryW(path.c_str());
-    if (!hModule)
-	throw_win32_error(format("LoadLibraryW: %ls", path.c_str()),
-	       GetLastError());	
-    ComponentRoutineProcPtr proc
-	= ProcAddress(hModule, "ACMP4AACHighEfficiencyEncoderEntry"); 
-    ComponentDescription desc = { 'aenc', 'aach', 'appl', 0 };
-    RegisterComponent(&desc, proc, 0, 0, 0, 0);
+    HMODULE hModule = QTLoadLibrary("QuickTimeAudioSupport.qtx");
+    if (hModule) {
+	ComponentRoutineProcPtr proc
+	    = ProcAddress(hModule, "ACMP4AACHighEfficiencyEncoderEntry"); 
+	if (proc) {
+	    ComponentDescription desc = { 'aenc', 'aach', 'appl', 0 };
+	    RegisterComponent(&desc, proc, 0, 0, 0, 0);
+	}
+    }
 }
 
 const char *get_qaac_version();
@@ -902,14 +914,19 @@ int wmain1(int argc, wchar_t **argv)
 	opts.encoder_name = widen(encoder_name);
 	LOG("%s\n", encoder_name.c_str());
 
+
 	if (opts.isSBR() || opts.check_only || opts.print_available_formats)
 	    install_aach_codec();
 	load_modules(opts);
 
 	if (opts.check_only) {
+#ifdef _DEBUG
+	    list_audio_encoders();
+#else
 	    uint32_t codecs[] = { 'aac ', 'aach', 'alac', 0 };
 	    for (uint32_t *p = codecs; *p; ++p)
 		LOG("%s\n", get_codec_version(*p).c_str());
+#endif
 	    if (opts.libsoxrate.loaded())
 		LOG("libsoxrate %s\n", opts.libsoxrate.version_string());
 	    if (opts.libsndfile.loaded())
