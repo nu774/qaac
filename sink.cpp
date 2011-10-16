@@ -35,6 +35,81 @@ uint32_t getChannelConfig(const AudioChannelLayout *layout)
     return 0;
 }
 
+static
+bool getDescripterHeader(const uint8_t **p, const uint8_t *end,
+			 int *tag, uint32_t *size)
+{
+    *size = 0;
+    if (*p < end) {
+	*tag = *(*p)++;
+	while (*p < end) {
+	    int n = *(*p)++;
+	    *size = (*size << 7) | (n & 0x7f);
+	    if (!(n & 0x80)) return true;
+	}
+    }
+    return false;
+}
+
+static
+void parseMagicCookieAAC(const std::vector<char> &cookie,
+			 std::vector<uint8_t> *decSpecificConfig)
+{
+    /*
+     * QT's "Magic Cookie" for AAC is just a esds descripter.
+     * We obtain only decSpecificConfig from it, and discard others.
+     */
+    const uint8_t *p = reinterpret_cast<const uint8_t*>(&cookie[0]);
+    const uint8_t *end = p + cookie.size();
+    int tag;
+    uint32_t size;
+    while (getDescripterHeader(&p, end, &tag, &size)) {
+	switch (tag) {
+	case 3: // esds
+	    /*
+	     * ES_ID: 16
+	     * streamDependenceFlag: 1
+	     * URLFlag: 1
+	     * OCRstreamFlag: 1
+	     * streamPriority: 5
+	     *
+	     * (flags are all zero, so other atttributes are not present)
+	     */
+	    p += 3;
+	    break;
+	case 4: // decConfig
+	    /*
+	     * objectTypeId: 8
+	     * streamType: 6
+	     * upStream: 1
+	     * reserved: 1
+	     * bufferSizeDB: 24
+	     * maxBitrate: 32
+	     * avgBitrate: 32
+	     *
+	     * QT gives constant value for bufferSizeDB, max/avgBitrate
+	     * depending on encoder settings.
+	     * On the other hand, mp4v2 calculates and sets them
+	     * using "real" values, when finished media writing;
+	     * Therefore, these values will be different from QT.
+	     */
+	    p += 13;
+	    break;
+	case 5: // decSpecificConfig
+	    {
+		std::vector<uint8_t> vec(size);
+		std::memcpy(&vec[0], p, size);
+		decSpecificConfig->swap(vec);
+	    }
+	    return;
+	default:
+	    p += size;
+	}
+    }
+    throw std::runtime_error(
+	    "Magic cookie format is different from expected!!");
+}
+
 using mp4v2::impl::MP4Atom;
 
 MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
@@ -105,15 +180,13 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
 
 	std::vector<char> cookie;
 	encoder.getMagicCookie(&cookie);
-	if (cookie.size() < 32 ||
-		std::memcmp(&cookie[26], "\x05\x80\x80\x80", 4))
-	    throw std::runtime_error("Unknown magic cookie format!!!");
-	int config_size = static_cast<unsigned char>(cookie[30]);
+	std::vector<uint8_t> decSpecificConfig;
+	parseMagicCookieAAC(cookie, &decSpecificConfig);
 
 	m_mp4file.SetTrackESConfiguration(
 		m_track_id,
-		reinterpret_cast<uint8_t*>(&cookie[31]),
-		config_size);
+		&decSpecificConfig[0],
+		decSpecificConfig.size());
 
     } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
