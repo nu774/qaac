@@ -1,7 +1,9 @@
 #include "qtmoviesource.h"
 #include "qtmoviehelper.h"
+#include "qtmeta.h"
 #include "itunetags.h"
 #include "strcnv.h"
+#include "utf8_codecvt_facet.hpp"
 
 static
 Track GetSoundTrack(Movie movie)
@@ -89,8 +91,7 @@ QTMovieSource::QTMovieSource(const std::wstring &path)
 	    m_channel_conversion_map.push_back(cmap[i] - 1);
 	for (size_t i = 1; i <= 32; ++i, bitmap >>= 1)
 	    if (bitmap & 1) m_chanmap.push_back(i);
-	M4ATagParser parser(GetFullPathNameX(path.c_str()));
-	m_tags = parser.getTags();
+	fetchTags(movie);
     } else {
 	if (layoutm->mNumberChannelDescriptions == asbd.mChannelsPerFrame)
 	    for (size_t i = 0; i < asbd.mChannelsPerFrame; ++i)
@@ -155,7 +156,6 @@ size_t QTMovieSource::readSamples(void *buffer, size_t nsamples)
     UInt32 npackets = nsamples;
     flags = 0;
     TRYE(MovieAudioExtractionFillBuffer(m_session, &npackets, &abl, &flags));
-#if 1
     if (m_channel_conversion_map.size() && npackets) {
 	size_t width = m_description.mBitsPerChannel >> 3;
 	size_t framelen = m_description.mBytesPerFrame;
@@ -169,9 +169,72 @@ size_t QTMovieSource::readSamples(void *buffer, size_t nsamples)
 	    }
 	}
     }
-#endif
     if (flags & kQTMovieAudioExtractionComplete)
 	m_extraction_complete = true;
     addSamplesRead(npackets);
     return npackets;
+}
+
+void QTMovieSource::fetchTags(Movie movie)
+{
+    QTMetaDataX meta = QTMetaDataX::FromMovie(movie);
+    utf8_codecvt_facet u8codec;
+    QTMetaDataItem mdi = 0;
+    while (QTMetaDataGetNextItem(meta, kQTMetaDataStorageFormatiTunes,
+				 mdi, 0, 0, 0, &mdi) == noErr) {
+	QTMetaDataItemX item(meta, mdi);
+	try {
+	    fourcc key(item.getKeyFormat());
+	    uint32_t dataType = item.getDataType();
+	    std::vector<uint8_t> value;
+	    item.getValue(&value);
+	    if ((key == Tag::kDisk || key == Tag::kTrack)
+		&& value.size() > 5) {
+		unsigned index = (value[2]<<8) | value[3];
+		unsigned total = (value[4]<<8) | value[5];
+		m_tags[key] = widen(format("%d/%d", index, total));
+	    }
+	    else if (key == Tag::kGenreID3 && value.size() == 2) {
+		unsigned val = (value[0]<<8)|value[1];
+		std::wstring sv = format(L"%d", val);
+		m_tags[key] = sv;
+	    }
+	    else if (dataType == kQTMetaDataTypeSignedIntegerBE) {
+		int v;
+		if (value.size() == 1)
+		    v = value[0];
+		else if (value.size() == 2)
+		    v = (value[0] << 8) | value[1];
+		else if (value.size() == 4)
+		    v = (value[0]<<24)|(value[1]<<16)|(value[2]<<8)|value[3];
+		else
+		    continue;
+		m_tags[key] = widen(format("%d", v));
+	    }
+	    else if (dataType == kQTMetaDataTypeUnsignedIntegerBE) {
+		unsigned v;
+		if (value.size() == 1)
+		    v = value[0];
+		else if (value.size() == 2)
+		    v = (value[0] << 8) | value[1];
+		else if (value.size() == 4)
+		    v = (value[0]<<24)|(value[1]<<16)|(value[2]<<8)|value[3];
+		else
+		    continue;
+		m_tags[key] = widen(format("%u", v));
+	    }
+	    else if (dataType == kQTMetaDataTypeUTF8) {
+		value.push_back(0);
+		std::wstring sv = m2w(
+		    reinterpret_cast<char*>(&value[0]), u8codec);
+		m_tags[key] = sv;
+	    }
+	} catch (...) {
+	    /*
+	     * getDataType() will fail for iTunes long format.
+	     * We simply ignore them.
+	     */
+	    continue;
+	}
+    }
 }

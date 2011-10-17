@@ -33,6 +33,8 @@ public:
     {
 	m_session.setRenderQuality(value);
     }
+private:
+    void fetchTags(Movie movie);
 };
 
 #endif

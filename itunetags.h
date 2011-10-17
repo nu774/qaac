@@ -96,20 +96,4 @@ public:
     void save(MP4FileX &mp4file);
 };
 
-class M4ATagParser : public ITagParser {
-    std::map<uint32_t, std::wstring> m_tags;
-    std::map<std::string, std::wstring> m_long_tags;
-    bool m_is_alac;
-public:
-    M4ATagParser(const std::wstring &filename);
-    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
-    const std::map<std::string, std::wstring> &getLongTags() const
-    {
-	return m_long_tags;
-    }
-    const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const { return 0; }
-    bool isALAC() const { return m_is_alac; }
-};
-
 #endif
