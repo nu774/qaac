@@ -151,6 +151,8 @@ void set_codec_options(AACEncoder &encoder, const Options &opts)
 	else {
 	    aac::Config t = { aac::kStrategy, method };
 	    config.push_back(t);
+	    encoder.setParameters(config);
+	    encoder.getCodecConfigArray(&currentConfig);
 	}
     }
     // bitrate

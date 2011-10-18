@@ -29,22 +29,27 @@ CFTypeRef CloneCFObject(CFTypeRef value)
     CFTypeID typeID = CFGetTypeID(value);
     if (typeID == CFDictionaryGetTypeID()) {
 	CFDictionaryRef dictRef = reinterpret_cast<CFDictionaryRef>(value);
-	CFMutableDictionaryRef dict = 
-	    CFDictionaryCreateMutableCopy(0, 0, dictRef);
-	std::vector<CFTypeRef> keys(CFDictionaryGetCount(dict));
-	CFDictionaryGetKeysAndValues(dict, &keys[0], 0);
-	for (size_t i = 0; i < keys.size(); ++i) {
-	    CFDictionaryReplaceValue(dict, keys[i], 
-		    CloneCFObject(CFDictionaryGetValue(dict, keys[i])));
+	CFMutableDictionaryRef dict =
+	    CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks,
+			&kCFTypeDictionaryValueCallBacks);
+	CFIndex count = CFDictionaryGetCount(dictRef);
+	std::vector<CFTypeRef> keys(count), values(count);
+	CFDictionaryGetKeysAndValues(dictRef, &keys[0], &values[0]);
+	for (CFIndex i = 0; i < count; ++i) {
+	    CFTypeRef child = CloneCFObject(values[i]);
+	    CFDictionarySetValue(dict, keys[i], child);
+	    CFRelease(child);
 	}
 	return dict;
     } else if (typeID == CFArrayGetTypeID()) {
 	CFArrayRef arrayRef = reinterpret_cast<CFArrayRef>(value);
-	CFMutableArrayRef array = CFArrayCreateMutableCopy(0, 0, arrayRef);
-	CFIndex count = CFArrayGetCount(array);
+	CFIndex count = CFArrayGetCount(arrayRef);
+	CFMutableArrayRef array =
+	    CFArrayCreateMutable(0, 0, &kCFTypeArrayCallBacks);
 	for (CFIndex i = 0; i < count; ++i) {
-	    CFArraySetValueAtIndex(array, i, 
-		    CloneCFObject(CFArrayGetValueAtIndex(array, i)));
+	    CFTypeRef child = CloneCFObject(CFArrayGetValueAtIndex(arrayRef, i));
+	    CFArrayAppendValue(array, child);
+	    CFRelease(child);
 	}
 	return array;
     } else {

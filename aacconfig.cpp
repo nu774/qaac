@@ -83,6 +83,8 @@ void GetAvailableSettingsForCodec(uint32_t format,
     }
 }
 
+extern void dump_object(CFTypeRef ref, std::ostream &os);
+
 namespace aac {
 
 const wchar_t *GetParamName(ParamType param)
@@ -116,6 +118,7 @@ void SetParameters(StdAudioComponentX *encoder,
 	CFDictionarySetValue(dict, W2CF(ent->valueKey),
 			     CFNumberCreateT(it->value));
     }
+//    dump_object(settings, std::cerr);
     encoder->setCodecSpecificSettingsArray(settings);
 }
 
