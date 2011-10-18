@@ -133,11 +133,19 @@ void TagEditor::save(MP4FileX &file)
 		ShortTagWriter(file, u8codec));
 	std::for_each(m_long_tags.begin(), m_long_tags.end(),
 		LongTagWriter(file, u8codec));
+    } catch (Exception *e) {
+	handle_mp4error(e);
+    }
+}
+
+void TagEditor::saveArtworks(MP4FileX &file)
+{
+    try {
 	for (size_t i = 0; i < m_artworks.size(); ++i) {
 	    uint64_t size;
 	    char *data = load_with_mmap(m_artworks[i].c_str(), &size);
+	    x::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
 	    file.SetMetadataArtwork("covr", data, size);
-	    UnmapViewOfFile(data);
 	}
     } catch (Exception *e) {
 	handle_mp4error(e);

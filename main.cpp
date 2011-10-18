@@ -549,6 +549,11 @@ void write_tags(MP4FileX *mp4file,
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
     editor.save(*mp4file);
+    try {
+	editor.saveArtworks(*mp4file);
+    } catch (const std::exception &e) {
+	LOG("WARNING: %s\n", e.what());
+    }
 }
 
 static void do_optimize(MP4FileX *file,
@@ -788,10 +793,14 @@ void handle_cue_sheet(Options &opts)
 static
 void load_lyrics_file(Options *opts)
 {
-    std::map<uint32_t, std::wstring>::iterator it
-	= opts->tagopts.find(Tag::kLyrics);
-    if (it != opts->tagopts.end())
-	it->second = load_text_file(it->second.c_str());
+    try {
+	std::map<uint32_t, std::wstring>::iterator it
+	    = opts->tagopts.find(Tag::kLyrics);
+	if (it != opts->tagopts.end())
+	    it->second = load_text_file(it->second.c_str());
+    } catch (const std::exception &e) {
+	LOG("WARNING: %s\n", e.what());
+    }
 }
 
 static

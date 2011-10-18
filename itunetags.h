@@ -94,6 +94,7 @@ public:
     }
     void fetchAiffID3Tags(const wchar_t *filename);
     void save(MP4FileX &mp4file);
+    void saveArtworks(MP4FileX &mp4file);
 };
 
 #endif
