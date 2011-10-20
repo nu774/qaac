@@ -24,7 +24,8 @@ void dict_callback(const void *key, const void *value, void *ctx)
     CFTypeID keyID = CFGetTypeID(key);
     if (keyID == CFStringGetTypeID()) {
 	wstring k = CF2W(reinterpret_cast<CFStringRef>(key));
-	dc->os << format("%s%ls: ", pad.c_str(), k.c_str());
+	dc->os << format("%s%[%d]%ls: ", pad.c_str(),
+			 CFGetRetainCount(key), k.c_str());
 	dump_value(value, *dc);
     }
 }
@@ -33,9 +34,11 @@ static
 void dump_value(CFTypeRef value, DumpContext dc)
 {
     CFTypeID valueID = CFGetTypeID(value);
+    CFIndex nref = CFGetRetainCount(value);
+    dc.os << format("[%d]", nref);
     if (valueID == CFStringGetTypeID()) {
 	wstring v = CF2W(reinterpret_cast<CFStringRef>(value));
-	dc.os << w2m(v).c_str() << endl;
+	dc.os << w2m(v) << endl;
     } else if (valueID == CFDictionaryGetTypeID()) {
 	dc.os << "Dictionary" << endl;
 	DumpContext ndc = dc.next();
