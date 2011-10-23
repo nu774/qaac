@@ -102,6 +102,14 @@ void EncoderBase::setSource(const x::shared_ptr<ISource> &src,
     }
 }
 
+void EncoderBase::resetSCAudio()
+{
+    QTAtomContainer ac;
+    SCGetSettingsAsAtomContainer(*this, &ac);
+    QTAtomContainerX disposer(ac);
+    SCSetSettingsFromAtomContainer(*this, ac);
+}
+
 bool EncoderBase::encodeChunk(UInt32 nframes)
 {
     prepareOutputBuffer(nframes);

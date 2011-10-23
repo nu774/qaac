@@ -20,6 +20,7 @@ public:
     void setSource(const x::shared_ptr<ISource> &src, uint32_t formatID,
 	    uint32_t remix, int chanmask=-1);
     void setSink(const x::shared_ptr<ISink> &sink) { m_sink = sink; }
+    void resetSCAudio();
 
     uint64_t samplesRead() const { return m_samples_read; }
     uint64_t framesWritten() const { return m_frames_written; }

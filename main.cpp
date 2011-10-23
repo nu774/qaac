@@ -643,6 +643,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
     LOG("%ls -> %ls\n", inputLayout.c_str(), outputLayout.c_str());
 
     if (opts.isAAC()) {
+	encoder.resetSCAudio();
 	set_codec_options(encoder, opts);
     } else {
 	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)
