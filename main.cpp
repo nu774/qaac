@@ -631,7 +631,8 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	if (opts.libsoxrate.loaded() && !opts.native_resampler) {
 	    x::shared_ptr<ISource> srcxx
 		= do_resample(srcx, opts, oasbd.mSampleRate);
-	    encoder.setSource(srcxx, layout, opts.chanmask);
+	    encoder.setSource(srcxx, opts.output_format, layout, opts.chanmask);
+	    encoder.setBasicDescription(oasbd);
 	}
     }
 

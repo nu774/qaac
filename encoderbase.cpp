@@ -25,18 +25,17 @@ AudioStreamBasicDescription BuildBasicDescription(const SampleFormat &format)
 
 EncoderBase::EncoderBase(const x::shared_ptr<ISource> &src,
     uint32_t formatID, uint32_t remix, int chanmask) :
-	m_formatID(formatID),
 	m_samples_read(0),
 	m_frames_written(0),
 	m_bytes_written(0),
 	m_max_bitrate(0),
 	m_cur_bitrate(0)
 {
-    setSource(src, remix, chanmask);
+    setSource(src, formatID, remix, chanmask);
 }
 
 void EncoderBase::setSource(const x::shared_ptr<ISource> &src,
-	uint32_t remix, int chanmask)
+	uint32_t formatID, uint32_t remix, int chanmask)
 {
     m_src = src;
     m_input_desc = BuildBasicDescription(src->getSampleFormat());
@@ -47,7 +46,6 @@ void EncoderBase::setSource(const x::shared_ptr<ISource> &src,
     if (chanmask < 0)
 	chanmask = chanmap ? GetChannelMask(*chanmap) : 0;
     if (!chanmask) chanmask = GetDefaultChannelMask(nchannels);
-    m_chanmask = chanmask;
     AudioChannelLayoutX layout = AudioChannelLayoutX::FromBitmap(chanmask);
     setInputChannelLayout(layout);
 
@@ -75,11 +73,11 @@ void EncoderBase::setSource(const x::shared_ptr<ISource> &src,
 	    throw std::runtime_error(
 	    "Remixing to a layout with same number of channels is not allowed");
     }
-    if (m_formatID == 'alac' && nchannelsOut != 2)
+    if (formatID == 'alac' && nchannelsOut != 2)
 	throw std::runtime_error("Only stereo is supported for ALAC");
 
     AudioStreamBasicDescription oasbd = { 0 };
-    oasbd.mFormatID = m_formatID;
+    oasbd.mFormatID = formatID;
     // Set temporary dummy value to obtain ApplicableChannelLayoutTagList
     // for the format
     oasbd.mChannelsPerFrame = 2;
