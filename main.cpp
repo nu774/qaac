@@ -92,8 +92,7 @@ void setup_sample_rate(AACEncoder &encoder, const Options &opts)
 	bool upsample = false;
 	AudioStreamBasicDescription desc;
 	encoder.getInputBasicDescription(&desc);
-	if (rate > desc.mSampleRate &&
-	    opts.libsoxrate.loaded() && !opts.native_resampler) {
+	if (rate > desc.mSampleRate && !opts.isNativeResampler()) {
 	    /*
 	     * Applicable output sample rate is less than input for AAC.
 	     * Therefore, in order to obtain desired rate, we must cheat
@@ -628,7 +627,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 
     if (src->getSampleFormat().m_rate != oasbd.mSampleRate) {
 	LOG("%dHz -> %gHz\n", src->getSampleFormat().m_rate, oasbd.mSampleRate);
-	if (opts.libsoxrate.loaded() && !opts.native_resampler) {
+	if (!opts.isNativeResampler()) {
 	    x::shared_ptr<ISource> srcxx
 		= do_resample(srcx, opts, oasbd.mSampleRate);
 	    encoder.setSource(srcxx, opts.output_format, layout, opts.chanmask);
@@ -642,8 +641,8 @@ void encode_file(const x::shared_ptr<ISource> &src,
     std::wstring outputLayout = encoder.getChannelLayoutName();
     LOG("%ls -> %ls\n", inputLayout.c_str(), outputLayout.c_str());
 
+    encoder.resetSCAudio();
     if (opts.isAAC()) {
-	encoder.resetSCAudio();
 	set_codec_options(encoder, opts);
     } else {
 	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)

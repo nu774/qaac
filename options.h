@@ -52,6 +52,10 @@ struct Options {
     {
 	return output_format == 'lpcm';
     }
+    bool isNativeResampler() const
+    {
+	return !libsoxrate.loaded() || native_resampler;
+    }
 
     uint32_t output_format;
     int32_t method;
