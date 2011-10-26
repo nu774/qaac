@@ -328,14 +328,16 @@ void MP4FileCopy::finish()
 	MP4RootAtom *root = dynamic_cast<MP4RootAtom*>(m_mp4file->m_pRootAtom);
 	root->FinishOptimalWrite();
     } catch (...) {
+	delete m_src;
 	delete m_dst;
 	m_dst = 0;
-	m_mp4file->m_file = m_src;
+	m_mp4file->m_file = 0;
 	throw;
     }
+    delete m_src;
     delete m_dst;
     m_dst = 0;
-    m_mp4file->m_file = m_src;
+    m_mp4file->m_file = 0;
 }
 
 bool MP4FileCopy::copyNextChunk()
