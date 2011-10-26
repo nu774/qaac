@@ -141,6 +141,13 @@ inline void DisposeHandleX(void *handle)
     DisposeHandle(reinterpret_cast<Handle>(handle));
 }
 
+class HandleLockerX {
+    Handle m_handle;
+public:
+    HandleLockerX(Handle h): m_handle(h) { HLock(h); }
+    ~HandleLockerX() { HUnlock(m_handle); }
+};
+
 CFDictionaryRef
 SearchCFDictArray(CFArrayRef ref, CFStringRef key, CFStringRef value);
 

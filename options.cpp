@@ -47,6 +47,7 @@ static struct option long_options[] = {
     { L"compilation", no_argument, 0, Tag::kCompilation },
     { L"lyrics", required_argument, 0, Tag::kLyrics },
     { L"artwork", required_argument, 0, Tag::kArtwork },
+    { L"artwork-size", required_argument, 0, 'atsz' },
     { 0, 0, 0, 0 }
 };
 static const uint32_t tag_keys[] = {
@@ -149,7 +150,7 @@ void usage()
 " (same value is set to all files, so use with care for multiple files)\n"
 "--title <string>\n"
 "--artist <string>\n"
-"--band <string>\n"
+"--band <string>       This means \"Album Artist\".\n"
 "--album <string>\n"
 "--grouping <string>\n"
 "--composer <string>\n"
@@ -161,6 +162,9 @@ void usage()
 "--compilation\n"
 "--lyrics <filename>\n"
 "--artwork <filename>\n"
+"--artwork-size WxH    Specify maximum width/height of artwork.\n"
+"                      If specified artwork (with --artwork) is larger than\n"
+"                      this, artwork is automatically resized.\n"
     );
 }
 
@@ -309,6 +313,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->method = pos;
 	    if (std::swscanf(optarg, L"%u", &this->bitrate) != 1) {
 		std::fputs("AAC Bitrate/Quality must be an integer\n", stderr);
+		return false;
+	    }
+	}
+	else if (ch == 'atsz') {
+	    if (std::swscanf(optarg, L"%ux%u",
+			&this->artwork_width, &this->artwork_height) != 2) {
+		std::fputs("Invalid artwork-size option arg\n", stderr);
 		return false;
 	    }
 	}

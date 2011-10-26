@@ -5,6 +5,8 @@
 #include "win32util.h"
 #include "strcnv.h"
 #include "mp4v2wrapper.h"
+#include "qthelper.h"
+#include "qtimage.h"
 
 using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Atom;
@@ -145,7 +147,14 @@ void TagEditor::saveArtworks(MP4FileX &file)
 	    uint64_t size;
 	    char *data = load_with_mmap(m_artworks[i].c_str(), &size);
 	    x::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
-	    file.SetMetadataArtwork("covr", data, size);
+	    std::vector<char> vec;
+	    if (!m_artwork_width || !m_artwork_height ||
+		!ConvertArtwork(data, size,
+		    m_artwork_width, m_artwork_height, &vec))
+		file.SetMetadataArtwork("covr", data, size);
+	    else {
+		file.SetMetadataArtwork("covr", &vec[0], vec.size());
+	    }
 	}
     } catch (Exception *e) {
 	handle_mp4error(e);

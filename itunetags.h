@@ -60,11 +60,15 @@ class TagEditor {
     std::vector<std::wstring> m_artworks;
     int m_encoder_delay;
     int m_padding;
+    uint32_t m_artwork_width;
+    uint32_t m_artwork_height;
     uint64_t m_nsamples;
 public:
     TagEditor()
 	: m_encoder_delay(0),
 	  m_padding(0),
+	  m_artwork_width(0),
+	  m_artwork_height(0),
 	  m_nsamples(0)
     {}
     void setGaplessInfo(const GaplessInfo &info)
@@ -91,6 +95,11 @@ public:
     void addArtwork(const wchar_t *filename)
     {
 	m_artworks.push_back(filename);
+    }
+    void setArtworkSize(uint32_t width, uint32_t height)
+    {
+	m_artwork_width = width;
+	m_artwork_height = height;
     }
     void fetchAiffID3Tags(const wchar_t *filename);
     void save(MP4FileX &mp4file);

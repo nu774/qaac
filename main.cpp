@@ -218,7 +218,7 @@ std::string get_codec_version(uint32_t codec)
 static
 void list_audio_encoders()
 {
-    ComponentDescription cd = { 'aenc', 0, 0, 0 };
+    ComponentDescription cd = { 0, 0, 0, 0 };
     ComponentDescription search = cd;
     Component component = 0;
     for (Component component = 0;
@@ -235,7 +235,9 @@ void list_audio_encoders()
 	    namex = p2cstr(reinterpret_cast<StringPtr>(*name.get()));
 	else
 	    namex = format("Unknown(%s)", fourcc(cd.componentSubType).svalue);
-	LOG(format("%s %d.%d.%d\n", namex.c_str(),
+	LOG(format("%s %s.%s %d.%d.%d\n", namex.c_str(),
+	    fourcc(cd.componentType).svalue,
+	    fourcc(cd.componentSubType).svalue,
 		(version>>16) & 0xffff,
 		(version>>8) & 0xff,
 		version & 0xff).c_str());
@@ -545,6 +547,7 @@ void write_tags(MP4FileX *mp4file,
 	encoder.getGaplessInfo(&info);
 	editor.setGaplessInfo(info);
     }
+    editor.setArtworkSize(opts.artwork_width, opts.artwork_height);
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
     editor.save(*mp4file);

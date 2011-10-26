@@ -2,9 +2,9 @@
 #define _QTHELPER_H
 
 #include <cstdio>
-#include <QTML.h>
 #include <cassert>
-#include <Components.h>
+#include <QTML.h>
+#include <Movies.h>
 #include "cfhelper.h"
 #include "chanmap.h"
 #include "win32util.h"
