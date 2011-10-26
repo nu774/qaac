@@ -148,9 +148,8 @@ void TagEditor::saveArtworks(MP4FileX &file)
 	    char *data = load_with_mmap(m_artworks[i].c_str(), &size);
 	    x::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
 	    std::vector<char> vec;
-	    if (!m_artwork_width || !m_artwork_height ||
-		!ConvertArtwork(data, size,
-		    m_artwork_width, m_artwork_height, &vec))
+	    if (!m_artwork_size ||
+		!ConvertArtwork(data, size, m_artwork_size, &vec))
 		file.SetMetadataArtwork("covr", data, size);
 	    else {
 		file.SetMetadataArtwork("covr", &vec[0], vec.size());

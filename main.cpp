@@ -547,7 +547,7 @@ void write_tags(MP4FileX *mp4file,
 	encoder.getGaplessInfo(&info);
 	editor.setGaplessInfo(info);
     }
-    editor.setArtworkSize(opts.artwork_width, opts.artwork_height);
+    editor.setArtworkSize(opts.artwork_size);
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
     editor.save(*mp4file);

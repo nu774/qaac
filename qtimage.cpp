@@ -51,7 +51,7 @@ Handle CreateDataReferenceFromPointer(const void *data,
     return dataRef;
 }
 
-bool ConvertArtwork(const void *data, size_t size, int maxW, int maxH,
+bool ConvertArtwork(const void *data, size_t size, int maxSize,
 	std::vector<char> *outImage)
 {
     OSType ftype = GetMacOSFileType(data, size);
@@ -67,14 +67,16 @@ bool ConvertArtwork(const void *data, size_t size, int maxW, int maxH,
     Rect imageBounds;
     TRYE(GraphicsImportGetNaturalBounds(importer, &imageBounds));
     MacOffsetRect(&imageBounds, -imageBounds.left, -imageBounds.top);
-    if (maxW >= imageBounds.right && maxH >= imageBounds.bottom)
+    if (maxSize >= imageBounds.right || maxSize >= imageBounds.bottom)
 	return false;
 
     TRYE(GraphicsImportSetQuality(importer, codecLosslessQuality));
 
+    double scale = static_cast<double>(maxSize) /
+	std::min(imageBounds.right, imageBounds.bottom);
     Rect newBounds = { 0 };
-    newBounds.right = maxW;
-    newBounds.bottom = maxH;
+    newBounds.right = imageBounds.right * scale;
+    newBounds.bottom = imageBounds.bottom * scale;
     TRYE(GraphicsImportSetBoundsRect(importer, &newBounds));
 
     ComponentInstance exporter;
@@ -82,6 +84,7 @@ bool ConvertArtwork(const void *data, size_t size, int maxW, int maxH,
 		kQTFileTypeJPEG, &exporter));
     x::shared_ptr<ComponentInstanceRecord> exporterPtr;
     TRYE(GraphicsExportSetInputGraphicsImporter(exporter, importer));
+    TRYE(GraphicsExportSetCompressionQuality(exporter, codecHighQuality));
 
     Handle outPic = NewHandle(0);
     x::shared_ptr<Ptr> outPicPtr(outPic, DisposeHandle);

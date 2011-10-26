@@ -162,7 +162,7 @@ void usage()
 "--compilation\n"
 "--lyrics <filename>\n"
 "--artwork <filename>\n"
-"--artwork-size WxH    Specify maximum width/height of artwork.\n"
+"--artwork-size <n>    Specify maximum width/height of artwork in pixels.\n"
 "                      If specified artwork (with --artwork) is larger than\n"
 "                      this, artwork is automatically resized.\n"
     );
@@ -317,8 +317,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    }
 	}
 	else if (ch == 'atsz') {
-	    if (std::swscanf(optarg, L"%ux%u",
-			&this->artwork_width, &this->artwork_height) != 2) {
+	    if (std::swscanf(optarg, L"%u", &this->artwork_size) != 1) {
 		std::fputs("Invalid artwork-size option arg\n", stderr);
 		return false;
 	    }

@@ -21,8 +21,7 @@ struct Options {
 	rate(-1),
 	remix(0),
 	chanmask(-1),
-	artwork_width(0),
-	artwork_height(0),
+	artwork_size(0),
 	ifilename(0), ofilename(0), outdir(0),
 	raw_format(L"S16LE"),
 	fname_format(0),
@@ -68,7 +67,7 @@ struct Options {
     int chanmask; /*     -1: honor chanmask in the source(default)
                           0: ignore chanmask in the source
                      others: use the value as chanmask     */
-    uint32_t artwork_width, artwork_height;
+    uint32_t artwork_size;
     wchar_t *ifilename, *ofilename, *outdir, *raw_format, *fname_format;
     wchar_t *logfilename;
     bool verbose, is_raw, is_adts, save_stat, nice, native_chanmapper,
