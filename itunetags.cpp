@@ -149,7 +149,7 @@ void TagEditor::saveArtworks(MP4FileX &file)
 	    x::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
 	    std::vector<char> vec;
 	    if (!m_artwork_size ||
-		!ConvertArtwork(data, size, m_artwork_size, &vec))
+		!QTConvertArtwork(data, size, m_artwork_size, &vec))
 		file.SetMetadataArtwork("covr", data, size);
 	    else {
 		file.SetMetadataArtwork("covr", &vec[0], vec.size());

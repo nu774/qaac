@@ -51,7 +51,7 @@ Handle CreateDataReferenceFromPointer(const void *data,
     return dataRef;
 }
 
-bool ConvertArtwork(const void *data, size_t size, int maxSize,
+bool QTConvertArtwork(const void *data, size_t size, int maxSize,
 	std::vector<char> *outImage)
 {
     OSType ftype = GetMacOSFileType(data, size);
