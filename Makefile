@@ -43,12 +43,14 @@ iff.o \
 iointer.o \
 itunetags.o \
 mp4v2wrapper.o \
+qtimage.o \
 qtmoviesource.o \
 riff.o \
 strcnv.o \
 utf8_codecvt_facet.o \
 util.o \
 wavsource.o \
+wicimage.o \
 win32util.o
 
 QOBJS=\

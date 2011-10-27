@@ -14,10 +14,17 @@ void throw_win32_error(const std::string &msg, DWORD code)
 		   (LPSTR)&pszMsg,
 		   0,
 		   0);
-    squeeze(pszMsg, "\r\n");
-    std::runtime_error e(format("%s: %s", msg.c_str(), pszMsg));
-    LocalFree(pszMsg);
-    throw e;
+    std::string ss;
+    if (pszMsg) {
+	squeeze(pszMsg, "\r\n");
+	ss = format("%s: %s", msg.c_str(), pszMsg);
+	LocalFree(pszMsg);
+    }
+    else if (code < 0xfe00)
+	ss = format("ERROR %d: %s", code, msg.c_str());
+    else
+	ss = format("ERROR %08x: %s", code, msg.c_str());
+    throw std::runtime_error(ss);
 }
 
 FILE *win32_tmpfile(const wchar_t *prefix)

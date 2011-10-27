@@ -7,6 +7,7 @@
 #include "mp4v2wrapper.h"
 #include "qthelper.h"
 #include "qtimage.h"
+#include "wicimage.h"
 
 using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Atom;
@@ -148,12 +149,19 @@ void TagEditor::saveArtworks(MP4FileX &file)
 	    char *data = load_with_mmap(m_artworks[i].c_str(), &size);
 	    x::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
 	    std::vector<char> vec;
-	    if (!m_artwork_size ||
-		!QTConvertArtwork(data, size, m_artwork_size, &vec))
-		file.SetMetadataArtwork("covr", data, size);
-	    else {
-		file.SetMetadataArtwork("covr", &vec[0], vec.size());
+	    if (m_artwork_size) {
+		bool res = false;
+		try {
+		    res = WICConvertArtwork(data, size, m_artwork_size, &vec);
+		} catch (...) {
+		    res = QTConvertArtwork(data, size, m_artwork_size, &vec);
+		}
+		if (res) {
+		    data = &vec[0];
+		    size = vec.size();
+		}
 	    }
+	    file.SetMetadataArtwork("covr", data, size);
 	}
     } catch (Exception *e) {
 	handle_mp4error(e);

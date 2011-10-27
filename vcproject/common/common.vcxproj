@@ -89,6 +89,7 @@
     <ClCompile Include="..\..\utf8_codecvt_facet.cpp" />
     <ClCompile Include="..\..\util.cpp" />
     <ClCompile Include="..\..\wavsource.cpp" />
+    <ClCompile Include="..\..\wicimage.cpp" />
     <ClCompile Include="..\..\win32util.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
