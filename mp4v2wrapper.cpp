@@ -28,10 +28,19 @@ class MP4AlacAtom: public MP4Atom {
 public:
     MP4AlacAtom(MP4File &file, const char *id): MP4Atom(file, id)
     {
+	AddVersionAndFlags();
 	AddProperty(new MP4BytesProperty(*this, "decoderConfig"));
     }
 };
 
+class MP4ChanAtom: public MP4Atom {
+public:
+    MP4ChanAtom(MP4File &file, const char *id): MP4Atom(file, id)
+    {
+	AddVersionAndFlags();
+	AddProperty(new MP4BytesProperty(*this, "channelLayout"));
+    }
+};
 
 extern FILE *win32_tmpfile(const wchar_t *prefix);
 
@@ -102,9 +111,15 @@ void MP4FileX::CreateTemp(const char *prefix,
     if (add_iods != 0) (void)AddChildAtom("moov", "iods");
 }
 
-MP4TrackId MP4FileX::AddAlacAudioTrack(uint32_t timeScale,
-    uint32_t bitsPerSample, const uint8_t *cookie, size_t cookieLength)
+MP4TrackId
+MP4FileX::AddAlacAudioTrack(const uint8_t *alac, const uint8_t *chan)
 {
+    uint32_t bitsPerSample = alac[5];
+    uint32_t nchannels = alac[9];
+    uint32_t timeScale;
+    std::memcpy(&timeScale, alac + 20, 4);
+    timeScale = b2host32(timeScale);
+
     MP4TrackId track = AddTrack(MP4_AUDIO_TRACK_TYPE, timeScale);
     AddTrackToOd(track);
 
@@ -130,11 +145,20 @@ MP4TrackId MP4FileX::AddAlacAudioTrack(uint32_t timeScale,
     dynamic_cast<MP4Integer32Property*>(pProp)->SetValue(timeScale<<16);
     atom->FindProperty("alac.sampleSize", &pProp);
     dynamic_cast<MP4Integer16Property*>(pProp)->SetValue(bitsPerSample);
+    atom->FindProperty("alac.channels", &pProp);
+    dynamic_cast<MP4Integer16Property*>(pProp)->SetValue(nchannels);
 
     MP4AlacAtom *alacAtom = new MP4AlacAtom(*this, "alac");
-    pProp = alacAtom->GetProperty(0);
-    dynamic_cast<MP4BytesProperty*>(pProp)->SetValue(cookie, cookieLength, 0);
+    pProp = alacAtom->GetProperty(2);
+    dynamic_cast<MP4BytesProperty*>(pProp)->SetValue(alac, 24, 0);
     atom->AddChildAtom(alacAtom);
+
+    if (chan) {
+	MP4ChanAtom *chanAtom = new MP4ChanAtom(*this, "chan");
+	pProp = chanAtom->GetProperty(2);
+	dynamic_cast<MP4BytesProperty*>(pProp)->SetValue(chan, 12, 0);
+	atom->AddChildAtom(chanAtom);
+    }
     return track;
 }
 
