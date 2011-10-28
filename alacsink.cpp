@@ -34,7 +34,8 @@ void parseMagicCookieALAC(const std::vector<char> &cookie,
     }
 }
 
-ALACSink::ALACSink(const std::wstring &path, EncoderBase &encoder, bool temp)
+ALACSink::ALACSink(const std::wstring &path, StdAudioComponentX &encoder,
+		   bool temp)
 	: MP4SinkBase(path, temp)
 {
     AudioStreamBasicDescription format;

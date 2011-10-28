@@ -26,6 +26,8 @@ struct Config {
 
 const wchar_t *GetParamName(ParamType param);
 CFArrayRef GetParametersFromSettings(CFArrayRef settings);
+void GetCodecConfigArray(StdAudioComponentX *encoder,
+			 CFArrayT<CFDictionaryRef> *result);
 void SetParameters(StdAudioComponentX *encoder,
 		   const std::vector<Config> &params);
 int GetParameterRange(CFArrayRef parameters, ParamType param,

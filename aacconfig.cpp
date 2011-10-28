@@ -103,6 +103,16 @@ CFArrayRef GetParametersFromSettings(CFArrayRef settings)
     return CFDictionaryGetValueT<CFArrayRef>(dict, CFSTR("parameters"));
 }
 
+void GetCodecConfigArray(StdAudioComponentX *encoder,
+	CFArrayT<CFDictionaryRef> *result)
+{
+    CFArrayT<CFDictionaryRef> settings;
+    encoder->getCodecSpecificSettingsArray(&settings);
+    CFArrayRef aref = GetParametersFromSettings(settings);
+    CFArrayT<CFDictionaryRef> array(static_cast<CFArrayRef>(CFRetain(aref)));
+    result->swap(array);
+}
+
 void SetParameters(StdAudioComponentX *encoder,
 		   const std::vector<Config> &params)
 {

@@ -147,7 +147,8 @@ void MP4SinkBase::close()
     }
 }
 
-MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
+MP4Sink::MP4Sink(const std::wstring &path, StdAudioComponentX &encoder,
+		 bool temp)
 	: MP4SinkBase(path, temp)
 {
     AudioStreamBasicDescription format;
@@ -195,7 +196,7 @@ MP4Sink::MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp)
 
 static void noop(void *) {}
 
-ADTSSink::ADTSSink(const std::wstring &path, EncoderBase &encoder)
+ADTSSink::ADTSSink(const std::wstring &path, StdAudioComponentX &encoder)
 {
     if (path == L"-") {
 #if defined(_MSC_VER) || defined(__MINGW32__)

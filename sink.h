@@ -22,7 +22,8 @@ public:
 
 class MP4Sink: public ISink, public MP4SinkBase {
 public:
-    MP4Sink(const std::wstring &path, EncoderBase &encoder, bool temp=false);
+    MP4Sink(const std::wstring &path, StdAudioComponentX &encoder,
+	    bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
 	try {
@@ -40,7 +41,7 @@ class ADTSSink: public ISink {
     uint32_t m_sample_rate_index;
     uint32_t m_channel_config;
 public:
-    ADTSSink(const std::wstring &path, EncoderBase &encoder);
+    ADTSSink(const std::wstring &path, StdAudioComponentX &encoder);
     void writeSamples(const void *data, size_t length, size_t nsamples);
 };
 

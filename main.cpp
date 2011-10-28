@@ -83,7 +83,7 @@ int get_bitrate_index(const CFArrayT<CFStringRef> &menu,
 }
 
 static
-void setup_sample_rate(AACEncoder &encoder, const Options &opts)
+void setup_sample_rate(StdAudioComponentX &encoder, const Options &opts)
 {
     if (opts.isALAC() && opts.rate <= 0)
 	return;
@@ -130,11 +130,11 @@ void setup_sample_rate(AACEncoder &encoder, const Options &opts)
 
 
 static
-void set_codec_options(AACEncoder &encoder, const Options &opts)
+void set_codec_options(StdAudioComponentX &encoder, const Options &opts)
 {
     CFArrayT<CFDictionaryRef> currentConfig;
     CFArrayT<CFStringRef> menu, limits;
-    encoder.getCodecConfigArray(&currentConfig);
+    aac::GetCodecConfigArray(&encoder, &currentConfig);
     std::vector<aac::Config> config;
 
     // encoding strategy
@@ -150,8 +150,8 @@ void set_codec_options(AACEncoder &encoder, const Options &opts)
 	else {
 	    aac::Config t = { aac::kStrategy, method };
 	    config.push_back(t);
-	    encoder.setParameters(config);
-	    encoder.getCodecConfigArray(&currentConfig);
+	    aac::SetParameters(&encoder, config);
+	    aac::GetCodecConfigArray(&encoder, &currentConfig);
 	}
     }
     // bitrate
@@ -177,7 +177,7 @@ void set_codec_options(AACEncoder &encoder, const Options &opts)
 	    config.push_back(t);
 	}
     }
-    encoder.setParameters(config);
+    aac::SetParameters(&encoder, config);
 }
 
 static
@@ -245,7 +245,7 @@ void list_audio_encoders()
 }
 
 static
-std::wstring get_encoder_config(AACEncoder &encoder)
+std::wstring get_encoder_config(StdAudioComponentX &encoder)
 {
     std::wstring s;
     AudioStreamBasicDescription desc;
@@ -256,7 +256,7 @@ std::wstring get_encoder_config(AACEncoder &encoder)
 	return s;
 
     CFArrayT<CFDictionaryRef> config;
-    encoder.getCodecConfigArray(&config);
+    aac::GetCodecConfigArray(&encoder, &config);
 
     CFArrayT<CFStringRef> menu;
     int value = aac::GetParameterRange(config, aac::kStrategy, &menu);
@@ -521,17 +521,15 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 }
 
 static
-void write_tags(MP4FileX *mp4file,
-	const Options &opts, AACEncoder &encoder,
-	const std::wstring &encoder_config)
+void write_tags(MP4FileX *mp4file, const Options &opts, ITagParser *src,
+		const std::wstring &encoder_config, GaplessInfo *gaplessInfo)
 {
     TagEditor editor;
 
-    ITagParser *tp = dynamic_cast<ITagParser*>(encoder.src());
-    if (tp) {
-	editor.setTag(tp->getTags());
+    if (src) {
+	editor.setTag(src->getTags());
 	const std::vector<std::pair<std::wstring, int64_t> > *chapters
-	    = tp->getChapters();
+	    = src->getChapters();
 	if (chapters)
 	    editor.setChapters(*chapters);
     }
@@ -543,11 +541,8 @@ void write_tags(MP4FileX *mp4file,
     editor.setTag(opts.tagopts);
     editor.setTag(Tag::kTool,
 	opts.encoder_name + L", " + encoder_config);
-    if (opts.isAAC()) {
-	GaplessInfo info;
-	encoder.getGaplessInfo(&info);
-	editor.setGaplessInfo(info);
-    }
+    if (opts.isAAC() && gaplessInfo)
+	editor.setGaplessInfo(*gaplessInfo);
     editor.setArtworkSize(opts.artwork_size);
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
@@ -662,7 +657,10 @@ void encode_file(const x::shared_ptr<ISource> &src,
 
     MP4SinkBase *sink = dynamic_cast<MP4SinkBase*>(encoder.sink());
     if (sink) {
-	write_tags(sink->getFile(), opts, encoder, encoder_config);
+	GaplessInfo gi = { 0 };
+	if (opts.isAAC()) encoder.getGaplessInfo(&gi);
+	write_tags(sink->getFile(), opts, dynamic_cast<ITagParser*>(src.get()),
+	    encoder_config, opts.isAAC() ? &gi : 0);
 	if (!opts.no_optimize)
 	    do_optimize(sink->getFile(), ofilename, opts);
     }

@@ -6,7 +6,8 @@
 
 class ALACSink: public ISink, public MP4SinkBase {
 public:
-    ALACSink(const std::wstring &path, EncoderBase &encoder, bool temp=false);
+    ALACSink(const std::wstring &path, StdAudioComponentX &encoder,
+	     bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
 	try {
