@@ -319,8 +319,8 @@ std::string formatSeconds(double seconds)
 {
     int h, m, s, millis;
     secondsToHMS(seconds, &h, &m, &s, &millis);
-    return h ? format("%02d:%02d:%02d.%03d", h, m, s, millis)
-	     : format("%02d:%02d.%03d", m, s, millis);
+    return h ? format("%d:%02d:%02d.%03d", h, m, s, millis)
+	     : format("%d:%02d.%03d", m, s, millis);
 }
 
 class Timer {
@@ -341,7 +341,7 @@ public:
     PeriodicDisplay(uint32_t interval, bool verbose=true)
 	: m_interval(interval),
 	  m_verbose(verbose),
-	  m_last_tick(0)
+	  m_last_tick(GetTickCount())
     {}
     void put(const std::string &message) {
 	m_message = message;
@@ -382,13 +382,14 @@ public:
 	double seconds = fcurrent / m_rate;
 	double ellapsed = m_timer.ellapsed();
 	double eta = ellapsed * (m_total / fcurrent - 1);
+	double speed = ellapsed ? seconds/ellapsed : 0.0;
 	if (m_total == -1)
 	    m_disp.put(format("\r%s (%.1fx)   ",
-		formatSeconds(seconds).c_str(), seconds / ellapsed));
+		formatSeconds(seconds).c_str(), speed));
 	else
 	    m_disp.put(format("\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
 		percent, formatSeconds(seconds).c_str(), m_tstamp.c_str(),
-		seconds / ellapsed, formatSeconds(eta).c_str()));
+		speed, formatSeconds(eta).c_str()));
     }
     void finish(uint64_t current)
     {
