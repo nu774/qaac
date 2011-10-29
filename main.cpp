@@ -915,6 +915,18 @@ void handle_cue_sheet(Options &opts)
     }
 }
 
+struct ConsoleTitleSaver {
+    wchar_t title[1024];
+    ConsoleTitleSaver()
+    {
+	GetConsoleTitleW(title, sizeof(title)/sizeof(wchar_t));
+    }
+    ~ConsoleTitleSaver()
+    {
+	SetConsoleTitleW(title);
+    }
+};
+
 #ifdef _MSC_VER
 int wmain(int argc, wchar_t **argv)
 #else
@@ -938,6 +950,8 @@ int wmain1(int argc, wchar_t **argv)
     if (!opts.parse(argc, argv))
 	return 1;
     try {
+	ConsoleTitleSaver consoleTitle;
+
 	if (opts.verbose && !opts.print_available_formats)
 	    Log::instance()->enable_stderr();
 	if (opts.logfilename && !opts.print_available_formats)
