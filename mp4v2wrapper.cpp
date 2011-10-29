@@ -120,6 +120,7 @@ MP4FileX::AddAlacAudioTrack(const uint8_t *alac, const uint8_t *chan)
     std::memcpy(&timeScale, alac + 20, 4);
     timeScale = b2host32(timeScale);
 
+    SetTimeScale(timeScale);
     MP4TrackId track = AddTrack(MP4_AUDIO_TRACK_TYPE, timeScale);
     AddTrackToOd(track);
 

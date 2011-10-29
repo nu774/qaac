@@ -1,12 +1,11 @@
 #ifndef _ALACSINK_H
 #define _ALACSINK_H
 
-#include "encoderbase.h"
 #include "sink.h"
 
 class ALACSink: public ISink, public MP4SinkBase {
 public:
-    ALACSink(const std::wstring &path, StdAudioComponentX &encoder,
+    ALACSink(const std::wstring &path, const std::vector<char> &magicCookie,
 	     bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {

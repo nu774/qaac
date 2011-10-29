@@ -147,12 +147,11 @@ void MP4SinkBase::close()
     }
 }
 
-MP4Sink::MP4Sink(const std::wstring &path, StdAudioComponentX &encoder,
-		 bool temp)
+MP4Sink::MP4Sink(const std::wstring &path, IEncoderOutputInfo *info, bool temp)
 	: MP4SinkBase(path, temp)
 {
     AudioStreamBasicDescription format;
-    encoder.getBasicDescription(&format);
+    info->getBasicDescription(&format);
     uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
     uint32_t frame_length = format.mFramesPerPacket;
     if (format.mFormatID == 'aach') {
@@ -180,7 +179,7 @@ MP4Sink::MP4Sink(const std::wstring &path, StdAudioComponentX &encoder,
 	//m_mp4file.SetAudioProfileLevel(level);
 
 	std::vector<char> cookie;
-	encoder.getMagicCookie(&cookie);
+	info->getMagicCookie(&cookie);
 	std::vector<uint8_t> decSpecificConfig;
 	parseMagicCookieAAC(cookie, &decSpecificConfig);
 
@@ -196,7 +195,7 @@ MP4Sink::MP4Sink(const std::wstring &path, StdAudioComponentX &encoder,
 
 static void noop(void *) {}
 
-ADTSSink::ADTSSink(const std::wstring &path, StdAudioComponentX &encoder)
+ADTSSink::ADTSSink(const std::wstring &path, IEncoderOutputInfo *info)
 {
     if (path == L"-") {
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -207,13 +206,13 @@ ADTSSink::ADTSSink(const std::wstring &path, StdAudioComponentX &encoder)
 	m_fp = file_ptr_t(wfopenx(path.c_str(), L"wb"), fclose);
     }
     AudioStreamBasicDescription format;
-    encoder.getBasicDescription(&format);
+    info->getBasicDescription(&format);
     uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
     if (format.mFormatID == 'aach')
 	sample_rate /= 2;
     m_sample_rate_index = getSamplingRateIndex(sample_rate);
     AudioChannelLayoutX layout;
-    encoder.getChannelLayout(&layout);
+    info->getChannelLayout(&layout);
     m_channel_config = getChannelConfig(layout);
 }
 

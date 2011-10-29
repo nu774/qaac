@@ -34,31 +34,18 @@ void parseMagicCookieALAC(const std::vector<char> &cookie,
     }
 }
 
-ALACSink::ALACSink(const std::wstring &path, StdAudioComponentX &encoder,
-		   bool temp)
+ALACSink::ALACSink(const std::wstring &path,
+	const std::vector<char> &magicCookie, bool temp)
 	: MP4SinkBase(path, temp)
 {
-    AudioStreamBasicDescription format;
-    encoder.getBasicDescription(&format);
-    uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
     try {
-	m_mp4file.SetTimeScale(sample_rate);
-	std::vector<char> cookie;
 	std::vector<uint8_t> alac, chan;
-	encoder.getMagicCookie(&cookie);
-#if 0
-	{
-	    std::wstring f = path + L".cookie.dat";
-	    std::FILE *fp = _wfopen(f.c_str(), L"wb");
-	    std::fwrite(&cookie[0], 1, cookie.size(), fp);
-	    std::fclose(fp);
-	}
-#endif
-	parseMagicCookieALAC(cookie, &alac, &chan);
+	parseMagicCookieALAC(magicCookie, &alac, &chan);
 	if (alac.size() != 24)
 	    throw std::runtime_error("Invalid ALACSpecificConfig!");
 	if (chan.size() && chan.size() != 12)
 	    throw std::runtime_error("Invalid ALACChannelLayout!");
+
 	m_track_id = m_mp4file.AddAlacAudioTrack(
 		&alac[0], chan.size() ? &chan[0] : 0);
     } catch (mp4v2::impl::Exception *e) {

@@ -4,8 +4,8 @@
 #include "shared_ptr.h"
 #include <CoreAudioTypes.h>
 #include "mp4v2wrapper.h"
-#include "encoderbase.h"
 #include "itunetags.h"
+#include "iencoder.h"
 
 class MP4SinkBase {
 protected:
@@ -22,7 +22,7 @@ public:
 
 class MP4Sink: public ISink, public MP4SinkBase {
 public:
-    MP4Sink(const std::wstring &path, StdAudioComponentX &encoder,
+    MP4Sink(const std::wstring &path, IEncoderOutputInfo *info,
 	    bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
@@ -41,7 +41,7 @@ class ADTSSink: public ISink {
     uint32_t m_sample_rate_index;
     uint32_t m_channel_config;
 public:
-    ADTSSink(const std::wstring &path, StdAudioComponentX &encoder);
+    ADTSSink(const std::wstring &path, IEncoderOutputInfo *info);
     void writeSamples(const void *data, size_t length, size_t nsamples);
 };
 

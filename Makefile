@@ -54,11 +54,10 @@ wicimage.o \
 win32util.o
 
 QOBJS=\
+SCAudioEncoder.o \
 aacconfig.o \
-aacencoder.o \
 alacsink.o \
 cuesheet.o \
-encoderbase.o \
 flacsrc.o \
 libsndfilesrc.o \
 logging.o \

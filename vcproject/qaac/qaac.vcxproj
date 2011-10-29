@@ -101,11 +101,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\aacconfig.cpp" />
-    <ClCompile Include="..\..\aacencoder.cpp" />
     <ClCompile Include="..\..\alacsink.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\dumpcfobj.cpp" />
-    <ClCompile Include="..\..\encoderbase.cpp" />
     <ClCompile Include="..\..\flacsrc.cpp" />
     <ClCompile Include="..\..\libsndfilesrc.cpp" />
     <ClCompile Include="..\..\logging.cpp" />
@@ -113,6 +111,7 @@
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\reg.cpp" />
     <ClCompile Include="..\..\resampler.cpp" />
+    <ClCompile Include="..\..\SCAudioEncoder.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
     <ClCompile Include="..\..\taksrc.cpp" />
     <ClCompile Include="..\..\version.cpp" />

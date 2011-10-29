@@ -3,6 +3,7 @@
 
 #include "stdaudio.h"
 #include "util.h"
+#include "iencoder.h"
 
 struct CodecSetting {
     uint32_t m_codec;
@@ -35,7 +36,11 @@ int GetParameterRange(CFArrayRef parameters, ParamType param,
 int GetParameterRange(StdAudioComponentX *encoder, ParamType param,
 	CFArrayT<CFStringRef> *available, CFArrayT<CFStringRef> *limits=0);
 void GetAvailableSettings(std::vector<CodecSetting> *settings);
-
+void SetupSampleRate(StdAudioComponentX &scaudio, int targetRate,
+		     bool isNativeResampler);
+int GetBitrateIndex(const CFArrayT<CFStringRef> &menu,
+		    const CFArrayT<CFStringRef> &limits, int rate);
+void CalcGaplessInfo(const IEncoderStat *stat, bool isSBR,
+	double rateRatio, GaplessInfo *result);
 }
-
 #endif

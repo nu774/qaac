@@ -4,8 +4,9 @@
 #include <QuickTimeComponents.h>
 #include "qthelper.h"
 #include "qtmoviehelper.h"
+#include "iencoder.h"
 
-class StdAudioComponentX : public ComponentX {
+class StdAudioComponentX : public ComponentX, public IEncoderOutputInfo {
     enum {
 	kSCAudio = kQTPropertyClass_SCAudio
     };
