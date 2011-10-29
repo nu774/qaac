@@ -4,7 +4,9 @@
 #include "itunetags.h"
 
 static struct option long_options[] = {
-    { L"help", no_argument, 0, 'h' },
+#ifdef NO_QT
+    { L"alac-fast", no_argument, 0, 'afst' },
+#else
     { L"check", no_argument, 0, 'chck' },
     { L"formats", no_argument, 0, 'fmts' },
     { L"abr", required_argument, 0, 'a' },
@@ -14,22 +16,24 @@ static struct option long_options[] = {
     { L"he", no_argument, 0, 'aach' },
     { L"alac", no_argument, 0, 'A' },
     { L"quality", required_argument, 0, 'q' },
+    { L"native-chanmapper", no_argument, 0, 'nchm' },
+    { L"remix", required_argument, 0, 'rmix' },
+    { L"native-resampler", no_argument, 0, 'nsmp' },
+    { L"adts", no_argument, 0, 'ADTS' },
+#endif
+    { L"help", no_argument, 0, 'h' },
     { L"rate", required_argument, 0, 'r' },
     { L"silent", no_argument, 0, 's' },
     { L"stat", no_argument, 0, 'S' },
     { L"nice", no_argument, 0, 'n' },
-    { L"native-chanmapper", no_argument, 0, 'nchm' },
-    { L"remix", required_argument, 0, 'rmix' },
     { L"chanmap", required_argument, 0, 'cmap' },
     { L"chanmask", required_argument, 0, 'mask' },
     { L"no-optimize", no_argument, 0, 'noop' },
-    { L"native-resampler", no_argument, 0, 'nsmp' },
     { L"normalize", no_argument, 0, 'N' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  'Rchn' },
     { L"raw-rate", required_argument, 0,  'Rrat' },
     { L"raw-format", required_argument, 0,  'Rfmt' },
-    { L"adts", no_argument, 0, 'ADTS' },
     { L"ignorelength", no_argument, 0, 'i' },
     { L"fname-format", required_argument, 0, 'nfmt' },
     { L"log", required_argument, 0, 'log ' },
@@ -70,20 +74,28 @@ const uint32_t * const tag_keys_end = tag_keys + array_size(tag_keys);
 
 const char *get_qaac_version();
 
+#ifdef NO_QT
+#define PROGNAME "refalac"
+#else
+#define PROGNAME "qaac"
+#endif
+
 static
 void usage()
 {
-    std::printf("qaac %s\n", get_qaac_version());
+    std::printf(PROGNAME " %s\n", get_qaac_version());
     std::puts(
-"Usage: qaac [options] infiles....\n"
+"Usage: " PROGNAME " [options] infiles....\n"
 "\n"
 "\"-\" as infile means stdin.\n"
+#ifndef NO_QT
 "In ADTS output mode, \"-\" as outfile means stdout.\n"
+#endif
 "\n"
 "Main options:\n"
+#ifndef NO_QT
 "--check                Show QT version etc, and exit\n"
 "--formats              Print available AAC formats, and exit\n"
-"-d <dirname>           Output directory, default is cwd\n"
 "-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
 "-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
 "-v, --cvbr <bitrate>   AAC Constrained VBR mode / bitrate\n"
@@ -93,15 +105,13 @@ void usage()
 "                       For LC, default is -V90\n"
 "                       For HE, default is -v0\n"
 "--he                   HE AAC mode (Can't use TVBR)\n"
-"-A, --alac             ALAC encoding mode\n"
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
+"--adts                 ADTS output (AAC only)\n"
 "-r, --rate <option>    Sample rate option (AAC only)\n"
 "                       Specify one of the followings:\n"
 "                       keep: Try to preserve the original rate\n"
 "                       auto: Let QuickTime choose the optimal one\n"
 "                       <number>: Literal rate in Hz\n"
-"-s, --silent           Suppress console messages\n"
-"-n, --nice             Give lower process priority\n"
 "--remix <layout>       Remix to the specifed output channel layout.\n"
 "                       \"layout\" is one of the following:\n"
 "                       auto, mono, stereo, quad,\n"
@@ -109,6 +119,17 @@ void usage()
 "                       \"auto\" means automatically remix to stereo or 5.1\n"
 "                       You can't increase number of channels from input,\n"
 "                       except for mono -> stereo case.\n"
+"--native-chanmapper    Use QuickTime native channel mapper.\n"
+"                       Don't use this.\n"
+"-A, --alac             ALAC encoding mode\n"
+"--no-optimize          Don't optimize MP4 container file after encoding\n"
+"--native-resampler     Always use QuickTime built-in resampler\n"
+#else
+"--fast                 Fast stereo encoding mode.\n"
+#endif
+"-d <dirname>           Output directory, default is cwd\n"
+"-s, --silent           Suppress console messages\n"
+"-n, --nice             Give lower process priority\n"
 "--chanmap <n1,n2...>   Re-arrange channels to the specified order.\n"
 "                       For N-ch input, you take numbers 1,2..N, and\n"
 "                       arrange them with comma-seperated, to the order\n"
@@ -118,13 +139,8 @@ void usage()
 "                       If --chanmask 0 is specified, qaac treats it as if\n"
 "                       no channel mask is present in the source, and pick\n"
 "                       default layout.\n"
-"--native-chanmapper    Use QuickTime native channel mapper.\n"
-"                       Don't use this.\n"
-"--no-optimize          Don't optimize MP4 container file after encoding\n"
-"--native-resampler     Always use QuickTime built-in resampler\n"
 "-N, --normalize        Normalize after resample (works in two-pass)\n"
 "                       Normalize is done only when rate conversion occurs\n"
-"--adts                 ADTS(raw AAC)output, instead of m4a(AAC only)\n"
 "-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
 "-R, --raw              Raw PCM input\n"
 "-S, --stat             Save bitrate statistics into file\n"
@@ -168,11 +184,16 @@ void usage()
     );
 }
 
+#ifndef NO_QT
+static const wchar_t * const short_opts = L"hAo:d:a:V:v:c:q:r:insRSN";
+#else
+static const wchar_t * const short_opts = L"ho:d:r:insRSN";
+#endif
+
 bool Options::parse(int &argc, wchar_t **&argv)
 {
     int ch, pos;
-    while ((ch = getopt_long(argc, argv, L"hAo:d:a:V:v:c:q:r:insRSN",
-		    long_options, 0)) != EOF)
+    while ((ch = getopt_long(argc, argv, short_opts, long_options, 0)) != EOF)
     {
 	if (ch == 'h')
 	    return usage(), false;
@@ -307,6 +328,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	}
 	else if (ch == 'Rfmt')
 	    this->raw_format = optarg;
+	else if (ch == 'afst')
+	    this->alac_fast = true;
 	else if ((pos = strindex("aVvc", ch)) >= 0) {
 	    if ((this->output_format && !isAAC()) || this->method != -1)
 		return usage(), false;
@@ -339,8 +362,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	this->ofilename = 0;
 	this->tagopts.clear();
     }
-    if (!this->output_format)
+    if (!this->output_format) {
+#ifdef NO_QT
+	this->output_format = 'alac';
+#else
 	this->output_format = 'aac ';
+#endif
+    }
     if (isSBR() && this->method == kTVBR) {
 	std::fputs("Can't use TVBR method in HE encoding mode\n", stderr);
 	return false;
@@ -350,12 +378,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	this->bitrate = isSBR() ? 0 : 90;
     }
     if (!isAAC() && this->is_adts) {
-	std::fputs("ADTS output mode is only allowed for AAC encoding\n",
-		stderr);
+	std::fputs("--adts is only available for AAC\n", stderr);
 	return false;
     }
     if (isALAC() && this->quality != -1) {
-	std::fputs("Quality is only available for AAC\n", stderr);
+	std::fputs("-q is only available for AAC\n", stderr);
 	return false;
     }
     if (this->ignore_length && this->is_raw) {

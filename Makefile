@@ -34,64 +34,72 @@ taglib/toolkit/tstringlist.o \
 taglib/toolkit/unicode.o 
 
 COBJS=\
-cfhelper.o \
+alacsink.o \
 chanmap.o \
 channel.o \
+cuesheet.o \
 flacmodule.o \
+flacsrc.o \
 getopt.o \
 iff.o \
 iointer.o \
-itunetags.o \
+libsndfilesrc.o \
+logging.o \
 mp4v2wrapper.o \
-qtimage.o \
-qtmoviesource.o \
+resampler.o \
 riff.o \
+sink.o \
 strcnv.o \
+taksrc.o \
 utf8_codecvt_facet.o \
 util.o \
 wavsource.o \
 wicimage.o \
-win32util.o
-
-QOBJS=\
-SCAudioEncoder.o \
-aacconfig.o \
-alacsink.o \
-cuesheet.o \
-flacsrc.o \
-libsndfilesrc.o \
-logging.o \
-main.o \
-options.o \
-reg.o \
-resampler.o \
-sink.o \
-taksrc.o \
-version.o \
+win32util.o \
 wvpacksrc.o
 
-AOBJS=\
-alacdec.o \
-flacsink.o \
-wavsink.o
+QOBJS=\
+aacconfig.o \
+cfhelper.o \
+itunetags.o \
+main.o \
+options.o \
+qtimage.o \
+qtmoviesource.o \
+reg.o \
+SCAudioEncoder.o \
+version.o
+
+AAOBJS=\
+ALAC/ag_dec.o \
+ALAC/ag_enc.o \
+ALAC/ALACBitUtilities.o \
+ALAC/ALACEncoder.o \
+ALAC/dp_enc.o \
+ALAC/EndianPortable.o \
+ALAC/matrix_enc.o
+
+QAOBJS=\
+alacenc.o \
+itunetags.o \
+main.o \
+options.o \
+version.o
 
 LIBS="$(QTSDKDir)/Libraries/QTMLClient.lib"
 INCLUDES=-Iinclude -I "$(QTSDKDir)/CIncludes" -Imp4v2 -Imp4v2/include \
 	 -Imp4v2/src -Itaglib -Itaglib/toolkit -Itaglib/mpeg/id3v1 \
 	 -Itaglib/mpeg/id3v2 -Itaglib/riff -Itaglib/riff/aiff
-
-CPPFLAGS =-DMP4V2_USE_STATIC_LIB -DTAGLIB_STATIC $(INCLUDES)
+DEFS=-DMP4V2_USE_STATIC_LIB -DTAGLIB_STATIC -DTARGET_RT_LITTLE_ENDIAN -DTARGET_OS_WIN32
+CPPFLAGS=$(DEFS) $(INCLUDES)
 CFLAGS = -O2 -Wall -Wno-multichar
 CXXFLAGS =$(CFLAGS)
 LDFLAGS = -static-libgcc -static-libstdc++ -lshlwapi -luuid -lmp4v2 $(LIBPATH)
 
-all: qaac alacdec
+all: qaac
 
 qaac: $(TOBJS) $(COBJS) $(QOBJS)
 	$(CXX) -o $@ $(TOBJS) $(COBJS) $(QOBJS) $(LIBS) $(LDFLAGS)
-
-alacdec: $(TOBJS) $(COBJS) $(AOBJS)
-	$(CXX) -o $@ $(TOBJS) $(COBJS) $(AOBJS) $(LIBS) $(LDFLAGS)
 
 clean:
 	find . -name '*.o' -exec rm '{}' +

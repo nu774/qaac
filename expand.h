@@ -1,3 +1,5 @@
+#ifndef EXPAND_H
+#define EXPAND_H
 #include <vector>
 #include <string>
 #include <streambuf>
@@ -70,3 +72,5 @@ process_template(const std::basic_string<CharT> &s, Func lookup)
     }
     return acc;
 }
+
+#endif

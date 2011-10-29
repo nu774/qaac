@@ -73,24 +73,29 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\cfhelper.cpp" />
+    <ClCompile Include="..\..\alacsink.cpp" />
     <ClCompile Include="..\..\chanmap.cpp" />
     <ClCompile Include="..\..\channel.cpp" />
+    <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\flacmodule.cpp" />
+    <ClCompile Include="..\..\flacsrc.cpp" />
     <ClCompile Include="..\..\getopt.c" />
     <ClCompile Include="..\..\iff.cpp" />
     <ClCompile Include="..\..\iointer.cpp" />
-    <ClCompile Include="..\..\itunetags.cpp" />
+    <ClCompile Include="..\..\libsndfilesrc.cpp" />
+    <ClCompile Include="..\..\logging.cpp" />
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />
-    <ClCompile Include="..\..\qtimage.cpp" />
-    <ClCompile Include="..\..\qtmoviesource.cpp" />
+    <ClCompile Include="..\..\resampler.cpp" />
     <ClCompile Include="..\..\riff.cpp" />
+    <ClCompile Include="..\..\sink.cpp" />
     <ClCompile Include="..\..\strcnv.cpp" />
+    <ClCompile Include="..\..\taksrc.cpp" />
     <ClCompile Include="..\..\utf8_codecvt_facet.cpp" />
     <ClCompile Include="..\..\util.cpp" />
     <ClCompile Include="..\..\wavsource.cpp" />
     <ClCompile Include="..\..\wicimage.cpp" />
     <ClCompile Include="..\..\win32util.cpp" />
+    <ClCompile Include="..\..\wvpacksrc.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

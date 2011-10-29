@@ -1,4 +1,8 @@
 const char *get_qaac_version()
 {
-    return "0.93";
+#ifdef NO_QT
+    return "0.01";
+#else
+    return "0.93a";
+#endif
 }

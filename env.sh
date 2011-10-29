@@ -9,7 +9,7 @@ case $# in
     fi
     ;;
 *)
-    CC=${1}gcc
+    CC=${1}g++
     CXX=${1}g++
     ;;
 esac

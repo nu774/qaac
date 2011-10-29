@@ -154,7 +154,11 @@ void TagEditor::saveArtworks(MP4FileX &file)
 		try {
 		    res = WICConvertArtwork(data, size, m_artwork_size, &vec);
 		} catch (...) {
+#if NO_QT
+		    throw;
+#else
 		    res = QTConvertArtwork(data, size, m_artwork_size, &vec);
+#endif
 		}
 		if (res) {
 		    data = &vec[0];

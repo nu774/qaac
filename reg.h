@@ -15,6 +15,7 @@
 #include <windows.h>
 #include "shared_ptr.h"
 #include "util.h"
+#include "expand.h"
 
 struct IRegAction {
     ~IRegAction() {}
