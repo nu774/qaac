@@ -190,6 +190,7 @@ void SetupSampleRate(StdAudioComponentX &scaudio, int targetRate,
     bool upsample = false;
     AudioStreamBasicDescription desc;
     scaudio.getInputBasicDescription(&desc);
+    if (rate < 0) rate = static_cast<int>(desc.mSampleRate);
     if (rate > desc.mSampleRate && !isNativeResampler) {
 	/*
 	 * Applicable output sample rate is less than input for AAC.
@@ -200,24 +201,20 @@ void SetupSampleRate(StdAudioComponentX &scaudio, int targetRate,
 	desc.mSampleRate = rate;
 	scaudio.setInputBasicDescription(desc);
     }
+
     std::vector<AudioValueRange> rates;
     scaudio.getApplicableSampleRateList(&rates);
     std::vector<int> sample_rate_table;
     for (size_t i = 0; i < rates.size(); ++i)
 	sample_rate_table.push_back(rates[i].mMinimum);
 
-    if (rate != 0) {
-	int srcrate = static_cast<int>(desc.mSampleRate);
-	if (rate < 0)
-	    rate = srcrate;
-	std::vector<int>::const_iterator it
-	    = std::min_element(sample_rate_table.begin(),
-		    sample_rate_table.end(), CloserTo<int>(rate));
-	rate = *it;
-	if (upsample && rate != desc.mSampleRate) {
-	    desc.mSampleRate = rate;
-	    scaudio.setInputBasicDescription(desc);
-	}
+    std::vector<int>::const_iterator it
+	= std::min_element(sample_rate_table.begin(),
+		sample_rate_table.end(), CloserTo<int>(rate));
+    rate = *it;
+    if (upsample && rate != desc.mSampleRate) {
+	desc.mSampleRate = rate;
+	scaudio.setInputBasicDescription(desc);
     }
     AudioStreamBasicDescription oasbd;
     scaudio.getBasicDescription(&oasbd);

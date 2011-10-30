@@ -669,8 +669,6 @@ void configure_aac(StdAudioComponentX &scaudio, const Options &opts)
 	else {
 	    aac::Config t = { aac::kStrategy, method };
 	    config.push_back(t);
-	    aac::SetParameters(&scaudio, config);
-	    aac::GetCodecConfigArray(&scaudio, &currentConfig);
 	}
     }
     // bitrate
@@ -678,6 +676,8 @@ void configure_aac(StdAudioComponentX &scaudio, const Options &opts)
 	if (opts.method == Options::kTVBR) {
 	    aac::Config t = { aac::kTVBRQuality, opts.bitrate };
 	    config.push_back(t);
+	    aac::Config tt = { aac::kBitRate, 0 };
+	    config.push_back(tt);
 	} else  {
 	    aac::GetParameterRange(currentConfig,
 		    aac::kBitRate, &menu, &limits);
@@ -791,7 +791,6 @@ void encode_file(const x::shared_ptr<ISource> &src,
     {
 	QTAtomContainer ac;
 	SCGetSettingsAsAtomContainer(scaudio, &ac);
-	QTAtomContainerX disposer(ac);
 	SCSetSettingsFromAtomContainer(scaudio, ac);
     }
     if (opts.isAAC()) {

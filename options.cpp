@@ -107,11 +107,9 @@ void usage()
 "--he                   HE AAC mode (Can't use TVBR)\n"
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
-"-r, --rate <option>    Sample rate option (AAC only)\n"
-"                       Specify one of the followings:\n"
-"                       keep: Try to preserve the original rate\n"
-"                       auto: Let QuickTime choose the optimal one\n"
-"                       <number>: Literal rate in Hz\n"
+"-r, --rate <number>    Specify target sample rate in Hz\n"
+"                       By default, sample rate will be same as input\n"
+"                       (if possible).\n"
 "--remix <layout>       Remix to the specifed output channel layout.\n"
 "                       \"layout\" is one of the following:\n"
 "                       auto, mono, stereo, quad,\n"
@@ -299,11 +297,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    }
 	}
 	else if (ch == 'r') {
-	    if (!std::wcscmp(optarg, L"auto"))
-		this->rate = 0;
-	    else if (!std::wcscmp(optarg, L"keep"))
-		this->rate = -1;
-	    else if (std::swscanf(optarg, L"%u", &this->rate) != 1) {
+	    if (std::swscanf(optarg, L"%u", &this->rate) != 1) {
 		std::fputs("Invalid rate value\n", stderr);
 		return false;
 	    }
