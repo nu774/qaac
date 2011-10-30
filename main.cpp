@@ -254,15 +254,12 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 	return x::shared_ptr<ISource>(new RawSource(stream, sf));
     }
 
-    if (!stream.seekable() && opts.libsndfile.loaded()) {
-	return x::shared_ptr<ISource>(
-		new LibSndfileSource(opts.libsndfile, opts.ifilename));
-    } else {
-	try {
-	    return x::shared_ptr<ISource>(new WaveSource(stream, false));
-	} catch (const std::runtime_error&) {
-	    stream.rewind();
-	}
+    try {
+	return x::shared_ptr<ISource>(new WaveSource(stream, false));
+    } catch (const std::runtime_error&) {
+	if (!stream.seekable())
+	    throw;
+	stream.rewind();
     }
 
     if (opts.libflac.loaded()) {
@@ -301,7 +298,6 @@ x::shared_ptr<ISource> open_source(const Options &opts)
     try {
 	return x::shared_ptr<ISource>(new QTMovieSource(opts.ifilename));
     } catch (const std::runtime_error&) {
-	stream.rewind();
 	throw;
     }
 #endif

@@ -69,7 +69,7 @@ LibSndfileSource::LibSndfileSource(
 	const LibSndfileModule &module, const wchar_t *path)
     : m_module(module)
 {
-    SF_INFO info;
+    SF_INFO info = { 0 };
     SNDFILE *fp;
     if (!std::wcscmp(path, L"-"))
 	fp = m_module.open_fd(0, SFM_READ, &info, 0);
