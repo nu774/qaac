@@ -309,18 +309,76 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 }
 
 static
-void write_tags(MP4FileX *mp4file, const Options &opts, IEncoder *encoder,
-		const std::wstring &encoder_config)
+void load_chapter_file(const wchar_t *chapter_file,
+	std::vector<std::pair<std::wstring, int64_t> > *chapters)
+{
+    try {
+	std::vector<std::pair<std::wstring, int64_t> > chaps;
+
+	std::wstring str = load_text_file(chapter_file);
+	std::vector<wchar_t> buf(str.begin(), str.end());
+	buf.push_back(0);
+	wchar_t *p = &buf[0], *tok;
+	const wchar_t *tfmt = L"%02d:%02d:%02d.%03d";
+	int h, m, s, ms;
+	int64_t stamp = 0;
+	while ((tok = wcssep(&p, L"\n"))) {
+	    if (swscanf(tok, tfmt, &h, &m, &s, &ms) == 4) {
+		wcssep(&tok, L"\t ");
+		std::wstring name = tok ? tok : L"";
+		int64_t hh = h;
+		stamp = (((hh * 60) + m) * 60 + s) * 1000 + ms;
+		chaps.push_back(std::make_pair(name, stamp));
+	    } else if (wcsncmp(tok, L"Chapter", 7) == 0) {
+		wchar_t *key = wcssep(&tok, L"=");
+		if (wcsstr(key, L"NAME")) {
+		    std::wstring name = tok ? tok : L"";
+		    chaps.push_back(std::make_pair(name, stamp));
+		} else if (swscanf(tok, tfmt, &h, &m, &s, &ms) == 4) {
+		    int64_t hh = h;
+		    stamp = (((hh * 60) + m) * 60 + s) * 1000 + ms;
+		}
+	    }
+	}
+	chapters->swap(chaps);
+    } catch (const std::exception &e) {
+	LOG("WARNING: %s\n", e.what());
+    }
+}
+
+static
+void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
+	IEncoder *encoder, const std::wstring &encoder_config)
 {
     TagEditor editor;
 
-    ITagParser *parser = dynamic_cast<ITagParser*>(encoder->src());
+    /*
+     * At this point, encoder's input format might not be the same with
+     * original source's format (src points to the actual source).
+     */
+    const AudioStreamBasicDescription
+	&iformat = encoder->getInputDescription(),
+	&oformat = encoder->getOutputDescription();
+
+    ITagParser *parser = dynamic_cast<ITagParser*>(src);
     if (parser) {
 	editor.setTag(parser->getTags());
 	const std::vector<std::pair<std::wstring, int64_t> > *chapters
 	    = parser->getChapters();
-	if (chapters)
-	    editor.setChapters(*chapters);
+	double rate_ratio
+	    = oformat.mSampleRate / src->getSampleFormat().m_rate;
+	if (chapters) {
+	    if (rate_ratio == 1.0)
+		editor.setChapters(*chapters);
+	    else {
+		std::vector<std::pair<std::wstring, int64_t> > chaps;
+		std::copy(chapters->begin(), chapters->end(),
+			std::back_inserter(chaps));
+		for (size_t i = 0; i < chaps.size(); ++i)
+		    chaps[i].second = chaps[i].second * rate_ratio + 0.5;
+		editor.setChapters(chaps);
+	    }
+	}
     }
     if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-")) {
 	try {
@@ -332,9 +390,8 @@ void write_tags(MP4FileX *mp4file, const Options &opts, IEncoder *encoder,
 #ifndef NO_QT
     if (opts.isAAC()) {
 	IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
-	double ratio = encoder->getOutputDescription().mSampleRate /
-	    encoder->getInputDescription().mSampleRate;
 	GaplessInfo gi;
+	double ratio = oformat.mSampleRate / iformat.mSampleRate;
 	aac::CalcGaplessInfo(stat, opts.isSBR(), ratio, &gi);
 	editor.setGaplessInfo(gi);
     }
@@ -342,6 +399,35 @@ void write_tags(MP4FileX *mp4file, const Options &opts, IEncoder *encoder,
     editor.setArtworkSize(opts.artwork_size);
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
+    if (opts.chapter_file) {
+	std::vector<std::pair<std::wstring, int64_t> > chaps;
+	load_chapter_file(opts.chapter_file, &chaps);
+	// convert from absolute millis to dulation in samples
+	for (size_t i = 0; i < chaps.size() - 1; ++i) {
+	    int64_t dur = chaps[i+1].second - chaps[i].second;
+	    dur = dur / 1000.0 * oformat.mSampleRate + 0.5;
+	    chaps[i].second = dur;
+	}
+	// last entry needs calculation from media length
+	if (chaps.size()) {
+	    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
+	    size_t pos = chaps.size() - 1;
+	    int64_t beg =
+		chaps[pos].second / 1000.0 * oformat.mSampleRate + 0.5;
+	    double ratio = oformat.mSampleRate / iformat.mSampleRate;
+	    int64_t dur = stat->samplesRead() * ratio - beg;
+	    chaps[pos].second = dur;
+	}
+	// sanity check
+	size_t i = 0;
+	for (i = 0; i < chaps.size(); ++i) {
+	    if (chaps[i].second < 0) {
+		LOG("WARNING: invalid chapter time\n");
+		break;
+	    }
+	}
+	if (i == chaps.size()) editor.setChapters(chaps);
+    }
     editor.save(*mp4file);
     try {
 	editor.saveArtworks(*mp4file);
@@ -813,7 +899,9 @@ void encode_file(const x::shared_ptr<ISource> &src,
 
 	MP4SinkBase *sinkp = dynamic_cast<MP4SinkBase*>(sink.get());
 	if (sinkp) {
-	    write_tags(sinkp->getFile(), opts, &encoder, encoder_config);
+	    // write_tags needs original src
+	    write_tags(sinkp->getFile(), opts, src.get(),
+		       &encoder, encoder_config);
 	    if (!opts.no_optimize)
 		do_optimize(sinkp->getFile(), ofilename, opts.verbose);
 	}
@@ -854,7 +942,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
     ALACSink *asink = dynamic_cast<ALACSink*>(sink.get());
     if (encoder.framesWritten()) {
 	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
-	write_tags(asink->getFile(), opts, &encoder,
+	write_tags(asink->getFile(), opts, src.get(), &encoder,
 	    L"Apple Lossless Encoder");
 	if (!opts.no_optimize)
 	    do_optimize(asink->getFile(), ofilename, opts.verbose);

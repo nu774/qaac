@@ -25,6 +25,7 @@ struct Options {
 	ifilename(0), ofilename(0), outdir(0),
 	raw_format(L"S16LE"),
 	fname_format(0),
+	chapter_file(0),
 	logfilename(0),
 	verbose(true), is_raw(false), is_adts(false), save_stat(false),
        	nice(false), native_chanmapper(false), ignore_length(false),
@@ -69,6 +70,7 @@ struct Options {
                      others: use the value as chanmask     */
     uint32_t artwork_size;
     wchar_t *ifilename, *ofilename, *outdir, *raw_format, *fname_format;
+    wchar_t *chapter_file;
     wchar_t *logfilename;
     bool verbose, is_raw, is_adts, save_stat, nice, native_chanmapper,
 	 ignore_length, no_optimize, native_resampler, check_only,

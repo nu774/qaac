@@ -52,6 +52,7 @@ static struct option long_options[] = {
     { L"lyrics", required_argument, 0, Tag::kLyrics },
     { L"artwork", required_argument, 0, Tag::kArtwork },
     { L"artwork-size", required_argument, 0, 'atsz' },
+    { L"chapter", required_argument, 0, 'chap' },
     { 0, 0, 0, 0 }
 };
 static const uint32_t tag_keys[] = {
@@ -179,6 +180,8 @@ void usage()
 "--artwork-size <n>    Specify maximum width/height of artwork in pixels.\n"
 "                      If specified artwork (with --artwork) is larger than\n"
 "                      this, artwork is automatically resized.\n"
+"--chapter <filename>\n"
+"                      Set chapter from file.\n"
     );
 }
 
@@ -344,6 +347,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end)
 	    this->tagopts[ch]
 		= (ch == Tag::kCompilation) ? L"1" : optarg;
+	else if (ch == 'chap')
+	    this->chapter_file = optarg;
 	else
 	    return false;
     }
