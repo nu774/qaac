@@ -5,7 +5,7 @@
 
 static struct option long_options[] = {
 #ifdef NO_QT
-    { L"alac-fast", no_argument, 0, 'afst' },
+    { L"fast", no_argument, 0, 'afst' },
 #else
     { L"check", no_argument, 0, 'chck' },
     { L"formats", no_argument, 0, 'fmts' },
