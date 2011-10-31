@@ -4,7 +4,6 @@ ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
     : m_encoder(new ALACEncoder())
 {
     m_input_desc.asbd = desc;
-    if (desc.mFormatFlags & kAudioFormatFlagIsPacked)
     memset(&m_output_desc, 0, sizeof m_output_desc);
     AudioStreamBasicDescription & oasbd = m_output_desc.asbd;
     oasbd.mFormatID = kALACFormatAppleLossless;
