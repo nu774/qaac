@@ -30,10 +30,10 @@ WaveSource::WaveSource(InputStream &stream, bool ignorelength)
     if (!m_format.m_bitsPerSample)
 	wav::want(false);
 
-    if (ignorelength || chunk_size() == 0xffffffff)
+    if (ignorelength || chunk_size() % m_format.bytesPerFrame())
 	setRange(0, -1);
     else
-	setRange(0, chunk_size() / m_format.bytesPerFrame());
+	setRange(0, chunk_size());
 }
 
 void WaveSource::fetchWaveFormat()

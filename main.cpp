@@ -72,7 +72,7 @@ std::wstring load_text_file(const wchar_t *name)
     } catch (...) {
 	result = m2w(&buffer[0]);
     }
-    return result;
+    return normalize_crlf(result.c_str(), L"\n");
 }
 
 static
@@ -245,9 +245,6 @@ x::shared_ptr<ISource> open_source(const Options &opts)
     StdioChannel channel(opts.ifilename);
     InputStream stream(channel);
 
-    if (opts.ignore_length)
-	return x::shared_ptr<ISource>(new WaveSource(stream, true));
-
     if (opts.is_raw) {
 	SampleFormat sf(nallow(opts.raw_format).c_str(),
 		opts.raw_channels, opts.raw_sample_rate);
@@ -255,53 +252,52 @@ x::shared_ptr<ISource> open_source(const Options &opts)
     }
 
     try {
-	return x::shared_ptr<ISource>(new WaveSource(stream, false));
-    } catch (const std::runtime_error&) {
-	if (!stream.seekable())
-	    throw;
-	stream.rewind();
-    }
+	try {
+	    return x::shared_ptr<ISource>(
+		    new WaveSource(stream, opts.ignore_length));
+	} catch (const std::runtime_error&) {
+	    if (!stream.seekable())
+		throw;
+	    stream.rewind();
+	}
 
-    if (opts.libflac.loaded()) {
-	try {
-	    return x::shared_ptr<ISource>(
-		    new FLACSource(opts.libflac, stream));
-	} catch (const std::runtime_error&) {
-	    stream.rewind();
+	if (opts.libflac.loaded()) {
+	    try {
+		return x::shared_ptr<ISource>(
+			new FLACSource(opts.libflac, stream));
+	    } catch (const std::runtime_error&) {
+		stream.rewind();
+	    }
 	}
-    }
-    if (opts.libwavpack.loaded()) {
-	try {
-	    return x::shared_ptr<ISource>(
-		    new WavpackSource(opts.libwavpack, stream));
-	} catch (const std::runtime_error&) {
-	    stream.rewind();
+	if (opts.libwavpack.loaded()) {
+	    try {
+		return x::shared_ptr<ISource>(
+			new WavpackSource(opts.libwavpack, stream));
+	    } catch (const std::runtime_error&) {
+		stream.rewind();
+	    }
 	}
-    }
-    if (opts.libtak.loaded() && opts.libtak.compatible()) {
-	try {
-	    return x::shared_ptr<ISource>(
-		    new TakSource(opts.libtak, stream));
-	} catch (const std::runtime_error&) {
-	    stream.rewind();
+	if (opts.libtak.loaded() && opts.libtak.compatible()) {
+	    try {
+		return x::shared_ptr<ISource>(
+			new TakSource(opts.libtak, stream));
+	    } catch (const std::runtime_error&) {
+		stream.rewind();
+	    }
 	}
-    }
-    if (opts.libsndfile.loaded()) {
-	try {
-	    return x::shared_ptr<ISource>(
-		    new LibSndfileSource(opts.libsndfile, opts.ifilename));
-	} catch (const std::runtime_error&) {
-	    stream.rewind();
+	if (opts.libsndfile.loaded()) {
+	    try {
+		return x::shared_ptr<ISource>(
+			new LibSndfileSource(opts.libsndfile, opts.ifilename));
+	    } catch (const std::runtime_error&) {}
 	}
-    }
 #ifndef NO_QT
-    try {
 	return x::shared_ptr<ISource>(new QTMovieSource(opts.ifilename));
-    } catch (const std::runtime_error&) {
-	throw;
-    }
 #endif
-    throw std::runtime_error("Not available input format");
+    } catch (const std::runtime_error&) {
+	throw std::runtime_error("Not available input file format");
+    }
+    return 0;
 }
 
 static

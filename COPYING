@@ -1,8 +1,8 @@
 All files are distributed as Public Domain, except for the followings:
 
-Files under ALAC:
+Files under ALAC, include/ALACAudioTypes.h, include/ALACEncoder.h:
 These are part of Apple Lossless Audio Codec Project distribution
-(http://alac.macosforge.org/).
+(http://alac.macosforge.org/). Slightly modified.
 
 Files under mp4v2:
 These are part of mp4v2 (http://code.google.com/p/mp4v2/),
