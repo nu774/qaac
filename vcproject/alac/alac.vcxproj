@@ -82,7 +82,6 @@
     <ClCompile Include="..\..\ALAC\ALACBitUtilities.c" />
     <ClCompile Include="..\..\ALAC\ALACEncoder.cpp" />
     <ClCompile Include="..\..\ALAC\dp_enc.c" />
-    <ClCompile Include="..\..\ALAC\EndianPortable.c" />
     <ClCompile Include="..\..\ALAC\matrix_enc.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

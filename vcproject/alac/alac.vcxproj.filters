@@ -30,9 +30,6 @@
     <ClCompile Include="..\..\ALAC\dp_enc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ALAC\EndianPortable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ALAC\matrix_enc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
