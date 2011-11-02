@@ -24,6 +24,8 @@ class MP4FileX: public mp4v2::impl::MP4File {
 public:
     MP4FileX() {}
 
+    void ResetFile() { m_file = 0; }
+
     void CreateTemp(const char *prefix,
 	    uint32_t flags, int add_ftyp, int add_iods,
 	    char *majorBrand, uint32_t minorVersion,

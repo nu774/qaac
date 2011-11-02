@@ -338,7 +338,12 @@ MP4FileCopy::MP4FileCopy(MP4File *file)
 void MP4FileCopy::start(const char *path)
 {
     m_mp4file->m_file = 0;
-    m_mp4file->Open(path, File::MODE_CREATE, 0);
+    try {
+	m_mp4file->Open(path, File::MODE_CREATE, 0);
+    } catch (...) {
+	m_mp4file->ResetFile();
+	throw;
+    }
     m_dst = m_mp4file->m_file;
     m_mp4file->SetIntegerProperty("moov.mvhd.modificationTime",
 	mp4v2::impl::MP4GetAbsTimestamp());

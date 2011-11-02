@@ -8,34 +8,6 @@
 #endif
 
 static
-uint32_t getSamplingRateIndex(uint32_t rate)
-{
-    static const uint32_t rtab[] = {
-	96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 
-	16000, 12000, 11025, 8000, 7350
-    };
-    const uint32_t * const endp = rtab + array_size(rtab);
-
-    const uint32_t *pos = std::find(rtab, endp, rate);
-    return pos < endp ? pos - rtab : 0xf;
-}
-
-static
-uint32_t getChannelConfig(const AudioChannelLayout *layout)
-{
-    switch (layout->mChannelLayoutTag) {
-	case kAudioChannelLayoutTag_Mono: return 1;
-	case kAudioChannelLayoutTag_Stereo: return 2;
-	case kAudioChannelLayoutTag_AAC_3_0: return 3;
-	case kAudioChannelLayoutTag_AAC_4_0: return 4;
-	case kAudioChannelLayoutTag_AAC_5_0: return 5;
-	case kAudioChannelLayoutTag_AAC_5_1: return 6;
-	case kAudioChannelLayoutTag_AAC_7_1: return 7;
-    }
-    return 0;
-}
-
-static
 bool getDescripterHeader(const uint8_t **p, const uint8_t *end,
 			 int *tag, uint32_t *size)
 {
@@ -131,6 +103,7 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
 		    const_cast<char**>(compatibleBrands), 
 		    array_size(compatibleBrands));
     } catch (mp4v2::impl::Exception *e) {
+	m_mp4file.ResetFile();
 	handle_mp4error(e);
     }
 }
@@ -205,15 +178,15 @@ ADTSSink::ADTSSink(const std::wstring &path, IEncoderOutputInfo *info)
     } else {
 	m_fp = file_ptr_t(wfopenx(path.c_str(), L"wb"), fclose);
     }
-    AudioStreamBasicDescription format;
-    info->getBasicDescription(&format);
-    uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
-    if (format.mFormatID == 'aach')
-	sample_rate /= 2;
-    m_sample_rate_index = getSamplingRateIndex(sample_rate);
-    AudioChannelLayoutX layout;
-    info->getChannelLayout(&layout);
-    m_channel_config = getChannelConfig(layout);
+    std::vector<char> cookie;
+    info->getMagicCookie(&cookie);
+    std::vector<uint8_t> decSpecificConfig;
+    parseMagicCookieAAC(cookie, &decSpecificConfig);
+    unsigned objtype = decSpecificConfig[0] >> 3;
+    m_sample_rate_index
+	= ((decSpecificConfig[0] & 3)<<1) | (decSpecificConfig[1] >> 7);
+    unsigned offset = m_sample_rate_index == 0xf ? 3 : 0;
+    m_channel_config = (decSpecificConfig[1 + offset] >> 3) & 0xf;
 }
 
 void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
