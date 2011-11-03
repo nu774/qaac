@@ -6,6 +6,7 @@
 static struct option long_options[] = {
 #ifdef NO_QT
     { L"fast", no_argument, 0, 'afst' },
+    { L"decode", no_argument, 0, 'D' },
 #else
     { L"check", no_argument, 0, 'chck' },
     { L"formats", no_argument, 0, 'fmts' },
@@ -125,6 +126,7 @@ void usage()
 "--native-resampler     Always use QuickTime built-in resampler\n"
 #else
 "--fast                 Fast stereo encoding mode.\n"
+"-D, --decode           Decode mode.\n"
 #endif
 "-d <dirname>           Output directory, default is cwd\n"
 "-s, --silent           Suppress console messages\n"
@@ -188,7 +190,7 @@ void usage()
 #ifndef NO_QT
 static const wchar_t * const short_opts = L"hAo:d:a:V:v:c:q:r:insRSN";
 #else
-static const wchar_t * const short_opts = L"ho:d:r:insRSN";
+static const wchar_t * const short_opts = L"hDo:d:r:insRSN";
 #endif
 
 bool Options::parse(int &argc, wchar_t **&argv)
@@ -224,6 +226,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return false;
 	    }
 	}
+	else if (ch == 'D')
+	    this->alac_decode = true;
 	else if (ch == 'nsmp')
 	    this->native_resampler = true;
 	else if (ch == 'N')

@@ -7,7 +7,7 @@ class WavSink : public ISink {
     FILE *m_file;
 public:
     WavSink(FILE *fp, uint64_t duration, const SampleFormat &format,
-	    const std::vector<uint32_t> *chanmap=0);
+	    uint32_t chanmask=0);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
 	write(data, length);

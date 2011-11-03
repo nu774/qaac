@@ -11,8 +11,8 @@ namespace wav {
 	os->sputn(reinterpret_cast<char*>(&obj), sizeof obj);
     }
 
-    void buildHeader(const SampleFormat &format,
-	    const std::vector<uint32_t> *chanmap, std::streambuf *result)
+    void buildHeader(const SampleFormat &format, uint32_t chanmask,
+		     std::streambuf *result)
     {
 	if (format.m_nchannels > 8)
 	    throw std::runtime_error(
@@ -54,15 +54,9 @@ namespace wav {
 	    // WAVEFORMATEXTENSIBLE
 	    put(result, static_cast<uint16_t>(22));
 	    // Samples
-	    put(result, static_cast<uint16_t>(0));
+	    put(result, static_cast<uint16_t>(format.m_bitsPerSample));
 	    // dwChannelMask
-	    {
-		uint32_t mask = 0;
-		if (chanmap)
-		    for (size_t i = 0; i < chanmap->size(); ++i)
-			mask |= (1 << (chanmap->at(i) - 1));
-		put(result, mask);
-	    }
+	    put(result, chanmask);
 	    // SubFormat
 	    if (format.m_type == SampleFormat::kIsFloat)
 		put(result, ksFormatSubTypeFloat);
@@ -75,11 +69,11 @@ namespace wav {
 WavSink::WavSink(FILE *fp,
 		 uint64_t duration,
 		 const SampleFormat &format,
-		 const std::vector<uint32_t> *chanmap)
+		 uint32_t chanmask)
 	: m_file(fp)
 {
     std::ostringstream os;
-    wav::buildHeader(format, chanmap, os.rdbuf());
+    wav::buildHeader(format, chanmask, os.rdbuf());
     std::string header = os.str();
 
     uint32_t hdrsize = header.size();

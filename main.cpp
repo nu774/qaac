@@ -21,6 +21,8 @@
 #include "aacconfig.h"
 #else
 #include "alacenc.h"
+#include "alacsrc.h"
+#include "wavsink.h"
 #endif
 #include "itunetags.h"
 #include "sink.h"
@@ -97,7 +99,9 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 	else
 	    return GetFullPathNameX(opts.ofilename);
     }
-    const wchar_t *ext = opts.isMP4() ? L"m4a" : L"aac";
+    const wchar_t *ext =
+	opts.alac_decode ? L"wav"
+			 : opts.isMP4() ? L"m4a" : L"aac";
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
     if (!std::wcscmp(ifilename, L"-"))
 	return std::wstring(L"stdin.") + ext;
@@ -242,6 +246,10 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 static
 x::shared_ptr<ISource> open_source(const Options &opts)
 {
+#ifdef NO_QT
+    if (opts.alac_decode)
+	return x::shared_ptr<ISource>(new ALACSource(opts.ifilename));
+#endif
     StdioChannel channel(opts.ifilename);
     InputStream stream(channel);
 
@@ -294,9 +302,8 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 #ifndef NO_QT
 	return x::shared_ptr<ISource>(new QTMovieSource(opts.ifilename));
 #endif
-    } catch (const std::runtime_error&) {
-	throw std::runtime_error("Not available input file format");
-    }
+    } catch (const std::runtime_error&) {}
+    throw std::runtime_error("Not available input file format");
     return 0;
 }
 
@@ -900,10 +907,54 @@ void encode_file(const x::shared_ptr<ISource> &src,
     }
 }
 #else // NO_QT
+static void noop(void *) {}
+
+static
+void decode_file(const x::shared_ptr<ISource> &src,
+	const std::wstring &ofilename, const Options &opts)
+{
+    x::shared_ptr<ISource> srcx(src);
+    const SampleFormat &sf = srcx->getSampleFormat();
+    std::vector<uint32_t> chanmap;
+    uint32_t tag = GetALACLayoutTag(sf.m_nchannels);
+    uint32_t bitmap = GetAACReversedChannelMap(tag, &chanmap);
+    if (chanmap.size())
+	srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, chanmap));
+
+    x::shared_ptr<FILE> fileptr;
+    if (opts.ofilename && !std::wcscmp(opts.ofilename, L"-")) {
+	fileptr = x::shared_ptr<FILE>(stdout, noop);
+	_setmode(1, _O_BINARY);
+    } else {
+	FILE *fp = wfopenx(ofilename.c_str(), L"wb");
+	fileptr = x::shared_ptr<FILE>(fp, std::fclose);
+    }
+    WavSink sink(fileptr.get(), srcx->length(), sf, bitmap);
+    Progress progress(opts.verbose, srcx->length(), sf.m_rate);
+    uint32_t bpf = sf.bytesPerFrame();
+    std::vector<uint8_t> buffer(4096 * bpf);
+    try {
+	size_t nread;
+	uint64_t ntotal = 0;
+	while ((nread = srcx->readSamples(&buffer[0], 4096)) > 0) {
+	    ntotal += nread;
+	    progress.update(ntotal);
+	    sink.writeSamples(&buffer[0], nread * bpf, nread);
+	}
+	progress.finish(ntotal);
+    } catch (const std::exception &e) {
+	LOG("\n%s\n", e.what());
+    }
+}
+
 static
 void encode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
+    if (opts.alac_decode) {
+	decode_file(src, ofilename, opts);
+	return;
+    }
     AudioChannelLayoutX origLayout, layout;
     x::shared_ptr<ISource> srcx =
 	mapped_source(src, opts, &origLayout, &layout);

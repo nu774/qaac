@@ -80,8 +80,11 @@
     <ClCompile Include="..\..\ALAC\ag_dec.c" />
     <ClCompile Include="..\..\ALAC\ag_enc.c" />
     <ClCompile Include="..\..\ALAC\ALACBitUtilities.c" />
+    <ClCompile Include="..\..\ALAC\ALACDecoder.cpp" />
     <ClCompile Include="..\..\ALAC\ALACEncoder.cpp" />
+    <ClCompile Include="..\..\ALAC\dp_dec.c" />
     <ClCompile Include="..\..\ALAC\dp_enc.c" />
+    <ClCompile Include="..\..\ALAC\matrix_dec.c" />
     <ClCompile Include="..\..\ALAC\matrix_enc.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

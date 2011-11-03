@@ -36,5 +36,14 @@
     <ClCompile Include="..\..\ALAC\ag_dec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ALAC\ALACDecoder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ALAC\dp_dec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ALAC\matrix_dec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

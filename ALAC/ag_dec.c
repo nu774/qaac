@@ -88,6 +88,23 @@ void set_ag_params(AGParamRecPtr params, uint32_t m, uint32_t p, uint32_t k, uin
 
 
 // note: implementing this with some kind of "count leading zeros" assembly is a big performance win
+#if defined(_MSC_VER) && !defined(_WIN64)
+static inline int32_t lead(int32_t m)
+{
+    if (m == 0)
+	return 32;
+    else {
+        int n;
+	__asm {
+	    mov eax, m
+	    bsr ebx, eax
+	    mov n, ebx
+	}
+	return n ^ 31;
+    }
+}
+
+#else
 static inline int32_t lead( int32_t m )
 {
 	long j;
@@ -101,6 +118,7 @@ static inline int32_t lead( int32_t m )
 	}
 	return (j);
 }
+#endif
 
 #define arithmin(a, b) ((a) < (b) ? (a) : (b))
 

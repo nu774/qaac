@@ -92,7 +92,7 @@ uint32_t GetALACLayoutTag(uint32_t nchannels)
 	kAudioChannelLayoutTag_AAC_6_1,
 	kAudioChannelLayoutTag_AAC_7_1
     };
-    return tab[nchannels];
+    return tab[nchannels-1];
 }
 
 uint32_t GetAACReversedChannelMap(uint32_t layoutTag,
