@@ -51,6 +51,7 @@ riff.o \
 sink.o \
 strcnv.o \
 taksrc.o \
+textfile.o \
 utf8_codecvt_facet.o \
 util.o \
 wavsource.o \
@@ -94,7 +95,7 @@ DEFS=-DMP4V2_USE_STATIC_LIB -DTAGLIB_STATIC -DTARGET_RT_LITTLE_ENDIAN -DTARGET_O
 CPPFLAGS=$(DEFS) $(INCLUDES)
 CFLAGS = -O2 -Wall -Wno-multichar
 CXXFLAGS =$(CFLAGS)
-LDFLAGS = -static-libgcc -static-libstdc++ -lshlwapi -luuid -lmp4v2 $(LIBPATH)
+LDFLAGS = -static-libgcc -static-libstdc++ -lshlwapi -lole32 -luuid -lmp4v2 $(LIBPATH)
 
 all: qaac
 

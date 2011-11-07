@@ -37,6 +37,7 @@
 #include "expand.h"
 #include "resampler.h"
 #include "logging.h"
+#include "textfile.h"
 #include <crtdbg.h>
 
 #ifdef NO_QT
@@ -50,31 +51,6 @@ std::wstring get_module_directory()
     std::wstring selfpath = GetModuleFileNameX();
     const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
     return selfpath.substr(0, fpos - selfpath.c_str());
-}
-
-std::wstring load_text_file(const wchar_t *name)
-{
-    StdioChannel channel(name);
-    InputStream stream(channel);
-    int64_t size = stream.size();
-    if (size > 0x100000)
-	throw std::runtime_error(format("%ls: file too large", name));
-    std::vector<char> buffer(size + 2);
-    stream.read(&buffer[0], size);
-    buffer[size] = buffer[size+1] = 0;
-
-    if (!std::memcmp(&buffer[0], "\xef\xbb\xbf", 3))
-	return m2w(&buffer[3], utf8_codecvt_facet());
-    else if (!std::memcmp(&buffer[0], "\xff\xfe", 2)) {
-	return std::wstring(reinterpret_cast<wchar_t*>(&buffer[2]));
-    }
-    std::wstring result;
-    try {
-	result = m2w(&buffer[0], utf8_codecvt_facet());
-    } catch (...) {
-	result = m2w(&buffer[0]);
-    }
-    return normalize_crlf(result.c_str(), L"\n");
 }
 
 static
@@ -304,7 +280,6 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 #endif
     } catch (const std::runtime_error&) {}
     throw std::runtime_error("Not available input file format");
-    return 0;
 }
 
 static
@@ -1163,7 +1138,6 @@ int wmain1(int argc, wchar_t **argv)
 	if (opts.nice)
 	    SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
 
-	load_lyrics_file(&opts);
 
 	std::string encoder_name;
 #ifdef NO_QT
@@ -1216,6 +1190,8 @@ int wmain1(int argc, wchar_t **argv)
 #endif
 	mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
 	//mp4v2::impl::log.setVerbosity(MP4_LOG_VERBOSE4);
+
+	load_lyrics_file(&opts);
 
 	while ((opts.ifilename = *argv++)) {
 	    const wchar_t *name = L"<stdin>";
