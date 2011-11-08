@@ -3,10 +3,10 @@
 
 #include "iointer.h"
 
-class WavSink : public ISink {
+class WaveSink : public ISink {
     FILE *m_file;
 public:
-    WavSink(FILE *fp, uint64_t duration, const SampleFormat &format,
+    WaveSink(FILE *fp, uint64_t duration, const SampleFormat &format,
 	    uint32_t chanmask=0);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {

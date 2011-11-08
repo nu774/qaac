@@ -4,7 +4,7 @@
 #include "wavsource.h"
 #include "wavsink.h"
 
-namespace wav {
+namespace wave {
     template <typename T>
     void put(std::streambuf *os, T obj)
     {
@@ -66,14 +66,14 @@ namespace wav {
     }
 }
 
-WavSink::WavSink(FILE *fp,
-		 uint64_t duration,
-		 const SampleFormat &format,
-		 uint32_t chanmask)
+WaveSink::WaveSink(FILE *fp,
+		   uint64_t duration,
+		   const SampleFormat &format,
+		   uint32_t chanmask)
 	: m_file(fp)
 {
     std::ostringstream os;
-    wav::buildHeader(format, chanmask, os.rdbuf());
+    wave::buildHeader(format, chanmask, os.rdbuf());
     std::string header = os.str();
 
     uint32_t hdrsize = header.size();

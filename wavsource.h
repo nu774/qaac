@@ -5,7 +5,7 @@
 #include "iointer.h"
 #include "riff.h"
 
-namespace wav
+namespace wave
 {
     struct myGUID {
 	uint32_t Data1;

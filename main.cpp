@@ -904,7 +904,7 @@ void decode_file(const x::shared_ptr<ISource> &src,
 	FILE *fp = wfopenx(ofilename.c_str(), L"wb");
 	fileptr = x::shared_ptr<FILE>(fp, std::fclose);
     }
-    WavSink sink(fileptr.get(), srcx->length(), sf, bitmap);
+    WaveSink sink(fileptr.get(), srcx->length(), sf, bitmap);
     Progress progress(opts.verbose, srcx->length(), sf.m_rate);
     uint32_t bpf = sf.bytesPerFrame();
     std::vector<uint8_t> buffer(4096 * bpf);
