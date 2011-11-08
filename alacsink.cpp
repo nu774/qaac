@@ -4,22 +4,22 @@
 #include "alacsink.h"
 
 static
-bool get32BE(char const ** pos, const char *end, uint32_t *n)
+bool get32BE(uint8_t const ** pos, const uint8_t *end, uint32_t *n)
 {
     if (end - *pos < 4) return false;
-    const unsigned char *p = reinterpret_cast<const unsigned char *>(*pos);
+    const uint8_t *p = *pos;
     *n = ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]);
     *pos += 4;
     return true;
 }
 
 static
-void parseMagicCookieALAC(const std::vector<char> &cookie,
+void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
 	std::vector<uint8_t> *alac,
 	std::vector<uint8_t> *chan)
 {
-    const char *beg = &cookie[0];
-    const char *end = beg + cookie.size();
+    const uint8_t *beg = &cookie[0];
+    const uint8_t *end = beg + cookie.size();
     uint32_t chunk_size, chunk_name;
 
     while (get32BE(&beg, end, &chunk_size)) {
@@ -35,7 +35,7 @@ void parseMagicCookieALAC(const std::vector<char> &cookie,
 }
 
 ALACSink::ALACSink(const std::wstring &path,
-	const std::vector<char> &magicCookie, bool temp)
+	const std::vector<uint8_t> &magicCookie, bool temp)
 	: MP4SinkBase(path, temp)
 {
     try {

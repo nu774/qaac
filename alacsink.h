@@ -5,7 +5,7 @@
 
 class ALACSink: public ISink, public MP4SinkBase {
 public:
-    ALACSink(const std::wstring &path, const std::vector<char> &magicCookie,
+    ALACSink(const std::wstring &path, const std::vector<uint8_t> &magicCookie,
 	     bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {

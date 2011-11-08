@@ -526,16 +526,15 @@ x::shared_ptr<ISink> open_sink(StdAudioComponentX &encoder,
 	const std::wstring &ofilename, const Options &opts)
 {
     ISink *sink;
+    std::vector<uint8_t> cookie;
+    encoder.getMagicCookie(&cookie);
     if (opts.is_adts)
-	sink = new ADTSSink(ofilename, &encoder);
-    else if (opts.isALAC()) {
-	std::vector<char> cookie;
-	encoder.getMagicCookie(&cookie);
+	sink = new ADTSSink(ofilename, cookie);
+    else if (opts.isALAC())
 	sink = new ALACSink(ofilename, cookie, !opts.no_optimize);
-    } else if (opts.isAAC())
-	sink = new MP4Sink(ofilename, &encoder, !opts.no_optimize);
-    x::shared_ptr<ISink> sinkp(sink);
-    return sinkp;
+    else if (opts.isAAC())
+	sink = new MP4Sink(ofilename, cookie, !opts.no_optimize);
+    return x::shared_ptr<ISink>(sink);
 }
 
 static
@@ -949,7 +948,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 
     ALACEncoderX encoder(iasbd);
     encoder.setFastMode(opts.alac_fast);
-    std::vector<char> cookie;
+    std::vector<uint8_t> cookie;
     encoder.getMagicCookie(&cookie);
 
     x::shared_ptr<ISink> sink(new ALACSink(ofilename, cookie,

@@ -51,11 +51,11 @@ bool ALACEncoderX::encodeChunk(UInt32 npackets)
     return true;
 }
 
-void ALACEncoderX::getMagicCookie(std::vector<char> *cookie)
+void ALACEncoderX::getMagicCookie(std::vector<uint8_t> *cookie)
 {
     uint32_t size =
 	m_encoder->GetMagicCookieSize(m_output_desc.asbd.mChannelsPerFrame);
-    std::vector<char> vec(size + 24);
+    std::vector<uint8_t> vec(size + 24);
     static const char *const hd = "\x00\x00\x00\x0c" "frmaalac"
 	"\x00\x00\x00\x24" "alac" "\x00\x00\x00\x00";
     std::memcpy(&vec[0], hd, 24);

@@ -22,7 +22,7 @@ public:
 
 class MP4Sink: public ISink, public MP4SinkBase {
 public:
-    MP4Sink(const std::wstring &path, IEncoderOutputInfo *info,
+    MP4Sink(const std::wstring &path, const std::vector<uint8_t> &cookie,
 	    bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
@@ -41,7 +41,7 @@ class ADTSSink: public ISink {
     uint32_t m_sample_rate_index;
     uint32_t m_channel_config;
 public:
-    ADTSSink(const std::wstring &path, IEncoderOutputInfo *info);
+    ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie);
     void writeSamples(const void *data, size_t length, size_t nsamples);
 };
 

@@ -24,14 +24,14 @@ bool getDescripterHeader(const uint8_t **p, const uint8_t *end,
 }
 
 static
-void parseMagicCookieAAC(const std::vector<char> &cookie,
+void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
 			 std::vector<uint8_t> *decSpecificConfig)
 {
     /*
      * QT's "Magic Cookie" for AAC is just a esds descripter.
      * We obtain only decSpecificConfig from it, and discard others.
      */
-    const uint8_t *p = reinterpret_cast<const uint8_t*>(&cookie[0]);
+    const uint8_t *p = &cookie[0];
     const uint8_t *end = p + cookie.size();
     int tag;
     uint32_t size;
@@ -82,6 +82,30 @@ void parseMagicCookieAAC(const std::vector<char> &cookie,
 	    "Magic cookie format is different from expected!!");
 }
 
+void parseDecSpecificConfig(const std::vector<uint8_t> &config,
+	unsigned *sampling_rate_index, unsigned *sampling_rate,
+	unsigned *channel_config)
+{
+    static const unsigned tab[] = {
+	96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 
+	16000, 12000, 11025, 8000, 7350, 0, 0, 0
+    };
+    const uint8_t *p = &config[0];
+    unsigned objtype = p[0] >> 3;
+    unsigned index = (p[0] & 7) << 1 | p[1] >> 7;
+    unsigned rate;
+    if (index == 0xf) {
+	rate = (p[1] & 0x7f) << 17 | p[2] << 9 | p[3] << 1 | p[4] >> 7;
+	p += 3;
+    } else {
+	rate = tab[index];
+    }
+    unsigned chconfig = (p[1] >> 3) & 0xf;
+    *sampling_rate_index = index;
+    *sampling_rate = rate;
+    *channel_config = chconfig;
+}
+
 using mp4v2::impl::MP4Atom;
 
 MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
@@ -120,47 +144,28 @@ void MP4SinkBase::close()
     }
 }
 
-MP4Sink::MP4Sink(const std::wstring &path, IEncoderOutputInfo *info, bool temp)
+MP4Sink::MP4Sink(const std::wstring &path,
+	const std::vector<uint8_t> &cookie, bool temp)
 	: MP4SinkBase(path, temp)
 {
-    AudioStreamBasicDescription format;
-    info->getBasicDescription(&format);
-    uint32_t sample_rate = static_cast<uint32_t>(format.mSampleRate);
-    uint32_t frame_length = format.mFramesPerPacket;
-    if (format.mFormatID == 'aach') {
-	sample_rate /= 2;
-	frame_length /= 2;
-    }
+    std::vector<uint8_t> config;
+    parseMagicCookieAAC(cookie, &config);
     try {
-	m_mp4file.SetTimeScale(sample_rate);
+	unsigned index, rate, chconfig;
+	parseDecSpecificConfig(config, &index, &rate, &chconfig);
+	m_mp4file.SetTimeScale(rate);
 	m_track_id = m_mp4file.AddAudioTrack(
-			sample_rate, frame_length, MP4_MPEG4_AUDIO_TYPE);
+			rate, 1024, MP4_MPEG4_AUDIO_TYPE);
 	/*
 	 * According to ISO 14496-12 8.16.3, 
 	 * ChannelCount of AusioSampleEntry is either 1 or 2.
 	 */
 	m_mp4file.SetIntegerProperty(
 		"moov.trak.mdia.minf.stbl.stsd.mp4a.channels",
-		format.mChannelsPerFrame == 1 ? 1 : 2);
-
-	uint8_t level;
-	if (format.mChannelsPerFrame < 3)
-	    level = sample_rate <= 24000 ? 0x28 : 0x29;
-	else
-	    level = sample_rate <= 48000 ? 0x2A : 0x2B;
-
-	//m_mp4file.SetAudioProfileLevel(level);
-
-	std::vector<char> cookie;
-	info->getMagicCookie(&cookie);
-	std::vector<uint8_t> decSpecificConfig;
-	parseMagicCookieAAC(cookie, &decSpecificConfig);
+		chconfig == 1 ? 1 : 2);
 
 	m_mp4file.SetTrackESConfiguration(
-		m_track_id,
-		&decSpecificConfig[0],
-		decSpecificConfig.size());
-
+		m_track_id, &config[0], config.size());
     } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
     }
@@ -168,7 +173,7 @@ MP4Sink::MP4Sink(const std::wstring &path, IEncoderOutputInfo *info, bool temp)
 
 static void noop(void *) {}
 
-ADTSSink::ADTSSink(const std::wstring &path, IEncoderOutputInfo *info)
+ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
 {
     if (path == L"-") {
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -178,15 +183,11 @@ ADTSSink::ADTSSink(const std::wstring &path, IEncoderOutputInfo *info)
     } else {
 	m_fp = file_ptr_t(wfopenx(path.c_str(), L"wb"), fclose);
     }
-    std::vector<char> cookie;
-    info->getMagicCookie(&cookie);
-    std::vector<uint8_t> decSpecificConfig;
-    parseMagicCookieAAC(cookie, &decSpecificConfig);
-    unsigned objtype = decSpecificConfig[0] >> 3;
-    m_sample_rate_index
-	= ((decSpecificConfig[0] & 3)<<1) | (decSpecificConfig[1] >> 7);
-    unsigned offset = m_sample_rate_index == 0xf ? 3 : 0;
-    m_channel_config = (decSpecificConfig[1 + offset] >> 3) & 0xf;
+    std::vector<uint8_t> config;
+    parseMagicCookieAAC(cookie, &config);
+    unsigned rate;
+    parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
+	    &m_channel_config);
 }
 
 void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)

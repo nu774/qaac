@@ -28,7 +28,7 @@ struct IEncoderOutputInfo {
     virtual ~IEncoderOutputInfo() {}
     virtual void getBasicDescription(AudioStreamBasicDescription *asbd) = 0;
     virtual void getChannelLayout(AudioChannelLayoutX *result) = 0;
-    virtual void getMagicCookie(std::vector<char> *result) = 0;
+    virtual void getMagicCookie(std::vector<uint8_t> *result) = 0;
 };
 
 class EncoderStat: public IEncoderStat {

@@ -94,7 +94,7 @@ public:
     {
 	getVectorProperty(kSCAudio, kApplicableSampleRateList, result);
     }
-    void getInputMagicCookie(std::vector<char> *result)
+    void getInputMagicCookie(std::vector<uint8_t> *result)
     {
 	getVectorProperty(kSCAudio, kInputMagicCookie, result);
     }
@@ -102,7 +102,7 @@ public:
     {
 	setProperty(kSCAudio, kInputMagicCookie, size, cookie);
     }
-    void getMagicCookie(std::vector<char> *result)
+    void getMagicCookie(std::vector<uint8_t> *result)
     {
 	getVectorProperty(kSCAudio, kMagicCookie, result);
     }
