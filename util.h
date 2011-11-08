@@ -67,13 +67,13 @@ std::basic_string<T> normalize_crlf(const T *s, const T *delim)
 {
     std::basic_string<T> result;
     const T *p;
-    int c;
+    T c;
     while ((c = *s++)) {
 	if (c == '\r') {
 	    for (p = delim; *p; ++p)
 		result.push_back(*p);
-	    if (*s && (c = *s++) != '\n')
-		result.push_back(c);
+	    if (*s == '\n')
+		++s;
 	}
 	else if (c == '\n')
 	    for (p = delim; *p; ++p)
