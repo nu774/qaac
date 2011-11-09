@@ -24,7 +24,7 @@ ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
     oasbd.mChannelsPerFrame = desc.mChannelsPerFrame;
     oasbd.mSampleRate = desc.mSampleRate;
     oasbd.mFramesPerPacket = kALACDefaultFramesPerPacket;
-    TRYE(m_encoder->InitializeEncoder(m_output_desc.afd));
+    CHECKCA(m_encoder->InitializeEncoder(m_output_desc.afd));
 
     m_stat.setBasicDescription(oasbd);
     uint32_t pullbytes = desc.mChannelsPerFrame *

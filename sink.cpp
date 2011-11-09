@@ -2,6 +2,7 @@
 #include "utf8_codecvt_facet.hpp"
 #include "strcnv.h"
 #include "sink.h"
+#include "win32util.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #include <io.h>
 #include <fcntl.h>

@@ -2,9 +2,9 @@
 #include <ALACBitUtilities.h>
 #include "strcnv.h"
 #include "utf8_codecvt_facet.hpp"
-#include "cfhelper.h"
 #include "alacsrc.h"
 #include "itunetags.h"
+#include "CoreAudioHelper.h"
 
 ALACSource::ALACSource(const std::wstring &path)
     : m_position(0)
@@ -54,7 +54,7 @@ ALACSource::ALACSource(const std::wstring &path)
 	m_format.m_rate = timeScale;
 
 	m_decoder = x::shared_ptr<ALACDecoder>(new ALACDecoder());
-	TRYE(m_decoder->Init(&alac[0], alac.size()));
+	CHECKCA(m_decoder->Init(&alac[0], alac.size()));
 	setRange(0, m_file.GetTrackDuration(m_track_id));
 	fetchTags();
     } catch (mp4v2::impl::Exception *e) {
@@ -95,7 +95,7 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
 	    BitBufferInit(&bits, &ivec[0], size);
 	    m_buffer.v.resize(bpf * duration);
 	    uint32_t ncount;
-	    TRYE(m_decoder->Decode(&bits, &m_buffer.v[0], duration,
+	    CHECKCA(m_decoder->Decode(&bits, &m_buffer.v[0], duration,
 			m_format.m_nchannels, &ncount));
 	    m_buffer.nsamples = ncount;
 

@@ -7,27 +7,14 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#ifndef NO_QT
-#include <QTML.h>
-#include <QTLoadLibraryUtils.h>
-#endif
 #include "strcnv.h"
 #include "win32util.h"
 #include <shellapi.h>
-#ifndef NO_QT
-#include "SCAudioEncoder.h"
-#include "qtmoviesource.h"
-#include "reg.h"
-#include "aacconfig.h"
-#else
-#include "alacenc.h"
-#include "alacsrc.h"
-#include "wavsink.h"
-#endif
 #include "itunetags.h"
 #include "sink.h"
 #include "rawsource.h"
 #include "flacsrc.h"
+#include "alacsrc.h"
 #include "alacsink.h"
 #include "options.h"
 #include "cuesheet.h"
@@ -38,9 +25,18 @@
 #include "resampler.h"
 #include "logging.h"
 #include "textfile.h"
+#ifdef REFALAC
+#include "alacenc.h"
+#include "wavsink.h"
+#else
+#include <delayimp.h>
+#include "AudioCodecX.h"
+#include "CoreAudioEncoder.h"
+#include "reg.h"
+#endif
 #include <crtdbg.h>
 
-#ifdef NO_QT
+#ifdef REFALAC
 #define PROGNAME "refalac"
 #else
 #define PROGNAME "qaac"
@@ -48,7 +44,7 @@
 
 std::wstring get_module_directory()
 {
-    std::wstring selfpath = GetModuleFileNameX();
+    std::wstring selfpath = GetModuleFileNameX(0);
     const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
     return selfpath.substr(0, fpos - selfpath.c_str());
 }
@@ -220,11 +216,24 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 }
 
 static
+x::shared_ptr<ISource> open_alac_source(const Options &opts)
+{
+    x::shared_ptr<ISource> src(new ALACSource(opts.ifilename));
+    const SampleFormat &sf = src->getSampleFormat();
+    std::vector<uint32_t> chanmap;
+    uint32_t tag = GetALACLayoutTag(sf.m_nchannels);
+    uint32_t bitmap = GetAACReversedChannelMap(tag, &chanmap);
+    return (chanmap.size())
+	? x::shared_ptr<ISource>(new ChannelMapper(src, chanmap, bitmap))
+	: src;
+}
+
+static
 x::shared_ptr<ISource> open_source(const Options &opts)
 {
-#ifdef NO_QT
+#ifdef REFALAC
     if (opts.alac_decode)
-	return x::shared_ptr<ISource>(new ALACSource(opts.ifilename));
+	return open_alac_source(opts);
 #endif
     StdioChannel channel(opts.ifilename);
     InputStream stream(channel);
@@ -275,8 +284,8 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 			new LibSndfileSource(opts.libsndfile, opts.ifilename));
 	    } catch (const std::runtime_error&) {}
 	}
-#ifndef NO_QT
-	return x::shared_ptr<ISource>(new QTMovieSource(opts.ifilename));
+#ifndef REFALAC
+	return open_alac_source(opts);
 #endif
     } catch (const std::runtime_error&) {}
     throw std::runtime_error("Not available input file format");
@@ -361,12 +370,19 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     }
     editor.setTag(opts.tagopts);
     editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
-#ifndef NO_QT
+#ifndef REFALAC
     if (opts.isAAC()) {
 	IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
+	AudioConverterX converter =
+	    dynamic_cast<CoreAudioEncoder*>(encoder)->getConverter();
+	AudioConverterPrimeInfo info;
+	converter.getPrimeInfo(&info);
 	GaplessInfo gi;
-	double ratio = oformat.mSampleRate / iformat.mSampleRate;
-	aac::CalcGaplessInfo(stat, opts.isSBR(), ratio, &gi);
+	gi.delay = info.leadingFrames;
+	gi.padding = info.trailingFrames;
+	uint64_t nsamples = stat->samplesWritten();
+	if (opts.isSBR()) nsamples /= 2;
+	gi.samples = nsamples - gi.delay - gi.padding;
 	editor.setGaplessInfo(gi);
     }
 #endif
@@ -434,12 +450,12 @@ x::shared_ptr<ISource> do_resample(
     const x::shared_ptr<ISource> &src, const Options &opts,
     uint32_t rate)
 {
-    LOG("Resampling with libsoxrate\n");
     SoxResampler *resampler = new SoxResampler(opts.libsoxrate, src,
 	    rate, opts.normalize);
     x::shared_ptr<ISource> new_src(resampler);
     if (!opts.normalize) return new_src;
 
+    LOG("Resampling with libsoxrate\n");
     uint64_t n = 0, rc;
     Progress progress(opts.verbose, src->length(),
 	    src->getSampleFormat().m_rate);
@@ -485,12 +501,16 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 {
     uint32_t nchannels = src->getSampleFormat().m_nchannels;
     x::shared_ptr<ISource> srcx(src);
+
+    // map with --chanmap option
     if (opts.chanmap.size()) {
 	if (opts.chanmap.size() != nchannels)
 	    throw std::runtime_error(
 		    "nchannels of input and --chanmap spec unmatch");
 	srcx = x::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
     }
+
+    // retrieve original channel layout, taking --chanmask into account
     const std::vector<uint32_t> *chanmap = src->getChannelMap();
     int chanmask = opts.chanmask;
     if (chanmask < 0)
@@ -498,36 +518,62 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     if (!chanmask) chanmask = GetDefaultChannelMask(nchannels);
     AudioChannelLayoutX layout = AudioChannelLayoutX::FromBitmap(chanmask);
     *orig_layout = layout;
-    if (opts.native_chanmapper)
-	*mapped_layout = layout;
-    else {
-	int nc = layout.numChannels();
-	AudioChannelLayoutX mapped(nc);
-	mapped->mChannelLayoutTag = GetAACLayoutTag(layout);
-	std::vector<uint32_t> chanmap;
-	GetAACChannelMap(layout, nc, &chanmap);
-	if (layout->mNumberChannelDescriptions == nc) {
-	    AudioChannelDescription *origDesc = layout->mChannelDescriptions;
-	    AudioChannelDescription *newDesc = mapped->mChannelDescriptions;
-	    for (size_t i = 0; i < nc; ++i) {
-		size_t n = chanmap.size() ? chanmap[i] - 1: i;
-		newDesc[i].mChannelLabel = origDesc[n].mChannelLabel;
-	    }
+
+    // construct mapped channel layout to AAC/ALAC order
+    int nc = layout.numChannels();
+    AudioChannelLayoutX mapped(nc);
+    mapped->mChannelLayoutTag = GetAACLayoutTag(layout);
+    std::vector<uint32_t> aacmap;
+    GetAACChannelMap(layout, nc, &aacmap);
+    if (layout->mNumberChannelDescriptions == nc) {
+	AudioChannelDescription *origDesc = layout->mChannelDescriptions;
+	AudioChannelDescription *newDesc = mapped->mChannelDescriptions;
+	for (size_t i = 0; i < nc; ++i) {
+	    size_t n = aacmap.size() ? aacmap[i] - 1: i;
+	    newDesc[i].mChannelLabel = origDesc[n].mChannelLabel;
 	}
-	srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, chanmap));
-	*mapped_layout = mapped;
     }
+    srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
+    *mapped_layout = mapped;
     return srcx;
 }
 
-#ifndef NO_QT
+#ifndef REFALAC
 static
-x::shared_ptr<ISink> open_sink(StdAudioComponentX &encoder,
-	const std::wstring &ofilename, const Options &opts)
+std::wstring get_encoder_config(AudioConverterX &converter)
+{
+    std::wstring s;
+    AudioStreamBasicDescription asbd;
+    converter.getOutputStreamDescription(&asbd);
+    UInt32 codec = asbd.mFormatID;
+    if (codec == 'aac ')
+	s = L"AAC-LC Encoder";
+    else if (codec == 'aach')
+	s = L"AAC-HE Encoder";
+    else
+	s = L"Apple Lossless Encoder";
+    if (codec != 'aac ' && codec != 'aach')
+	return s;
+    UInt32 value = converter.getBitRateControlMode();
+    const wchar_t * strategies[] = { L"CBR", L"ABR", L"CVBR", L"TVBR" };
+    s += format(L", %s", strategies[value]);
+    if (value == kAudioCodecBitRateControlMode_Variable) {
+	value = converter.getSoundQualityForVBR();
+	s += format(L" q%d", value);
+    } else {
+	value = converter.getEncodeBitRate();
+	s += format(L" %gkbps", value / 1000.0);
+    }
+    value = converter.getCodecQuality();
+    s += format(L", Quality %d", value);
+    return s;
+}
+
+static
+x::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
+	const Options &opts, const std::vector<uint8_t> &cookie)
 {
     ISink *sink;
-    std::vector<uint8_t> cookie;
-    encoder.getMagicCookie(&cookie);
     if (opts.is_adts)
 	sink = new ADTSSink(ofilename, cookie);
     else if (opts.isALAC())
@@ -537,364 +583,253 @@ x::shared_ptr<ISink> open_sink(StdAudioComponentX &encoder,
     return x::shared_ptr<ISink>(sink);
 }
 
-static
-const char *get_codec_name(uint32_t codec)
+inline std::wstring CF2W(CFStringRef str)
 {
-    if (codec == 'aac ') return "AAC LC Encoder";
-    else if (codec == 'aach') return "AAC HE Encoder";
-    else if (codec == 'alac') return "Apple Lossless Encoder";
-    else return "Unknown Encoder";
+    CFIndex length = CFStringGetLength(str);
+    if (!length) return L"";
+    std::vector<UniChar> buffer(length);
+    CFRange range = { 0, length };
+    CFStringGetCharacters(str, range, &buffer[0]);
+    return std::wstring(buffer.begin(), buffer.end());
 }
 
 static
-std::string get_codec_version(uint32_t codec)
+void show_available_codec_setttings(UInt32 fmt)
 {
-    ComponentDescription cd = { 'aenc', codec, 'appl', 0 };
-    Component component = FindNextComponent(0, &cd);
-    x::shared_ptr<Ptr> name(NewEmptyHandle(), DisposeHandle);
-    GetComponentInfo(component, &cd, name.get(), 0, 0);
-    ComponentResult version = 
-	CallComponentVersion(reinterpret_cast<ComponentInstance>(component));
-    std::string namex;
-    if (*name.get())
-	namex = p2cstr(reinterpret_cast<StringPtr>(*name.get()));
-    else
-	namex = get_codec_name(codec);
-    return format("%s %d.%d.%d", namex.c_str(),
-	    (version>>16) & 0xffff, (version>>8) & 0xff, version & 0xff);
-}
+    AudioCodecX codec(fmt);
+    std::vector<AudioValueRange> srates;
+    codec.getAvailableOutputSampleRates(&srates);
+    std::vector<UInt32> tags;
+    codec.getAvailableOutputChannelLayoutTags(&tags);
 
-static
-void list_audio_encoders()
-{
-    ComponentDescription cd = { 0, 0, 0, 0 };
-    ComponentDescription search = cd;
-    Component component = 0;
-    for (Component component = 0;
-	 component = FindNextComponent(component, &cd);
-	 cd = search)
-    {
-	x::shared_ptr<Ptr> name(NewEmptyHandle(), DisposeHandle);
-	GetComponentInfo(component, &cd, name.get(), 0, 0);
-	ComponentResult version = 
-	    CallComponentVersion(
-		    reinterpret_cast<ComponentInstance>(component));
-	std::string namex;
-	if (*name.get())
-	    namex = p2cstr(reinterpret_cast<StringPtr>(*name.get()));
-	else
-	    namex = format("Unknown(%s)", fourcc(cd.componentSubType).svalue);
-	LOG(format("%s %s.%s %d.%d.%d\n", namex.c_str(),
-	    fourcc(cd.componentType).svalue,
-	    fourcc(cd.componentSubType).svalue,
-		(version>>16) & 0xffff,
-		(version>>8) & 0xff,
-		version & 0xff).c_str());
-    }
-}
+    for (size_t i = 0; i < srates.size(); ++i) {
+	if (srates[i].mMinimum == 0) continue;
+	for (size_t j = 0; j < tags.size(); ++j) {
+	    if (tags[j] == 0) continue;
+	    AudioChannelLayoutX acl;
+	    acl->mChannelLayoutTag = tags[j];
+	    CFStringRef name;
+	    UInt32 size = sizeof(CFStringRef);
+	    CHECKCA(AudioFormatGetProperty(
+			kAudioFormatProperty_ChannelLayoutName,
+			sizeof(AudioChannelLayout), acl, &size, &name));
+	    std::wstring wname = CF2W(name);
+	    CFRelease(name);
 
-static
-std::wstring get_encoder_config(StdAudioComponentX &scaudio)
-{
-    std::wstring s;
-    AudioStreamBasicDescription desc;
-    scaudio.getBasicDescription(&desc);
-    uint32_t codec = desc.mFormatID;
-    s = m2w(get_codec_version(codec));
-    if (codec != 'aac ' && codec != 'aach')
-	return s;
+	    AudioStreamBasicDescription iasbd = { 0 };
+	    iasbd.mFormatID = 'lpcm';
+	    iasbd.mFormatFlags =
+		kAudioFormatFlagIsPacked | kAudioFormatFlagIsFloat;
+	    iasbd.mFramesPerPacket = 1;
+	    iasbd.mChannelsPerFrame = acl.numChannels();
+	    iasbd.mSampleRate = srates[i].mMinimum;
+	    iasbd.mBitsPerChannel = 32;
+	    iasbd.mBytesPerPacket = iasbd.mBytesPerFrame
+		= iasbd.mChannelsPerFrame * iasbd.mBitsPerChannel >> 3;
+	    AudioStreamBasicDescription oasbd = { 0 };
+	    oasbd.mFormatID = fmt;
+	    oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
+	    CHECKCA(AudioCodecInitialize(codec, &iasbd, &oasbd, 0, 0));
+	    std::vector<AudioValueRange> bits;
+	    codec.getApplicableBitRateRange(&bits);
+	    CHECKCA(AudioCodecUninitialize(codec));
 
-    CFArrayT<CFDictionaryRef> config;
-    aac::GetCodecConfigArray(&scaudio, &config);
-
-    CFArrayT<CFStringRef> menu;
-    int value = aac::GetParameterRange(config, aac::kStrategy, &menu);
-    s += format(L", %s", CF2W(menu.at(value)).c_str());
-    
-    try {
-	value = aac::GetParameterRange(config, aac::kTVBRQuality, &menu);
-	s += format(L" q%d", value);
-    } catch (...) {
-	value = aac::GetParameterRange(config, aac::kBitRate, &menu);
-	s += format(L" %skbps", CF2W(menu.at(value)).c_str());
-    }
-
-    value = aac::GetParameterRange(config, aac::kQuality, &menu);
-    s += format(L", %ls", CF2W(menu.at(value)).c_str());
-    return s;
-}
-
-static
-void configure_scaudio(StdAudioComponentX &scaudio, const Options &opts,
-	ISource *src, AudioChannelLayout *origLayout,
-	AudioChannelLayout *layout)
-{
-    uint32_t formatID = opts.output_format;
-    const SampleFormat &iformat = src->getSampleFormat();
-    int nchannels = iformat.m_nchannels;
-
-    AudioStreamBasicDescription iasbd, oasbd = { 0 };
-    build_basic_description(iformat, &iasbd);
-    scaudio.setInputBasicDescription(iasbd);
-
-    scaudio.setInputChannelLayout(origLayout);
-    std::wstring inputLayout = scaudio.getInputChannelLayoutName();
-    scaudio.setInputChannelLayout(layout);
-
-    oasbd.mFormatID = formatID;
-    // Set temporary dummy value to obtain ApplicableChannelLayoutTagList
-    // for the format
-    oasbd.mChannelsPerFrame = 2;
-    scaudio.setBasicDescription(oasbd);
-
-    uint32_t aacTag = GetAACLayoutTag(origLayout);
-    // get output channel layout
-    AudioChannelLayoutX olayout;
-    if (opts.remix == 0xffffffff) { // --remix auto
-	olayout->mChannelLayoutTag = kAudioChannelLayoutTag_AAC_5_1;
-	if (nchannels < 6 || aacTag == kAudioChannelLayoutTag_AAC_6_0)
-	    olayout->mChannelLayoutTag = kAudioChannelLayoutTag_Stereo;
-    }
-    else if (opts.remix)
-	olayout->mChannelLayoutTag = opts.remix;
-    else if (nchannels == 3)
-	olayout->mChannelLayoutTag = kAudioChannelLayoutTag_Stereo;
-    else
-	olayout->mChannelLayoutTag = aacTag;
-
-    unsigned nchannelsOut = olayout.numChannels();
-    if (opts.remix && nchannels == nchannelsOut) {
-	if (aacTag != olayout->mChannelLayoutTag)
-	    throw std::runtime_error(
-	    "Remixing to a layout with same number of channels is not allowed");
-    }
-    /*
-    if (formatID == 'alac' && nchannelsOut != 2)
-	throw std::runtime_error("Only stereo is supported for ALAC");
-     */
-
-    std::vector<UInt32> avails;
-    scaudio.getApplicableChannelLayoutTagList(&avails);
-    if (std::find(avails.begin(), avails.end(),
-		      olayout->mChannelLayoutTag) == avails.end())
-	throw std::runtime_error("Not available output channel layout");
-    // Now we set real number of channels
-    oasbd.mChannelsPerFrame = nchannelsOut;
-    scaudio.setBasicDescription(oasbd);
-
-    try {
-	scaudio.setChannelLayout(olayout);
-    } catch (...) {
-	if (opts.remix)
-	    throw std::runtime_error("Can't remix into the specified layout");
-	else
-	    throw;
-    }
-    std::wstring outputLayout = scaudio.getChannelLayoutName();
-    LOG("%ls -> %ls\n", inputLayout.c_str(), outputLayout.c_str());
-
-    scaudio.setRenderQuality(kQTAudioRenderQuality_Max);
-}
-
-static
-void parameter_not_supported(aac::ParamType param,
-	const CFArrayT<CFStringRef> &menu, size_t base=0)
-{
-    std::string msg = format("Specified %ls value is not supported.\n"
-	"Available values are:", GetParamName(param));
-    for (size_t i = base; i < menu.size(); ++i)
-	msg += format("\n%d: %ls", i, CF2W(menu.at(i)).c_str());
-    throw std::runtime_error(msg);
-}
-
-static
-void configure_aac(StdAudioComponentX &scaudio, const Options &opts)
-{
-    CFArrayT<CFDictionaryRef> currentConfig;
-    CFArrayT<CFStringRef> menu, limits;
-    aac::GetCodecConfigArray(&scaudio, &currentConfig);
-    std::vector<aac::Config> config;
-
-    // encoding strategy
-    {
-	unsigned method = opts.method;
-	if (opts.isSBR()) {
-	    int mapping[] = { 1, 0xff, 2, 0 };
-	    method = mapping[opts.method];
-	}
-	aac::GetParameterRange(currentConfig, aac::kStrategy, &menu);
-	if (method >= menu.size())
-	    parameter_not_supported(aac::kStrategy, menu);
-	else {
-	    aac::Config t = { aac::kStrategy, method };
-	    config.push_back(t);
-	}
-    }
-    // bitrate
-    {
-	if (opts.method == Options::kTVBR) {
-	    aac::Config t = { aac::kTVBRQuality, opts.bitrate };
-	    config.push_back(t);
-	    aac::Config tt = { aac::kBitRate, 0 };
-	    config.push_back(tt);
-	} else  {
-	    aac::GetParameterRange(currentConfig,
-		    aac::kBitRate, &menu, &limits);
-	    size_t index = aac::GetBitrateIndex(menu, limits, opts.bitrate);
-	    aac::Config t = { aac::kBitRate, index };
-	    config.push_back(t);
-	}
-    }
-    // quality
-    {
-	aac::GetParameterRange(currentConfig, aac::kQuality, &menu);
-	if (opts.quality >= menu.size())
-	    parameter_not_supported(aac::kQuality, menu);
-	else {
-	    aac::Config t = { aac::kQuality, opts.quality };
-	    config.push_back(t);
-	}
-    }
-    aac::SetParameters(&scaudio, config);
-}
-
-static
-void install_aach_codec()
-{
-    HMODULE hModule = QTLoadLibrary("QuickTimeAudioSupport.qtx");
-    if (hModule) {
-	ComponentRoutineProcPtr proc
-	    = ProcAddress(hModule, "ACMP4AACHighEfficiencyEncoderEntry"); 
-	if (proc) {
-	    ComponentDescription desc = { 'aenc', 'aach', 'appl', 0 };
-	    RegisterComponent(&desc, proc, 0, 0, 0, 0);
+	    std::printf("%s %gHz %ls --",
+		    fmt == 'aac ' ? "LC" : "HE",
+		    srates[i].mMinimum, wname.c_str());
+	    for (size_t k = 0; k < bits.size(); ++k) {
+		if (!bits[k].mMinimum) continue;
+		int delim = k == 0 ? ' ' : ',';
+		std::printf("%c%g", delim, bits[k].mMinimum / 1000.0);
+	    }
+	    std::puts("");
 	}
     }
 }
 
 static
-void override_registry()
+void show_available_aac_settings()
 {
-    std::wstring fname = get_module_directory() + L"\\qaac.reg";
+    show_available_codec_setttings('aac ');
+    show_available_codec_setttings('aach');
+}
+
+static
+std::string GetCoreAudioVersion(HMODULE hDll)
+{
+    std::wstring dllpath = GetModuleFileNameX(hDll);
+    DWORD dwhandle = 0;
+    DWORD size = GetFileVersionInfoSizeW(dllpath.c_str(), &dwhandle);
+    std::vector<BYTE> vec(size * 4);
+    GetFileVersionInfoW(dllpath.c_str(), dwhandle, vec.size(), &vec[0]);
+    UINT len = 0;
+    VS_FIXEDFILEINFO *vsfi;
+    VerQueryValueW(&vec[0], L"\\", (void**)(&vsfi), &len);
+    WORD vers[4];
+    vers[0] = HIWORD(vsfi->dwFileVersionMS);
+    vers[1] = LOWORD(vsfi->dwFileVersionMS);
+    vers[2] = HIWORD(vsfi->dwFileVersionLS);
+    vers[3] = LOWORD(vsfi->dwFileVersionLS);
+    return format("%d.%d.%d.%d", vers[0], vers[1], vers[2], vers[3]);
+}
+
+static
+void setup_aach_codec(HMODULE hDll)
+{
+    CFPlugInFactoryFunction aachFactory =
+	ProcAddress(hDll, "ACMP4AACHighEfficiencyEncoderFactory");
+    if (aachFactory) {
+	AudioComponentDescription desc = { 'aenc', 'aach', 0 };
+	AudioComponentRegister(&desc,
+		CFSTR("MPEG4 High Efficiency AAC Encoder"),
+		0, aachFactory);
+    }
+}
+
+static
+FARPROC WINAPI DllImportHook(unsigned notify, PDelayLoadInfo pdli)
+{
+    throw_win32_error(pdli->szDll, pdli->dwLastError);
+    return 0;
+}
+
+static
+void override_registry(int verbose)
+{
+    std::wstring fname = get_module_directory() + L"qaac.reg";
     FILE *fp;
     try {
 	fp = wfopenx(fname.c_str(), L"r, ccs=UNICODE");
     } catch (...) {
 	return;
     }
-    LOG("Found qaac.reg, overriding registry\n");
+    if (verbose > 1)
+	LOG("Found qaac.reg, overriding registry\n");
     x::shared_ptr<FILE> fptr(fp, std::fclose);
     RegAction action;
     RegParser parser;
     try {
 	parser.parse(fptr, &action);
-    } catch (const std::runtime_error &e) {
-	LOG("WARING: %s\n", e.what());
+    } catch (const std::exception &e) {
+	LOG("WARNING: %s\n", e.what());
 	return;
     }
-    action.show();
+    if (verbose > 1)
+	action.show();
     action.realize();
 }
 
-void show_available_aac_settings()
+inline
+void throwIfError(HRESULT expr, const char *msg)
 {
-    std::vector<CodecSetting> settings;
-    aac::GetAvailableSettings(&settings);
-    for (size_t i = 0; i < settings.size(); ++i) {
-	std::printf("%s %dHz %ls --",
-		settings[i].m_codec == 'aac ' ? "LC" : "HE",
-		settings[i].m_sample_rate,
-		settings[i].m_channel_layout.c_str());
-	std::vector<uint32_t> &bitrates = settings[i].m_bitrates;
-	for (size_t j = 0; j < bitrates.size(); ++j) {
-	    int delim = j == 0 ? ' ' : ',';
-	    std::printf("%c%d", delim, bitrates[j]);
-	}
-	std::printf("\n");
-    }
+    if (FAILED(expr))
+	throw_win32_error(msg, expr);
+}
+#define HR(expr) (void)(throwIfError((expr), #expr))
+
+static
+void set_dll_directories(int verbose)
+{
+    SetDllDirectoryW(L"");
+    DWORD sz = GetEnvironmentVariableW(L"PATH", 0, 0);
+    std::vector<wchar_t> vec(sz);
+    sz = GetEnvironmentVariableW(L"PATH", &vec[0], sz);
+    std::wstring searchPaths(&vec[0], &vec[sz]);
+
+    override_registry(verbose);
+    try {
+	HKEY hKey;
+	const wchar_t *subkey =
+	    L"SOFTWARE\\Apple Inc.\\Apple Application Support";
+	HR(RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, 0, KEY_READ, &hKey));
+	x::shared_ptr<HKEY__> hKeyPtr(hKey, RegCloseKey);
+	DWORD size;
+	HR(RegQueryValueExW(hKey, L"InstallDir", 0, 0, 0, &size));
+	std::vector<wchar_t> vec(size/sizeof(wchar_t));
+	HR(RegQueryValueExW(hKey, L"InstallDir", 0, 0,
+		    reinterpret_cast<LPBYTE>(&vec[0]), &size));
+	searchPaths = format(L"%s;%s", &vec[0], searchPaths.c_str());
+    } catch (const std::exception &) {}
+    std::wstring dir = get_module_directory() + L"QTfiles";
+    searchPaths = format(L"%s;%s", dir.c_str(), searchPaths.c_str());
+    SetEnvironmentVariableW(L"PATH", searchPaths.c_str());
+}
+
+inline uint32_t bound_quality(uint32_t n)
+{
+    return std::min(n, static_cast<uint32_t>(kAudioConverterQuality_Max));
 }
 
 static
 void encode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
-    uint32_t formatID = opts.output_format;
+    AudioCodecX codec(opts.output_format);
+
     AudioChannelLayoutX origLayout, layout;
     x::shared_ptr<ISource> srcx =
 	mapped_source(src, opts, &origLayout, &layout);
+    AudioStreamBasicDescription iasbd;
+    build_basic_description(srcx->getSampleFormat(), &iasbd);
 
-    StdAudioComponentX scaudio;
-    configure_scaudio(scaudio, opts, srcx.get(), origLayout, layout);
-    if (opts.isAAC())
-	aac::SetupSampleRate(scaudio, opts.rate, opts.isNativeResampler());
-    else if (opts.rate > 0) {
-	AudioStreamBasicDescription oasbd;
-	scaudio.getBasicDescription(&oasbd);
-	oasbd.mSampleRate = opts.rate;
-	scaudio.setBasicDescription(oasbd);
-    }
-    AudioStreamBasicDescription iasbd, oasbd;
-    scaudio.getInputBasicDescription(&iasbd);
-    scaudio.getBasicDescription(&oasbd);
-    const SampleFormat &iformat = srcx->getSampleFormat();
+    if (!codec.isAvailableOutputChannelLayout(layout->mChannelLayoutTag))
+	throw std::runtime_error("Channel layout not supported");
 
-    if (iformat.m_rate != oasbd.mSampleRate) {
-	LOG("%dHz -> %gHz\n", iformat.m_rate, oasbd.mSampleRate);
-	if (!opts.isNativeResampler()) {
-	    srcx = do_resample(srcx, opts, oasbd.mSampleRate);
+    double rate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
+    rate = codec.getClosestAvailableOutputSampleRate(rate);
+    if (rate != iasbd.mSampleRate) {
+	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, rate);
+	if (!opts.native_resampler) {
+	    srcx = do_resample(srcx, opts, rate);
 	    build_basic_description(srcx->getSampleFormat(), &iasbd);
-	    scaudio.setInputBasicDescription(iasbd);
-	    scaudio.setBasicDescription(oasbd);
 	}
     }
-    {
-	QTAtomContainer ac;
-	SCGetSettingsAsAtomContainer(scaudio, &ac);
-	SCSetSettingsFromAtomContainer(scaudio, ac);
-    }
+    AudioStreamBasicDescription oasbd = { 0 };
+    oasbd.mFormatID = opts.output_format;
+    oasbd.mChannelsPerFrame = layout.numChannels();
+    oasbd.mSampleRate = rate;
+
+    AudioConverterX converter(iasbd, oasbd);
+    converter.setInputChannelLayout(layout);
+    converter.setOutputChannelLayout(layout);
     if (opts.isAAC()) {
-	configure_aac(scaudio, opts);
-    } else {
-	if (iasbd.mBitsPerChannel != 16 && iasbd.mBitsPerChannel != 24)
-	    LOG("WARNING: Only 16/24bit format is supported for ALAC\n");
+	converter.setBitRateControlMode(opts.method);
+	if (opts.method != Options::kTVBR) {
+	    double bitrate = opts.bitrate ? opts.bitrate * 1000 : 0x7fffffff;
+	    bitrate = converter.getClosestAvailableBitRate(bitrate);
+	    converter.setEncodeBitRate(bitrate);
+	} else {
+	    converter.setSoundQualityForVBR(bound_quality(opts.bitrate));
+	}
+	converter.setCodecQuality(bound_quality((opts.quality + 1) << 5));
     }
-    std::wstring encoder_config = get_encoder_config(scaudio);
-
+    std::wstring encoder_config = get_encoder_config(converter);
     LOG("%ls\n", encoder_config.c_str());
-
-    x::shared_ptr<ISink> sink = open_sink(scaudio, ofilename, opts);
-    SCAudioEncoder encoder(scaudio);
+    std::vector<uint8_t> cookie;
+    converter.getCompressionMagicCookie(&cookie);
+    CoreAudioEncoder encoder(converter);
     encoder.setSource(srcx);
+    x::shared_ptr<ISink> sink = open_sink(ofilename, opts, cookie);
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, opts);
     if (encoder.framesWritten()) {
 	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
-
-	MP4SinkBase *sinkp = dynamic_cast<MP4SinkBase*>(sink.get());
-	if (sinkp) {
-	    // write_tags needs original src
-	    write_tags(sinkp->getFile(), opts, src.get(),
-		       &encoder, encoder_config);
+	MP4SinkBase *asink = dynamic_cast<MP4SinkBase*>(sink.get());
+	if (asink) {
+	    write_tags(asink->getFile(), opts, src.get(), &encoder,
+		encoder_config);
 	    if (!opts.no_optimize)
-		do_optimize(sinkp->getFile(), ofilename, opts.verbose);
+		do_optimize(asink->getFile(), ofilename, opts.verbose);
 	}
     }
 }
-#else // NO_QT
+#else // REFALAC
 static void noop(void *) {}
 
 static
 void decode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
-    x::shared_ptr<ISource> srcx(src);
-    const SampleFormat &sf = srcx->getSampleFormat();
-    std::vector<uint32_t> chanmap;
-    uint32_t tag = GetALACLayoutTag(sf.m_nchannels);
-    uint32_t bitmap = GetAACReversedChannelMap(tag, &chanmap);
-    if (chanmap.size())
-	srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, chanmap));
-
     x::shared_ptr<FILE> fileptr;
     if (opts.ofilename && !std::wcscmp(opts.ofilename, L"-")) {
 	fileptr = x::shared_ptr<FILE>(stdout, noop);
@@ -903,14 +838,21 @@ void decode_file(const x::shared_ptr<ISource> &src,
 	FILE *fp = wfopenx(ofilename.c_str(), L"wb");
 	fileptr = x::shared_ptr<FILE>(fp, std::fclose);
     }
-    WaveSink sink(fileptr.get(), srcx->length(), sf, bitmap);
-    Progress progress(opts.verbose, srcx->length(), sf.m_rate);
+    unsigned bitmap = 0;
+    const std::vector<uint32_t> *layout = src->getChannelMap();
+    if (layout) {
+	for (size_t i = 0; i < layout->size(); ++i)
+	    bitmap |= (1 << (layout->at(i)-1));
+    }
+    const SampleFormat &sf = src->getSampleFormat();
+    WaveSink sink(fileptr.get(), src->length(), sf, bitmap);
+    Progress progress(opts.verbose, src->length(), sf.m_rate);
     uint32_t bpf = sf.bytesPerFrame();
     std::vector<uint8_t> buffer(4096 * bpf);
     try {
 	size_t nread;
 	uint64_t ntotal = 0;
-	while ((nread = srcx->readSamples(&buffer[0], 4096)) > 0) {
+	while ((nread = src->readSamples(&buffer[0], 4096)) > 0) {
 	    ntotal += nread;
 	    progress.update(ntotal);
 	    sink.writeSamples(&buffer[0], nread * bpf, nread);
@@ -1077,7 +1019,7 @@ void handle_cue_sheet(Options &opts)
 	ofilename = strtransform(ofilename, FNConverter()) + L".stub";
 	ofilename = get_output_filename(ofilename.c_str(), opts);
 	LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
-	encode_file(src, ofilename, opts);
+	encode_file(source, ofilename, opts);
     }
 }
 
@@ -1104,6 +1046,7 @@ struct COMInitializer {
     }
 };
 
+
 #ifdef _MSC_VER
 int wmain(int argc, wchar_t **argv)
 #else
@@ -1126,6 +1069,8 @@ int wmain1(int argc, wchar_t **argv)
     int result = 0;
     if (!opts.parse(argc, argv))
 	return 1;
+
+    COMInitializer __com__;
     try {
 	ConsoleTitleSaver consoleTitle;
 
@@ -1137,31 +1082,26 @@ int wmain1(int argc, wchar_t **argv)
 	if (opts.nice)
 	    SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
 
-
 	std::string encoder_name;
-#ifdef NO_QT
 	encoder_name = format(PROGNAME " %s", get_qaac_version());
-	COMInitializer __com__; // for WIC
-#else
-	override_registry();
-	LOG("initializing QTML...");
-	QTInitializer __quicktime__;
-	LOG("done\n\n");
-	uint32_t qtver;
-	Gestalt(gestaltQuickTime, reinterpret_cast<long*>(&qtver));
-	qtver >>= 16;
-	encoder_name = format(PROGNAME " %s, QuickTime %d.%d.%d",
-		get_qaac_version(),
-		qtver >> 8, (qtver >> 4) & 0xf, qtver & 0xf);
-	if (opts.isSBR() || opts.check_only || opts.print_available_formats)
-	    install_aach_codec();
+#ifndef REFALAC
+	__pfnDliFailureHook2 = DllImportHook;
+	set_dll_directories(opts.verbose);
+	HMODULE hDll = LoadLibraryW(L"CoreAudioToolbox.dll");
+	if (hDll) {
+	    std::string ver = GetCoreAudioVersion(hDll);
+	    encoder_name = format("%s, CoreAudioToolbox %s",
+		    encoder_name.c_str(), ver.c_str());
+	    setup_aach_codec(hDll);
+	    FreeLibrary(hDll);
+	}
 #endif
 	opts.encoder_name = widen(encoder_name);
-	LOG("%s\n", encoder_name.c_str());
+	if (!opts.print_available_formats)
+	    LOG("%s\n", encoder_name.c_str());
 
 	load_modules(opts);
 
-#ifndef NO_QT
 	if (opts.check_only) {
 	    if (opts.libsoxrate.loaded())
 		LOG("libsoxrate %s\n", opts.libsoxrate.version_string());
@@ -1182,6 +1122,7 @@ int wmain1(int argc, wchar_t **argv)
 	    }
 	    return 0;
 	}
+#ifndef REFALAC
 	if (opts.print_available_formats) {
 	    show_available_aac_settings();
 	    return 0;

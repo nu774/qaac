@@ -154,7 +154,7 @@ class RegAction: public IRegAction {
 public:
     RegAction()
     {
-	std::wstring selfpath = GetModuleFileNameX();
+	std::wstring selfpath = GetModuleFileNameX(0);
 	const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
 	m_selfdir = selfpath.substr(0, fpos - selfpath.c_str());
     }

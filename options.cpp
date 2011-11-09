@@ -4,7 +4,7 @@
 #include "itunetags.h"
 
 static struct option long_options[] = {
-#ifdef NO_QT
+#ifdef REFALAC
     { L"fast", no_argument, 0, 'afst' },
     { L"decode", no_argument, 0, 'D' },
 #else
@@ -17,14 +17,13 @@ static struct option long_options[] = {
     { L"he", no_argument, 0, 'aach' },
     { L"alac", no_argument, 0, 'A' },
     { L"quality", required_argument, 0, 'q' },
-    { L"native-chanmapper", no_argument, 0, 'nchm' },
-    { L"remix", required_argument, 0, 'rmix' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
     { L"adts", no_argument, 0, 'ADTS' },
 #endif
     { L"help", no_argument, 0, 'h' },
     { L"rate", required_argument, 0, 'r' },
     { L"silent", no_argument, 0, 's' },
+    { L"verbose", no_argument, 0, 'verb' },
     { L"stat", no_argument, 0, 'S' },
     { L"nice", no_argument, 0, 'n' },
     { L"chanmap", required_argument, 0, 'cmap' },
@@ -76,7 +75,7 @@ const uint32_t * const tag_keys_end = tag_keys + array_size(tag_keys);
 
 const char *get_qaac_version();
 
-#ifdef NO_QT
+#ifdef REFALAC
 #define PROGNAME "refalac"
 #else
 #define PROGNAME "qaac"
@@ -90,12 +89,12 @@ void usage()
 "Usage: " PROGNAME " [options] infiles....\n"
 "\n"
 "\"-\" as infile means stdin.\n"
-#ifndef NO_QT
+#ifndef REFALAC
 "In ADTS output mode, \"-\" as outfile means stdout.\n"
 #endif
 "\n"
 "Main options:\n"
-#ifndef NO_QT
+#ifndef REFALAC
 "--check                Show QT version etc, and exit\n"
 "--formats              Print available AAC formats, and exit\n"
 "-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
@@ -109,19 +108,10 @@ void usage()
 "--he                   HE AAC mode (Can't use TVBR)\n"
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
+"-A, --alac             ALAC encoding mode\n"
 "-r, --rate <number>    Specify target sample rate in Hz\n"
 "                       By default, sample rate will be same as input\n"
 "                       (if possible).\n"
-"--remix <layout>       Remix to the specifed output channel layout.\n"
-"                       \"layout\" is one of the following:\n"
-"                       auto, mono, stereo, quad,\n"
-"                       4.0, 5.0, 5.1, 6.0, 6.1, 7.0, 7.1, 8.0\n"
-"                       \"auto\" means automatically remix to stereo or 5.1\n"
-"                       You can't increase number of channels from input,\n"
-"                       except for mono -> stereo case.\n"
-"--native-chanmapper    Use QuickTime native channel mapper.\n"
-"                       Don't use this.\n"
-"-A, --alac             ALAC encoding mode\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "--native-resampler     Always use QuickTime built-in resampler\n"
 #else
@@ -130,6 +120,7 @@ void usage()
 #endif
 "-d <dirname>           Output directory, default is cwd\n"
 "-s, --silent           Suppress console messages\n"
+"--verbose              More verbose console messages\n"
 "-n, --nice             Give lower process priority\n"
 "--chanmap <n1,n2...>   Re-arrange channels to the specified order.\n"
 "                       For N-ch input, you take numbers 1,2..N, and\n"
@@ -187,7 +178,7 @@ void usage()
     );
 }
 
-#ifndef NO_QT
+#ifndef REFALAC
 static const wchar_t * const short_opts = L"hAo:d:a:V:v:c:q:r:insRSN";
 #else
 static const wchar_t * const short_opts = L"hDo:d:r:insRSN";
@@ -233,13 +224,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	else if (ch == 'N')
 	    this->normalize = true;
 	else if (ch == 's')
-	    this->verbose = false;
+	    this->verbose = 0;
+	else if (ch == 'verb')
+	    this->verbose = 2;
 	else if (ch == 'S')
 	    this->save_stat = true;
 	else if (ch == 'n')
 	    this->nice = true;
-	else if (ch == 'nchm')
-	    this->native_chanmapper = true;
 	else if (ch == 'i')
 	    this->ignore_length = true;
 	else if (ch == 'R')
@@ -273,36 +264,6 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return false;
 	    }
 	}
-	else if (ch == 'rmix') {
-	    struct channel_layout {
-		const wchar_t *name;
-		uint32_t tag;
-	    } tbl[] = {
-		{ L"mono", kAudioChannelLayoutTag_Mono },
-		{ L"stereo", kAudioChannelLayoutTag_Stereo },
-		{ L"quad", kAudioChannelLayoutTag_Quadraphonic },
-		{ L"4.0", kAudioChannelLayoutTag_AAC_4_0 },
-		{ L"5.0", kAudioChannelLayoutTag_AAC_5_0 },
-		{ L"5.1", kAudioChannelLayoutTag_AAC_5_1 },
-		{ L"6.0", kAudioChannelLayoutTag_AAC_6_0 },
-		{ L"6.1", kAudioChannelLayoutTag_AAC_6_1 },
-		{ L"7.0", kAudioChannelLayoutTag_AAC_7_0 },
-		{ L"7.1", kAudioChannelLayoutTag_AAC_7_1 },
-		{ L"8.0", kAudioChannelLayoutTag_AAC_Octagonal },
-		{ L"auto", 0xffffffff },
-		{ 0, 0 }
-	    }, *p;
-	    for (p = tbl; p->name; ++p) {
-		if (!std::wcsncmp(optarg, p->name, wcslen(p->name))) {
-		    this->remix = p->tag;
-		    break;
-		}
-	    }
-	    if (!p->name) {
-		std::fputs("Invalid remix optarg\n", stderr);
-		return false;
-	    }
-	}
 	else if (ch == 'r') {
 	    if (std::swscanf(optarg, L"%u", &this->rate) != 1) {
 		std::fputs("Invalid rate value\n", stderr);
@@ -331,7 +292,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->raw_format = optarg;
 	else if (ch == 'afst')
 	    this->alac_fast = true;
-	else if ((pos = strindex("aVvc", ch)) >= 0) {
+	else if ((pos = strindex("cavV", ch)) >= 0) {
 	    if ((this->output_format && !isAAC()) || this->method != -1)
 		return usage(), false;
 	    this->method = pos;
@@ -366,7 +327,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	this->tagopts.clear();
     }
     if (!this->output_format) {
-#ifdef NO_QT
+#ifdef REFALAC
 	this->output_format = 'alac';
 #else
 	this->output_format = 'aac ';

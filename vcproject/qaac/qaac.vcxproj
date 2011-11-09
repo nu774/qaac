@@ -52,17 +52,22 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>QTMLClient.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)taglib.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)qaac.exe</OutputFile>
-      <AdditionalLibraryDirectories>$(QTSDKDir)\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(OutDir)qaac.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
+      <DelayLoadDLLs>CoreAudioToolbox.dll;CoreFoundation.dll</DelayLoadDLLs>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
+    <PreLinkEvent>
+      <Command>
+      </Command>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -78,18 +83,23 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>QTMLClient.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)taglib.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)qaac.exe</OutputFile>
-      <AdditionalLibraryDirectories>$(QTSDKDir)\Libraries;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
+      <DelayLoadDLLs>CoreAudioToolbox.dll;CoreFoundation.dll</DelayLoadDLLs>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
+    <PreLinkEvent>
+      <Command>
+      </Command>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="..\common\common.vcxproj">
@@ -100,16 +110,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\aacconfig.cpp" />
-    <ClCompile Include="..\..\cfhelper.cpp" />
-    <ClCompile Include="..\..\dumpcfobj.cpp" />
-    <ClCompile Include="..\..\itunetags.cpp" />
+    <ClCompile Include="..\..\CoreAudioEncoder.cpp" />
     <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\options.cpp" />
-    <ClCompile Include="..\..\qtimage.cpp" />
-    <ClCompile Include="..\..\qtmoviesource.cpp" />
     <ClCompile Include="..\..\reg.cpp" />
-    <ClCompile Include="..\..\SCAudioEncoder.cpp" />
     <ClCompile Include="..\..\version.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

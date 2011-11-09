@@ -5,8 +5,6 @@
 #include "win32util.h"
 #include "strcnv.h"
 #include "mp4v2wrapper.h"
-#include "qthelper.h"
-#include "qtimage.h"
 #include "wicimage.h"
 
 using mp4v2::impl::MP4File;
@@ -150,16 +148,7 @@ void TagEditor::saveArtworks(MP4FileX &file)
 	    x::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
 	    std::vector<char> vec;
 	    if (m_artwork_size) {
-		bool res = false;
-		try {
-		    res = WICConvertArtwork(data, size, m_artwork_size, &vec);
-		} catch (...) {
-#if NO_QT
-		    throw;
-#else
-		    res = QTConvertArtwork(data, size, m_artwork_size, &vec);
-#endif
-		}
+		bool res = WICConvertArtwork(data, size, m_artwork_size, &vec);
 		if (res) {
 		    data = &vec[0];
 		    size = vec.size();

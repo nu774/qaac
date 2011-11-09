@@ -24,13 +24,25 @@ void GetAACChannelMap(const AudioChannelLayout *layout,
 
 class ChannelMapper: public DelegatingSource {
     std::vector<uint32_t> m_chanmap;
+    std::vector<uint32_t> m_layout;
 public:
     ChannelMapper(const x::shared_ptr<ISource> &source,
-	const std::vector<uint32_t> &chanmap)
+	const std::vector<uint32_t> &chanmap, uint32_t bitmap=0)
 	: DelegatingSource(source)
     {
 	for (size_t i = 0; i < chanmap.size(); ++i)
 	    m_chanmap.push_back(chanmap[i] - 1);
+	if (bitmap) {
+	    for (size_t i = 0; i < 32; ++i, bitmap >>= 1)
+		if (bitmap & 1) m_layout.push_back(i + 1);
+	}
+    }
+    const std::vector<uint32_t> *getChannelMap()
+    {
+	if (m_layout.size())
+	    return &m_layout;
+	else
+	    return DelegatingSource::getChannelMap();
     }
     size_t readSamples(void *buffer, size_t nsamples);
 };

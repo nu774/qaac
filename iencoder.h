@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <CoreAudioTypes.h>
-#include "qthelper.h"
+#include "CoreAudioHelper.h"
 
 struct IEncoder {
     virtual ~IEncoder() {}

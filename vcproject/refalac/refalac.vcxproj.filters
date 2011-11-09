@@ -27,12 +27,6 @@
     <ClCompile Include="..\..\version.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\itunetags.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\alacsrc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\wavsink.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

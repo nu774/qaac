@@ -1,12 +1,15 @@
-#ifndef SCAudioEncoder_H
-#define SCAudioEncoder_H
+#ifndef CoreAudioEncoder_H
+#define CoreAudioEncoder_H
 
+#include "CoreAudioToolbox.h"
+#include "AudioConverterX.h"
 #include "iointer.h"
-#include "stdaudio.h"
 #include "iencoder.h"
 
-class SCAudioEncoder: public IEncoder, public IEncoderStat {
-    StdAudioComponentX m_scaudio;
+class CoreAudioEncoder: public IEncoder, public IEncoderStat {
+    AudioConverterX m_converter;
+    bool m_requires_packet_desc;
+    bool m_variable_packet_len;
     x::shared_ptr<ISource> m_src;
     x::shared_ptr<ISink> m_sink;
     x::shared_ptr<AudioBufferList> m_output_abl;
@@ -15,10 +18,11 @@ class SCAudioEncoder: public IEncoder, public IEncoderStat {
     AudioStreamBasicDescription m_input_desc, m_output_desc;
     EncoderStat m_stat;
 public:
-    SCAudioEncoder(StdAudioComponentX &scaudio);
+    CoreAudioEncoder(AudioConverterX &converter);
     void setSource(const x::shared_ptr<ISource> &source) { m_src = source; }
     void setSink(const x::shared_ptr<ISink> &sink) { m_sink = sink; }
     bool encodeChunk(UInt32 npackets);
+    AudioConverterX getConverter() { return m_converter; }
     ISource *src() { return m_src.get(); }
     const AudioStreamBasicDescription &getInputDescription() const
     {
@@ -34,14 +38,15 @@ public:
     double currentBitrate() const { return m_stat.currentBitrate(); }
     double overallBitrate() const { return m_stat.overallBitrate(); }
 private:
-    static ComponentResult staticInputDataProc(
-	    ComponentInstance ci,
+    static OSStatus staticInputDataProc(
+	    AudioConverterRef inAudioConverter,
 	    UInt32 *ioNumberDataPackets,
 	    AudioBufferList *ioData,
 	    AudioStreamPacketDescription **outDataPacketDescription,
-	    void *inRefCon)
+	    void *inUserData)
     {
-	SCAudioEncoder* self = reinterpret_cast<SCAudioEncoder*>(inRefCon);
+	CoreAudioEncoder* self =
+	    reinterpret_cast<CoreAudioEncoder*>(inUserData);
 	return self->inputDataProc(ioNumberDataPackets, ioData);
     }
     long inputDataProc(UInt32 *npackets, AudioBufferList *abl);

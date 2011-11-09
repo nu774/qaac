@@ -74,6 +74,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\alacsink.cpp" />
+    <ClCompile Include="..\..\alacsrc.cpp" />
     <ClCompile Include="..\..\chanmap.cpp" />
     <ClCompile Include="..\..\channel.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
@@ -82,6 +83,7 @@
     <ClCompile Include="..\..\getopt.c" />
     <ClCompile Include="..\..\iff.cpp" />
     <ClCompile Include="..\..\iointer.cpp" />
+    <ClCompile Include="..\..\itunetags.cpp" />
     <ClCompile Include="..\..\libsndfilesrc.cpp" />
     <ClCompile Include="..\..\logging.cpp" />
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />

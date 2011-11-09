@@ -73,13 +73,13 @@ std::wstring GetCurrentDirectoryX()
 }
 
 inline
-std::wstring GetModuleFileNameX()
+std::wstring GetModuleFileNameX(HMODULE module)
 {
     std::vector<wchar_t> buffer(32);
-    DWORD cclen = GetModuleFileNameW(0, &buffer[0], buffer.size());
+    DWORD cclen = GetModuleFileNameW(module, &buffer[0], buffer.size());
     while (cclen >= buffer.size() - 1) {
 	buffer.resize(buffer.size() * 2);
-	cclen = GetModuleFileNameW(0, &buffer[0], buffer.size());
+	cclen = GetModuleFileNameW(module, &buffer[0], buffer.size());
     }
     return std::wstring(&buffer[0], &buffer[cclen]);
 }
