@@ -31,6 +31,7 @@ AFSource::AFSource(const wchar_t *path)
 	m_format.m_endian = SampleFormat::kIsBigEndian;
     else
 	m_format.m_endian = SampleFormat::kIsLittleEndian;
+    setRange(0, m_af.getAudioDataPacketCount());
     x::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
