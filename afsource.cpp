@@ -5,15 +5,19 @@
 AFSource::AFSource(const wchar_t *path)
     : m_offset(0)
 {
-    std::wstring fullpath = get_prefixed_fullpath(path);
-    CFStringPtr sp = W2CF(fullpath);
+    /*
+     * XXX:
+     * UNC path seems correctly handled, but very long file name is not,
+     * with or without \\?\ prefix.
+     */
+    CFStringPtr sp = W2CF(path);
     CFURLRef url = CFURLCreateWithFileSystemPath(0, sp.get(),
 	    kCFURLWindowsPathStyle, false);
     x::shared_ptr<const __CFURL> urlPtr(url, CFRelease);
     AudioFileID afid;
     CHECKCA(AudioFileOpenURL(url, kAudioFileReadPermission, 0, &afid));
     m_af.attach(afid, true);
-    fourcc fmt(m_af.getFileFormat());
+    //fourcc fmt(m_af.getFileFormat());
     AudioStreamBasicDescription asbd;
     m_af.getDataFormat(&asbd);
     if (asbd.mFormatID != 'lpcm')
