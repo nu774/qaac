@@ -5,7 +5,7 @@
 #include "AudioComponent.h"
 #include "AudioCodec.h"
 #include "AudioConverter.h"
+#include "AudioFile.h"
 #include "AudioFormat.h"
-#include "CoreAudioHelper.h"
 
 #endif

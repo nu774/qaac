@@ -32,6 +32,7 @@
 #include <delayimp.h>
 #include "AudioCodecX.h"
 #include "CoreAudioEncoder.h"
+#include "afsource.h"
 #include "reg.h"
 #endif
 #include <crtdbg.h>
@@ -285,6 +286,9 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 	    } catch (const std::runtime_error&) {}
 	}
 #ifndef REFALAC
+	try {
+	    return x::shared_ptr<ISource>(new AFSource(opts.ifilename));
+	} catch (const std::runtime_error&) {}
 	return open_alac_source(opts);
 #endif
     } catch (const std::runtime_error&) {}
@@ -581,16 +585,6 @@ x::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     else if (opts.isAAC())
 	sink = new MP4Sink(ofilename, cookie, !opts.no_optimize);
     return x::shared_ptr<ISink>(sink);
-}
-
-inline std::wstring CF2W(CFStringRef str)
-{
-    CFIndex length = CFStringGetLength(str);
-    if (!length) return L"";
-    std::vector<UniChar> buffer(length);
-    CFRange range = { 0, length };
-    CFStringGetCharacters(str, range, &buffer[0]);
-    return std::wstring(buffer.begin(), buffer.end());
 }
 
 static

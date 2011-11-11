@@ -2,6 +2,7 @@
 #define AudioConverterX_H
 
 #include "CoreAudioToolbox.h"
+#include "CoreAudioHelper.h"
 
 class AudioConverterX {
     x::shared_ptr<OpaqueAudioConverter> m_converter;
