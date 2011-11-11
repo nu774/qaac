@@ -33,7 +33,7 @@ class SoxResampler: public DelegatingSource {
     double m_peak;
     bool m_end_of_input;
     size_t m_input_frames;
-    std::vector<char> m_ibuffer;
+    std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_src_buffer;
     x::shared_ptr<FILE> m_tmpfile;
     std::map<uint32_t, std::wstring> m_emptyTags;

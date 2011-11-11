@@ -36,8 +36,6 @@ SoxResampler::SoxResampler(const SoxResamplerModule &module,
       m_end_of_input(false), m_input_frames(0)
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
-    if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
-	throw std::runtime_error("Can't handle big endian sample");
     if (srcFormat.m_bitsPerSample == 64)
 	throw std::runtime_error("Can't handle 64bit sample");
 
@@ -131,9 +129,11 @@ bool SoxResampler::underflow()
     const SampleFormat &srcFormat = source()->getSampleFormat();
     size_t nsamples = m_src_buffer.size() / m_format.m_nchannels;
 
-    if (srcFormat.m_type == SampleFormat::kIsFloat &&
-	    srcFormat.m_bitsPerSample == 32) {
+    if (srcFormat.m_type == SampleFormat::kIsFloat) {
 	m_input_frames = source()->readSamples(&m_src_buffer[0], nsamples);
+	if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
+	    bswap32buffer(reinterpret_cast<uint8_t*>(&m_src_buffer[0]),
+		    nsamples * srcFormat.bytesPerFrame());
 	m_samples_read += m_input_frames;
 	return m_input_frames > 0;
     }
@@ -145,6 +145,11 @@ bool SoxResampler::underflow()
     switch (srcFormat.m_bitsPerSample) {
     case 8:
 	{
+	    if (srcFormat.m_type == SampleFormat::kIsUnsignedInteger) {
+		uint8_t *src = &m_ibuffer[0];
+		for (size_t i = 0; i < blen; ++i)
+		    src[i] = src[i] ^ 0x80;
+	    }
 	    const char *src = reinterpret_cast<const char *>(&m_ibuffer[0]);
 	    for (size_t i = 0; i < blen; ++i)
 		*fp++ = static_cast<float>(src[i]) / 0x80;
@@ -152,6 +157,8 @@ bool SoxResampler::underflow()
 	break;
     case 16:
 	{
+	    if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
+		bswap16buffer(&m_ibuffer[0], blen);
 	    const short *src = reinterpret_cast<const short *>(&m_ibuffer[0]);
 	    for (size_t i = 0; i < blen / 2; ++i)
 		*fp++ = static_cast<float>(src[i]) / 0x8000;
@@ -159,6 +166,8 @@ bool SoxResampler::underflow()
 	break;
     case 24:
 	{
+	    if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
+		bswap24buffer(&m_ibuffer[0], blen);
 	    const uint8_t *src =
 		reinterpret_cast<const uint8_t*>(&m_ibuffer[0]);
 	    for (size_t i = 0; i < blen / 3; ++i) {
@@ -170,6 +179,8 @@ bool SoxResampler::underflow()
 	break;
     case 32:
 	{
+	    if (srcFormat.m_endian == SampleFormat::kIsBigEndian)
+		bswap32buffer(&m_ibuffer[0], blen);
 	    const int *src = reinterpret_cast<const int *>(&m_ibuffer[0]);
 	    for (size_t i = 0; i < blen / 4; ++i)
 		*fp++ = static_cast<float>(src[i]) / 0x80000000U;
