@@ -27,7 +27,8 @@ WaveSource::WaveSource(InputStream &stream, bool ignorelength)
     if (!m_format.m_bitsPerSample)
 	wave::want(false);
 
-    if (ignorelength || chunk_size() % m_format.bytesPerFrame())
+    if (ignorelength || !chunk_size() ||
+	chunk_size() % m_format.bytesPerFrame())
 	setRange(0, -1);
     else
 	setRange(0, chunk_size() / m_format.bytesPerFrame());
