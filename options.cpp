@@ -30,6 +30,7 @@ static struct option long_options[] = {
     { L"chanmask", required_argument, 0, 'mask' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"normalize", no_argument, 0, 'N' },
+    { L"text-codepage", required_argument, 0, 'txcp' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  'Rchn' },
     { L"raw-rate", required_argument, 0,  'Rrat' },
@@ -135,6 +136,9 @@ void usage()
 "                       Normalize is done only when rate conversion occurs\n"
 "-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
 "-R, --raw              Raw PCM input\n"
+"--text-codepage <n>    Specify text code page of cuesheet/chapter/lyrics.\n"
+"                       1252 for Latin-1, 65001 for UTF-8.\n"
+"                       Use this when automatic encoding detection fails.\n"
 "-S, --stat             Save bitrate statistics into file\n"
 "--log <filename>       Output message to file\n"
 "\n"
@@ -298,6 +302,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->method = pos;
 	    if (std::swscanf(optarg, L"%u", &this->bitrate) != 1) {
 		std::fputs("AAC Bitrate/Quality must be an integer\n", stderr);
+		return false;
+	    }
+	}
+	else if (ch == 'txcp') {
+	    if (std::swscanf(optarg, L"%u", &this->textcp) != 1) {
+		std::fputs(
+			"--text-codepage requires code page number\n", stderr);
 		return false;
 	    }
 	}

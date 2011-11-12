@@ -32,7 +32,8 @@ struct Options {
        	nice(false), native_chanmapper(false), ignore_length(false),
 	no_optimize(false), native_resampler(false), check_only(false),
 	normalize(false), print_available_formats(false), alac_fast(false),
-	alac_decode(false)
+	alac_decode(false),
+	textcp(0)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -78,6 +79,7 @@ struct Options {
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
 	 ignore_length, no_optimize, native_resampler, check_only,
 	 normalize, print_available_formats, alac_fast, alac_decode;
+    uint32_t textcp;
     std::map<uint32_t, std::wstring> tagopts;
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;

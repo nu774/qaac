@@ -19,7 +19,7 @@ void throwIfError(HRESULT expr, const char *msg)
 
 void release(IUnknown *x) { x->Release(); }
 
-std::wstring load_text_file(const std::wstring &path)
+std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 {
     IStream *stream;
     HR(SHCreateStreamOnFileW(path.c_str(),
@@ -41,7 +41,7 @@ std::wstring load_text_file(const std::wstring &path)
 
     DetectEncodingInfo encoding;
     INT nscores = 1;
-    HR(mlang->DetectCodepageInIStream(MLDETECTCP_NONE, 0,
+    HR(mlang->DetectCodepageInIStream(MLDETECTCP_NONE, codepage,
 		stream, &encoding, &nscores));
     HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
 

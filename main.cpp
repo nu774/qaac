@@ -57,7 +57,7 @@ void load_lyrics_file(Options *opts)
 	std::map<uint32_t, std::wstring>::iterator it
 	    = opts->tagopts.find(Tag::kLyrics);
 	if (it != opts->tagopts.end())
-	    it->second = load_text_file(it->second.c_str());
+	    it->second = load_text_file(it->second.c_str(), opts->textcp);
     } catch (const std::exception &e) {
 	LOG("WARNING: %s\n", e.what());
     }
@@ -294,13 +294,14 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 }
 
 static
-void load_chapter_file(const wchar_t *chapter_file,
+void load_chapter_file(const Options &opts,
 	std::vector<std::pair<std::wstring, int64_t> > *chapters)
 {
     try {
+	const wchar_t *chapter_file = opts.chapter_file;
 	std::vector<std::pair<std::wstring, int64_t> > chaps;
 
-	std::wstring str = load_text_file(chapter_file);
+	std::wstring str = load_text_file(chapter_file, opts.textcp);
 	std::vector<wchar_t> buf(str.begin(), str.end());
 	buf.push_back(0);
 	wchar_t *p = &buf[0], *tok;
@@ -393,7 +394,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	editor.addArtwork(opts.artworks[i].c_str());
     if (opts.chapter_file) {
 	std::vector<std::pair<std::wstring, int64_t> > chaps;
-	load_chapter_file(opts.chapter_file, &chaps);
+	load_chapter_file(opts, &chaps);
 	// convert from absolute millis to dulation in samples
 	for (size_t i = 0; i < chaps.size() - 1; ++i) {
 	    int64_t dur = chaps[i+1].second - chaps[i].second;
@@ -952,7 +953,7 @@ void handle_cue_sheet(Options &opts)
     const wchar_t *p = std::wcsrchr(cuepath.c_str(), L'\\');
     if (p) cuedir = cuepath.substr(0, p - cuepath.c_str());
 
-    std::wstringbuf istream(load_text_file(opts.ifilename));
+    std::wstringbuf istream(load_text_file(opts.ifilename, opts.textcp));
     CueSheet cue;
     cue.parse(&istream);
     typedef std::map<uint32_t, std::wstring> meta_t;
