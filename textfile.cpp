@@ -39,10 +39,18 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 		IID_IMultiLanguage2, (void**)(&mlang)));
     x::shared_ptr<IMultiLanguage2> mlangPtr(mlang, release);
 
-    DetectEncodingInfo encoding;
-    INT nscores = 1;
-    HR(mlang->DetectCodepageInIStream(MLDETECTCP_NONE, codepage,
-		stream, &encoding, &nscores));
+    DetectEncodingInfo encoding[2];
+    INT nscores = 2;
+    HR(mlang->DetectCodepageInIStream(0, codepage,
+		stream, encoding, &nscores));
+    /*
+     * Usually DetectCodepageInIStream() puts the most appropriate choice
+     * in the first place.
+     * However, it tends to pick 1252(latin-1) for UTF-8 encoded latin-1 file.
+     */
+    size_t pick =
+	encoding[0].nCodePage == 1252 && encoding[1].nCodePage == 65001;
+
     HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
 
     std::vector<char> ibuf(fileSize);
@@ -51,12 +59,14 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 
     DWORD ctx = 0;
     UINT size = ibuf.size(), cnt;
-    HR(mlang->ConvertStringToUnicode(&ctx, encoding.nCodePage,
+    HR(mlang->ConvertStringToUnicode(&ctx, encoding[pick].nCodePage,
 		&ibuf[0], &size, 0, &cnt));
     std::vector<wchar_t> obuf(cnt);
     size = ibuf.size();
-    HR(mlang->ConvertStringToUnicode(&ctx, encoding.nCodePage,
+    HR(mlang->ConvertStringToUnicode(&ctx, encoding[pick].nCodePage,
 		&ibuf[0], &size, &obuf[0], &cnt));
     obuf.push_back(0);
-    return normalize_crlf(&obuf[0], L"\n");
+    // chop off BOM
+    size_t bom = obuf.size() && obuf[0] == 0xfeff;
+    return normalize_crlf(&obuf[bom], L"\n");
 }
