@@ -287,8 +287,10 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 	}
 #ifndef REFALAC
 	try {
-	    return x::shared_ptr<ISource>(new AFSource(opts.ifilename));
-	} catch (const std::runtime_error&) {}
+	    return x::shared_ptr<ISource>(new AFSource(stream));
+	} catch (const std::runtime_error&) {
+	    stream.rewind();
+	}
 	return open_alac_source(opts);
 #endif
     } catch (const std::runtime_error&) {}

@@ -2,6 +2,33 @@
 #include "win32util.h"
 #include "CoreAudioHelper.h"
 
+namespace audiofile {
+    OSStatus read(void *cookie, SInt64 pos, UInt32 count, void *data,
+	    UInt32 *nread)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	if (pT->seek(pos, ISeekable::kBegin) != pos)
+	    return ioErr;
+	*nread = pT->read(data, count);
+	return 0;
+    }
+    SInt64 size(void *cookie)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->size();
+    }
+    OSStatus setsize(void *cookie, SInt64 size)
+    {
+	return ioErr;
+    }
+    OSStatus write(void *cookie, SInt64 pos, UInt32 count, const void *data,
+	    UInt32 *nwritten)
+    {
+	return ioErr;
+    }
+}
+
+#if 0
 AFSource::AFSource(const wchar_t *path)
     : m_offset(0)
 {
@@ -17,6 +44,35 @@ AFSource::AFSource(const wchar_t *path)
     AudioFileID afid;
     CHECKCA(AudioFileOpenURL(url, kAudioFileReadPermission, 0, &afid));
     m_af.attach(afid, true);
+    init();
+}
+#endif
+
+AFSource::AFSource(InputStream &stream)
+    : m_offset(0), m_stream(stream)
+{
+    AudioFileID afid;
+    CHECKCA(AudioFileOpenWithCallbacks(
+		&m_stream, audiofile::read, audiofile::write,
+		audiofile::size, audiofile::setsize, 0, &afid));
+    m_af.attach(afid, true);
+    init();
+}
+
+size_t AFSource::readSamples(void *buffer, size_t nsamples)
+{
+    nsamples = adjustSamplesToRead(nsamples);
+    if (!nsamples) return 0;
+    UInt32 ns = nsamples;
+    UInt32 nb = ns * m_format.bytesPerFrame();
+    CHECKCA(AudioFileReadPackets(m_af, false, &nb, 0,
+		m_offset + getSamplesRead(), &ns, buffer));
+    addSamplesRead(ns);
+    return ns;
+}
+
+void AFSource::init()
+{
     //fourcc fmt(m_af.getFileFormat());
     AudioStreamBasicDescription asbd;
     m_af.getDataFormat(&asbd);
@@ -67,21 +123,4 @@ AFSource::AFSource(const wchar_t *path)
 	    }
 	}
     } catch (std::exception &) {}
-}
-
-size_t AFSource::readSamples(void *buffer, size_t nsamples)
-{
-    nsamples = adjustSamplesToRead(nsamples);
-    if (!nsamples) return 0;
-    UInt32 ns = nsamples;
-    UInt32 nb = ns * m_format.bytesPerFrame();
-    CHECKCA(AudioFileReadPackets(m_af, false, &nb, 0,
-		m_offset + getSamplesRead(), &ns, buffer));
-    addSamplesRead(ns);
-    return ns;
-}
-
-void AFSource::skipSamples(int64_t count)
-{
-    m_offset += count;
 }
