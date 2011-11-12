@@ -104,6 +104,7 @@ void AFSource::init()
 	    if (!bitmap) {
 		switch (acl->mChannelLayoutTag) {
 		case kAudioChannelLayoutTag_Quadraphonic:
+		case kAudioChannelLayoutTag_ITU_2_2:
 		    bitmap = 0x33; break;
 		case kAudioChannelLayoutTag_MPEG_4_0_A:
 		    bitmap = 0x107; break;

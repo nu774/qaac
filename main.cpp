@@ -232,10 +232,6 @@ x::shared_ptr<ISource> open_alac_source(const Options &opts)
 static
 x::shared_ptr<ISource> open_source(const Options &opts)
 {
-#ifdef REFALAC
-    if (opts.alac_decode)
-	return open_alac_source(opts);
-#endif
     StdioChannel channel(opts.ifilename);
     InputStream stream(channel);
 
@@ -279,20 +275,20 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 		stream.rewind();
 	    }
 	}
-	if (opts.libsndfile.loaded()) {
-	    try {
-		return x::shared_ptr<ISource>(
-			new LibSndfileSource(opts.libsndfile, opts.ifilename));
-	    } catch (const std::runtime_error&) {}
-	}
 #ifndef REFALAC
 	try {
 	    return x::shared_ptr<ISource>(new AFSource(stream));
 	} catch (const std::runtime_error&) {
 	    stream.rewind();
 	}
-	return open_alac_source(opts);
 #endif
+	if (opts.libsndfile.loaded()) {
+	    try {
+		return x::shared_ptr<ISource>(
+			new LibSndfileSource(opts.libsndfile, opts.ifilename));
+	    } catch (const std::runtime_error&) {}
+	}
+	return open_alac_source(opts);
     } catch (const std::runtime_error&) {}
     throw std::runtime_error("Not available input file format");
 }
