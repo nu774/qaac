@@ -621,11 +621,16 @@ void show_available_codec_setttings(UInt32 fmt)
 		= iasbd.mChannelsPerFrame * iasbd.mBitsPerChannel >> 3;
 	    AudioStreamBasicDescription oasbd = { 0 };
 	    oasbd.mFormatID = fmt;
+	    oasbd.mSampleRate = iasbd.mSampleRate;
 	    oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
-	    CHECKCA(AudioCodecInitialize(codec, &iasbd, &oasbd, 0, 0));
+
+	    AudioConverterX converter(iasbd, oasbd);
+	    converter.setInputChannelLayout(acl);
+	    converter.setOutputChannelLayout(acl);
+	    converter.setBitRateControlMode(
+		    kAudioCodecBitRateControlMode_Constant);
 	    std::vector<AudioValueRange> bits;
-	    codec.getApplicableBitRateRange(&bits);
-	    CHECKCA(AudioCodecUninitialize(codec));
+	    converter.getApplicableEncodeBitRates(&bits);
 
 	    std::printf("%s %gHz %ls --",
 		    fmt == 'aac ' ? "LC" : "HE",
