@@ -25,6 +25,7 @@ struct ISeekable: public IChannel {
     virtual ~ISeekable() {}
     virtual bool seekable() = 0;
     virtual int64_t seek(int64_t offset, int whence) = 0;
+    virtual int64_t tell() = 0;
 };
 
 typedef void *HANDLE;
@@ -119,7 +120,7 @@ namespace __InputStreamImpl {
 	{
 	    return m_channel->seek(offset, whence);
 	}
-	int64_t tell() { return seek(0, ISeekable::kCurrent); }
+	int64_t tell() { return m_channel->tell(); }
 	int64_t size()
 	{
 	    int64_t curpos = tell();
