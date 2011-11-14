@@ -23,6 +23,7 @@
 #include "wavsource.h"
 #include "expand.h"
 #include "resampler.h"
+#include "normalize.h"
 #include "logging.h"
 #include "textfile.h"
 #ifdef REFALAC
@@ -456,28 +457,22 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
 }
 
 static
-x::shared_ptr<ISource> do_resample(
-    const x::shared_ptr<ISource> &src, const Options &opts,
-    uint32_t rate)
+x::shared_ptr<ISource> do_normalize(
+    const x::shared_ptr<ISource> &src, const Options &opts)
 {
-    SoxResampler *resampler = new SoxResampler(opts.libsoxrate, src,
-	    rate, opts.normalize);
-    x::shared_ptr<ISource> new_src(resampler);
-    if (!opts.normalize) return new_src;
+    Normalizer *normalizer = new Normalizer(src);
+    x::shared_ptr<ISource> new_src(normalizer);
 
-    LOG("Resampling with libsoxrate\n");
+    LOG("Normalizing...\n");
     uint64_t n = 0, rc;
     Progress progress(opts.verbose, src->length(),
 	    src->getSampleFormat().m_rate);
-    while ((rc = resampler->convertSamples(4096)) > 0) {
+    while ((rc = normalizer->process(4096)) > 0) {
 	n += rc;
-	progress.update(resampler->samplesRead());
+	progress.update(normalizer->samplesRead());
     }
-    progress.finish(resampler->samplesRead());
-    if (resampler->getPeak() > 1.0) {
-	LOG("Peak value %g > 1.0, gain compressed.\n",
-	    resampler->getPeak());
-    }
+    progress.finish(normalizer->samplesRead());
+    LOG("Peak value: %g\n", normalizer->getPeak());
     return new_src;
 }
 
@@ -785,10 +780,16 @@ void encode_file(const x::shared_ptr<ISource> &src,
     if (rate != iasbd.mSampleRate) {
 	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, rate);
 	if (!opts.native_resampler) {
-	    srcx = do_resample(srcx, opts, rate);
+	    srcx = x::shared_ptr<ISource>(
+		    new SoxResampler(opts.libsoxrate, srcx, rate));
 	    build_basic_description(srcx->getSampleFormat(), &iasbd);
 	}
     }
+    if (opts.normalize) {
+	srcx = do_normalize(src, opts);
+	build_basic_description(srcx->getSampleFormat(), &iasbd);
+    }
+
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mFormatID = opts.output_format;
     oasbd.mChannelsPerFrame = layout.numChannels();
