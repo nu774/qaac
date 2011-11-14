@@ -4,7 +4,7 @@
   <PropertyGroup Label="UserMacros">
     <QTSDKDir>C:\Program Files (x86)\QuickTime SDK</QTSDKDir>
     <mp4v2Includes>..\..\mp4v2;..\..\mp4v2\include;..\..\mp4v2\src</mp4v2Includes>
-    <taglibIncludes>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff</taglibIncludes>
+    <taglibIncludes>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\ape;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff</taglibIncludes>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />

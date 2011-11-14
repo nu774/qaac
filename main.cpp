@@ -347,6 +347,8 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	&oformat = encoder->getOutputDescription();
 
     ITagParser *parser = dynamic_cast<ITagParser*>(src);
+    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
+
     if (parser) {
 	editor.setTag(parser->getTags());
 	const std::vector<std::pair<std::wstring, int64_t> > *chapters
@@ -370,12 +372,17 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	try {
 	    editor.fetchAiffID3Tags(opts.ifilename);
 	} catch (const std::exception &) {}
+	if (dynamic_cast<TakSource*>(src)) {
+	    try {
+		editor.fetchAPETags(opts.ifilename,
+			oformat.mSampleRate, stat->samplesRead());
+	    } catch (const std::exception &) {}
+	}
     }
     editor.setTag(opts.tagopts);
     editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
 #ifndef REFALAC
     if (opts.isAAC()) {
-	IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 	AudioConverterX converter =
 	    dynamic_cast<CoreAudioEncoder*>(encoder)->getConverter();
 	AudioConverterPrimeInfo info;

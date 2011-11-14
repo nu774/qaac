@@ -1,11 +1,14 @@
 #include <algorithm>
 #include <aifffile.h>
+#include <apefile.h>
+#include <apetag.h>
 #include "id3v1genres.h"
 #include "itunetags.h"
 #include "win32util.h"
 #include "strcnv.h"
 #include "mp4v2wrapper.h"
 #include "wicimage.h"
+#include "cuesheet.h"
 
 using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Atom;
@@ -100,6 +103,31 @@ void TagEditor::fetchAiffID3Tags(const wchar_t *filename)
 		}
 	    }
 	    setTag(id, value);
+	}
+    }
+}
+
+void TagEditor::fetchAPETags(const wchar_t *filename, uint32_t sampleRate,
+	uint64_t duration)
+{
+    std::wstring fullname = get_prefixed_fullpath(filename);
+    TagLib::APE::File file(fullname.c_str(), false);
+    if (!file.isOpen())
+	throw std::runtime_error("taglib: can't open file");
+    TagLib::APE::Tag *tag = file.APETag(false);
+    const TagLib::APE::ItemListMap &itemListMap = tag->itemListMap();
+    TagLib::APE::ItemListMap::ConstIterator it;
+    for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
+	std::wstring key = it->first.toWString();
+	std::string skey = nallow(key);
+	std::wstring value = it->second.toString().toWString();
+	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
+	if (id) setTag(id, value);
+	if (!strcasecmp(skey.c_str(), "cuesheet")) {
+	    std::map<uint32_t, std::wstring> meta;
+	    Cue::CueSheetToChapters(value, sampleRate, duration,
+		    &m_chapters, &meta);
+	    setTag(meta);
 	}
     }
 }

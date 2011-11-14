@@ -130,8 +130,10 @@ TakSource::TakSource(const TakModule &module, InputStream &stream)
 		format("blocksize: %d is different from expected",
 		    info.Audio.BlockSize));
     setRange(0, info.Sizes.SampleNum);
+    /*
     if (stream.seekable())
 	fetchTags();
+    */
 }
 
 void TakSource::skipSamples(int64_t count)
