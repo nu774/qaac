@@ -766,9 +766,25 @@ void encode_file(const x::shared_ptr<ISource> &src,
 {
     AudioCodecX codec(opts.output_format);
 
+    x::shared_ptr<ISource> srcx(src);
+
+    if (opts.delay > 0) {
+	CompositeSource *cp = new CompositeSource();
+	x::shared_ptr<ISource> cpPtr(cp);
+	NullSource *ns = new NullSource(srcx->getSampleFormat());
+	ns->setRange(0, 0.001 * opts.delay * srcx->getSampleFormat().m_rate);
+	cp->addSource(x::shared_ptr<ISource>(ns));
+	cp->addSource(srcx);
+	srcx = cpPtr;
+    } else if (opts.delay < 0) {
+	IPartialSource *p = dynamic_cast<IPartialSource*>(srcx.get());
+	if (p)
+	    p->setRange(-0.001 * opts.delay * srcx->getSampleFormat().m_rate, -1);
+	else
+	    LOG("WARNING: can't set negative delay for this input");
+    }
     AudioChannelLayoutX origLayout, layout;
-    x::shared_ptr<ISource> srcx =
-	mapped_source(src, opts, &origLayout, &layout);
+    srcx = mapped_source(srcx, opts, &origLayout, &layout);
     AudioStreamBasicDescription iasbd;
     build_basic_description(srcx->getSampleFormat(), &iasbd);
 

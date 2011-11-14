@@ -15,13 +15,15 @@ static struct option long_options[] = {
     { L"cvbr", required_argument, 0, 'v' },
     { L"cbr", required_argument, 0, 'c' },
     { L"he", no_argument, 0, 'aach' },
-    { L"alac", no_argument, 0, 'A' },
     { L"quality", required_argument, 0, 'q' },
-    { L"native-resampler", no_argument, 0, 'nsmp' },
     { L"adts", no_argument, 0, 'ADTS' },
+    { L"alac", no_argument, 0, 'A' },
+    { L"rate", required_argument, 0, 'r' },
+    { L"normalize", no_argument, 0, 'N' },
+    { L"delay", required_argument, 0, 'dlay' },
+    { L"native-resampler", no_argument, 0, 'nsmp' },
 #endif
     { L"help", no_argument, 0, 'h' },
-    { L"rate", required_argument, 0, 'r' },
     { L"silent", no_argument, 0, 's' },
     { L"verbose", no_argument, 0, 'verb' },
     { L"stat", no_argument, 0, 'S' },
@@ -29,7 +31,6 @@ static struct option long_options[] = {
     { L"chanmap", required_argument, 0, 'cmap' },
     { L"chanmask", required_argument, 0, 'mask' },
     { L"no-optimize", no_argument, 0, 'noop' },
-    { L"normalize", no_argument, 0, 'N' },
     { L"text-codepage", required_argument, 0, 'txcp' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  'Rchn' },
@@ -110,11 +111,16 @@ void usage()
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
 "-A, --alac             ALAC encoding mode\n"
+"--no-optimize          Don't optimize MP4 container file after encoding\n"
+"-N, --normalize        Normalize (works in two-pass)\n"
 "-r, --rate <number>    Specify target sample rate in Hz\n"
 "                       By default, sample rate will be same as input\n"
 "                       (if possible).\n"
-"--no-optimize          Don't optimize MP4 container file after encoding\n"
-"--native-resampler     Always use QuickTime built-in resampler\n"
+"--native-resampler     Use Apple built-in resampler\n"
+"--delay <millisecs>    When positive value is given, prepend silence at the\n"
+"                       begining to achieve delay of specified amount.\n"
+"                       When negative value is given, specified length is\n"
+"                       dropped from the beginning.\n"
 #else
 "--fast                 Fast stereo encoding mode.\n"
 "-D, --decode           Decode mode.\n"
@@ -122,6 +128,8 @@ void usage()
 "-d <dirname>           Output directory, default is cwd\n"
 "-s, --silent           Suppress console messages\n"
 "--verbose              More verbose console messages\n"
+"-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
+"-R, --raw              Raw PCM input\n"
 "-n, --nice             Give lower process priority\n"
 "--chanmap <n1,n2...>   Re-arrange channels to the specified order.\n"
 "                       For N-ch input, you take numbers 1,2..N, and\n"
@@ -132,10 +140,6 @@ void usage()
 "                       If --chanmask 0 is specified, qaac treats it as if\n"
 "                       no channel mask is present in the source, and pick\n"
 "                       default layout.\n"
-"-N, --normalize        Normalize after resample (works in two-pass)\n"
-"                       Normalize is done only when rate conversion occurs\n"
-"-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
-"-R, --raw              Raw PCM input\n"
 "--text-codepage <n>    Specify text code page of cuesheet/chapter/lyrics.\n"
 "                       1252 for Latin-1, 65001 for UTF-8.\n"
 "                       Use this when automatic encoding detection fails.\n"
@@ -185,7 +189,7 @@ void usage()
 #ifndef REFALAC
 static const wchar_t * const short_opts = L"hAo:d:a:V:v:c:q:r:insRSN";
 #else
-static const wchar_t * const short_opts = L"hDo:d:r:insRSN";
+static const wchar_t * const short_opts = L"hDo:d:insRS";
 #endif
 
 bool Options::parse(int &argc, wchar_t **&argv)
@@ -302,6 +306,12 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->method = pos;
 	    if (std::swscanf(optarg, L"%u", &this->bitrate) != 1) {
 		std::fputs("AAC Bitrate/Quality must be an integer\n", stderr);
+		return false;
+	    }
+	}
+	else if (ch == 'dlay') {
+	    if (std::swscanf(optarg, L"%d", &this->delay) != 1) {
+		std::fputs("Delay must be an integer in millis\n", stderr);
 		return false;
 	    }
 	}
