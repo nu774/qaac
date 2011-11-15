@@ -38,7 +38,7 @@ size_t Normalizer::readSamples(void *buffer, size_t nsamples)
     size_t nc = std::fread(buffer, sizeof(float),
  	    nsamples * m_format.m_nchannels, m_tmpfile.get());
     float *fp = reinterpret_cast<float*>(buffer);
-    if (m_peak != 1.0 && m_peak != 0.0) {
+    if (m_peak > 1.0 || (m_peak > FLT_EPSILON && m_peak < 1.0 - FLT_EPSILON)) {
 	for (size_t i = 0; i < nc; ++i) {
 	    float nfp = static_cast<float>(*fp / m_peak);
 	    *fp++ = nfp;
