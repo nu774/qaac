@@ -16,7 +16,8 @@ public:
     size_t readSamples(void *buffer, size_t nsamples);
     double getPeak() const { return m_peak; }
     size_t process(size_t nsamples);
-    uint64_t samplesRead() { return m_processed; }
+    uint64_t samplesRead() const { return m_processed; }
+    uint64_t length() const { return m_processed; }
 private:
     size_t underflow(float *buffer, size_t nsamples);
 };

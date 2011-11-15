@@ -463,7 +463,7 @@ x::shared_ptr<ISource> do_normalize(
     Normalizer *normalizer = new Normalizer(src);
     x::shared_ptr<ISource> new_src(normalizer);
 
-    LOG("Normalizing...\n");
+    LOG("Scanning maximum peak...\n");
     uint64_t n = 0, rc;
     Progress progress(opts.verbose, src->length(),
 	    src->getSampleFormat().m_rate);
@@ -802,7 +802,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	}
     }
     if (opts.normalize) {
-	srcx = do_normalize(src, opts);
+	srcx = do_normalize(srcx, opts);
 	build_basic_description(srcx->getSampleFormat(), &iasbd);
     }
 
