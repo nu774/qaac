@@ -3,6 +3,7 @@
 #include "strcnv.h"
 #include "sink.h"
 #include "win32util.h"
+#include "bitstream.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #include <io.h>
 #include <fcntl.h>
@@ -92,19 +93,14 @@ void parseDecSpecificConfig(const std::vector<uint8_t> &config,
 	16000, 12000, 11025, 8000, 7350, 0, 0, 0
     };
     const uint8_t *p = &config[0];
-    unsigned objtype = p[0] >> 3;
-    unsigned index = (p[0] & 7) << 1 | p[1] >> 7;
-    unsigned rate;
-    if (index == 0xf) {
-	rate = (p[1] & 0x7f) << 17 | p[2] << 9 | p[3] << 1 | p[4] >> 7;
-	p += 3;
-    } else {
-	rate = tab[index];
-    }
-    unsigned chconfig = (p[1] >> 3) & 0xf;
-    *sampling_rate_index = index;
-    *sampling_rate = rate;
-    *channel_config = chconfig;
+    BitStream bs(const_cast<uint8_t*>(&config[0]), config.size());
+    unsigned objtype = bs.get(5);
+    *sampling_rate_index = bs.get(4);
+    if (*sampling_rate_index == 15)
+	*sampling_rate = bs.get(24);
+    else
+	*sampling_rate = tab[*sampling_rate_index];
+    *channel_config = bs.get(4);
 }
 
 using mp4v2::impl::MP4Atom;
@@ -193,18 +189,27 @@ ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
 
 void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
 {
-    const unsigned profile = 1;
-    unsigned char adts[] = "\xff\xf1\x00\x00\x00\x1f\xfc";
-    size_t len = length + 7;
+    BitStream bs;
+    bs.put(0xfff, 12); // syncword
+    bs.put(0, 1);  // ID(MPEG identifier). 0 for MPEG4, 1 for MPEG2
+    bs.put(0, 2);  // layer. always 0
+    bs.put(1, 1);  // protection absent. 1 means no CRC information
+    bs.put(1, 2);  // profile, (MPEG-4 object type) - 1. 1 for AAC LC
+    bs.put(m_sample_rate_index, 4); // sampling rate index
+    bs.put(0, 1); // private bit
+    bs.put(m_channel_config, 3); // channel configuration
+    bs.put(0, 4); /*
+		   * originaly/copy: 1
+		   * home: 1
+		   * copyright_identification_bit: 1
+		   * copyright_identification_start: 1
+		   */
+    bs.put(length + 7, 13); // frame_length
+    bs.put(0x7ff, 11); // adts_buffer_fullness, 0x7ff for VBR
+    bs.put(0, 2); // number_of_raw_data_blocks_in_frame
+    bs.byteAlign();
 
-    adts[2] |= profile << 6;
-    adts[2] |= m_sample_rate_index << 2;
-    adts[2] |= (m_channel_config & 4) >> 2;
-    adts[3] |= (m_channel_config & 3) << 6;
-    adts[3] |= len >> 11;
-    adts[4] |= (len >> 3) & 0xff;
-    adts[5] |= (len & 7) << 5;
-    std::fwrite(adts, 1, 7, m_fp.get());
+    std::fwrite(bs.data(), 1, 7, m_fp.get());
     std::fwrite(data, 1, length, m_fp.get());
     if (ferror(m_fp.get()))
 	throw std::runtime_error("write error");

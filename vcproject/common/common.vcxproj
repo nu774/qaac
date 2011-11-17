@@ -75,6 +75,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\alacsink.cpp" />
     <ClCompile Include="..\..\alacsrc.cpp" />
+    <ClCompile Include="..\..\bitstream.cpp" />
     <ClCompile Include="..\..\chanmap.cpp" />
     <ClCompile Include="..\..\channel.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
