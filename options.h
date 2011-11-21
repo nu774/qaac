@@ -8,7 +8,7 @@
 #include "wvpacksrc.h"
 #include "taksrc.h"
 #include "itunetags.h"
-#include "resampler.h"
+#include "soxdsp.h"
 
 struct Options {
 //    enum { kABR, kTVBR, kCVBR, kCBR };
@@ -90,7 +90,7 @@ struct Options {
     LibSndfileModule libsndfile;
     FLACModule libflac;
     WavpackModule libwavpack;
-    SoxResamplerModule libsoxrate;
+    SoxModule libsoxrate;
     TakModule libtak;
 };
 

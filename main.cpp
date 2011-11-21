@@ -22,7 +22,7 @@
 #include "nullsource.h"
 #include "wavsource.h"
 #include "expand.h"
-#include "resampler.h"
+#include "soxdsp.h"
 #include "normalize.h"
 #include "logging.h"
 #include "textfile.h"
@@ -795,9 +795,11 @@ void encode_file(const x::shared_ptr<ISource> &src,
     rate = codec.getClosestAvailableOutputSampleRate(rate);
     if (rate != iasbd.mSampleRate) {
 	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, rate);
-	if (!opts.native_resampler) {
-	    srcx = x::shared_ptr<ISource>(
-		    new SoxResampler(opts.libsoxrate, srcx, rate));
+	if (!opts.native_resampler && opts.libsoxrate.loaded()) {
+	    x::shared_ptr<ISoxDSPEngine>
+		engine(new SoxResampler(opts.libsoxrate,
+					srcx->getSampleFormat(), rate));
+	    srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
 	    build_basic_description(srcx->getSampleFormat(), &iasbd);
 	}
     }
@@ -940,7 +942,7 @@ void load_modules(Options &opts)
     opts.libflac = FLACModule(L"libFLAC.dll");
     opts.libwavpack = WavpackModule(L"wavpackdll.dll");
     opts.libtak = TakModule(L"tak_deco_lib.dll");
-    opts.libsoxrate = SoxResamplerModule(L"libsoxrate.dll");
+    opts.libsoxrate = SoxModule(L"libsoxrate.dll");
 }
 
 struct FNConverter {

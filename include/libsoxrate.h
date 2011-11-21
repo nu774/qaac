@@ -32,12 +32,14 @@ typedef struct lsx_rate_state_tag lsx_rate_t;
  * phase response: linear
  * band width: 0 (which means default)
  * allow aliasing: deny
+ * threads: on
  */
 enum lsx_rate_config_e {
     SOX_RATE_QUALITY,        /* 0:mid, 1:high:, 2:very high */
     SOX_RATE_PHASE_RESPONSE, /* 0:minimum, 1:intermediate, 2:linear */
     SOX_RATE_BANDWIDTH,      /* double. 80-99.7 */
     SOX_RATE_ALLOW_ALIASING, /* 0:deny, 1:allow */
+    SOX_RATE_USE_THREADS,    /* 0:off 1:on */
 };
 
 const char *lsx_rate_version_string(void);
@@ -89,7 +91,38 @@ int lsx_rate_start(lsx_rate_t *state);
  * Audio samples in ibuf must be interleaved.
  */
 int lsx_rate_process(lsx_rate_t *state, const float *ibuf, float *obuf,
-	size_t *ilen, size_t *olen);
+		     size_t *ilen, size_t *olen);
+
+int lsx_rate_process_noninterleaved(lsx_rate_t *state,
+				    const float * const *ibuf,
+				    float **obuf, size_t *ilen, size_t *olen,
+				    size_t istride, size_t ostride);
+
+
+struct lsx_fir_state_tag;
+typedef struct lsx_fir_state_tag lsx_fir_t;
+
+lsx_fir_t *lsx_fir_create(unsigned nchannels, double *coefs, int ncoefs,
+			  int use_threads);
+int lsx_fir_close(lsx_fir_t *state);
+int lsx_fir_start(lsx_fir_t *state);
+int lsx_fir_process(lsx_fir_t *state, const float *ibuf, float *obuf,
+		    size_t *ilen, size_t *olen);
+int lsx_fir_process_noninterleaved(lsx_fir_t *state, const float * const *ibuf,
+				   float **obuf, size_t *ilen, size_t *olen,
+				   size_t istride, size_t ostride);
+
+double * lsx_design_lpf(
+    double Fp,      /* End of pass-band; ~= 0.01dB point */
+    double Fc,      /* Start of stop-band */
+    double Fn,      /* Nyquist freq; e.g. 0.5, 1, PI */
+    int allow_aliasing,
+    double att,     /* Stop-band attenuation in dB */
+    int * num_taps, /* (Single phase.)  0: value will be estimated */
+    int k);         /* Number of phases; 0 for single-phase */
+
+void lsx_free(void *ptr);
+
 
 #ifdef __cplusplus
 }

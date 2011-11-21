@@ -1,12 +1,13 @@
 #include <cstdio>
 #include <cstring>
+#include <vector>
 #include "win32util.h"
-#include "resampler.h"
+#include "soxdsp.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
     while (0)
 
-SoxResamplerModule::SoxResamplerModule(const std::wstring &path)
+SoxModule::SoxModule(const std::wstring &path)
 {
     HMODULE hDll;
     hDll = LoadLibraryW(path.c_str());
@@ -15,11 +16,18 @@ SoxResamplerModule::SoxResamplerModule(const std::wstring &path)
 	return;
     try {
 	CHECK(version_string = ProcAddress(hDll, "lsx_rate_version_string"));
-	CHECK(create = ProcAddress(hDll, "lsx_rate_create"));
-	CHECK(close = ProcAddress(hDll, "lsx_rate_close"));
-	CHECK(config = ProcAddress(hDll, "lsx_rate_config"));
-	CHECK(start = ProcAddress(hDll, "lsx_rate_start"));
-	CHECK(process = ProcAddress(hDll, "lsx_rate_process"));
+	CHECK(rate_create = ProcAddress(hDll, "lsx_rate_create"));
+	CHECK(rate_close = ProcAddress(hDll, "lsx_rate_close"));
+	CHECK(rate_config = ProcAddress(hDll, "lsx_rate_config"));
+	CHECK(rate_start = ProcAddress(hDll, "lsx_rate_start"));
+	CHECK(rate_process =
+	      ProcAddress(hDll, "lsx_rate_process_noninterleaved"));
+	CHECK(fir_create = ProcAddress(hDll, "lsx_fir_create"));
+	CHECK(fir_close = ProcAddress(hDll, "lsx_fir_close"));
+	CHECK(fir_start = ProcAddress(hDll, "lsx_fir_start"));
+	CHECK(fir_process =
+	      ProcAddress(hDll, "lsx_fir_process_noninterleaved")); 
+	CHECK(design_lpf = ProcAddress(hDll, "lsx_design_lpf"));
     } catch (...) {
 	FreeLibrary(hDll);
 	m_loaded = false;
@@ -28,33 +36,28 @@ SoxResamplerModule::SoxResamplerModule(const std::wstring &path)
     m_module = module_t(hDll, FreeLibrary);
 }
 
-SoxResampler::SoxResampler(const SoxResamplerModule &module,
-	const x::shared_ptr<ISource> &src, uint32_t rate)
-    : DelegatingSource(src), m_module(module),
+SoxDSPProcessor::SoxDSPProcessor(const x::shared_ptr<ISoxDSPEngine> &engine,
+				 const x::shared_ptr<ISource> &src)
+    : DelegatingSource(src), m_engine(engine),
       m_end_of_input(false), m_input_frames(0)
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
     if (srcFormat.m_bitsPerSample == 64)
 	throw std::runtime_error("Can't handle 64bit sample");
 
-    m_format = SampleFormat("F32LE", srcFormat.m_nchannels, rate);
+    m_format = m_engine->getSampleFormat();
 
-    lsx_rate_t *converter = m_module.create(
-	    m_format.m_nchannels, srcFormat.m_rate, rate);
-    if (!converter)
-	throw std::runtime_error("ERROR: SoxResampler");
-    m_converter = x::shared_ptr<lsx_rate_t>(converter, m_module.close);
-    if (m_module.start(converter) < 0)
-	throw std::runtime_error("ERROR: SoxResampler");
-
-    m_src_buffer.resize(4096 * srcFormat.m_nchannels);
-    m_ibuffer.resize(m_src_buffer.size() * srcFormat.bytesPerFrame());
+    m_src_buffer.resize(4096 * m_format.m_nchannels);
+    m_ibuffer.resize(m_src_buffer.size() * m_format.bytesPerFrame());
 }
 
-size_t SoxResampler::readSamples(void *buffer, size_t nsamples)
+size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
 {
     float *src = &m_src_buffer[0];
     float *dst = static_cast<float*>(buffer);
+
+    unsigned nchannels = m_format.m_nchannels;
+    std::vector<float*> ivec(nchannels), ovec(nchannels);
 
     while (nsamples > 0) {
 	if (m_input_frames == 0 && !m_end_of_input) {
@@ -64,22 +67,27 @@ size_t SoxResampler::readSamples(void *buffer, size_t nsamples)
 	}
 	uint32_t ilen = m_input_frames;
 	uint32_t olen = nsamples;
-	m_module.process(m_converter.get(), src, dst, &ilen, &olen);
+	for (size_t i = 0; i < nchannels; ++i) {
+	    ivec[i] = src + i;
+	    ovec[i] = dst + i;
+	}
+	m_engine->process(&ivec[0], &ovec[0],
+			  &ilen, &olen, nchannels, nchannels);
 	nsamples -= olen;
 	m_input_frames -= ilen;
-	src += ilen * m_format.m_nchannels;
+	src += ilen * nchannels;
 	if (m_end_of_input && olen == 0)
 	    break;
-	dst += olen * m_format.m_nchannels;
+	dst += olen * nchannels;
     }
     if (m_input_frames) {
 	std::memmove(&this->m_src_buffer[0], src,
-	    m_input_frames * m_format.m_nchannels * sizeof(float));
+		     m_input_frames * nchannels * sizeof(float));
     }
-    return (dst - static_cast<float*>(buffer)) / m_format.m_nchannels;
+    return (dst - static_cast<float*>(buffer)) / nchannels;
 }
 
-bool SoxResampler::underflow()
+bool SoxDSPProcessor::underflow()
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
     size_t nsamples = m_src_buffer.size() / m_format.m_nchannels;
@@ -141,4 +149,18 @@ bool SoxResampler::underflow()
 	break;
     }
     return m_input_frames > 0;
+}
+
+SoxResampler::SoxResampler(const SoxModule &module,
+			   const SampleFormat &format, uint32_t rate)
+    : m_module(module)
+{
+    m_format = SampleFormat("F32LE", format.m_nchannels, rate);
+    lsx_rate_t *converter = m_module.rate_create(
+	    format.m_nchannels, format.m_rate, rate);
+    if (!converter)
+	throw std::runtime_error("ERROR: SoxResampler");
+    m_processor = x::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
+    if (m_module.rate_start(converter) < 0)
+	throw std::runtime_error("ERROR: SoxResampler");
 }

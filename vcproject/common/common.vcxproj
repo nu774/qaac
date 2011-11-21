@@ -89,9 +89,9 @@
     <ClCompile Include="..\..\logging.cpp" />
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />
     <ClCompile Include="..\..\normalize.cpp" />
-    <ClCompile Include="..\..\resampler.cpp" />
     <ClCompile Include="..\..\riff.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
+    <ClCompile Include="..\..\soxdsp.cpp" />
     <ClCompile Include="..\..\strcnv.cpp" />
     <ClCompile Include="..\..\taksrc.cpp" />
     <ClCompile Include="..\..\textfile.cpp" />

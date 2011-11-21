@@ -64,9 +64,6 @@
     <ClCompile Include="..\..\libsndfilesrc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\resampler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\taksrc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -89,6 +86,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\bitstream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\soxdsp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
