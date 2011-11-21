@@ -102,8 +102,8 @@ int lsx_rate_process_noninterleaved(lsx_rate_t *state,
 struct lsx_fir_state_tag;
 typedef struct lsx_fir_state_tag lsx_fir_t;
 
-lsx_fir_t *lsx_fir_create(unsigned nchannels, double *coefs, int ncoefs,
-			  int use_threads);
+lsx_fir_t *lsx_fir_create(unsigned nchannels, double *coefs, unsigned ncoefs,
+			  unsigned post_peak, int use_threads);
 int lsx_fir_close(lsx_fir_t *state);
 int lsx_fir_start(lsx_fir_t *state);
 int lsx_fir_process(lsx_fir_t *state, const float *ibuf, float *obuf,

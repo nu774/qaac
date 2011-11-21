@@ -28,6 +28,7 @@ SoxModule::SoxModule(const std::wstring &path)
 	CHECK(fir_process =
 	      ProcAddress(hDll, "lsx_fir_process_noninterleaved")); 
 	CHECK(design_lpf = ProcAddress(hDll, "lsx_design_lpf"));
+	CHECK(free = ProcAddress(hDll, "lsx_free"));
     } catch (...) {
 	FreeLibrary(hDll);
 	m_loaded = false;
@@ -71,8 +72,10 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
 	    ivec[i] = src + i;
 	    ovec[i] = dst + i;
 	}
+        _CrtCheckMemory();
 	m_engine->process(&ivec[0], &ovec[0],
 			  &ilen, &olen, nchannels, nchannels);
+	_CrtCheckMemory();
 	nsamples -= olen;
 	m_input_frames -= ilen;
 	src += ilen * nchannels;
@@ -163,4 +166,28 @@ SoxResampler::SoxResampler(const SoxModule &module,
     m_processor = x::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
     if (m_module.rate_start(converter) < 0)
 	throw std::runtime_error("ERROR: SoxResampler");
+}
+
+SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
+			   const SampleFormat &format, uint32_t Fp)
+    : m_module(module)
+{
+    m_format = SampleFormat("F32LE", format.m_nchannels, format.m_rate);
+    double Fn = static_cast<double>(format.m_rate) / 2.0;
+    double Fc = Fp + format.m_rate * 0.005;
+    if (Fp == 0 || Fc > Fn)
+	throw std::runtime_error("SoxLowpassFilter: invalid target rate");
+    int num_taps = 0;
+    double *coefs = m_module.design_lpf(Fp, Fc, Fn, 0, 120.0, &num_taps, 0);
+    if (!coefs)
+	throw std::runtime_error("SoxLowpassFilter: failed to design lpf");
+    x::shared_ptr<double> __delete_lator__(coefs, m_module.free);
+    lsx_fir_t *converter =
+	m_module.fir_create(format.m_nchannels, coefs, num_taps,
+			    num_taps >> 1, true);
+    if (!converter)
+	throw std::runtime_error("ERROR: SoxLowpassFilter");
+    m_processor = x::shared_ptr<lsx_fir_t>(converter, m_module.fir_close);
+    if (m_module.fir_start(converter) < 0)
+	throw std::runtime_error("ERROR: SoxLowpassFilter");
 }

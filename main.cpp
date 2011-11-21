@@ -803,6 +803,14 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	    build_basic_description(srcx->getSampleFormat(), &iasbd);
 	}
     }
+    if (opts.lowpass > 0 && opts.libsoxrate.loaded()) {
+	x::shared_ptr<ISoxDSPEngine>
+	    engine(new SoxLowpassFilter(opts.libsoxrate,
+					srcx->getSampleFormat(),
+					opts.lowpass));
+	srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
+	build_basic_description(srcx->getSampleFormat(), &iasbd);
+    }
     if (opts.normalize) {
 	srcx = do_normalize(srcx, opts);
 	build_basic_description(srcx->getSampleFormat(), &iasbd);

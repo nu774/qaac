@@ -19,6 +19,7 @@ static struct option long_options[] = {
     { L"adts", no_argument, 0, 'ADTS' },
     { L"alac", no_argument, 0, 'A' },
     { L"rate", required_argument, 0, 'r' },
+    { L"lowpass", required_argument, 0, 'lpf ' },
     { L"normalize", no_argument, 0, 'N' },
     { L"delay", required_argument, 0, 'dlay' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
@@ -118,6 +119,9 @@ void usage()
 "                       By default, sample rate will be same as input\n"
 "                       (if possible).\n"
 "--native-resampler     Use Apple built-in resampler\n"
+"--lowpass <number>     Specify lowpass filter cut-off frequency in Hz\n"
+"                       Use this whe you want lower cut-off than\n"
+"                       Apple default.\n"
 "--delay <millisecs>    When positive value is given, prepend silence at the\n"
 "                       begining to achieve delay of specified amount.\n"
 "                       When negative value is given, specified length is\n"
@@ -307,6 +311,12 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->method = pos;
 	    if (std::swscanf(optarg, L"%u", &this->bitrate) != 1) {
 		std::fputs("AAC Bitrate/Quality must be an integer\n", stderr);
+		return false;
+	    }
+	}
+	else if (ch == 'lpf ') {
+	    if (std::swscanf(optarg, L"%u", &this->lowpass) != 1) {
+		std::fputs("lowpass must be an integer\n", stderr);
 		return false;
 	    }
 	}

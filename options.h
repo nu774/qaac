@@ -20,6 +20,7 @@ struct Options {
 	bitrate(-1), quality(-1),
 	raw_channels(2), raw_sample_rate(44100),
 	rate(-1),
+	lowpass(0),
 	remix(0),
 	chanmask(-1),
 	artwork_size(0),
@@ -69,6 +70,7 @@ struct Options {
     uint32_t raw_channels, raw_sample_rate;
     uint32_t remix; /* 0, or output channel layout tag */
     int rate; /* -1: keep, 0: auto, others: literal value */
+    int lowpass;
     int chanmask; /*     -1: honor chanmask in the source(default)
                           0: ignore chanmask in the source
                      others: use the value as chanmask     */
