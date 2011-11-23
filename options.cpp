@@ -115,9 +115,12 @@ void usage()
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "-N, --normalize        Normalize (works in two pass. generates HUGE tempfile\n"
 "                       for large input)\n"
-"-r, --rate <number>    Specify target sample rate in Hz\n"
-"                       By default, sample rate will be same as input\n"
-"                       (if possible).\n"
+"-r, --rate <keep|auto|n>\n"
+"                       keep: output sampling rate will be same as input\n"
+"                             if possible.\n"
+"                       auto: output sampling rate will be automatically\n"
+"                             chosen by encoder.\n"
+"                       n: desired output sampling rate in Hz\n"
 "--native-resampler     Use Apple built-in resampler\n"
 "--lowpass <number>     Specify lowpass filter cut-off frequency in Hz\n"
 "                       Use this whe you want lower cut-off than\n"
@@ -278,7 +281,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    }
 	}
 	else if (ch == 'r') {
-	    if (std::swscanf(optarg, L"%u", &this->rate) != 1) {
+	    if (!std::wcscmp(optarg, L"keep"))
+		this->rate = -1;
+	    else if (!std::wcscmp(optarg, L"auto"))
+		this->rate = 0;
+	    else if (std::swscanf(optarg, L"%u", &this->rate) != 1) {
 		std::fputs("Invalid rate value\n", stderr);
 		return false;
 	    }

@@ -761,6 +761,20 @@ inline uint32_t bound_quality(uint32_t n)
 }
 
 static
+void config_aac_codec(AudioConverterX &converter, const Options &opts)
+{
+    converter.setBitRateControlMode(opts.method);
+    if (opts.method != Options::kTVBR) {
+	double bitrate = opts.bitrate ? opts.bitrate * 1000 : 0x7fffffff;
+	bitrate = converter.getClosestAvailableBitRate(bitrate);
+	converter.setEncodeBitRate(bitrate);
+    } else {
+	converter.setSoundQualityForVBR(bound_quality(opts.bitrate));
+    }
+    converter.setCodecQuality(bound_quality((opts.quality + 1) << 5));
+}
+
+static
 void encode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
@@ -785,20 +799,35 @@ void encode_file(const x::shared_ptr<ISource> &src,
     }
     AudioChannelLayoutX origLayout, layout;
     srcx = mapped_source(srcx, opts, &origLayout, &layout);
-    AudioStreamBasicDescription iasbd;
-    build_basic_description(srcx->getSampleFormat(), &iasbd);
-
     if (!codec.isAvailableOutputChannelLayout(layout->mChannelLayoutTag))
 	throw std::runtime_error("Channel layout not supported");
 
-    double rate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
-    rate = codec.getClosestAvailableOutputSampleRate(rate);
-    if (rate != iasbd.mSampleRate) {
-	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, rate);
+    AudioStreamBasicDescription iasbd;
+    build_basic_description(srcx->getSampleFormat(), &iasbd);
+
+    AudioStreamBasicDescription oasbd = { 0 };
+    oasbd.mFormatID = opts.output_format;
+    oasbd.mChannelsPerFrame = layout.numChannels();
+
+    double rate = opts.rate > 0 ? opts.rate
+			        : opts.rate == -1 ? iasbd.mSampleRate
+						  : 0;
+    if (rate) {
+	oasbd.mSampleRate = codec.getClosestAvailableOutputSampleRate(rate);
+    } else {
+	AudioConverterX converter(iasbd, oasbd);
+	converter.setInputChannelLayout(layout);
+	converter.setOutputChannelLayout(layout);
+	if (opts.isAAC()) config_aac_codec(converter, opts);
+	converter.getOutputStreamDescription(&oasbd);
+    }
+    if (oasbd.mSampleRate != iasbd.mSampleRate) {
+	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
 	if (!opts.native_resampler && opts.libsoxrate.loaded()) {
 	    x::shared_ptr<ISoxDSPEngine>
 		engine(new SoxResampler(opts.libsoxrate,
-					srcx->getSampleFormat(), rate));
+					srcx->getSampleFormat(),
+					oasbd.mSampleRate));
 	    srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
 	    build_basic_description(srcx->getSampleFormat(), &iasbd);
 	}
@@ -816,25 +845,11 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	build_basic_description(srcx->getSampleFormat(), &iasbd);
     }
 
-    AudioStreamBasicDescription oasbd = { 0 };
-    oasbd.mFormatID = opts.output_format;
-    oasbd.mChannelsPerFrame = layout.numChannels();
-    oasbd.mSampleRate = rate;
-
     AudioConverterX converter(iasbd, oasbd);
     converter.setInputChannelLayout(layout);
     converter.setOutputChannelLayout(layout);
-    if (opts.isAAC()) {
-	converter.setBitRateControlMode(opts.method);
-	if (opts.method != Options::kTVBR) {
-	    double bitrate = opts.bitrate ? opts.bitrate * 1000 : 0x7fffffff;
-	    bitrate = converter.getClosestAvailableBitRate(bitrate);
-	    converter.setEncodeBitRate(bitrate);
-	} else {
-	    converter.setSoundQualityForVBR(bound_quality(opts.bitrate));
-	}
-	converter.setCodecQuality(bound_quality((opts.quality + 1) << 5));
-    }
+    if (opts.isAAC()) config_aac_codec(converter, opts);
+
     std::wstring encoder_config = get_encoder_config(converter);
     LOG("%ls\n", encoder_config.c_str());
     std::vector<uint8_t> cookie;

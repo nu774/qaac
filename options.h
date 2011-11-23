@@ -19,7 +19,7 @@ struct Options {
 	method(-1),
 	bitrate(-1), quality(-1),
 	raw_channels(2), raw_sample_rate(44100),
-	rate(-1),
+	rate(0),
 	lowpass(0),
 	remix(0),
 	chanmask(-1),
