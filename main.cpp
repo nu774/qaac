@@ -824,6 +824,8 @@ void encode_file(const x::shared_ptr<ISource> &src,
 						  : 0;
     if (rate)
 	oasbd.mSampleRate = codec.getClosestAvailableOutputSampleRate(rate);
+    else if (!opts.isAAC())
+	oasbd.mSampleRate = iasbd.mSampleRate;
     else {
 	AudioConverterX converter(iasbd, oasbd);
 	converter.setInputChannelLayout(layout);
