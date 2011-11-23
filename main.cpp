@@ -516,6 +516,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     }
 
     // retrieve original channel layout, taking --chanmask into account
+    if (opts.chanmask > 0 && bitcount(opts.chanmask) != nchannels)
+	throw std::runtime_error("unmatch number of channels with --chanmask");
     const std::vector<uint32_t> *chanmap = src->getChannelMap();
     int chanmask = opts.chanmask;
     if (chanmask < 0)
@@ -541,6 +543,29 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
     *mapped_layout = mapped;
     return srcx;
+}
+
+static
+x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
+				      const Options & opts)
+{
+    double rate = src->getSampleFormat().m_rate;
+    if (opts.delay > 0) {
+	CompositeSource *cp = new CompositeSource();
+	x::shared_ptr<ISource> cpPtr(cp);
+	NullSource *ns = new NullSource(src->getSampleFormat());
+	ns->setRange(0, 0.001 * opts.delay * rate);
+	cp->addSource(x::shared_ptr<ISource>(ns));
+	cp->addSource(src);
+	return cpPtr;
+    } else if (opts.delay < 0) {
+	IPartialSource *p = dynamic_cast<IPartialSource*>(src.get());
+	if (p)
+	    p->setRange(-0.001 * opts.delay * rate, -1);
+	else
+	    LOG("WARNING: can't set negative delay for this input");
+    }
+    return src;
 }
 
 #ifndef REFALAC
@@ -780,23 +805,8 @@ void encode_file(const x::shared_ptr<ISource> &src,
 {
     AudioCodecX codec(opts.output_format);
 
-    x::shared_ptr<ISource> srcx(src);
+    x::shared_ptr<ISource> srcx = delayed_source(src, opts);
 
-    if (opts.delay > 0) {
-	CompositeSource *cp = new CompositeSource();
-	x::shared_ptr<ISource> cpPtr(cp);
-	NullSource *ns = new NullSource(srcx->getSampleFormat());
-	ns->setRange(0, 0.001 * opts.delay * srcx->getSampleFormat().m_rate);
-	cp->addSource(x::shared_ptr<ISource>(ns));
-	cp->addSource(srcx);
-	srcx = cpPtr;
-    } else if (opts.delay < 0) {
-	IPartialSource *p = dynamic_cast<IPartialSource*>(srcx.get());
-	if (p)
-	    p->setRange(-0.001 * opts.delay * srcx->getSampleFormat().m_rate, -1);
-	else
-	    LOG("WARNING: can't set negative delay for this input");
-    }
     AudioChannelLayoutX origLayout, layout;
     srcx = mapped_source(srcx, opts, &origLayout, &layout);
     if (!codec.isAvailableOutputChannelLayout(layout->mChannelLayoutTag))
@@ -812,9 +822,9 @@ void encode_file(const x::shared_ptr<ISource> &src,
     double rate = opts.rate > 0 ? opts.rate
 			        : opts.rate == -1 ? iasbd.mSampleRate
 						  : 0;
-    if (rate) {
+    if (rate)
 	oasbd.mSampleRate = codec.getClosestAvailableOutputSampleRate(rate);
-    } else {
+    else {
 	AudioConverterX converter(iasbd, oasbd);
 	converter.setInputChannelLayout(layout);
 	converter.setOutputChannelLayout(layout);
@@ -829,7 +839,6 @@ void encode_file(const x::shared_ptr<ISource> &src,
 					srcx->getSampleFormat(),
 					oasbd.mSampleRate));
 	    srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
-	    build_basic_description(srcx->getSampleFormat(), &iasbd);
 	}
     }
     if (opts.lowpass > 0 && opts.libsoxrate.loaded()) {
@@ -838,12 +847,10 @@ void encode_file(const x::shared_ptr<ISource> &src,
 					srcx->getSampleFormat(),
 					opts.lowpass));
 	srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
-	build_basic_description(srcx->getSampleFormat(), &iasbd);
     }
-    if (opts.normalize) {
+    if (opts.normalize)
 	srcx = do_normalize(srcx, opts);
-	build_basic_description(srcx->getSampleFormat(), &iasbd);
-    }
+    build_basic_description(srcx->getSampleFormat(), &iasbd);
 
     AudioConverterX converter(iasbd, oasbd);
     converter.setInputChannelLayout(layout);
