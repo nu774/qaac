@@ -249,8 +249,10 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 				// check for partial frame to override requested numSamples
 				if ( partialFrame != 0 )
 				{
-					numSamples  = BitBufferRead( bits, 16 ) << 16;
-					numSamples |= BitBufferRead( bits, 16 );
+					uint32_t n = BitBufferRead(bits, 16) << 16;
+					n |= BitBufferRead(bits, 16);
+					if (n > numSamples) return kALAC_ParamError;
+					numSamples = n;
 				}
 
 				if ( escapeFlag == 0 )
@@ -400,8 +402,10 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 				// check for partial frame length to override requested numSamples
 				if ( partialFrame != 0 )
 				{
-					numSamples  = BitBufferRead( bits, 16 ) << 16;
-					numSamples |= BitBufferRead( bits, 16 );
+					uint32_t n = BitBufferRead(bits, 16) << 16;
+					n |= BitBufferRead(bits, 16);
+					if (n > numSamples) return kALAC_ParamError;
+					numSamples = n;
 				}
 
 				if ( escapeFlag == 0 )
