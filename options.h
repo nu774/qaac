@@ -21,7 +21,6 @@ struct Options {
 	raw_channels(2), raw_sample_rate(44100),
 	rate(-1),
 	lowpass(0),
-	remix(0),
 	chanmask(-1),
 	artwork_size(0),
 	ifilename(0), ofilename(0), outdir(0),
@@ -29,6 +28,8 @@ struct Options {
 	fname_format(0),
 	chapter_file(0),
 	logfilename(0),
+	remix_preset(0),
+	remix_file(0),
 	verbose(1), is_raw(false), is_adts(false), save_stat(false),
        	nice(false), native_chanmapper(false), ignore_length(false),
 	no_optimize(false), native_resampler(false), check_only(false),
@@ -68,7 +69,6 @@ struct Options {
     int32_t method;
     uint32_t bitrate, quality;
     uint32_t raw_channels, raw_sample_rate;
-    uint32_t remix; /* 0, or output channel layout tag */
     int rate; /* -1: keep, 0: auto, others: literal value */
     int lowpass;
     int chanmask; /*     -1: honor chanmask in the source(default)
@@ -78,6 +78,8 @@ struct Options {
     wchar_t *ifilename, *ofilename, *outdir, *raw_format, *fname_format;
     wchar_t *chapter_file;
     wchar_t *logfilename;
+    wchar_t *remix_preset;
+    wchar_t *remix_file;
     int verbose;
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
 	 ignore_length, no_optimize, native_resampler, check_only,

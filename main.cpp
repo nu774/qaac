@@ -26,6 +26,7 @@
 #include "normalize.h"
 #include "logging.h"
 #include "textfile.h"
+#include "mixer.h"
 #ifdef REFALAC
 #include "alacenc.h"
 #include "wavsink.h"
@@ -36,6 +37,7 @@
 #include "afsource.h"
 #include "reg.h"
 #endif
+#include <ShlObj.h>
 #include <crtdbg.h>
 
 #ifdef REFALAC
@@ -568,6 +570,75 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
     return src;
 }
 
+static
+FILE *open_config_file(const wchar_t *file)
+{
+    std::vector<std::wstring> search_paths;
+    const wchar_t *home = _wgetenv(L"HOME");
+    if (home)
+	search_paths.push_back(format(L"%s\\%s", home, L".qaac"));
+    wchar_t path[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathW(0, CSIDL_APPDATA, 0, 0, path)))
+	search_paths.push_back(format(L"%s\\%s", path, L"qaac"));
+    search_paths.push_back(get_module_directory());
+    for (size_t i = 0; i < search_paths.size(); ++i) {
+	try {
+	    std::wstring pathtry =
+		format(L"%s\\%s", search_paths[i].c_str(), file);
+	    return wfopenx(pathtry.c_str(), L"r");
+	} catch (...) {
+	    if (i == search_paths.size() - 1) throw;
+	}
+    }
+    return 0;
+}
+
+static
+void matrix_from_preset(const Options &opts,
+			std::vector<std::vector<complex_t> > *result)
+{
+    FILE *fp;
+    if (opts.remix_preset) {
+	std::wstring path = format(L"matrix\\%s.txt", opts.remix_preset);
+	fp = open_config_file(path.c_str());
+    } else
+	fp = wfopenx(opts.remix_file, L"r");
+    x::shared_ptr<FILE> fpPtr(fp, std::fclose);
+    int c;
+    std::vector<std::vector<complex_t> > matrix;
+    std::vector<complex_t> row;
+    while ((c = std::getc(fp)) != EOF) {
+	if (c == '\n') {
+	    if (row.size()) {
+		matrix.push_back(row);
+		row.clear();
+	    }
+	} else if (isspace(c)) {
+	    while (c != '\n' && std::isspace(c = std::getc(fp)))
+		;
+	    std::ungetc(c, fp);
+	} else if (isdigit(c) || c == '-') {
+	    std::ungetc(c, fp);
+	    double v;
+	    if (std::fscanf(fp, "%lf", &v) != 1)
+		throw std::runtime_error("invalid matrix preset file");
+	    c = std::getc(fp);
+	    if (std::strchr("iIjJ", c))
+		row.push_back(complex_t(0.0, v));
+	    else if (std::strchr("kK", c))
+		row.push_back(complex_t(0.0, -v));
+	    else {
+		std::ungetc(c, fp);
+		row.push_back(complex_t(v, 0.0));
+	    }
+	} else
+	    throw std::runtime_error("invalid char in matrix preset file");
+    }
+    if (row.size())
+	matrix.push_back(row);
+    result->swap(matrix);
+}
+
 #ifndef REFALAC
 static
 std::wstring get_encoder_config(AudioConverterX &converter)
@@ -807,6 +878,12 @@ void encode_file(const x::shared_ptr<ISource> &src,
 
     x::shared_ptr<ISource> srcx = delayed_source(src, opts);
 
+    if ((opts.remix_preset || opts.remix_file) && opts.libsoxrate.loaded()) {
+	std::vector<std::vector<complex_t> > matrix;
+	matrix_from_preset(opts, &matrix);
+	srcx = x::shared_ptr<ISource>(new MatrixMixer(srcx, opts.libsoxrate,
+						      matrix));
+    }
     AudioChannelLayoutX origLayout, layout;
     srcx = mapped_source(srcx, opts, &origLayout, &layout);
     if (!codec.isAvailableOutputChannelLayout(layout->mChannelLayoutTag))

@@ -23,6 +23,8 @@ static struct option long_options[] = {
     { L"normalize", no_argument, 0, 'N' },
     { L"delay", required_argument, 0, 'dlay' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
+    { L"remix-preset", required_argument, 0, 'mixp' },
+    { L"remix-matrix", required_argument, 0, 'mixm' },
 #endif
     { L"help", no_argument, 0, 'h' },
     { L"silent", no_argument, 0, 's' },
@@ -129,6 +131,8 @@ void usage()
 "                       begining to achieve delay of specified amount.\n"
 "                       When negative value is given, specified length is\n"
 "                       dropped from the beginning.\n"
+"--remix-preset <name>  Specify preset remixing matrix name.\n"
+"--remix-matrix <file>  Specify file containing remixing matrix.\n"
 #else
 "--fast                 Fast stereo encoding mode.\n"
 "-D, --decode           Decode mode.\n"
@@ -353,6 +357,10 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		= (ch == Tag::kCompilation) ? L"1" : optarg;
 	else if (ch == 'chap')
 	    this->chapter_file = optarg;
+	else if (ch == 'mixp')
+	    this->remix_preset = optarg;
+	else if (ch == 'mixm')
+	    this->remix_file = optarg;
 	else
 	    return false;
     }

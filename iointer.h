@@ -105,7 +105,9 @@ class DelegatingSource: public ISource, public ITagParser {
     x::shared_ptr<ISource> m_src;
     std::map<uint32_t, std::wstring> m_emptyTags;
 public:
+    DelegatingSource() {}
     DelegatingSource(x::shared_ptr<ISource> src): m_src(src) {}
+    void setSource(x::shared_ptr<ISource> src) { m_src = src; }
     ISource *source() { return m_src.get(); }
     uint64_t length() const { return m_src->length(); }
     const SampleFormat &getSampleFormat() const

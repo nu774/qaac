@@ -87,6 +87,7 @@
     <ClCompile Include="..\..\itunetags.cpp" />
     <ClCompile Include="..\..\libsndfilesrc.cpp" />
     <ClCompile Include="..\..\logging.cpp" />
+    <ClCompile Include="..\..\mixer.cpp" />
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />
     <ClCompile Include="..\..\normalize.cpp" />
     <ClCompile Include="..\..\riff.cpp" />
