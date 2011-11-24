@@ -20,3 +20,66 @@ SampleFormat::SampleFormat(const char *spec, unsigned nchannels, unsigned rate)
     if (!m_bitsPerSample || (m_bitsPerSample & 0x7)) die();
     if (m_type == kIsFloat && (m_bitsPerSample & 0x1f)) die();
 }
+
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
+			  std::vector<float> *floatBuffer, size_t nsamples)
+{
+    const SampleFormat &sf = src->getSampleFormat();
+    if (byteBuffer->size() < nsamples * sf.bytesPerFrame())
+	byteBuffer->resize(nsamples * sf.bytesPerFrame());
+    if (floatBuffer->size() < nsamples * sf.m_nchannels)
+	floatBuffer->resize(nsamples * sf.m_nchannels);
+
+    uint8_t *bp = &(*byteBuffer)[0];
+    float *fp = &(*floatBuffer)[0];
+    nsamples = src->readSamples(bp, nsamples);
+    size_t blen = nsamples * sf.bytesPerFrame();
+
+    if (sf.m_type == SampleFormat::kIsFloat) {
+	if (sf.m_endian == SampleFormat::kIsBigEndian)
+	    bswap32buffer(bp, blen);
+	std::memcpy(fp, bp, blen);
+    } else {
+	switch (sf.m_bitsPerSample) {
+	case 8:
+	    {
+		if (sf.m_type == SampleFormat::kIsUnsignedInteger)
+		    for (size_t i = 0; i < blen; ++i)
+			bp[i] ^= 0x80;
+		char *src = reinterpret_cast<char *>(bp);
+		for (size_t i = 0; i < blen; ++i)
+		    *fp++ = static_cast<float>(src[i]) / 0x80;
+	    }
+	    break;
+	case 16:
+	    {
+		if (sf.m_endian == SampleFormat::kIsBigEndian)
+		    bswap16buffer(bp, blen);
+		short *src = reinterpret_cast<short *>(bp);
+		for (size_t i = 0; i < blen >> 1; ++i)
+		    *fp++ = static_cast<float>(src[i]) / 0x8000;
+	    }
+	    break;
+	case 24:
+	    {
+		if (sf.m_endian == SampleFormat::kIsBigEndian)
+		    bswap24buffer(bp, blen);
+		for (size_t i = 0; i < blen / 3; ++i) {
+		    int32_t v = bp[i*3]<<8 | bp[i*3+1]<<16 | bp[i*3+2]<<24;
+		    *fp++ = static_cast<float>(v) / 0x80000000U;
+		}
+	    }
+	    break;
+	case 32:
+	    {
+		if (sf.m_endian == SampleFormat::kIsBigEndian)
+		    bswap32buffer(bp, blen);
+		int *src = reinterpret_cast<int *>(bp);
+		for (size_t i = 0; i < blen / 4; ++i)
+		    *fp++ = static_cast<float>(src[i]) / 0x80000000U;
+	    }
+	    break;
+	}
+    }
+    return nsamples;
+}

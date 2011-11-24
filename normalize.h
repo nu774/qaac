@@ -18,8 +18,6 @@ public:
     size_t process(size_t nsamples);
     uint64_t samplesRead() const { return m_processed; }
     uint64_t length() const { return m_processed; }
-private:
-    size_t underflow(float *buffer, size_t nsamples);
 };
 
 #endif

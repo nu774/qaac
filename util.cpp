@@ -1,8 +1,6 @@
-#include <cstdio>
-#include <cstring>
 #include <cstdarg>
-#include <string>
 #include <vector>
+#include "util.h"
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #ifndef vsnprintf
@@ -83,3 +81,32 @@ std::wstring format(const wchar_t *fmt, ...)
 }
 #endif
 
+void bswap16buffer(uint8_t *buffer, size_t size)
+{
+    for (uint8_t *p = buffer; p < buffer + size; p += 2) {
+	uint8_t tmp = p[0];
+	p[0] = p[1];
+	p[1] = tmp;
+    }
+}
+
+void bswap24buffer(uint8_t *buffer, size_t size)
+{
+    for (uint8_t *p = buffer; p < buffer + size; p += 3) {
+	uint8_t tmp = p[0];
+	p[0] = p[2];
+	p[2] = tmp;
+    }
+}
+
+void bswap32buffer(uint8_t *buffer, size_t size)
+{
+    for (uint8_t *p = buffer; p < buffer + size; p += 4) {
+	uint8_t tmp = p[0];
+	p[0] = p[3];
+	p[3] = tmp;
+	tmp = p[1];
+	p[1] = p[2];
+	p[2] = tmp;
+    }
+}

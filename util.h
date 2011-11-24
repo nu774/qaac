@@ -241,41 +241,12 @@ inline uint32_t b2host32(uint32_t n)
     return (b2host16(n & 0xffff) << 16) | b2host16(n >> 16);
 }
 
-inline void bswap16buffer(uint16_t *buffer, size_t size)
-{
-    for (uint16_t *p = buffer; p < p + size; ++p) {
-	*p = (*p >> 8 | *p << 8);
-    }
-}
+void bswap16buffer(uint8_t *buffer, size_t size);
 
-inline void bswap16buffer(uint8_t *buffer, size_t size)
-{
-    for (uint8_t *p = buffer; p < buffer + size; p += 2) {
-	uint8_t tmp = p[0];
-	p[0] = p[1];
-	p[1] = tmp;
-    }
-}
+void bswap16buffer(uint8_t *buffer, size_t size);
 
-inline void bswap24buffer(uint8_t *buffer, size_t size)
-{
-    for (uint8_t *p = buffer; p < buffer + size; p += 3) {
-	uint8_t tmp = p[0];
-	p[0] = p[2];
-	p[2] = tmp;
-    }
-}
+void bswap24buffer(uint8_t *buffer, size_t size);
 
-inline void bswap32buffer(uint8_t *buffer, size_t size)
-{
-    for (uint8_t *p = buffer; p < buffer + size; p += 4) {
-	uint8_t tmp = p[0];
-	p[0] = p[3];
-	p[3] = tmp;
-	tmp = p[1];
-	p[1] = p[2];
-	p[2] = tmp;
-    }
-}
+void bswap32buffer(uint8_t *buffer, size_t size);
 
 #endif

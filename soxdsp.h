@@ -44,15 +44,13 @@ class SoxDSPProcessor: public DelegatingSource {
     bool m_end_of_input;
     size_t m_input_frames;
     std::vector<uint8_t> m_ibuffer;
-    std::vector<float> m_src_buffer;
+    std::vector<float> m_fbuffer;
 public:
     SoxDSPProcessor(const x::shared_ptr<ISoxDSPEngine> &engine,
 		    const x::shared_ptr<ISource> &src);
     uint64_t length() const { return -1; }
     const SampleFormat &getSampleFormat() const { return m_format; }
     size_t readSamples(void *buffer, size_t nsamples);
-private:
-    bool underflow();
 };
 
 class SoxResampler: public ISoxDSPEngine {
