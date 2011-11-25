@@ -88,7 +88,7 @@ MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
     m_format = SampleFormat("F32LE", spec.size(), fmt.m_rate);
 
     if (m_shiftMask) {
-	size_t numtaps = fmt.m_rate / 80;
+	size_t numtaps = fmt.m_rate / 12;
 	if (!(numtaps & 1)) ++numtaps;
 	std::vector<double> coefs(numtaps);
 	hilbert(&coefs[0], numtaps);

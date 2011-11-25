@@ -18,14 +18,14 @@ static struct option long_options[] = {
     { L"quality", required_argument, 0, 'q' },
     { L"adts", no_argument, 0, 'ADTS' },
     { L"alac", no_argument, 0, 'A' },
+    { L"native-resampler", no_argument, 0, 'nsmp' },
+#endif
     { L"rate", required_argument, 0, 'r' },
     { L"lowpass", required_argument, 0, 'lpf ' },
     { L"normalize", no_argument, 0, 'N' },
     { L"delay", required_argument, 0, 'dlay' },
-    { L"native-resampler", no_argument, 0, 'nsmp' },
-    { L"remix-preset", required_argument, 0, 'mixp' },
-    { L"remix-matrix", required_argument, 0, 'mixm' },
-#endif
+    { L"matrix-preset", required_argument, 0, 'mixp' },
+    { L"matrix-file", required_argument, 0, 'mixm' },
     { L"help", no_argument, 0, 'h' },
     { L"silent", no_argument, 0, 's' },
     { L"verbose", no_argument, 0, 'verb' },
@@ -117,13 +117,17 @@ void usage()
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "-N, --normalize        Normalize (works in two pass. generates HUGE tempfile\n"
 "                       for large input)\n"
+"--native-resampler     Use Apple built-in resampler\n"
+#else
+"--fast                 Fast stereo encoding mode.\n"
+"-D, --decode           Decode mode.\n"
+#endif
 "-r, --rate <keep|auto|n>\n"
 "                       keep: output sampling rate will be same as input\n"
 "                             if possible.\n"
 "                       auto: output sampling rate will be automatically\n"
 "                             chosen by encoder.\n"
 "                       n: desired output sampling rate in Hz\n"
-"--native-resampler     Use Apple built-in resampler\n"
 "--lowpass <number>     Specify lowpass filter cut-off frequency in Hz\n"
 "                       Use this whe you want lower cut-off than\n"
 "                       Apple default.\n"
@@ -131,12 +135,8 @@ void usage()
 "                       begining to achieve delay of specified amount.\n"
 "                       When negative value is given, specified length is\n"
 "                       dropped from the beginning.\n"
-"--remix-preset <name>  Specify preset remixing matrix name.\n"
-"--remix-matrix <file>  Specify file containing remixing matrix.\n"
-#else
-"--fast                 Fast stereo encoding mode.\n"
-"-D, --decode           Decode mode.\n"
-#endif
+"--matrix-preset <name> Specify preset remixing matrix name.\n"
+"--matrix-file <file>   Specify file containing remixing matrix.\n"
 "-d <dirname>           Output directory, default is cwd\n"
 "-s, --silent           Suppress console messages\n"
 "--verbose              More verbose console messages\n"
@@ -201,7 +201,7 @@ void usage()
 #ifndef REFALAC
 static const wchar_t * const short_opts = L"hAo:d:a:V:v:c:q:r:insRSN";
 #else
-static const wchar_t * const short_opts = L"hDo:d:insRS";
+static const wchar_t * const short_opts = L"hDo:d:insRSN";
 #endif
 
 bool Options::parse(int &argc, wchar_t **&argv)

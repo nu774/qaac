@@ -641,6 +641,101 @@ void matrix_from_preset(const Options &opts,
 
 #ifndef REFALAC
 static
+void config_aac_codec(AudioConverterX &converter, const Options &opts);
+#endif
+
+static x::shared_ptr<ISource> 
+preprocess_input(const x::shared_ptr<ISource> &src,
+		 const Options &opts,
+		 AudioChannelLayoutX *oLayout,
+		 AudioChannelLayoutX *nLayout,
+		 AudioStreamBasicDescription *inputDesc,
+		 AudioStreamBasicDescription *outputDesc)
+{
+#ifndef REFALAC
+    AudioCodecX codec(opts.output_format);
+#endif
+    x::shared_ptr<ISource> srcx = delayed_source(src, opts);
+
+    if ((opts.remix_preset || opts.remix_file) && opts.libsoxrate.loaded()) {
+	std::vector<std::vector<complex_t> > matrix;
+	matrix_from_preset(opts, &matrix);
+	srcx = x::shared_ptr<ISource>(new MatrixMixer(srcx, opts.libsoxrate,
+						      matrix));
+    }
+    AudioChannelLayoutX origLayout, layout;
+#ifndef REFALAC
+    srcx = mapped_source(srcx, opts, &origLayout, &layout);
+    if (!codec.isAvailableOutputChannelLayout(layout->mChannelLayoutTag))
+	throw std::runtime_error("Channel layout not supported");
+#else
+    if (!opts.alac_decode) {
+	srcx = mapped_source(srcx, opts, &origLayout, &layout);
+	uint32_t otag = layout->mChannelLayoutTag;
+	if (otag != kAudioChannelLayoutTag_Mono &&
+	    otag != kAudioChannelLayoutTag_Stereo &&
+	    otag != kAudioChannelLayoutTag_AAC_4_0 &&
+	    otag != kAudioChannelLayoutTag_AAC_5_0 &&
+	    otag != kAudioChannelLayoutTag_AAC_5_1 &&
+	    otag != kAudioChannelLayoutTag_AAC_6_1 &&
+	    otag != kAudioChannelLayoutTag_AAC_7_1)
+	    throw std::runtime_error("Not supported channel layout for ALAC");
+    }
+#endif
+    AudioStreamBasicDescription iasbd;
+    build_basic_description(srcx->getSampleFormat(), &iasbd);
+
+    AudioStreamBasicDescription oasbd = { 0 };
+    oasbd.mFormatID = opts.output_format;
+    oasbd.mChannelsPerFrame = layout.numChannels();
+
+    double rate = opts.rate > 0 ? opts.rate
+			        : opts.rate == -1 ? iasbd.mSampleRate
+						  : 0;
+#ifndef REFALAC
+    if (rate)
+	oasbd.mSampleRate = codec.getClosestAvailableOutputSampleRate(rate);
+    else if (!opts.isAAC())
+	oasbd.mSampleRate = iasbd.mSampleRate;
+    else {
+	AudioConverterX converter(iasbd, oasbd);
+	converter.setInputChannelLayout(layout);
+	converter.setOutputChannelLayout(layout);
+	if (opts.isAAC()) config_aac_codec(converter, opts);
+	converter.getOutputStreamDescription(&oasbd);
+    }
+#else
+    oasbd.mSampleRate = rate > 0 ? rate : iasbd.mSampleRate;
+#endif
+    if (oasbd.mSampleRate != iasbd.mSampleRate) {
+	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
+	if (!opts.native_resampler && opts.libsoxrate.loaded()) {
+	    x::shared_ptr<ISoxDSPEngine>
+		engine(new SoxResampler(opts.libsoxrate,
+					srcx->getSampleFormat(),
+					oasbd.mSampleRate));
+	    srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
+	}
+    }
+    if (opts.lowpass > 0 && opts.libsoxrate.loaded()) {
+	x::shared_ptr<ISoxDSPEngine>
+	    engine(new SoxLowpassFilter(opts.libsoxrate,
+					srcx->getSampleFormat(),
+					opts.lowpass));
+	srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
+    }
+    if (opts.normalize)
+	srcx = do_normalize(srcx, opts);
+    build_basic_description(srcx->getSampleFormat(), &iasbd);
+    if (oLayout) *oLayout = origLayout;
+    if (nLayout) *nLayout = layout;
+    if (inputDesc) *inputDesc = iasbd;
+    if (outputDesc) *outputDesc = oasbd;
+    return srcx;
+}
+
+#ifndef REFALAC
+static
 std::wstring get_encoder_config(AudioConverterX &converter)
 {
     std::wstring s;
@@ -874,62 +969,11 @@ static
 void encode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
-    AudioCodecX codec(opts.output_format);
-
-    x::shared_ptr<ISource> srcx = delayed_source(src, opts);
-
-    if ((opts.remix_preset || opts.remix_file) && opts.libsoxrate.loaded()) {
-	std::vector<std::vector<complex_t> > matrix;
-	matrix_from_preset(opts, &matrix);
-	srcx = x::shared_ptr<ISource>(new MatrixMixer(srcx, opts.libsoxrate,
-						      matrix));
-    }
     AudioChannelLayoutX origLayout, layout;
-    srcx = mapped_source(srcx, opts, &origLayout, &layout);
-    if (!codec.isAvailableOutputChannelLayout(layout->mChannelLayoutTag))
-	throw std::runtime_error("Channel layout not supported");
+    AudioStreamBasicDescription iasbd, oasbd;
 
-    AudioStreamBasicDescription iasbd;
-    build_basic_description(srcx->getSampleFormat(), &iasbd);
-
-    AudioStreamBasicDescription oasbd = { 0 };
-    oasbd.mFormatID = opts.output_format;
-    oasbd.mChannelsPerFrame = layout.numChannels();
-
-    double rate = opts.rate > 0 ? opts.rate
-			        : opts.rate == -1 ? iasbd.mSampleRate
-						  : 0;
-    if (rate)
-	oasbd.mSampleRate = codec.getClosestAvailableOutputSampleRate(rate);
-    else if (!opts.isAAC())
-	oasbd.mSampleRate = iasbd.mSampleRate;
-    else {
-	AudioConverterX converter(iasbd, oasbd);
-	converter.setInputChannelLayout(layout);
-	converter.setOutputChannelLayout(layout);
-	if (opts.isAAC()) config_aac_codec(converter, opts);
-	converter.getOutputStreamDescription(&oasbd);
-    }
-    if (oasbd.mSampleRate != iasbd.mSampleRate) {
-	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
-	if (!opts.native_resampler && opts.libsoxrate.loaded()) {
-	    x::shared_ptr<ISoxDSPEngine>
-		engine(new SoxResampler(opts.libsoxrate,
-					srcx->getSampleFormat(),
-					oasbd.mSampleRate));
-	    srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
-	}
-    }
-    if (opts.lowpass > 0 && opts.libsoxrate.loaded()) {
-	x::shared_ptr<ISoxDSPEngine>
-	    engine(new SoxLowpassFilter(opts.libsoxrate,
-					srcx->getSampleFormat(),
-					opts.lowpass));
-	srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
-    }
-    if (opts.normalize)
-	srcx = do_normalize(srcx, opts);
-    build_basic_description(srcx->getSampleFormat(), &iasbd);
+    x::shared_ptr<ISource> srcx =
+	preprocess_input(src, opts, &origLayout, &layout, &iasbd, &oasbd);
 
     AudioConverterX converter(iasbd, oasbd);
     converter.setInputChannelLayout(layout);
@@ -1000,34 +1044,21 @@ static
 void encode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
+    AudioChannelLayoutX origLayout, layout;
+    AudioStreamBasicDescription iasbd;
+    x::shared_ptr<ISource> srcx =
+	preprocess_input(src, opts, &origLayout, &layout, &iasbd, 0);
     if (opts.alac_decode) {
-	decode_file(src, ofilename, opts);
+	decode_file(srcx, ofilename, opts);
 	return;
     }
-    AudioChannelLayoutX origLayout, layout;
-    x::shared_ptr<ISource> srcx =
-	mapped_source(src, opts, &origLayout, &layout);
-
-    uint32_t otag = layout->mChannelLayoutTag;
-    if (otag != kAudioChannelLayoutTag_Mono &&
-	otag != kAudioChannelLayoutTag_Stereo &&
-	otag != kAudioChannelLayoutTag_AAC_4_0 &&
-	otag != kAudioChannelLayoutTag_AAC_5_0 &&
-	otag != kAudioChannelLayoutTag_AAC_5_1 &&
-	otag != kAudioChannelLayoutTag_AAC_6_1 &&
-	otag != kAudioChannelLayoutTag_AAC_7_1)
-	throw std::runtime_error("Not supported channel layout for ALAC");
-
-    AudioStreamBasicDescription iasbd;
-    build_basic_description(srcx->getSampleFormat(), &iasbd);
-
     ALACEncoderX encoder(iasbd);
     encoder.setFastMode(opts.alac_fast);
     std::vector<uint8_t> cookie;
     encoder.getMagicCookie(&cookie);
 
     x::shared_ptr<ISink> sink(new ALACSink(ofilename, cookie,
-		!opts.no_optimize));
+					   !opts.no_optimize));
     encoder.setSource(srcx);
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, opts);
