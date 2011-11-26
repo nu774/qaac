@@ -613,11 +613,11 @@ void matrix_from_preset(const Options &opts,
 		matrix.push_back(row);
 		row.clear();
 	    }
-	} else if (isspace(c)) {
+	} else if (std::isspace(c)) {
 	    while (c != '\n' && std::isspace(c = std::getc(fp)))
 		;
 	    std::ungetc(c, fp);
-	} else if (isdigit(c) || c == '-') {
+	} else if (std::isdigit(c) || c == '-') {
 	    std::ungetc(c, fp);
 	    double v;
 	    if (std::fscanf(fp, "%lf", &v) != 1)
