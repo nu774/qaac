@@ -6,6 +6,7 @@
 class WaveSink : public ISink {
     FILE *m_file;
     uint32_t m_data_pos;
+    uint64_t m_bytes_written;
 public:
     WaveSink(FILE *fp, uint64_t duration, const SampleFormat &format,
 	    uint32_t chanmask=0);
@@ -21,6 +22,7 @@ private:
 	std::fwrite(data, 1, length, m_file);
 	if (ferror(m_file))
 	    throw std::runtime_error(std::strerror(errno));
+	m_bytes_written += length;
     }
 };
 

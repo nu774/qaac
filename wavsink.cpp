@@ -98,11 +98,11 @@ WaveSink::WaveSink(FILE *fp,
 
 void WaveSink::finishWrite()
 {
+    if (m_bytes_written & 1) write("\0", 1);
+    uint64_t datasize64 = m_bytes_written;
+    uint64_t riffsize64 = datasize64 + m_data_pos - 8;
     fpos_t pos;
     std::fgetpos(m_file, &pos);
-    if (pos & 1) write("\0", 1);
-    uint64_t datasize64 = pos - m_data_pos;
-    uint64_t riffsize64 = datasize64 + m_data_pos - 8;
     if (riffsize64 >> 32 == 0) {
 	if (std::fseek(m_file, m_data_pos - 4, SEEK_SET) == 0) {
 	    uint32_t size32 = static_cast<uint32_t>(datasize64);
