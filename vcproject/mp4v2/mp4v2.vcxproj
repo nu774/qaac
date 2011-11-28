@@ -133,6 +133,7 @@
     <ClCompile Include="..\..\mp4v2\src\atom_vmhd.cpp" />
     <ClCompile Include="..\..\mp4v2\src\cmeta.cpp" />
     <ClCompile Include="..\..\mp4v2\src\log.cpp" />
+    <ClCompile Include="..\..\mp4v2\src\mp4.cpp" />
     <ClCompile Include="..\..\mp4v2\src\qtff\coding.cpp" />
     <ClCompile Include="..\..\mp4v2\src\qtff\ColorParameterBox.cpp" />
     <ClCompile Include="..\..\mp4v2\src\itmf\CoverArtBox.cpp" />
@@ -145,7 +146,6 @@
     <ClCompile Include="..\..\mp4v2\libplatform\io\FileSystem_win32.cpp" />
     <ClCompile Include="..\..\mp4v2\src\itmf\generic.cpp" />
     <ClCompile Include="..\..\mp4v2\src\isma.cpp" />
-    <ClCompile Include="..\..\mp4v2\src\mp4.cpp" />
     <ClCompile Include="..\..\mp4v2\src\mp4atom.cpp" />
     <ClCompile Include="..\..\mp4v2\src\mp4container.cpp" />
     <ClCompile Include="..\..\mp4v2\src\mp4descriptor.cpp" />

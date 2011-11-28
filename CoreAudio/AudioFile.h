@@ -227,6 +227,7 @@ OSStatus AudioFileCountUserData (
    UInt32      *outNumberItems
 );
 
+/*
 OSStatus AudioFileCreateWithURL (
    CFURLRef                          inFileRef,
    AudioFileTypeID                   inFileType,
@@ -234,6 +235,7 @@ OSStatus AudioFileCreateWithURL (
    UInt32                            inFlags,
    AudioFileID                       *outAudioFile
 );
+*/
 
 OSStatus AudioFileGetGlobalInfo (
    AudioFilePropertyID inPropertyID,
@@ -291,12 +293,14 @@ OSStatus AudioFileInitializeWithCallbacks (
    AudioFileID                       *outAudioFile
 );
 
+/*
 OSStatus AudioFileOpenURL (
    CFURLRef        inFileRef,
    SInt8           inPermissions,
    AudioFileTypeID inFileTypeHint,
    AudioFileID     *outAudioFile
 );
+*/
 
 OSStatus AudioFileOpenWithCallbacks (
    void                  *inClientData,

@@ -52,7 +52,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>REFALAC;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;_CRT_SECURE_NO_WARNINGS;TAGLIB_STATIC;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(QTSDKDir)\CIncludes;..\..\include;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -69,7 +69,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>REFALAC;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;_CRT_SECURE_NO_WARNINGS;TAGLIB_STATIC;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(QTSDKDir)\CIncludes;..\..\include;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

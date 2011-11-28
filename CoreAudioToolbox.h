@@ -1,11 +1,13 @@
 #ifndef CoreAudioToolbox_H
 #define CoreAudioToolbox_H
 
-#include <CoreAudioTypes.h>
-#include "AudioComponent.h"
-#include "AudioCodec.h"
-#include "AudioConverter.h"
-#include "AudioFile.h"
-#include "AudioFormat.h"
+#include "CoreAudio/MacTypes.h"
+#include "CoreAudio/CoreFoundation.h"
+#include "CoreAudio/CoreAudioTypes.h"
+#include "CoreAudio/AudioComponent.h"
+#include "CoreAudio/AudioCodec.h"
+#include "CoreAudio/AudioConverter.h"
+#include "CoreAudio/AudioFile.h"
+#include "CoreAudio/AudioFormat.h"
 
 #endif

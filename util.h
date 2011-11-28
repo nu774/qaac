@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
-#include <GNUCompatibility/stdint.h> // To avoid conflict with QT
+#include <stdint.h> // To avoid conflict with QT
 
 #if defined _MSC_VER
 #ifndef strcasecmp

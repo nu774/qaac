@@ -483,7 +483,7 @@ void build_basic_description(const SampleFormat &format,
 	AudioStreamBasicDescription *result)
 {
     AudioStreamBasicDescription desc = { 0 };
-    desc.mFormatID = kAudioFormatLinearPCM;
+    desc.mFormatID = 'lpcm';
     desc.mFormatFlags = kAudioFormatFlagIsPacked;
     if (format.m_type == SampleFormat::kIsSignedInteger)
 	desc.mFormatFlags |= kAudioFormatFlagIsSignedInteger;

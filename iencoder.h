@@ -2,7 +2,7 @@
 #define _IENCODER_H
 
 #include <vector>
-#include <CoreAudioTypes.h>
+#include "CoreAudioToolbox.h"
 #include "CoreAudioHelper.h"
 
 struct IEncoder {

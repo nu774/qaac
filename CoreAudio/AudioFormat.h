@@ -1,7 +1,7 @@
 #ifndef AudioFormat_H
 #define AudioFormat_H
 
-#include <CoreAudioTypes.h>
+#include "CoreAudioTypes.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,9 +1,6 @@
 #ifndef AudioComponent_H
 #define AudioComponent_H
 
-#include <CoreFoundation.h>
-#include <CoreAudioTypes.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

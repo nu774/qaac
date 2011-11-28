@@ -57,15 +57,6 @@ public:
 		kAudioFilePropertyChannelLayout, &size, acl.get()));
 	layout->swap(acl);
     }
-    void getInfoDictionary(x::shared_ptr<const __CFDictionary> *result)
-    {
-	UInt32 size = sizeof(CFDictionaryRef);
-	CFDictionaryRef dict;
-	CHECKCA(AudioFileGetProperty(m_file.get(),
-		    kAudioFilePropertyInfoDictionary, &size, &dict));
-	x::shared_ptr<const __CFDictionary> ptr(dict, CFRelease);
-	result->swap(ptr);
-    }
 
 private:
     static OSStatus fakeDispose(AudioFileID file)

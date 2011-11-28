@@ -6,12 +6,12 @@
 #include <string>
 #include <vector>
 #include "shared_ptr.h"
-#include <GNUCompatibility/stdint.h> // To avoid conflict with QT
-#ifdef _MSC_VER
-#include <intsafe.h>
-  typedef SSIZE_T ssize_t;
-#endif
+#include <stdint.h>
 #include "util.h"
+
+#ifdef _MSC_VER
+typedef intptr_t ssize_t;
+#endif
 
 struct IChannel {
     virtual ~IChannel() {}

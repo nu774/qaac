@@ -1,7 +1,7 @@
 #ifndef _CHANMAP_H
 #define _CHANMAP_H
 
-#include <CoreAudioTypes.h>
+#include "CoreAudioTypes.h"
 #include "iointer.h"
 
 void MapChannelLabel(AudioChannelDescription *desc, uint32_t bitmap);

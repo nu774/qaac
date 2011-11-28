@@ -3,7 +3,7 @@
 
 #include "iointer.h"
 #include "iencoder.h"
-#include <GNUCompatibility/stdint.h>
+#include <stdint.h>
 #include <ALACEncoder.h>
 
 class ALACEncoderX: public IEncoder, public IEncoderStat {

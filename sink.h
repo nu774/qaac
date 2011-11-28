@@ -2,7 +2,7 @@
 #define _SINK_H
 
 #include "shared_ptr.h"
-#include <CoreAudioTypes.h>
+#include "CoreAudioToolbox.h"
 #include "mp4v2wrapper.h"
 #include "itunetags.h"
 #include "iencoder.h"

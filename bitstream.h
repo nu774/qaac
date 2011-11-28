@@ -2,7 +2,7 @@
 #define BITSTREAM_H
 
 #include <vector>
-#include <GNUCompatibility/stdint.h>
+#include <stdint.h>
 
 class BitStream {
     std::vector<uint8_t> m_buffer;

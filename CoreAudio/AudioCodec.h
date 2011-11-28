@@ -1,8 +1,6 @@
 #ifndef AudioCodec_H
 #define AudioCodec_H
 
-#include <Components.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

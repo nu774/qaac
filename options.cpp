@@ -1,4 +1,3 @@
-#include <CoreAudioTypes.h>
 #include "options.h"
 #include "getopt.h"
 #include "itunetags.h"

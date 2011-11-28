@@ -3,6 +3,8 @@
 #include "CoreAudioHelper.h"
 
 namespace audiofile {
+    const int ioErr = -36;
+
     OSStatus read(void *cookie, SInt64 pos, UInt32 count, void *data,
 	    UInt32 *nread)
     {

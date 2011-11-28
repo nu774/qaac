@@ -1,4 +1,4 @@
-#include <GNUCompatibility/stdint.h>
+#include <stdint.h>
 #include <ALACBitUtilities.h>
 #include "strcnv.h"
 #include "utf8_codecvt_facet.hpp"

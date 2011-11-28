@@ -3,7 +3,7 @@
 
 #include <string>
 #include <stdexcept>
-#include <GNUCompatibility/stdint.h> // To avoid conflict with QT
+#include <stdint.h>
 #undef FindAtom
 #include "impl.h"
 #include "util.h"
