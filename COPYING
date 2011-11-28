@@ -12,9 +12,6 @@ Files under taglib:
 These are part of TagLib (http://developer.kde.org/~wheeler/taglib.html),
 version 1.7.0
 
-include/fp.h, include/Math64.h:
-These are part of QuickTimeSDK, and slightly modified for gcc compatibility.
-
 utf8_codecvt_facet.[ch]pp:
 These are part of Boost (http://www.boost.org/),
 version 1.45.0
@@ -36,8 +33,8 @@ version 1.0.24
 
 include/wavpack.h:
 This is a header file of WavPack (http://www.wavpack.com/),
-version 4.50.1
-Slightly modified due to incompatibility with QuickTime's stdint.h.
+version 4.60.1
+Slightly modified due to incompatibility with MSVC's stdint.h.
 
 include/tak_deco_lib.h:
 This is a header file of TAK (http://www.thbeck.de/Tak/Tak.html),

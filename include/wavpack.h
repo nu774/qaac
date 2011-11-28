@@ -16,28 +16,10 @@
 
 #include <sys/types.h>
 
-#if 0
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include <stdlib.h>
-typedef unsigned __int64 uint64_t;
-typedef unsigned __int32 uint32_t;
-typedef unsigned __int16 uint16_t;
-typedef unsigned __int8 uint8_t;
-typedef __int64 int64_t;
-typedef __int32 int32_t;
-typedef __int16 int16_t;
-typedef __int8  int8_t;
-typedef float float32_t;
 #else
 #include <inttypes.h>
-#endif
-#endif
-
-typedef unsigned char   uchar;
-
-#if !defined(__GNUC__) || defined(WIN32)
-typedef unsigned short  ushort;
-typedef unsigned int    uint;
 #endif
 
 // RIFF / wav header formats (these occur at the beginning of both wav files
@@ -59,12 +41,12 @@ typedef struct {
 #define ChunkHeaderFormat "4L"
 
 typedef struct {
-    ushort FormatTag, NumChannels;
+    unsigned short FormatTag, NumChannels;
     uint32_t SampleRate, BytesPerSecond;
-    ushort BlockAlign, BitsPerSample;
-    ushort cbSize, ValidBitsPerSample;
+    unsigned short BlockAlign, BitsPerSample;
+    unsigned short cbSize, ValidBitsPerSample;
     int32_t ChannelMask;
-    ushort SubFormat;
+    unsigned short SubFormat;
     char GUID [14];
 } WaveHeader;
 
@@ -81,7 +63,7 @@ typedef struct {
     char ckID [4];
     uint32_t ckSize;
     short version;
-    uchar track_no, index_no;
+    unsigned char track_no, index_no;
     uint32_t total_samples, block_index, block_samples, flags, crc;
 } WavpackHeader;
 
@@ -166,7 +148,7 @@ typedef struct {
     int bits_per_sample, bytes_per_sample;
     int qmode, flags, xmode, num_channels, float_norm_exp;
     int32_t block_samples, extra_flags, sample_rate, channel_mask;
-    uchar md5_checksum [16], md5_read;
+    unsigned char md5_checksum [16], md5_read;
     int num_tag_strings;
     char **tag_strings;
 } WavpackConfig;
@@ -189,6 +171,7 @@ typedef struct {
 #define CONFIG_SKIP_WVX         0x4000000 // no wvx stream w/ floats & big ints
 #define CONFIG_MD5_CHECKSUM     0x8000000 // store MD5 signature
 #define CONFIG_MERGE_BLOCKS     0x10000000 // merge blocks of equal redundancy (for lossyWAV)
+#define CONFIG_PAIR_UNDEF_CHANS 0x20000000 // encode undefined channels in stereo pairs
 #define CONFIG_OPTIMIZE_MONO    0x80000000 // optimize for mono streams posing as stereo
 
 ////////////// Callbacks used for reading & writing WavPack streams //////////
@@ -263,9 +246,9 @@ int WavpackGetNumChannels (WavpackContext *wpc);
 int WavpackGetChannelMask (WavpackContext *wpc);
 int WavpackGetReducedChannels (WavpackContext *wpc);
 int WavpackGetFloatNormExp (WavpackContext *wpc);
-int WavpackGetMD5Sum (WavpackContext *wpc, uchar data [16]);
+int WavpackGetMD5Sum (WavpackContext *wpc, unsigned char data [16]);
 uint32_t WavpackGetWrapperBytes (WavpackContext *wpc);
-uchar *WavpackGetWrapperData (WavpackContext *wpc);
+unsigned char *WavpackGetWrapperData (WavpackContext *wpc);
 void WavpackFreeWrapper (WavpackContext *wpc);
 void WavpackSeekTrailingWrapper (WavpackContext *wpc);
 double WavpackGetProgress (WavpackContext *wpc);
@@ -276,14 +259,18 @@ double WavpackGetInstantBitrate (WavpackContext *wpc);
 int WavpackGetNumTagItems (WavpackContext *wpc);
 int WavpackGetTagItem (WavpackContext *wpc, const char *item, char *value, int size);
 int WavpackGetTagItemIndexed (WavpackContext *wpc, int index, char *item, int size);
+int WavpackGetNumBinaryTagItems (WavpackContext *wpc);
+int WavpackGetBinaryTagItem (WavpackContext *wpc, const char *item, char *value, int size);
+int WavpackGetBinaryTagItemIndexed (WavpackContext *wpc, int index, char *item, int size);
 int WavpackAppendTagItem (WavpackContext *wpc, const char *item, const char *value, int vsize);
+int WavpackAppendBinaryTagItem (WavpackContext *wpc, const char *item, const char *value, int vsize);
 int WavpackDeleteTagItem (WavpackContext *wpc, const char *item);
 int WavpackWriteTag (WavpackContext *wpc);
 
 WavpackContext *WavpackOpenFileOutput (WavpackBlockOutput blockout, void *wv_id, void *wvc_id);
 int WavpackSetConfiguration (WavpackContext *wpc, WavpackConfig *config, uint32_t total_samples);
 int WavpackAddWrapper (WavpackContext *wpc, void *data, uint32_t bcount);
-int WavpackStoreMD5Sum (WavpackContext *wpc, uchar data [16]);
+int WavpackStoreMD5Sum (WavpackContext *wpc, unsigned char data [16]);
 int WavpackPackInit (WavpackContext *wpc);
 int WavpackPackSamples (WavpackContext *wpc, int32_t *sample_buffer, uint32_t sample_count);
 int WavpackFlushSamples (WavpackContext *wpc);
