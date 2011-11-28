@@ -23,13 +23,13 @@ inline int _wtoi(const wchar_t *s) { return std::wcstol(s, 0, 10); }
 template <typename T, size_t size>
 inline size_t array_size(const T (&)[size]) { return size; }
 
-inline int strindex(const char *s, int ch)
+inline intptr_t strindex(const char *s, int ch)
 {
     const char *p = std::strchr(s, ch);
     return p ? p - s : -1;
 }
 
-inline int strindex(const wchar_t *s, int ch)
+inline intptr_t strindex(const wchar_t *s, int ch)
 {
     const wchar_t *p = std::wcschr(s, ch);
     return p ? p - s : -1;

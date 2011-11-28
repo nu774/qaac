@@ -1082,7 +1082,11 @@ void load_modules(Options &opts)
     opts.libflac = FLACModule(L"libFLAC.dll");
     opts.libwavpack = WavpackModule(L"wavpackdll.dll");
     opts.libtak = TakModule(L"tak_deco_lib.dll");
+#ifdef _WIN64
+    opts.libsoxrate = SoxModule(L"libsoxrate64.dll");
+#else
     opts.libsoxrate = SoxModule(L"libsoxrate.dll");
+#endif
 }
 
 struct FNConverter {

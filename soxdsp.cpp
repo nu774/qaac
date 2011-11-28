@@ -68,8 +68,8 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
 		m_end_of_input = true;
 	    src = &m_fbuffer[0];
 	}
-	uint32_t ilen = m_input_frames;
-	uint32_t olen = nsamples;
+	size_t ilen = m_input_frames;
+	size_t olen = nsamples;
 	for (size_t i = 0; i < nchannels; ++i) {
 	    ivec[i] = src + i;
 	    ovec[i] = dst + i;

@@ -121,9 +121,10 @@ size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 }
 
 FLAC__StreamDecoderReadStatus
-FLACSource::readCallback(FLAC__byte *buffer, unsigned *bytes)
+FLACSource::readCallback(FLAC__byte *buffer, size_t *bytes)
 {
-    *bytes = m_stream.read(buffer, *bytes);
+    uint32_t nb = *bytes;
+    *bytes = m_stream.read(buffer, nb);
     return *bytes == 0 ? FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM
 		       : FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
 }

@@ -164,8 +164,8 @@ size_t MatrixMixer::phaseShift(void *buffer, size_t nsamples)
 		    src[i * ichannels + *it] /= m_filter_gain;
 	    }
 	}
-	uint32_t ilen = m_input_frames;
-	uint32_t olen = nsamples;
+	size_t ilen = m_input_frames;
+	size_t olen = nsamples;
 	size_t j = 0;
 	for (size_t i = 0; i < m_shift_channels.size(); ++i) {
 	    ivec[i] = src + m_shift_channels[i];

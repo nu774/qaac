@@ -71,7 +71,8 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
 	uint8_t *bufp = static_cast<uint8_t*>(buffer);
 	uint32_t nread = 0;
 
-	uint32_t size = std::min(m_buffer.rest(), nsamples);
+	uint32_t size = std::min(m_buffer.rest(),
+				 static_cast<uint32_t>(nsamples));
 	if (size) {
 	    std::memcpy(bufp, &m_buffer.v[m_buffer.done * bpf], size * bpf);
 	    m_buffer.advance(size);
@@ -99,7 +100,8 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
 			m_format.m_nchannels, &ncount));
 	    m_buffer.nsamples = ncount;
 
-	    duration = std::min(ncount - m_buffer.done, nsamples - nread);
+	    duration = std::min(ncount - m_buffer.done,
+				static_cast<uint32_t>(nsamples) - nread);
 	    std::memcpy(bufp, &m_buffer.v[m_buffer.done * bpf], duration * bpf);
 	    m_buffer.advance(duration);
 	    nread += duration;

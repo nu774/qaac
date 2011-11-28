@@ -47,7 +47,7 @@ private:
     static FLAC__StreamDecoderReadStatus staticReadCallback(
 	    const FLAC__StreamDecoder *decoder,
 	    FLAC__byte *buffer,
-	    unsigned *bytes,
+	    size_t *bytes,
 	    void *client_data)
     {
 	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
@@ -109,7 +109,7 @@ private:
 	self->errorCallback(status);
     }
     FLAC__StreamDecoderReadStatus
-	readCallback(FLAC__byte *buffer, unsigned *bytes);
+	readCallback(FLAC__byte *buffer, size_t *bytes);
     FLAC__StreamDecoderSeekStatus seekCallback(uint64_t offset);
     FLAC__StreamDecoderTellStatus tellCallback(uint64_t *offset);
     FLAC__StreamDecoderLengthStatus lengthCallback(uint64_t *length);
