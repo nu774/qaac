@@ -14,6 +14,7 @@ public:
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
 	write(data, length);
+	m_bytes_written += length;
     }
     void finishWrite();
 private:
@@ -22,7 +23,6 @@ private:
 	std::fwrite(data, 1, length, m_file);
 	if (ferror(m_file))
 	    throw std::runtime_error(std::strerror(errno));
-	m_bytes_written += length;
     }
 };
 
