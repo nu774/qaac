@@ -27,6 +27,7 @@
 #include "logging.h"
 #include "textfile.h"
 #include "mixer.h"
+#include "intsrc.h"
 #ifdef REFALAC
 #include "alacenc.h"
 #include "wavsink.h"
@@ -726,6 +727,13 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     }
     if (opts.normalize)
 	srcx = do_normalize(srcx, opts);
+    if (opts.output_format == 'alac' &&
+	srcx->getSampleFormat().m_type == SampleFormat::kIsFloat) {
+	int32_t bits = src->getSampleFormat().m_bitsPerSample;
+	if (bits == 8) bits = 16;
+	else if (bits > 24) bits = 24;
+	srcx = x::shared_ptr<ISource>(new IntegerSource(srcx, bits));
+    }
     build_basic_description(srcx->getSampleFormat(), &iasbd);
     if (oLayout) *oLayout = origLayout;
     if (nLayout) *nLayout = layout;

@@ -143,6 +143,7 @@
     <ClCompile Include="..\..\flacsrc.cpp" />
     <ClCompile Include="..\..\getopt.c" />
     <ClCompile Include="..\..\iff.cpp" />
+    <ClCompile Include="..\..\intsrc.cpp" />
     <ClCompile Include="..\..\iointer.cpp" />
     <ClCompile Include="..\..\itunetags.cpp" />
     <ClCompile Include="..\..\libsndfilesrc.cpp" />

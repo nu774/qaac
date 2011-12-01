@@ -374,7 +374,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
     }
     if (!this->output_format) {
 #ifdef REFALAC
-	this->output_format = 'alac';
+	this->output_format = this->alac_decode ? 'lpcm' : 'alac';
 #else
 	this->output_format = 'aac ';
 #endif
