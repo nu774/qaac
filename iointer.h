@@ -143,5 +143,7 @@ public:
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *rawBuffer,
 			  std::vector<float> *floatBuffer, size_t nsamples);
 
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
+			  float *floatBuffer, size_t nsamples);
 #endif
 

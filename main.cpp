@@ -28,6 +28,7 @@
 #include "textfile.h"
 #include "mixer.h"
 #include "intsrc.h"
+#include "scaler.h"
 #ifdef REFALAC
 #include "alacenc.h"
 #include "wavsink.h"
@@ -557,16 +558,25 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 	CompositeSource *cp = new CompositeSource();
 	x::shared_ptr<ISource> cpPtr(cp);
 	NullSource *ns = new NullSource(src->getSampleFormat());
-	ns->setRange(0, 0.001 * opts.delay * rate);
+	int nsamples = 0.001 * opts.delay * rate + 0.5;
+	ns->setRange(0, nsamples);
 	cp->addSource(x::shared_ptr<ISource>(ns));
 	cp->addSource(src);
+	if (opts.verbose > 1)
+	    LOG("Delay of %dms: pad %d samples\n", opts.delay,
+		static_cast<int>(0.001 * opts.delay * rate));
 	return cpPtr;
     } else if (opts.delay < 0) {
 	IPartialSource *p = dynamic_cast<IPartialSource*>(src.get());
-	if (p)
-	    p->setRange(-0.001 * opts.delay * rate, -1);
+	if (p) {
+	    int nsamples = -0.001 * opts.delay * rate + 0.5;
+	    p->setRange(nsamples, -1);
+	    if (opts.verbose > 1)
+		LOG("Delay of %dms: trunc %d samples\n", opts.delay,
+		    nsamples);
+	}
 	else
-	    LOG("WARNING: can't set negative delay for this input");
+	    LOG("WARNING: can't set negative delay for this input\n");
     }
     return src;
 }
@@ -661,6 +671,10 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     if ((opts.remix_preset || opts.remix_file) && opts.libsoxrate.loaded()) {
 	std::vector<std::vector<complex_t> > matrix;
 	matrix_from_preset(opts, &matrix);
+	if (opts.verbose > 1) {
+	    LOG("remixing with matrix: %dch -> %dch\n",
+		matrix[0].size(), matrix.size());
+	}
 	srcx = x::shared_ptr<ISource>(new MatrixMixer(srcx, opts.libsoxrate,
 						      matrix));
     }
@@ -719,6 +733,8 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	}
     }
     if (opts.lowpass > 0 && opts.libsoxrate.loaded()) {
+	if (opts.verbose > 1)
+	    LOG("Applying LPF: %dHz\n", opts.lowpass);
 	x::shared_ptr<ISoxDSPEngine>
 	    engine(new SoxLowpassFilter(opts.libsoxrate,
 					srcx->getSampleFormat(),
@@ -727,11 +743,20 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     }
     if (opts.normalize)
 	srcx = do_normalize(srcx, opts);
+    if (opts.gain) {
+	double scale = dB_to_scale(opts.gain);
+	if (opts.verbose > 1)
+	    LOG("Gain adjust: %gdB, scale factor %g\n",
+		opts.gain, scale);
+	srcx = x::shared_ptr<ISource>(new Scaler(srcx, scale));
+    }
     if (opts.output_format == 'alac' &&
 	srcx->getSampleFormat().m_type == SampleFormat::kIsFloat) {
 	int32_t bits = src->getSampleFormat().m_bitsPerSample;
 	if (bits == 8) bits = 16;
 	else if (bits > 24) bits = 24;
+	if (opts.verbose > 1)
+	    LOG("Convert to %dbit signed integer format\n", bits);
 	srcx = x::shared_ptr<ISource>(new IntegerSource(srcx, bits));
     }
     build_basic_description(srcx->getSampleFormat(), &iasbd);

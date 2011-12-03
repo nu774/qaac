@@ -22,6 +22,7 @@ static struct option long_options[] = {
     { L"rate", required_argument, 0, 'r' },
     { L"lowpass", required_argument, 0, 'lpf ' },
     { L"normalize", no_argument, 0, 'N' },
+    { L"gain", required_argument, 0, 'gain' },
     { L"delay", required_argument, 0, 'dlay' },
     { L"matrix-preset", required_argument, 0, 'mixp' },
     { L"matrix-file", required_argument, 0, 'mixm' },
@@ -114,6 +115,9 @@ void usage()
 "--adts                 ADTS output (AAC only)\n"
 "-A, --alac             ALAC encoding mode\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
+"--gain <f>             Adjust gain by f dB.\n"
+"                       Use negative value to decrese gain, when you want to\n"
+"                       avoid clipping introduced by DSP.\n"
 "-N, --normalize        Normalize (works in two pass. generates HUGE tempfile\n"
 "                       for large input)\n"
 "--native-resampler     Use Apple built-in resampler\n"
@@ -321,6 +325,12 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->method = pos;
 	    if (std::swscanf(optarg, L"%u", &this->bitrate) != 1) {
 		std::fputs("AAC Bitrate/Quality must be an integer\n", stderr);
+		return false;
+	    }
+	}
+	else if (ch == 'gain') {
+	    if (std::swscanf(optarg, L"%lf", &this->gain) != 1) {
+		std::fputs("gain must be an floating point number\n", stderr);
 		return false;
 	    }
 	}

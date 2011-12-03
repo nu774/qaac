@@ -25,13 +25,20 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 			  std::vector<float> *floatBuffer, size_t nsamples)
 {
     const SampleFormat &sf = src->getSampleFormat();
-    if (byteBuffer->size() < nsamples * sf.bytesPerFrame())
-	byteBuffer->resize(nsamples * sf.bytesPerFrame());
     if (floatBuffer->size() < nsamples * sf.m_nchannels)
 	floatBuffer->resize(nsamples * sf.m_nchannels);
+    return readSamplesAsFloat(src, byteBuffer, &floatBuffer->at(0), nsamples);
+}
+
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
+			  float *floatBuffer, size_t nsamples)
+{
+    const SampleFormat &sf = src->getSampleFormat();
+    if (byteBuffer->size() < nsamples * sf.bytesPerFrame())
+	byteBuffer->resize(nsamples * sf.bytesPerFrame());
 
     uint8_t *bp = &(*byteBuffer)[0];
-    float *fp = &(*floatBuffer)[0];
+    float *fp = floatBuffer;
     nsamples = src->readSamples(bp, nsamples);
     size_t blen = nsamples * sf.bytesPerFrame();
 
@@ -83,3 +90,4 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
     }
     return nsamples;
 }
+

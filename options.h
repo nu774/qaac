@@ -36,7 +36,8 @@ struct Options {
 	normalize(false), print_available_formats(false), alac_fast(false),
 	alac_decode(false),
 	textcp(0),
-	delay(0)
+	delay(0),
+	gain(0.0)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -86,6 +87,7 @@ struct Options {
 	 normalize, print_available_formats, alac_fast, alac_decode;
     uint32_t textcp;
     int delay;
+    double gain;
     std::map<uint32_t, std::wstring> tagopts;
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;
