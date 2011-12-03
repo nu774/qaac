@@ -16,6 +16,26 @@
 #endif
 #endif
 
+#ifdef _MSC_VER
+#ifdef _M_IX86
+inline int lrint(double x)
+{
+    int n;
+    _asm {
+	fld x
+	fistp n
+    }
+    return n;
+}
+#else
+#include <emmintrin.h>
+inline int lrint(double x)
+{
+    return _mm_cvtsd_si32(_mm_load_sd(&x));
+}
+#endif
+#endif
+
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 inline int _wtoi(const wchar_t *s) { return std::wcstol(s, 0, 10); }
 #endif

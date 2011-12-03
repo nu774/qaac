@@ -1,23 +1,5 @@
 #include "intsrc.h"
 
-#ifdef _M_IX86
-inline int lrint(double x)
-{
-    int n;
-    _asm {
-	fld x
-	fistp n
-    }
-    return n;
-}
-#else
-#include <emmintrin.h>
-inline int lrint(double x)
-{
-    return _mm_cvtsd_si32(_mm_load_sd(&x));
-}
-#endif
-
 inline double clip(double x, double max, double min)
 {
     if (x > max) x = max;
@@ -39,7 +21,7 @@ size_t IntegerSource::readSamples(void *buffer, size_t nsamples)
 	    for (size_t i = 0; i < count; ++i) {
 		double v = fp[i] * 0x8000;
 		// dither with TPDF
-		double rv = v + m_dist(m_mt) + m_dist(m_mt);
+		double rv = v + random() + random();
 		*dst++ = lrint(clip(rv, 32767.0, -32768.0));
 	    }
 	}

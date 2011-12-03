@@ -558,18 +558,18 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 	CompositeSource *cp = new CompositeSource();
 	x::shared_ptr<ISource> cpPtr(cp);
 	NullSource *ns = new NullSource(src->getSampleFormat());
-	int nsamples = 0.001 * opts.delay * rate + 0.5;
+	int nsamples = lrint(0.001 * opts.delay * rate);
 	ns->setRange(0, nsamples);
 	cp->addSource(x::shared_ptr<ISource>(ns));
 	cp->addSource(src);
 	if (opts.verbose > 1)
 	    LOG("Delay of %dms: pad %d samples\n", opts.delay,
-		static_cast<int>(0.001 * opts.delay * rate));
+		nsamples);
 	return cpPtr;
     } else if (opts.delay < 0) {
 	IPartialSource *p = dynamic_cast<IPartialSource*>(src.get());
 	if (p) {
-	    int nsamples = -0.001 * opts.delay * rate + 0.5;
+	    int nsamples = lrint(-0.001 * opts.delay * rate);
 	    p->setRange(nsamples, -1);
 	    if (opts.verbose > 1)
 		LOG("Delay of %dms: trunc %d samples\n", opts.delay,

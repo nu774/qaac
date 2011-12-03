@@ -22,6 +22,8 @@ public:
     }
     const SampleFormat &getSampleFormat() const { return m_format; }
     size_t readSamples(void *buffer, size_t nsamples);
+private:
+    double random() { return m_dist(m_mt); }
 };
 
 #endif
