@@ -682,7 +682,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	std::vector<std::vector<complex_t> > matrix;
 	matrix_from_preset(opts, &matrix);
 	if (opts.verbose > 1) {
-	    LOG("remixing with matrix: %dch -> %dch\n",
+	    LOG("Matrix mixer: %dch -> %dch\n",
 		matrix[0].size(), matrix.size());
 	}
 	srcx.reset(new MatrixMixer(srcx, opts.libsoxrate, matrix, threading));
@@ -757,7 +757,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     if (opts.gain) {
 	double scale = dB_to_scale(opts.gain);
 	if (opts.verbose > 1)
-	    LOG("Gain adjust: %gdB, scale factor %g\n",
+	    LOG("Gain adjustment: %gdB, scale factor %g\n",
 		opts.gain, scale);
 	srcx.reset(new Scaler(srcx, scale));
     }
@@ -775,7 +775,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	reader->start();
 	srcx.reset(reader);
 	if (opts.verbose > 1)
-	    LOG("Use threading\n");
+	    LOG("Enable threading\n");
     }
     build_basic_description(srcx->getSampleFormat(), &iasbd);
     if (oLayout) *oLayout = origLayout;
