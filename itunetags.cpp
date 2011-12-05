@@ -46,6 +46,13 @@ public:
 	} else if (key == Tag::kGenreID3) {
 	    if (std::sscanf(vp, "%d", &n) == 1)
 		m_file.SetMetadataGenre(fourcc(key).svalue, n);
+	} else if (key == Tag::kGenre) {
+	    char *endp;
+	    long v = std::strtol(vp, &endp, 10);
+	    if (endp != vp && *endp == 0)
+		m_file.SetMetadataGenre("gnre", v + 1);
+	    else
+		m_file.SetMetadataString(fourcc(key).svalue, vp);
 	} else if (key == Tag::kLyrics) {
 	    std::string s = normalize_crlf(vp, "\r\n");
 	    m_file.SetMetadataString(fourcc(key).svalue, s.c_str());
