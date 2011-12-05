@@ -6,9 +6,7 @@
 #include <process.h>
 
 class PipedReader: public DelegatingSource {
-    x::shared_ptr<void> m_readPipe, m_writePipe;
-    HANDLE m_thread;
-    volatile LONG m_quitFlag;
+    x::shared_ptr<void> m_readPipe, m_writePipe, m_thread;
 public:
     PipedReader(x::shared_ptr<ISource> &src);
     ~PipedReader();
@@ -18,7 +16,7 @@ public:
 	intptr_t h = _beginthreadex(0, 0, staticInputThreadProc, this, 0, 0);
 	if (h == -1)
 	    throw std::runtime_error(std::strerror(errno));
-	m_thread = reinterpret_cast<HANDLE>(h);
+	m_thread.reset(reinterpret_cast<HANDLE>(h), CloseHandle);
     }
 private:
     void inputThreadProc();

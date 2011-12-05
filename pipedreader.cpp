@@ -1,7 +1,7 @@
 #include "pipedreader.h"
 
 PipedReader::PipedReader(x::shared_ptr<ISource> &src):
-    DelegatingSource(src), m_thread(0), m_quitFlag(0)
+    DelegatingSource(src), m_thread(0)
 {
     HANDLE hr, hw;
     if (!CreatePipe(&hr, &hw, 0, 0x8000))
@@ -12,10 +12,13 @@ PipedReader::PipedReader(x::shared_ptr<ISource> &src):
 
 PipedReader::~PipedReader()
 {
-    if (m_thread) {
-	InterlockedExchange(&m_quitFlag, 1);
-	WaitForSingleObject(m_thread, INFINITE);
-	CloseHandle(m_thread);
+    if (m_thread.get()) {
+	/*
+	 * Let InputThread quit if it's still running.
+	 * (WriteFile() will immediately fail, even if it is blocking on it)
+	 */
+	m_readPipe.reset();
+	WaitForSingleObject(m_thread.get(), INFINITE);
     }
 }
 
@@ -42,14 +45,19 @@ void PipedReader::inputThreadProc()
     ISource *src = source();
     uint32_t bpf = src->getSampleFormat().bytesPerFrame();
     std::vector<uint8_t> buffer(4096 * bpf);
+    uint8_t *bp = &buffer[0];
+    HANDLE ph = m_writePipe.get();
     for (;;) {
-	if (InterlockedCompareExchange(&m_quitFlag, 2, 1) == 1)
-	    break;
-	size_t nsamples = src->readSamples(&buffer[0], 4096);
-	if (nsamples == 0)
-	    break;
-	DWORD written;
-	WriteFile(m_writePipe.get(), &buffer[0], nsamples * bpf, &written, 0);
+	try {
+	    size_t nsamples;
+	    DWORD nb;
+	    if ((nsamples = src->readSamples(bp, 4096)) == 0)
+		break;
+	    else if (!WriteFile(ph, bp, nsamples * bpf, &nb, 0))
+		break;
+	} catch (...) {
+	    break; // XXX
+	}
     }
     m_writePipe.reset(); // close
 }
