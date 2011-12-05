@@ -90,8 +90,8 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
     return (dst - static_cast<float*>(buffer)) / nchannels;
 }
 
-SoxResampler::SoxResampler(const SoxModule &module,
-			   const SampleFormat &format, uint32_t rate)
+SoxResampler::SoxResampler(const SoxModule &module, const SampleFormat &format,
+			   uint32_t rate, bool mt)
     : m_module(module)
 {
     m_format = SampleFormat("F32LE", format.m_nchannels, rate);
@@ -100,12 +100,13 @@ SoxResampler::SoxResampler(const SoxModule &module,
     if (!converter)
 	throw std::runtime_error("ERROR: SoxResampler");
     m_processor = x::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
+    m_module.rate_config(converter, SOX_RATE_USE_THREADS, static_cast<int>(mt));
     if (m_module.rate_start(converter) < 0)
 	throw std::runtime_error("ERROR: SoxResampler");
 }
 
 SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
-			   const SampleFormat &format, uint32_t Fp)
+			   const SampleFormat &format, uint32_t Fp, bool mt)
     : m_module(module)
 {
     m_format = SampleFormat("F32LE", format.m_nchannels, format.m_rate);
@@ -120,7 +121,7 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
     x::shared_ptr<double> __delete_lator__(coefs, m_module.free);
     lsx_fir_t *converter =
 	m_module.fir_create(format.m_nchannels, coefs, num_taps,
-			    num_taps >> 1, true);
+			    num_taps >> 1, mt);
     if (!converter)
 	throw std::runtime_error("ERROR: SoxLowpassFilter");
     m_processor = x::shared_ptr<lsx_fir_t>(converter, m_module.fir_close);

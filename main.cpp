@@ -29,6 +29,7 @@
 #include "mixer.h"
 #include "intsrc.h"
 #include "scaler.h"
+#include "pipedreader.h"
 #ifdef REFALAC
 #include "alacenc.h"
 #include "wavsink.h"
@@ -516,7 +517,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	if (opts.chanmap.size() != nchannels)
 	    throw std::runtime_error(
 		    "nchannels of input and --chanmap spec unmatch");
-	srcx = x::shared_ptr<ISource>(new ChannelMapper(src, opts.chanmap));
+	srcx.reset(new ChannelMapper(src, opts.chanmap));
     }
 
     // retrieve original channel layout, taking --chanmask into account
@@ -663,6 +664,9 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 		 AudioStreamBasicDescription *inputDesc,
 		 AudioStreamBasicDescription *outputDesc)
 {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    bool threading = si.dwNumberOfProcessors > 1;
 #ifndef REFALAC
     AudioCodecX codec(opts.output_format);
 #endif
@@ -675,8 +679,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	    LOG("remixing with matrix: %dch -> %dch\n",
 		matrix[0].size(), matrix.size());
 	}
-	srcx = x::shared_ptr<ISource>(new MatrixMixer(srcx, opts.libsoxrate,
-						      matrix));
+	srcx.reset(new MatrixMixer(srcx, opts.libsoxrate, matrix, threading));
     }
     AudioChannelLayoutX origLayout, layout;
 #ifndef REFALAC
@@ -728,8 +731,9 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	    x::shared_ptr<ISoxDSPEngine>
 		engine(new SoxResampler(opts.libsoxrate,
 					srcx->getSampleFormat(),
-					oasbd.mSampleRate));
-	    srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
+					oasbd.mSampleRate,
+					threading));
+	    srcx.reset(new SoxDSPProcessor(engine, srcx));
 	}
     }
     if (opts.lowpass > 0 && opts.libsoxrate.loaded()) {
@@ -738,8 +742,9 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	x::shared_ptr<ISoxDSPEngine>
 	    engine(new SoxLowpassFilter(opts.libsoxrate,
 					srcx->getSampleFormat(),
-					opts.lowpass));
-	srcx = x::shared_ptr<ISource>(new SoxDSPProcessor(engine, srcx));
+					opts.lowpass,
+					threading));
+	srcx.reset(new SoxDSPProcessor(engine, srcx));
     }
     if (opts.normalize)
 	srcx = do_normalize(srcx, opts);
@@ -748,7 +753,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	if (opts.verbose > 1)
 	    LOG("Gain adjust: %gdB, scale factor %g\n",
 		opts.gain, scale);
-	srcx = x::shared_ptr<ISource>(new Scaler(srcx, scale));
+	srcx.reset(new Scaler(srcx, scale));
     }
     if (opts.output_format == 'alac' &&
 	srcx->getSampleFormat().m_type == SampleFormat::kIsFloat) {
@@ -757,7 +762,14 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	else if (bits > 24) bits = 24;
 	if (opts.verbose > 1)
 	    LOG("Convert to %dbit signed integer format\n", bits);
-	srcx = x::shared_ptr<ISource>(new IntegerSource(srcx, bits));
+	srcx.reset(new IntegerSource(srcx, bits));
+    }
+    if (threading) {
+	PipedReader *reader = new PipedReader(srcx);
+	reader->start();
+	srcx.reset(reader);
+	if (opts.verbose > 1)
+	    LOG("Use threading\n");
     }
     build_basic_description(srcx->getSampleFormat(), &iasbd);
     if (oLayout) *oLayout = origLayout;
@@ -1029,7 +1041,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	    write_tags(asink->getFile(), opts, src.get(), &encoder,
 		encoder_config);
 	    if (!opts.no_optimize)
-		do_optimize(asink->getFile(), ofilename, opts.verbose);
+		do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
 	}
     }
 }
@@ -1101,7 +1113,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 	write_tags(asink->getFile(), opts, src.get(), &encoder,
 	    L"Apple Lossless Encoder");
 	if (!opts.no_optimize)
-	    do_optimize(asink->getFile(), ofilename, opts.verbose);
+	    do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
     }
 }
 #endif

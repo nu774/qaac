@@ -75,7 +75,8 @@ static double calcGain(double *coefs, size_t numcoefs)
 
 MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
 			 const SoxModule &module,
-			 const std::vector<std::vector<complex_t> > &spec)
+			 const std::vector<std::vector<complex_t> > &spec,
+			 bool mt)
     : DelegatingSource(source), m_module(module), m_matrix(spec),
       m_input_frames(0), m_end_of_input(false)
 {
@@ -96,7 +97,7 @@ MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
 	m_filter_gain = calcGain(&coefs[0], numtaps);
 	lsx_fir_t *filter =
 	    m_module.fir_create(bitcount(m_shiftMask), &coefs[0], numtaps,
-				numtaps >> 1, true);
+				numtaps >> 1, mt);
 	if (!filter)
 	    throw std::runtime_error("failed to init hilbert transformer");
 	m_filter = x::shared_ptr<lsx_fir_t>(filter, m_module.fir_close);

@@ -59,7 +59,7 @@ class SoxResampler: public ISoxDSPEngine {
     SampleFormat m_format;
 public:
     SoxResampler(const SoxModule &module, const SampleFormat &format,
-		 uint32_t Fp);
+		 uint32_t Fp, bool mt);
     const SampleFormat &getSampleFormat() { return m_format; }
     int process(const float * const *ibuf, float **obuf, size_t *ilen,
 		size_t *olen, size_t istride, size_t ostride)
@@ -75,7 +75,7 @@ class SoxLowpassFilter: public ISoxDSPEngine {
     SampleFormat m_format;
 public:
     SoxLowpassFilter(const SoxModule &module, const SampleFormat &format,
-		     uint32_t rate);
+		     uint32_t rate, bool mt);
     const SampleFormat &getSampleFormat() { return m_format; }
     int process(const float * const *ibuf, float **obuf, size_t *ilen,
 		size_t *olen, size_t istride, size_t ostride)

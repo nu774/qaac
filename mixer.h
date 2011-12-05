@@ -23,7 +23,7 @@ class MatrixMixer: public DelegatingSource {
     double m_filter_gain;
 public:
     MatrixMixer(const x::shared_ptr<ISource> &source, const SoxModule &module,
-		const std::vector<std::vector<complex_t> > &spec);
+		const std::vector<std::vector<complex_t> > &spec, bool mt);
     uint64_t length() const { return -1; }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannelMap() const { return 0; }
