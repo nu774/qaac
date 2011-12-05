@@ -43,9 +43,23 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
     size_t blen = nsamples * sf.bytesPerFrame();
 
     if (sf.m_type == SampleFormat::kIsFloat) {
-	if (sf.m_endian == SampleFormat::kIsBigEndian)
-	    bswap32buffer(bp, blen);
-	std::memcpy(fp, bp, blen);
+	switch (sf.m_bitsPerSample) {
+	case 32:
+	    {
+		if (sf.m_endian == SampleFormat::kIsBigEndian)
+		    bswap32buffer(bp, blen);
+		std::memcpy(fp, bp, blen);
+	    }
+	    break;
+	case 64:
+	    {
+		if (sf.m_endian == SampleFormat::kIsBigEndian)
+		    bswap64buffer(bp, blen);
+		double *src = reinterpret_cast<double *>(bp);
+		std::copy(src, src + (blen >> 3), fp);
+	    }
+	    break;
+	}
     } else {
 	switch (sf.m_bitsPerSample) {
 	case 8:
@@ -82,7 +96,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 		if (sf.m_endian == SampleFormat::kIsBigEndian)
 		    bswap32buffer(bp, blen);
 		int *src = reinterpret_cast<int *>(bp);
-		for (size_t i = 0; i < blen / 4; ++i)
+		for (size_t i = 0; i < blen >> 2; ++i)
 		    *fp++ = static_cast<float>(src[i]) / 0x80000000U;
 	    }
 	    break;

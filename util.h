@@ -269,4 +269,5 @@ void bswap24buffer(uint8_t *buffer, size_t size);
 
 void bswap32buffer(uint8_t *buffer, size_t size);
 
+void bswap64buffer(uint8_t *buffer, size_t size);
 #endif
