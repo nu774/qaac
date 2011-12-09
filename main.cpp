@@ -268,7 +268,8 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 	if (opts.libwavpack.loaded()) {
 	    try {
 		return x::shared_ptr<ISource>(
-			new WavpackSource(opts.libwavpack, stream));
+			new WavpackSource(opts.libwavpack, stream,
+					  opts.ifilename));
 	    } catch (const std::runtime_error&) {
 		stream.rewind();
 	    }

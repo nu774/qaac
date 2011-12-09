@@ -94,18 +94,27 @@ struct WavpackStreamReaderImpl: public WavpackStreamReader
     }
 };
 
-WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream)
+WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
+			     const std::wstring &path)
     : m_module(module), m_stream(stream)
 {
     char error[0x100];
     /* wavpack doesn't copy WavpackStreamReader into their context, therefore
      * must be kept in the memory */
     static WavpackStreamReaderImpl reader;
-    WavpackContext *wpc = m_module.OpenFileInputEx(&reader,
-	    &m_stream, 0, error, OPEN_TAGS | OPEN_NORMALIZE, 0);
+
+    try {
+	std::wstring cpath = path + L"c";
+	StdioChannel channel(cpath.c_str());
+	m_cstream.reset(new InputStream(channel));
+    } catch (...) {}
+
+    int flags = OPEN_TAGS | (m_cstream.get() ? OPEN_WVC : 0);
+    WavpackContext *wpc =
+	m_module.OpenFileInputEx(&reader, &m_stream, m_cstream.get(),
+				 error, flags, 0);
     if (!wpc)
-	throw std::runtime_error(format("WavpackOpenFileInputEx: %s",
-		    error));
+	throw std::runtime_error(format("WavpackOpenFileInputEx: %s", error));
     m_wpc = x::shared_ptr<WavpackContext>(wpc, m_module.CloseFile);
 
     int mode = m_module.GetMode(wpc);

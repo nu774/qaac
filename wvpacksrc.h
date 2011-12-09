@@ -43,13 +43,15 @@ class WavpackSource:
 {
     WavpackModule m_module;
     InputStream m_stream;
+    x::shared_ptr<InputStream> m_cstream;
     SampleFormat m_format;
     x::shared_ptr<void> m_wpc;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
 public:
-    WavpackSource(const WavpackModule &module, InputStream &stream);
+    WavpackSource(const WavpackModule &module, InputStream &stream,
+		  const std::wstring &path);
     uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannelMap() const { return &m_chanmap; }
