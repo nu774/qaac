@@ -101,19 +101,14 @@ static inline int32_t lead(int32_t m)
 	_BitScanReverse(&n, m);
 	return n ^ 31;
 }
-#elif defined(__GNUC__) && defined(__i386__)
+#elif defined(__GNUC__)
 static inline int32_t lead(int32_t m)
 {
-	unsigned long n;
-    __asm("bsr %1, %0\n"
-        : "=r" (n)
-        : "r" (m));
-	return n ^ 31;
+	return __builtin_clz(m);
 }
 #else
 /*
- * Dark_Shikari:
- * http://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code 
+ * http://aggregate.org/MAGIC/#Population Count (Ones Count)
  */
 static inline uint32_t popcnt( uint32_t x )
 {
@@ -124,6 +119,9 @@ static inline uint32_t popcnt( uint32_t x )
     x += (x >> 16);
     return x & 0x0000003f;
 }
+/*
+ * http://aggregate.org/MAGIC/#Leading Zero Count
+ */
 static inline uint32_t lead( uint32_t x )
 {
     x |= (x >> 1);
