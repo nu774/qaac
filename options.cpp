@@ -19,6 +19,7 @@ static struct option long_options[] = {
     { L"alac", no_argument, 0, 'A' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
 #endif
+    { L"no-optimize", no_argument, 0, 'noop' },
     { L"rate", required_argument, 0, 'r' },
     { L"lowpass", required_argument, 0, 'lpf ' },
     { L"normalize", no_argument, 0, 'N' },
@@ -26,14 +27,14 @@ static struct option long_options[] = {
     { L"delay", required_argument, 0, 'dlay' },
     { L"matrix-preset", required_argument, 0, 'mixp' },
     { L"matrix-file", required_argument, 0, 'mixm' },
+    { L"chanmap", required_argument, 0, 'cmap' },
+    { L"chanmask", required_argument, 0, 'mask' },
     { L"help", no_argument, 0, 'h' },
     { L"silent", no_argument, 0, 's' },
     { L"verbose", no_argument, 0, 'verb' },
     { L"stat", no_argument, 0, 'S' },
+    { L"threading", no_argument, 0, 'thrd' },
     { L"nice", no_argument, 0, 'n' },
-    { L"chanmap", required_argument, 0, 'cmap' },
-    { L"chanmask", required_argument, 0, 'mask' },
-    { L"no-optimize", no_argument, 0, 'noop' },
     { L"text-codepage", required_argument, 0, 'txcp' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  'Rchn' },
@@ -114,17 +115,12 @@ void usage()
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
 "-A, --alac             ALAC encoding mode\n"
-"--no-optimize          Don't optimize MP4 container file after encoding\n"
-"--gain <f>             Adjust gain by f dB.\n"
-"                       Use negative value to decrese gain, when you want to\n"
-"                       avoid clipping introduced by DSP.\n"
-"-N, --normalize        Normalize (works in two pass. generates HUGE tempfile\n"
-"                       for large input)\n"
 "--native-resampler     Use Apple built-in resampler\n"
 #else
 "--fast                 Fast stereo encoding mode.\n"
 "-D, --decode           Decode mode.\n"
 #endif
+"--no-optimize          Don't optimize MP4 container file after encoding\n"
 "-r, --rate <keep|auto|n>\n"
 "                       keep: output sampling rate will be same as input\n"
 "                             if possible.\n"
@@ -134,18 +130,17 @@ void usage()
 "--lowpass <number>     Specify lowpass filter cut-off frequency in Hz\n"
 "                       Use this whe you want lower cut-off than\n"
 "                       Apple default.\n"
+"--gain <f>             Adjust gain by f dB.\n"
+"                       Use negative value to decrese gain, when you want to\n"
+"                       avoid clipping introduced by DSP.\n"
+"-N, --normalize        Normalize (works in two pass. generates HUGE tempfile\n"
+"                       for large input)\n"
 "--delay <millisecs>    When positive value is given, prepend silence at the\n"
 "                       begining to achieve delay of specified amount.\n"
 "                       When negative value is given, specified length is\n"
 "                       dropped from the beginning.\n"
 "--matrix-preset <name> Specify preset remixing matrix name.\n"
 "--matrix-file <file>   Specify file containing remixing matrix.\n"
-"-d <dirname>           Output directory, default is cwd\n"
-"-s, --silent           Suppress console messages\n"
-"--verbose              More verbose console messages\n"
-"-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
-"-R, --raw              Raw PCM input\n"
-"-n, --nice             Give lower process priority\n"
 "--chanmap <n1,n2...>   Re-arrange channels to the specified order.\n"
 "                       For N-ch input, you take numbers 1,2..N, and\n"
 "                       arrange them with comma-seperated, to the order\n"
@@ -155,6 +150,13 @@ void usage()
 "                       If --chanmask 0 is specified, qaac treats it as if\n"
 "                       no channel mask is present in the source, and pick\n"
 "                       default layout.\n"
+"-d <dirname>           Output directory, default is cwd\n"
+"-s, --silent           Suppress console messages\n"
+"--verbose              More verbose console messages\n"
+"-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
+"-R, --raw              Raw PCM input\n"
+"--threading            Enable multi-threading\n"
+"-n, --nice             Give lower process priority\n"
 "--text-codepage <n>    Specify text code page of cuesheet/chapter/lyrics.\n"
 "                       1252 for Latin-1, 65001 for UTF-8.\n"
 "                       Use this when automatic encoding detection fails.\n"
@@ -254,6 +256,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->save_stat = true;
 	else if (ch == 'n')
 	    this->nice = true;
+	else if (ch == 'thrd')
+	    this->threading = true;
 	else if (ch == 'i')
 	    this->ignore_length = true;
 	else if (ch == 'R')

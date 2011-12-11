@@ -34,7 +34,7 @@ struct Options {
        	nice(false), native_chanmapper(false), ignore_length(false),
 	no_optimize(false), native_resampler(false), check_only(false),
 	normalize(false), print_available_formats(false), alac_fast(false),
-	alac_decode(false),
+	alac_decode(false), threading(false),
 	textcp(0),
 	delay(0),
 	gain(0.0)
@@ -84,7 +84,8 @@ struct Options {
     int verbose;
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
 	 ignore_length, no_optimize, native_resampler, check_only,
-	 normalize, print_available_formats, alac_fast, alac_decode;
+	 normalize, print_available_formats, alac_fast, alac_decode,
+	 threading;
     uint32_t textcp;
     int delay;
     double gain;

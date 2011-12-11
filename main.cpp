@@ -673,7 +673,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
-    bool threading = si.dwNumberOfProcessors > 1;
+    bool threading = opts.threading && si.dwNumberOfProcessors > 1;
 #ifndef REFALAC
     AudioCodecX codec(opts.output_format);
 #endif
@@ -771,7 +771,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	    LOG("Convert to %dbit signed integer format\n", bits);
 	srcx.reset(new IntegerSource(srcx, bits));
     }
-    if (threading) {
+    if (threading && !opts.alac_decode) {
 	PipedReader *reader = new PipedReader(srcx);
 	reader->start();
 	srcx.reset(reader);
