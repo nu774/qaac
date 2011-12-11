@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
+ * Bug fixes and Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
@@ -24,6 +25,7 @@
 	Contains:   Adaptive Golomb decode routines.
 
 	Copyright:	(c) 2001-2011 Apple, Inc.
+	Bug fixes and Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
 */
 
 #include "aglib.h"
@@ -42,6 +44,10 @@
 	#endif
 #endif
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 #define CODE_TO_LONG_MAXBITS	32
 #define N_MAX_MEAN_CLAMP		0xffff
 #define N_MEAN_CLAMP_VAL		0xffff
@@ -49,6 +55,8 @@
 
 #if __GNUC__
 #define ALWAYS_INLINE		__attribute__((always_inline))
+#elif defined(_MSC_VER)
+#define ALWAYS_INLINE __forceinline
 #else
 #define ALWAYS_INLINE
 #endif
@@ -86,30 +94,44 @@ void set_ag_params(AGParamRecPtr params, uint32_t m, uint32_t p, uint32_t k, uin
 #pragma mark -
 #endif
 
-
-// note: implementing this with some kind of "count leading zeros" assembly is a big performance win
-#if defined(_MSC_VER)
-#include <intrin.h>
-#pragma intrinsic (_BitScanReverse)
+#ifdef _MSC_VER
 static inline int32_t lead(int32_t m)
 {
-    unsigned long n;
-    return _BitScanReverse(&n, m) ? n ^ 31 : 32;
+	unsigned long n;
+	_BitScanReverse(&n, m);
+	return n ^ 31;
 }
-
-#else
-static inline int32_t lead( int32_t m )
+#elif defined(__GNUC__) && defined(__i386__)
+static inline int32_t lead(int32_t m)
 {
-	long j;
-	unsigned long c = (1ul << 31);
-
-	for(j=0; j < 32; j++)
-	{
-		if((c & m) != 0)
-			break;
-		c >>= 1;
-	}
-	return (j);
+	unsigned long n;
+    __asm("bsr %1, %0\n"
+        : "=r" (n)
+        : "r" (m));
+	return n ^ 31;
+}
+#else
+/*
+ * Dark_Shikari:
+ * http://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code 
+ */
+static inline uint32_t popcnt( uint32_t x )
+{
+    x -= ((x >> 1) & 0x55555555);
+    x = (((x >> 2) & 0x33333333) + (x & 0x33333333));
+    x = (((x >> 4) + x) & 0x0f0f0f0f);
+    x += (x >> 8);
+    x += (x >> 16);
+    return x & 0x0000003f;
+}
+static inline uint32_t lead( uint32_t x )
+{
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    return 32 - popcnt(x);
 }
 #endif
 
@@ -136,6 +158,36 @@ static inline uint32_t ALWAYS_INLINE read32bit( uint8_t * buffer )
 
 }
 
+static inline uint32_t ALWAYS_INLINE read32bit_ex( uint8_t * buffer, uint8_t * end )
+{
+	uint32_t		value ;
+#ifdef _M_IX86
+	if (buffer + 4 <= end) {
+		return _byteswap_ulong(*(uint32_t*)buffer);
+	}
+#endif
+	// embedded CPUs typically can't read unaligned 32-bit words so just read the bytes
+	value = 0;
+
+	if (buffer < end) {
+		value = (uint32_t)*buffer << 24;
+		++buffer;
+		if (buffer < end) {
+			value |= (uint32_t) *buffer << 16;
+			++buffer;
+			if (buffer < end) {
+				value |= (uint32_t) *buffer << 8;
+				++buffer;
+				if (buffer < end) {
+					value |= (uint32_t) *buffer;
+				}
+			}
+		}
+	}
+	return value;
+
+}
+
 #if PRAGMA_MARK
 #pragma mark -
 #endif
@@ -144,7 +196,7 @@ static inline uint32_t ALWAYS_INLINE read32bit( uint8_t * buffer )
 
 
 static inline uint32_t ALWAYS_INLINE
-getstreambits( uint8_t *in, int32_t bitoffset, int32_t numbits )
+getstreambits( uint8_t *in, uint8_t * inEnd, int32_t bitoffset, int32_t numbits )
 {
 	uint32_t	load1, load2;
 	uint32_t	byteoffset = bitoffset / 8;
@@ -152,7 +204,7 @@ getstreambits( uint8_t *in, int32_t bitoffset, int32_t numbits )
 	
 	//Assert( numbits <= 32 );
 
-	load1 = read32bit( in + byteoffset );
+	load1 = read32bit_ex( in + byteoffset, inEnd );
 
 	if ( (numbits + (bitoffset & 0x7)) > 32)
 	{
@@ -179,14 +231,14 @@ getstreambits( uint8_t *in, int32_t bitoffset, int32_t numbits )
 }
 
 
-static inline int32_t dyn_get(unsigned char *in, uint32_t *bitPos, uint32_t m, uint32_t k)
+static inline int32_t dyn_get(uint8_t *in, uint8_t * inEnd, uint32_t *bitPos, uint32_t m, uint32_t k)
 {
     uint32_t	tempbits = *bitPos;
     uint32_t		result;
     uint32_t		pre = 0, v;
     uint32_t		streamlong;
 
-	streamlong = read32bit( in + (tempbits >> 3) );
+	streamlong = read32bit_ex( in + (tempbits >> 3), inEnd );
     streamlong <<= (tempbits & 7);
 
     /* find the number of bits in the prefix */ 
@@ -228,14 +280,14 @@ static inline int32_t dyn_get(unsigned char *in, uint32_t *bitPos, uint32_t m, u
 }
 
 
-static inline int32_t dyn_get_32bit( uint8_t * in, uint32_t * bitPos, int32_t m, int32_t k, int32_t maxbits )
+static inline int32_t dyn_get_32bit( uint8_t * in, uint8_t * inEnd, uint32_t * bitPos, int32_t m, int32_t k, int32_t maxbits )
 {
 	uint32_t	tempbits = *bitPos;
 	uint32_t		v;
 	uint32_t		streamlong;
 	uint32_t		result;
 	
-	streamlong = read32bit( in + (tempbits >> 3) );
+	streamlong = read32bit_ex( in + (tempbits >> 3), inEnd );
 	streamlong <<= (tempbits & 7);
 
 	/* find the number of bits in the prefix */ 
@@ -246,7 +298,7 @@ static inline int32_t dyn_get_32bit( uint8_t * in, uint32_t * bitPos, int32_t m,
 	
 	if(result >= MAX_PREFIX_32)
 	{
-		result = getstreambits(in, tempbits+MAX_PREFIX_32, maxbits);
+		result = getstreambits(in, inEnd, tempbits+MAX_PREFIX_32, maxbits);
 		tempbits += MAX_PREFIX_32 + maxbits;
 	}
 	else
@@ -282,7 +334,7 @@ static inline int32_t dyn_get_32bit( uint8_t * in, uint32_t * bitPos, int32_t m,
 
 int32_t dyn_decomp( AGParamRecPtr params, BitBuffer * bitstream, int32_t * pc, int32_t numSamples, int32_t maxSize, uint32_t * outNumBits )
 {
-    uint8_t 		*in;
+    uint8_t 		*in, *inEnd;
     int32_t			*outPtr = pc;
     uint32_t 	bitPos, startPos, maxPos;
     uint32_t		j, m, k, n, c, mz;
@@ -296,7 +348,7 @@ int32_t dyn_decomp( AGParamRecPtr params, BitBuffer * bitstream, int32_t * pc, i
 	RequireAction( (bitstream != nil) && (pc != nil) && (outNumBits != nil), return kALAC_ParamError; );
 	*outNumBits = 0;
 
-	in = bitstream->cur;
+	in = bitstream->cur; inEnd = bitstream->end;
 	startPos = bitstream->bitIndex;
 	maxPos = bitstream->byteSize * 8;
 	bitPos = startPos;
@@ -318,7 +370,7 @@ int32_t dyn_decomp( AGParamRecPtr params, BitBuffer * bitstream, int32_t * pc, i
         k = arithmin(k, kb_local);
         m = (1<<k)-1;
         
-		n = dyn_get_32bit( in, &bitPos, m, k, maxSize );
+		n = dyn_get_32bit( in, inEnd, &bitPos, m, k, maxSize );
 
         // least significant bit is sign bit
         {
@@ -347,7 +399,7 @@ int32_t dyn_decomp( AGParamRecPtr params, BitBuffer * bitstream, int32_t * pc, i
             k = lead(mb) - BITOFF+((mb+MOFF)>>MDENSHIFT);
             mz = ((1<<k)-1) & wb_local;
 
-            n = dyn_get(in, &bitPos, mz, k);
+            n = dyn_get(in, inEnd, &bitPos, mz, k);
 
             RequireAction(c+n <= numSamples, status = kALAC_ParamError; goto Exit; );
 

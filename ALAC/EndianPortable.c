@@ -1,3 +1,4 @@
+#if 0
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
  *
@@ -173,3 +174,4 @@ void Swap32(uint32_t * inUInt32)
 	*inUInt32 = BSWAP32(*inUInt32);
 }
 
+#endif

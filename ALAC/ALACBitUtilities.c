@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
+ * Bug fixes and Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
@@ -35,6 +36,12 @@ void BitBufferInit( BitBuffer * bits, uint8_t * buffer, uint32_t byteSize )
 	bits->end		= bits->cur + byteSize;
 	bits->bitIndex	= 0;
 	bits->byteSize	= byteSize;
+}
+
+// BitBufferRemaining
+//
+uint32_t BitBufferRemaining( BitBuffer * bits ) {
+	return (uint32_t)(bits->end - bits->cur) * 8 - bits->bitIndex;
 }
 
 // BitBufferRead

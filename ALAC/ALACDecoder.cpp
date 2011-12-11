@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
+ * Bug fixes and Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
@@ -87,7 +88,6 @@ ALACDecoder::~ALACDecoder()
 */
 int32_t ALACDecoder::Init( void * inMagicCookie, uint32_t inMagicCookieSize )
 {
-	int32_t		status = ALAC_noErr;
     ALACSpecificConfig theConfig;
     uint8_t * theActualCookie = (uint8_t *)inMagicCookie;
     uint32_t theCookieBytesRemaining = inMagicCookieSize;
@@ -98,13 +98,14 @@ int32_t ALACDecoder::Init( void * inMagicCookie, uint32_t inMagicCookieSize )
     // ALACSpecificConfig. 
     // See ALACMagicCookieDescription.txt for additional documentation concerning the 'magic cookie'
     
-    // skip format ('frma') atom if present
+	if (theCookieBytesRemaining < 12) return kALAC_ParamError;
     if (theActualCookie[4] == 'f' && theActualCookie[5] == 'r' && theActualCookie[6] == 'm' && theActualCookie[7] == 'a')
     {
         theActualCookie += 12;
         theCookieBytesRemaining -= 12;
     }
     
+	if (theCookieBytesRemaining < 12) return kALAC_ParamError;
     // skip 'alac' atom header if present
     if (theActualCookie[4] == 'a' && theActualCookie[5] == 'l' && theActualCookie[6] == 'a' && theActualCookie[7] == 'c')
     {
@@ -113,50 +114,43 @@ int32_t ALACDecoder::Init( void * inMagicCookie, uint32_t inMagicCookieSize )
     }
 
     // read the ALACSpecificConfig
-    if (theCookieBytesRemaining >= sizeof(ALACSpecificConfig))
-    {
-        theConfig.frameLength = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->frameLength);
-        theConfig.compatibleVersion = ((ALACSpecificConfig *)theActualCookie)->compatibleVersion;
-        theConfig.bitDepth = ((ALACSpecificConfig *)theActualCookie)->bitDepth;
-        theConfig.pb = ((ALACSpecificConfig *)theActualCookie)->pb;
-        theConfig.mb = ((ALACSpecificConfig *)theActualCookie)->mb;
-        theConfig.kb = ((ALACSpecificConfig *)theActualCookie)->kb;
-        theConfig.numChannels = ((ALACSpecificConfig *)theActualCookie)->numChannels;
-        theConfig.maxRun = Swap16BtoN(((ALACSpecificConfig *)theActualCookie)->maxRun);
-        theConfig.maxFrameBytes = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->maxFrameBytes);
-        theConfig.avgBitRate = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->avgBitRate);
-        theConfig.sampleRate = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->sampleRate);
+    if (theCookieBytesRemaining < sizeof(ALACSpecificConfig)) return kALAC_ParamError;
 
-        mConfig = theConfig;
+	theConfig.frameLength = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->frameLength);
+    theConfig.compatibleVersion = ((ALACSpecificConfig *)theActualCookie)->compatibleVersion;
+    theConfig.bitDepth = ((ALACSpecificConfig *)theActualCookie)->bitDepth;
+    theConfig.pb = ((ALACSpecificConfig *)theActualCookie)->pb;
+    theConfig.mb = ((ALACSpecificConfig *)theActualCookie)->mb;
+    theConfig.kb = ((ALACSpecificConfig *)theActualCookie)->kb;
+    theConfig.numChannels = ((ALACSpecificConfig *)theActualCookie)->numChannels;
+    theConfig.maxRun = Swap16BtoN(((ALACSpecificConfig *)theActualCookie)->maxRun);
+    theConfig.maxFrameBytes = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->maxFrameBytes);
+    theConfig.avgBitRate = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->avgBitRate);
+    theConfig.sampleRate = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->sampleRate);
+
+    mConfig = theConfig;
         
-        RequireAction( mConfig.compatibleVersion <= kALACVersion, return kALAC_ParamError; );
+    RequireAction( mConfig.compatibleVersion <= kALACVersion, return kALAC_ParamError; );
 
-        // allocate mix buffers
-        mMixBufferU = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
-        mMixBufferV = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
+    // allocate mix buffers
+    mMixBufferU = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
+    mMixBufferV = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
 
-        // allocate dynamic predictor buffer
-        mPredictor = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
+    // allocate dynamic predictor buffer
+    mPredictor = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
 
-        // "shift off" buffer shares memory with predictor buffer
-        mShiftBuffer = (uint16_t *) mPredictor;
+    // "shift off" buffer shares memory with predictor buffer
+    mShiftBuffer = (uint16_t *) mPredictor;
         
-        RequireAction( (mMixBufferU != nil) && (mMixBufferV != nil) && (mPredictor != nil),
-                        status = kALAC_MemFullError; goto Exit; );
-     }
-    else
-    {
-        status = kALAC_ParamError;
-    }
+    RequireAction( (mMixBufferU != nil) && (mMixBufferV != nil) && (mPredictor != nil),
+                    return kALAC_MemFullError; );
 
-    // skip to Channel Layout Info
-    // theActualCookie += sizeof(ALACSpecificConfig);
-    
-    // Currently, the Channel Layout Info portion of the magic cookie (as defined in the 
-    // ALACMagicCookieDescription.txt document) is unused by the decoder. 
-    
-Exit:
-	return status;
+	
+	// channel bookkeeping
+
+	if (mConfig.numChannels < 1 || mConfig.numChannels > kALACMaxChannels) return kALAC_MemFullError;
+
+	return ALAC_noErr;
 }
 
 /*
@@ -249,10 +243,11 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 				// check for partial frame to override requested numSamples
 				if ( partialFrame != 0 )
 				{
-					uint32_t n = BitBufferRead(bits, 16) << 16;
-					n |= BitBufferRead(bits, 16);
-					if (n > numSamples) return kALAC_ParamError;
-					numSamples = n;
+					uint32_t numPartial;
+					numPartial = BitBufferRead( bits, 16 ) << 16;
+					numPartial |= BitBufferRead( bits, 16 );
+					RequireAction( numPartial <= numSamples, status = kALAC_ParamError; goto Exit; );
+					numSamples = numPartial;
 				}
 
 				if ( escapeFlag == 0 )
@@ -302,6 +297,9 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 
 					// uncompressed frame, copy data into the mix buffer to use common output code
 					shift = 32 - chanBits;
+
+					RequireAction(BitBufferRemaining(bits) >= chanBits * numSamples, status = kALAC_ParamError; goto Exit; );
+
 					if ( chanBits <= 16 )
 					{
 						for ( i = 0; i < numSamples; i++ )
@@ -399,13 +397,13 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 
 				chanBits = mConfig.bitDepth - (bytesShifted * 8) + 1;
 				
-				// check for partial frame length to override requested numSamples
 				if ( partialFrame != 0 )
 				{
-					uint32_t n = BitBufferRead(bits, 16) << 16;
-					n |= BitBufferRead(bits, 16);
-					if (n > numSamples) return kALAC_ParamError;
-					numSamples = n;
+					uint32_t numPartial;
+					numPartial = BitBufferRead( bits, 16 ) << 16;
+					numPartial |= BitBufferRead( bits, 16 );
+					RequireAction( numPartial <= numSamples, status = kALAC_ParamError; goto Exit; );
+					numSamples = numPartial;
 				}
 
 				if ( escapeFlag == 0 )
@@ -478,8 +476,12 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 					//Assert( bytesShifted == 0 );
 
 					// uncompressed frame, copy data into the mix buffers to use common output code
+
 					chanBits = mConfig.bitDepth;
 					shift = 32 - chanBits;
+
+					RequireAction(BitBufferRemaining(bits) >= 2 * chanBits * numSamples, status = kALAC_ParamError; goto Exit; );
+
 					if ( chanBits <= 16 )
 					{
 						for ( i = 0; i < numSamples; i++ )
@@ -610,6 +612,7 @@ NoMoreChannels:
 				Zero16( fill16, numSamples, numChannels );
 				break;
 			}
+			case 20:
 			case 24:
 			{
 				uint8_t *	fill24 = (uint8_t *)sampleBuffer + (channelIndex * 3);

@@ -42,6 +42,10 @@
 		#include <libkern/OSByteOrder.h>
 	#endif
 #endif
+#if defined(_MSC_VER)
+#include <intrin.h>
+#pragma intrinsic (_BitScanReverse)
+#endif
 
 #define CODE_TO_LONG_MAXBITS	32
 #define N_MAX_MEAN_CLAMP		0xffff
@@ -50,6 +54,8 @@
 
 #if __GNUC__
 #define ALWAYS_INLINE		__attribute__((always_inline))
+#elif defined(_MSC_VER)
+#define ALWAYS_INLINE __forceinline
 #else
 #define ALWAYS_INLINE
 #endif
@@ -62,27 +68,44 @@
 */
 
 // note: implementing this with some kind of "count leading zeros" assembly is a big performance win
-#if defined(_MSC_VER)
-#include <intrin.h>
-#pragma intrinsic (_BitScanReverse)
+#ifdef _MSC_VER
 static inline int32_t lead(int32_t m)
 {
-    unsigned long n;
-    return _BitScanReverse(&n, m) ? n ^ 31 : 32;
+	unsigned long n;
+	_BitScanReverse(&n, m);
+	return n ^ 31;
+}
+#elif defined(__GNUC__) && defined(__i386__)
+static inline int32_t lead(int32_t m)
+{
+	unsigned long n;
+    __asm("bsr %1, %0\n"
+        : "=r" (n)
+        : "r" (m));
+	return n ^ 31;
 }
 #else
-static inline int32_t lead( int32_t m )
+/*
+ * Dark_Shikari:
+ * http://stackoverflow.com/questions/355967/how-to-use-msvc-intrinsics-to-get-the-equivalent-of-this-gcc-code 
+ */
+static inline uint32_t popcnt( uint32_t x )
 {
-	long j;
-	unsigned long c = (1ul << 31);
-
-	for(j=0; j < 32; j++)
-	{
-		if((c & m) != 0)
-			break;
-		c >>= 1;
-	}
-	return (j);
+    x -= ((x >> 1) & 0x55555555);
+    x = (((x >> 2) & 0x33333333) + (x & 0x33333333));
+    x = (((x >> 4) + x) & 0x0f0f0f0f);
+    x += (x >> 8);
+    x += (x >> 16);
+    return x & 0x0000003f;
+}
+static inline uint32_t lead( uint32_t x )
+{
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    return 32 - popcnt(x);
 }
 #endif
 

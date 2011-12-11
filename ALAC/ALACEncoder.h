@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
+ * Bug fixes and Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
@@ -51,7 +52,7 @@ class ALACEncoder
         void				GetMagicCookie( void * config, uint32_t * ioSize ); 
 
         virtual int32_t	InitializeEncoder(AudioFormatDescription theOutputFormat);
-
+		uint32_t			GetMaxOutputBytes() {return mMaxOutputBytes;}
     protected:
 		virtual void		GetSourceFormat( const AudioFormatDescription * source, AudioFormatDescription * output );
 		
