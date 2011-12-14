@@ -97,33 +97,12 @@ void AFSource::init()
     x::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
-	if (acl->mNumberChannelDescriptions == m_format.m_nchannels) {
-	    for (size_t i = 0; i < m_format.m_nchannels; ++i)
-		m_chanmap.push_back(
-		    acl->mChannelDescriptions[i].mChannelLabel);
-	} else {
-	    unsigned bitmap = acl->mChannelBitmap;
-	    if (!bitmap) {
-		switch (acl->mChannelLayoutTag) {
-		case kAudioChannelLayoutTag_Quadraphonic:
-		case kAudioChannelLayoutTag_ITU_2_2:
-		    bitmap = 0x33; break;
-		case kAudioChannelLayoutTag_MPEG_4_0_A:
-		    bitmap = 0x107; break;
-		case kAudioChannelLayoutTag_MPEG_5_0_A:
-		    bitmap = 0x37; break;
-		case kAudioChannelLayoutTag_MPEG_5_1_A:
-		    bitmap = 0x3f; break;
-		case kAudioChannelLayoutTag_MPEG_6_1_A:
-		    bitmap = 0x13f; break;
-		case kAudioChannelLayoutTag_MPEG_7_1_A:
-		    bitmap = 0xff; break;
-		}
-	    }
-	    if (bitmap) {
-		for (size_t i = 0; i < 32; ++i, bitmap >>= 1)
-		    if (bitmap & 1) m_chanmap.push_back(i + 1);
-	    }
+	uint32_t bitmap = GetBitmapFromAudioChannelLayout(acl.get());
+	if (bitmap && bitcount(bitmap) >= m_format.m_nchannels) {
+	    for (size_t i = 0;
+		 m_chanmap.size() < m_format.m_nchannels && i < 32;
+		 ++i, bitmap >>= 1)
+		if (bitmap & 1) m_chanmap.push_back(i + 1);
 	}
     } catch (std::exception &) {}
 }

@@ -1,5 +1,39 @@
 #include "chanmap.h"
 
+uint32_t GetBitmapFromAudioChannelLayout(const AudioChannelLayout *acl)
+{
+    if (acl->mChannelBitmap)
+	return acl->mChannelBitmap;
+    else if (acl->mNumberChannelDescriptions > 0) {
+	const AudioChannelDescription *desc = acl->mChannelDescriptions;
+	uint32_t bitmap = 0;
+	for (size_t i = 0; i < acl->mNumberChannelDescriptions - 1; ++i)
+	    if (desc[i].mChannelLabel >= desc[i+1].mChannelLabel)
+		return 0;
+	for (size_t i = 0; i < acl->mNumberChannelDescriptions; ++i) {
+	    if (desc[i].mChannelLabel >= 33)
+		return 0;
+	    bitmap |= (1 << (desc[i].mChannelLabel - 1));
+	}
+	return bitmap;
+    } else {
+	switch (acl->mChannelLayoutTag) {
+	case kAudioChannelLayoutTag_Mono: return 0x4;
+	case kAudioChannelLayoutTag_Stereo: return 0x3;
+	case kAudioChannelLayoutTag_MPEG_3_0_A: return 0x7;
+	case kAudioChannelLayoutTag_Quadraphonic:
+	case kAudioChannelLayoutTag_ITU_2_2:
+	    return 0x33;
+	case kAudioChannelLayoutTag_MPEG_4_0_A: return 0x107;
+	case kAudioChannelLayoutTag_MPEG_5_0_A: return 0x37;
+	case kAudioChannelLayoutTag_MPEG_5_1_A: return 0x3f;
+	case kAudioChannelLayoutTag_MPEG_6_1_A: return 0x13f;
+	case kAudioChannelLayoutTag_MPEG_7_1_A: return 0xff;
+	}
+    }
+    return 0;
+}
+
 /*
  * Fill in AudioChannelDescription with channel labels.
  * It seems QT looks at these labels when remix is done,

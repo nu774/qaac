@@ -256,7 +256,6 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 		throw;
 	    stream.rewind();
 	}
-
 	if (opts.libflac.loaded()) {
 	    try {
 		return x::shared_ptr<ISource>(
@@ -513,8 +512,8 @@ void build_basic_description(const SampleFormat &format,
 
 static
 x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
-    const Options &opts, AudioChannelLayoutX *orig_layout,
-    AudioChannelLayoutX *mapped_layout)
+    const Options &opts, AudioChannelLayoutX *wav_layout,
+    AudioChannelLayoutX *aac_layout)
 {
     uint32_t nchannels = src->getSampleFormat().m_nchannels;
     x::shared_ptr<ISource> srcx(src);
@@ -534,26 +533,34 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     int chanmask = opts.chanmask;
     if (chanmask < 0)
 	chanmask = chanmap ? GetChannelMask(*chanmap) : 0;
-    if (!chanmask) chanmask = GetDefaultChannelMask(nchannels);
-    AudioChannelLayoutX layout = AudioChannelLayoutX::FromBitmap(chanmask);
-    *orig_layout = layout;
-
-    // construct mapped channel layout to AAC/ALAC order
-    int nc = layout.numChannels();
-    AudioChannelLayoutX mapped(nc);
-    mapped->mChannelLayoutTag = GetAACLayoutTag(layout);
-    std::vector<uint32_t> aacmap;
-    GetAACChannelMap(layout, nc, &aacmap);
-    if (layout->mNumberChannelDescriptions == nc) {
-	AudioChannelDescription *origDesc = layout->mChannelDescriptions;
-	AudioChannelDescription *newDesc = mapped->mChannelDescriptions;
-	for (size_t i = 0; i < nc; ++i) {
-	    size_t n = aacmap.size() ? aacmap[i] - 1: i;
-	    newDesc[i].mChannelLabel = origDesc[n].mChannelLabel;
-	}
+    if (!chanmask && !opts.alac_decode) {
+	if (opts.verbose >1)
+	    LOG("Using default channel layout.\n");
+	chanmask = GetDefaultChannelMask(nchannels);
     }
-    srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
-    *mapped_layout = mapped;
+    AudioChannelLayoutX layout;
+    if (chanmask) {
+	layout = AudioChannelLayoutX::FromBitmap(chanmask);
+	*wav_layout = layout;
+    }
+    if (!opts.alac_decode) {
+	// construct mapped channel layout to AAC/ALAC order
+	int nc = layout.numChannels();
+	AudioChannelLayoutX mapped(nc);
+	mapped->mChannelLayoutTag = GetAACLayoutTag(layout);
+	std::vector<uint32_t> aacmap;
+	GetAACChannelMap(layout, nc, &aacmap);
+	if (layout->mNumberChannelDescriptions == nc) {
+	    AudioChannelDescription *origDesc = layout->mChannelDescriptions;
+	    AudioChannelDescription *newDesc = mapped->mChannelDescriptions;
+	    for (size_t i = 0; i < nc; ++i) {
+		size_t n = aacmap.size() ? aacmap[i] - 1: i;
+		newDesc[i].mChannelLabel = origDesc[n].mChannelLabel;
+	    }
+	}
+	srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
+	*aac_layout = mapped;
+    }
     return srcx;
 }
 
@@ -666,8 +673,8 @@ void config_aac_codec(AudioConverterX &converter, const Options &opts);
 static x::shared_ptr<ISource> 
 preprocess_input(const x::shared_ptr<ISource> &src,
 		 const Options &opts,
-		 AudioChannelLayoutX *oLayout,
-		 AudioChannelLayoutX *nLayout,
+		 AudioChannelLayoutX *wLayout,
+		 AudioChannelLayoutX *aLayout,
 		 AudioStreamBasicDescription *inputDesc,
 		 AudioStreamBasicDescription *outputDesc)
 {
@@ -688,15 +695,14 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	}
 	srcx.reset(new MatrixMixer(srcx, opts.libsoxrate, matrix, threading));
     }
-    AudioChannelLayoutX origLayout, layout;
+    AudioChannelLayoutX wavLayout, aacLayout;
+    srcx = mapped_source(srcx, opts, &wavLayout, &aacLayout);
 #ifndef REFALAC
-    srcx = mapped_source(srcx, opts, &origLayout, &layout);
-    if (!codec.isAvailableOutputChannelLayout(layout->mChannelLayoutTag))
+    if (!codec.isAvailableOutputChannelLayout(aacLayout->mChannelLayoutTag))
 	throw std::runtime_error("Channel layout not supported");
 #else
     if (!opts.alac_decode) {
-	srcx = mapped_source(srcx, opts, &origLayout, &layout);
-	uint32_t otag = layout->mChannelLayoutTag;
+	uint32_t otag = aacLayout->mChannelLayoutTag;
 	if (otag != kAudioChannelLayoutTag_Mono &&
 	    otag != kAudioChannelLayoutTag_Stereo &&
 	    otag != kAudioChannelLayoutTag_AAC_4_0 &&
@@ -712,7 +718,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mFormatID = opts.output_format;
-    oasbd.mChannelsPerFrame = layout.numChannels();
+    oasbd.mChannelsPerFrame = aacLayout.numChannels();
 
     double rate = opts.rate > 0 ? opts.rate
 			        : opts.rate == -1 ? iasbd.mSampleRate
@@ -724,8 +730,8 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	oasbd.mSampleRate = iasbd.mSampleRate;
     else {
 	AudioConverterX converter(iasbd, oasbd);
-	converter.setInputChannelLayout(layout);
-	converter.setOutputChannelLayout(layout);
+	converter.setInputChannelLayout(aacLayout);
+	converter.setOutputChannelLayout(aacLayout);
 	if (opts.isAAC()) config_aac_codec(converter, opts);
 	converter.getOutputStreamDescription(&oasbd);
     }
@@ -779,8 +785,8 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	    LOG("Enable threading\n");
     }
     build_basic_description(srcx->getSampleFormat(), &iasbd);
-    if (oLayout) *oLayout = origLayout;
-    if (nLayout) *nLayout = layout;
+    if (wLayout) *wLayout = wavLayout;
+    if (aLayout) *aLayout = aacLayout;
     if (inputDesc) *inputDesc = iasbd;
     if (outputDesc) *outputDesc = oasbd;
     return srcx;
@@ -1021,15 +1027,15 @@ static
 void encode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
-    AudioChannelLayoutX origLayout, layout;
+    AudioChannelLayoutX wavLayout, aacLayout;
     AudioStreamBasicDescription iasbd, oasbd;
 
     x::shared_ptr<ISource> srcx =
-	preprocess_input(src, opts, &origLayout, &layout, &iasbd, &oasbd);
+	preprocess_input(src, opts, &wavLayout, &aacLayout, &iasbd, &oasbd);
 
     AudioConverterX converter(iasbd, oasbd);
-    converter.setInputChannelLayout(layout);
-    converter.setOutputChannelLayout(layout);
+    converter.setInputChannelLayout(aacLayout);
+    converter.setOutputChannelLayout(aacLayout);
     if (opts.isAAC()) config_aac_codec(converter, opts);
 
     std::wstring encoder_config = get_encoder_config(converter);
@@ -1057,7 +1063,8 @@ static void noop(void *) {}
 
 static
 void decode_file(const x::shared_ptr<ISource> &src,
-	const std::wstring &ofilename, const Options &opts)
+		 const std::wstring &ofilename, const Options &opts,
+		 const AudioChannelLayout *layout)
 {
     x::shared_ptr<FILE> fileptr;
     if (opts.ofilename && !std::wcscmp(opts.ofilename, L"-")) {
@@ -1068,11 +1075,7 @@ void decode_file(const x::shared_ptr<ISource> &src,
 	fileptr = x::shared_ptr<FILE>(fp, std::fclose);
     }
     unsigned bitmap = 0;
-    const std::vector<uint32_t> *layout = src->getChannelMap();
-    if (layout) {
-	for (size_t i = 0; i < layout->size(); ++i)
-	    bitmap |= (1 << (layout->at(i)-1));
-    }
+    if (layout) bitmap = GetBitmapFromAudioChannelLayout(layout);
     const SampleFormat &sf = src->getSampleFormat();
     WaveSink sink(fileptr.get(), src->length(), sf, bitmap);
     Progress progress(opts.verbose, src->length(), sf.m_rate);
@@ -1096,12 +1099,12 @@ static
 void encode_file(const x::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
-    AudioChannelLayoutX origLayout, layout;
+    AudioChannelLayoutX wavLayout, aacLayout;
     AudioStreamBasicDescription iasbd;
     x::shared_ptr<ISource> srcx =
-	preprocess_input(src, opts, &origLayout, &layout, &iasbd, 0);
+	preprocess_input(src, opts, &wavLayout, &aacLayout, &iasbd, 0);
     if (opts.alac_decode) {
-	decode_file(srcx, ofilename, opts);
+	decode_file(srcx, ofilename, opts, wavLayout);
 	return;
     }
     ALACEncoderX encoder(iasbd);

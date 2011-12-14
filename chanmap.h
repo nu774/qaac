@@ -4,6 +4,7 @@
 #include "CoreAudioTypes.h"
 #include "iointer.h"
 
+uint32_t GetBitmapFromAudioChannelLayout(const AudioChannelLayout *acl);
 void MapChannelLabel(AudioChannelDescription *desc, uint32_t bitmap);
 void AdjustChannelLabel(AudioChannelDescription *desc, uint32_t bitmap,
 	uint32_t outLayoutTag);
