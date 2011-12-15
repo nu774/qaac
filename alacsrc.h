@@ -36,6 +36,4 @@ public:
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<std::pair<std::wstring, int64_t> >
 	*getChapters() const { return 0; }
-private:
-    void fetchTags();
 };

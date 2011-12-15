@@ -191,6 +191,28 @@ enum {
    kBytePacketTranslationFlag_IsEstimate = 1
 };
 
+#define kAFInfoDictionary_Artist "artist"
+#define kAFInfoDictionary_Album "album"
+#define kAFInfoDictionary_Tempo "tempo"
+#define kAFInfoDictionary_KeySignature "key signature"
+#define kAFInfoDictionary_TimeSignature "time signature"
+#define kAFInfoDictionary_TrackNumber "track number"
+#define kAFInfoDictionary_Year "year"
+#define kAFInfoDictionary_Composer "composer"
+#define kAFInfoDictionary_Lyricist "lyricist"
+#define kAFInfoDictionary_Genre "genre"
+#define kAFInfoDictionary_Title "title"
+#define kAFInfoDictionary_RecordedDate "recorded date"
+#define kAFInfoDictionary_Comments "comments"
+#define kAFInfoDictionary_Copyright "copyright"
+#define kAFInfoDictionary_SourceEncoder "source encoder"
+#define kAFInfoDictionary_EncodingApplication "encoding application"
+#define kAFInfoDictionary_NominalBitRate "nominal bit rate"
+#define kAFInfoDictionary_ChannelLayout "channel layout"
+#define kAFInfoDictionary_ApproximateDurationInSeconds "approximate duration in seconds"
+#define kAFInfoDictionary_SourceBitDepth "source bit depth"
+#define kAFInfoDictionary_ISRC "ISRC"
+#define kAFInfoDictionary_SubTitle "subtitle"
 
 typedef SInt64 (*AudioFile_GetSizeProc)(
    void  *inClientData
@@ -294,14 +316,12 @@ OSStatus AudioFileInitializeWithCallbacks (
    AudioFileID                       *outAudioFile
 );
 
-/*
 OSStatus AudioFileOpenURL (
    CFURLRef        inFileRef,
    SInt8           inPermissions,
    AudioFileTypeID inFileTypeHint,
    AudioFileID     *outAudioFile
 );
-*/
 
 OSStatus AudioFileOpenWithCallbacks (
    void                  *inClientData,

@@ -57,6 +57,28 @@ public:
 		kAudioFilePropertyChannelLayout, &size, acl.get()));
 	layout->swap(acl);
     }
+    void getMagicCookieData(std::vector<uint8_t> *cookie)
+    {
+	UInt32 size;
+	UInt32 writable;
+	CHECKCA(AudioFileGetPropertyInfo(m_file.get(),
+					 kAudioFilePropertyMagicCookieData,
+					 &size, &writable));
+	std::vector<uint8_t> vec(size);
+	CHECKCA(AudioFileGetProperty(m_file.get(),
+				     kAudioFilePropertyMagicCookieData,
+				     &size, &vec[0]));
+	cookie->swap(vec);
+    }
+    CFDictionaryRef getInfoDictionary()
+    {
+	CFDictionaryRef dict;
+	UInt32 size = sizeof dict;
+	CHECKCA(AudioFileGetProperty(m_file.get(),
+		    kAudioFilePropertyInfoDictionary,
+		    &size, &dict));
+	return dict;
+    }
 
 private:
     static OSStatus fakeDispose(AudioFileID file)

@@ -330,3 +330,65 @@ namespace Vorbis {
 	vc->swap(result);
     }
 }
+
+namespace mp4a
+{
+    std::wstring parseValue(uint32_t fcc, const MP4ItmfData &data,
+	    std::codecvt<wchar_t, char, std::mbstate_t> &codec)
+    {
+	uint8_t *value = data.value;
+
+	if (fcc == Tag::kGenreID3) {
+	    int v = (value[0] << 8) | value[1];
+	    return widen(format("%d", v));
+	} else if (fcc == Tag::kDisk || fcc == Tag::kTrack) {
+	    int index = (value[2] << 8) | value[3];
+	    int total = (value[4] << 8) | value[5];
+	    return widen(format("%d/%d", index, total));
+	} else if (data.typeCode == MP4_ITMF_BT_INTEGER) {
+	    int v;
+	    if (data.valueSize == 1)
+		v = value[0];
+	    else if (data.valueSize == 2)
+		v = (value[0] << 8) | value[1];
+	    else if (data.valueSize == 4)
+		v = (value[0]<<24)|(value[1]<<16)|(value[2]<<8)|value[3];
+	    else
+		return L"";
+	    return widen(format("%d", v));
+	} else if (data.typeCode == MP4_ITMF_BT_UTF8) {
+	    char *vp = reinterpret_cast<char*>(value);
+	    std::string s(vp, vp + data.valueSize);
+	    return m2w(s, codec);
+	}
+	return L"";
+    }
+
+    void fetchTags(MP4FileX &file, std::map<uint32_t, std::wstring> *result)
+    {
+	utf8_codecvt_facet u8codec;
+	std::map<uint32_t, std::wstring> tags;
+	try {
+	    MP4ItmfItemList *itemlist =
+		mp4v2::impl::itmf::genericGetItems(file);
+	    if (!itemlist)
+		return;
+	    x::shared_ptr<MP4ItmfItemList> __delete_later__(
+		    itemlist, mp4v2::impl::itmf::genericItemListFree);
+	    for (size_t i = 0; i < itemlist->size; ++i) {
+		MP4ItmfItem &item = itemlist->elements[i];
+		uint32_t fcc = fourcc(item.code);
+		MP4ItmfData &data = item.dataList.elements[0];
+		if (!data.value)
+		    continue;
+		if (fcc != '----') {
+		    std::wstring v = parseValue(fcc, data, u8codec);
+		    if (!v.empty()) tags[fcc] = v;
+		}
+	    }
+	    result->swap(tags);
+	} catch (mp4v2::impl::Exception *e) {
+	    handle_mp4error(e);
+	}
+    }
+}

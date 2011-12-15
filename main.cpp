@@ -272,13 +272,18 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 	if (opts.libtak.loaded() && opts.libtak.compatible())
 	    TRY_MAKE_SHARED(TakSource(opts.libtak, stream));
 #ifndef REFALAC
-	TRY_MAKE_SHARED(AFSource(stream));
+	try {
+	    return AudioFileOpenFactory(stream, opts.ifilename);
+	} catch (...) {
+	    stream.rewind();
+	}
 #endif
 	if (opts.libsndfile.loaded())
 	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, opts.ifilename));
 
+#ifdef REFALAC
 	return open_alac_source(opts);
-
+#endif
     } catch (const std::runtime_error&) {}
     throw std::runtime_error("Not available input file format");
 #undef TRY_MAKE_SHARED
@@ -544,7 +549,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 		newDesc[i].mChannelLabel = origDesc[n].mChannelLabel;
 	    }
 	}
-	srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
+	if (aacmap.size())
+	    srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
 	*aac_layout = mapped;
     }
     return srcx;
