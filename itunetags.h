@@ -9,6 +9,7 @@
 
 namespace Tag {
     const uint32_t kTitle = fourcc("\xa9""nam");
+    const uint32_t kSubTitle = fourcc("\xa9""st3");
     const uint32_t kArtist = fourcc("\xa9""ART");
     const uint32_t kAlbumArtist = 'aART';
     const uint32_t kAlbum = fourcc("\xa9""alb");

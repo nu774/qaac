@@ -44,6 +44,7 @@ static struct option long_options[] = {
     { L"fname-format", required_argument, 0, 'nfmt' },
     { L"log", required_argument, 0, 'log ' },
     { L"title", required_argument, 0, Tag::kTitle },
+    { L"subtitle", required_argument, 0, Tag::kSubTitle },
     { L"artist", required_argument, 0, Tag::kArtist },
     { L"band", required_argument, 0, Tag::kAlbumArtist },
     { L"album", required_argument, 0, Tag::kAlbum },
@@ -63,6 +64,7 @@ static struct option long_options[] = {
 };
 static const uint32_t tag_keys[] = {
     Tag::kTitle,
+    Tag::kSubTitle,
     Tag::kArtist,
     Tag::kAlbumArtist,
     Tag::kAlbum,
@@ -182,6 +184,7 @@ void usage()
 "Tagging options:\n"
 " (same value is set to all files, so use with care for multiple files)\n"
 "--title <string>\n"
+"--subtitle <string>\n"
 "--artist <string>\n"
 "--band <string>       This means \"Album Artist\".\n"
 "--album <string>\n"

@@ -198,11 +198,12 @@ void TagEditor::saveArtworks(MP4FileX &file)
 
 namespace ID3 {
     const Tag::NameIDMap tagNameMap[] = {
+	{ "TIT1", Tag::kGrouping },
 	{ "TIT2", Tag::kTitle },
+	{ "TIT3", Tag::kSubTitle },
 	{ "TPE1", Tag::kArtist },
 	{ "TPE2", Tag::kAlbumArtist },
 	{ "TALB", Tag::kAlbum },
-	{ "TIT1", Tag::kGrouping },
 	{ "TCOM", Tag::kComposer },
 	{ "TCON", Tag::kGenre },
 	{ "TDRC", Tag::kDate },
@@ -241,6 +242,8 @@ namespace Vorbis {
 	{ "discnumber", Tag::kDisk },
 	{ "disc", Tag::kDisk },
 	{ "comment", Tag::kComment },
+	{ "subtitle", Tag::kSubTitle },
+	{ "lyrics", Tag::kLyrics },
 	{ 0, 0 }
     };
     uint32_t GetIDFromTagName(const char *name)

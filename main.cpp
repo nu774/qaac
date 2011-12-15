@@ -702,15 +702,19 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	throw std::runtime_error("Channel layout not supported");
 #else
     if (!opts.alac_decode) {
-	uint32_t otag = aacLayout->mChannelLayoutTag;
-	if (otag != kAudioChannelLayoutTag_Mono &&
-	    otag != kAudioChannelLayoutTag_Stereo &&
-	    otag != kAudioChannelLayoutTag_AAC_4_0 &&
-	    otag != kAudioChannelLayoutTag_AAC_5_0 &&
-	    otag != kAudioChannelLayoutTag_AAC_5_1 &&
-	    otag != kAudioChannelLayoutTag_AAC_6_1 &&
-	    otag != kAudioChannelLayoutTag_AAC_7_1)
+	switch (aacLayout->mChannelLayoutTag) {
+	case kAudioChannelLayoutTag_Mono:
+	case kAudioChannelLayoutTag_Stereo:
+	case kAudioChannelLayoutTag_AAC_3_0:
+	case kAudioChannelLayoutTag_AAC_4_0:
+	case kAudioChannelLayoutTag_AAC_5_0:
+	case kAudioChannelLayoutTag_AAC_5_1:
+	case kAudioChannelLayoutTag_AAC_6_1:
+	case kAudioChannelLayoutTag_AAC_7_1:
+	    break;
+	default:
 	    throw std::runtime_error("Not supported channel layout for ALAC");
+	}
     }
 #endif
     AudioStreamBasicDescription iasbd;
