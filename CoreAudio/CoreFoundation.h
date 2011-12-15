@@ -1,6 +1,8 @@
 #ifndef CoreFoundation_H__
 #define CoreFoundation_H__
 
+#include "MacTypes.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

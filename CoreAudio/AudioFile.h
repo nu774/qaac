@@ -1,7 +1,8 @@
 #ifndef AudioFile_H
 #define AudioFile_H
 
-#include "CoreAudioToolbox.h"
+#include "CoreFoundation.h"
+#include "CoreAudioTypes.h"
 
 #ifdef __cplusplus
 extern "C" {

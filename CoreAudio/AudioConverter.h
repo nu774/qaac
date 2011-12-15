@@ -1,5 +1,6 @@
 #ifndef AudioConverter_H
 #define AudioConverter_H
+
 #include "CoreAudioTypes.h"
 
 #ifdef __cplusplus

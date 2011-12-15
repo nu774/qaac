@@ -241,62 +241,48 @@ x::shared_ptr<ISource> open_source(const Options &opts)
     StdioChannel channel(opts.ifilename);
     InputStream stream(channel);
 
+#define MAKE_SHARED(Foo) x::shared_ptr<ISource>(new Foo)
+#define TRY_MAKE_SHARED(Foo) \
+    do { \
+	try { return MAKE_SHARED(Foo); } \
+	catch (std::exception) { stream.rewind(); } \
+    } while (0) 
+
     if (opts.is_raw) {
 	SampleFormat sf(nallow(opts.raw_format).c_str(),
-		opts.raw_channels, opts.raw_sample_rate);
-	return x::shared_ptr<ISource>(new RawSource(stream, sf));
+			opts.raw_channels, opts.raw_sample_rate);
+	return MAKE_SHARED(RawSource(stream, sf));
     }
 
     try {
 	try {
-	    return x::shared_ptr<ISource>(
-		    new WaveSource(stream, opts.ignore_length));
+	    return MAKE_SHARED(WaveSource(stream, opts.ignore_length));
 	} catch (const std::runtime_error&) {
 	    if (!stream.seekable())
 		throw;
 	    stream.rewind();
 	}
-	if (opts.libflac.loaded()) {
-	    try {
-		return x::shared_ptr<ISource>(
-			new FLACSource(opts.libflac, stream));
-	    } catch (const std::runtime_error&) {
-		stream.rewind();
-	    }
-	}
-	if (opts.libwavpack.loaded()) {
-	    try {
-		return x::shared_ptr<ISource>(
-			new WavpackSource(opts.libwavpack, stream,
+	if (opts.libflac.loaded())
+	    TRY_MAKE_SHARED(FLACSource(opts.libflac, stream));
+
+	if (opts.libwavpack.loaded())
+	    TRY_MAKE_SHARED(WavpackSource(opts.libwavpack, stream,
 					  opts.ifilename));
-	    } catch (const std::runtime_error&) {
-		stream.rewind();
-	    }
-	}
-	if (opts.libtak.loaded() && opts.libtak.compatible()) {
-	    try {
-		return x::shared_ptr<ISource>(
-			new TakSource(opts.libtak, stream));
-	    } catch (const std::runtime_error&) {
-		stream.rewind();
-	    }
-	}
+
+	if (opts.libtak.loaded() && opts.libtak.compatible())
+	    TRY_MAKE_SHARED(TakSource(opts.libtak, stream));
 #ifndef REFALAC
-	try {
-	    return x::shared_ptr<ISource>(new AFSource(stream));
-	} catch (const std::runtime_error&) {
-	    stream.rewind();
-	}
+	TRY_MAKE_SHARED(AFSource(stream));
 #endif
-	if (opts.libsndfile.loaded()) {
-	    try {
-		return x::shared_ptr<ISource>(
-			new LibSndfileSource(opts.libsndfile, opts.ifilename));
-	    } catch (const std::runtime_error&) {}
-	}
+	if (opts.libsndfile.loaded())
+	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, opts.ifilename));
+
 	return open_alac_source(opts);
+
     } catch (const std::runtime_error&) {}
     throw std::runtime_error("Not available input file format");
+#undef TRY_MAKE_SHARED
+#undef MAKE_SHARED
 }
 
 static
