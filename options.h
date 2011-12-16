@@ -37,7 +37,8 @@ struct Options {
 	alac_decode(false), threading(false),
 	textcp(0),
 	delay(0),
-	gain(0.0)
+	gain(0.0),
+	is_console_visible(true)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -93,6 +94,8 @@ struct Options {
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;
     std::vector<uint32_t> chanmap;
+
+    bool is_console_visible;
 
     LibSndfileModule libsndfile;
     FLACModule libflac;

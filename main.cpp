@@ -133,12 +133,15 @@ class PeriodicDisplay {
     uint32_t m_last_tick;
     std::string m_message;
     bool m_verbose;
+    bool m_console_visible;
 public:
     PeriodicDisplay(uint32_t interval, bool verbose=true)
 	: m_interval(interval),
 	  m_verbose(verbose),
 	  m_last_tick(GetTickCount())
-    {}
+    {
+	m_console_visible = IsWindowVisible(GetConsoleWindow());
+    }
     void put(const std::string &message) {
 	m_message = message;
 	uint32_t tick = GetTickCount();
@@ -149,10 +152,12 @@ public:
     }
     void flush() {
 	if (m_verbose) std::fputs(m_message.c_str(), stderr);
-	std::vector<char> s(m_message.size() + 1);
-	std::strcpy(&s[0], m_message.c_str());
-	squeeze(&s[0], "\r");
-	SetConsoleTitleA(format(PROGNAME " %s", &s[0]).c_str());
+	if (m_console_visible) {
+	    std::vector<char> s(m_message.size() + 1);
+	    std::strcpy(&s[0], m_message.c_str());
+	    squeeze(&s[0], "\r");
+	    SetConsoleTitleA(format(PROGNAME " %s", &s[0]).c_str());
+	}
     }
 };
 
@@ -163,16 +168,19 @@ class Progress {
     uint32_t m_rate;
     std::string m_tstamp;
     Timer m_timer;
+    bool m_console_visible;
 public:
     Progress(bool verbosity, uint64_t total, uint32_t rate)
 	: m_disp(100, verbosity), m_verbose(verbosity),
 	  m_total(total), m_rate(rate)
     {
+	m_console_visible = IsWindowVisible(GetConsoleWindow());
 	if (total != -1)
 	    m_tstamp = formatSeconds(static_cast<double>(total) / rate);
     }
     void update(uint64_t current)
     {
+	if (!m_verbose && !m_console_visible) return;
 	double fcurrent = current;
 	double percent = 100.0 * fcurrent / m_total;
 	double seconds = fcurrent / m_rate;
@@ -202,19 +210,20 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 	const Options &opts)
 {
     typedef x::shared_ptr<std::FILE> file_t;
-    file_t statfp;
+    file_t statPtr;
     if (opts.save_stat) {
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
-	statfp = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
+	statPtr = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
     Progress progress(opts.verbose, encoder->src()->length(),
 	    encoder->getOutputDescription().mSampleRate);
     try {
+	FILE *statfp = statPtr.get();
 	while (encoder->encodeChunk(1)) {
 	    progress.update(stat->samplesRead());
-	    if (statfp.get())
-		std::fprintf(statfp.get(), "%g\n", stat->currentBitrate());
+	    if (statfp)
+		std::fprintf(statfp, "%g\n", stat->currentBitrate());
 	}
 	progress.finish(stat->samplesRead());
     } catch (const std::exception &e) {
@@ -525,7 +534,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     if (chanmask < 0)
 	chanmask = chanmap ? GetChannelMask(*chanmap) : 0;
     if (!chanmask && !opts.alac_decode) {
-	if (opts.verbose >1)
+	if (opts.verbose >1 || opts.logfilename)
 	    LOG("Using default channel layout.\n");
 	chanmask = GetDefaultChannelMask(nchannels);
     }
@@ -569,7 +578,7 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 	ns->setRange(0, nsamples);
 	cp->addSource(x::shared_ptr<ISource>(ns));
 	cp->addSource(src);
-	if (opts.verbose > 1)
+	if (opts.verbose > 1 || opts.logfilename)
 	    LOG("Delay of %dms: pad %d samples\n", opts.delay,
 		nsamples);
 	return cpPtr;
@@ -578,7 +587,7 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 	if (p) {
 	    int nsamples = lrint(-0.001 * opts.delay * rate);
 	    p->setRange(nsamples, -1);
-	    if (opts.verbose > 1)
+	    if (opts.verbose > 1 || opts.logfilename)
 		LOG("Delay of %dms: trunc %d samples\n", opts.delay,
 		    nsamples);
 	}
@@ -681,7 +690,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     if ((opts.remix_preset || opts.remix_file) && opts.libsoxrate.loaded()) {
 	std::vector<std::vector<complex_t> > matrix;
 	matrix_from_preset(opts, &matrix);
-	if (opts.verbose > 1) {
+	if (opts.verbose > 1 || opts.logfilename) {
 	    LOG("Matrix mixer: %dch -> %dch\n",
 		matrix[0].size(), matrix.size());
 	}
@@ -746,7 +755,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	}
     }
     if (opts.lowpass > 0 && opts.libsoxrate.loaded()) {
-	if (opts.verbose > 1)
+	if (opts.verbose > 1 || opts.logfilename)
 	    LOG("Applying LPF: %dHz\n", opts.lowpass);
 	x::shared_ptr<ISoxDSPEngine>
 	    engine(new SoxLowpassFilter(opts.libsoxrate,
@@ -759,7 +768,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	srcx = do_normalize(srcx, opts);
     if (opts.gain) {
 	double scale = dB_to_scale(opts.gain);
-	if (opts.verbose > 1)
+	if (opts.verbose > 1 || opts.logfilename)
 	    LOG("Gain adjustment: %gdB, scale factor %g\n",
 		opts.gain, scale);
 	srcx.reset(new Scaler(srcx, scale));
@@ -769,7 +778,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	int32_t bits = src->getSampleFormat().m_bitsPerSample;
 	if (bits == 8) bits = 16;
 	else if (bits > 24) bits = 24;
-	if (opts.verbose > 1)
+	if (opts.verbose > 1 || opts.logfilename)
 	    LOG("Convert to %dbit signed integer format\n", bits);
 	srcx.reset(new IntegerSource(srcx, bits));
     }
@@ -777,7 +786,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	PipedReader *reader = new PipedReader(srcx);
 	reader->start();
 	srcx.reset(reader);
-	if (opts.verbose > 1)
+	if (opts.verbose > 1 || opts.logfilename)
 	    LOG("Enable threading\n");
     }
     build_basic_description(srcx->getSampleFormat(), &iasbd);
@@ -1288,6 +1297,7 @@ int wmain1(int argc, wchar_t **argv)
     int result = 0;
     if (!opts.parse(argc, argv))
 	return 1;
+    opts.is_console_visible = IsWindowVisible(GetConsoleWindow());
 
     COMInitializer __com__;
     try {

@@ -15,6 +15,7 @@ public:
 	if (!m_instance) m_instance = new Log();
 	return m_instance;
     }
+    bool is_enabled() { return m_streams.size() != 0; }
     void enable_stderr()
     {
 	m_streams.push_back(x::shared_ptr<FILE>(stderr, std::fclose));
@@ -48,4 +49,9 @@ inline void LOG(const char *fmt, ...)
     va_start(ap, fmt);
     Log::instance()->vprintf(fmt, ap);
     va_end(ap);
+}
+
+inline bool IS_LOG_ENABLED()
+{
+    return Log::instance()->is_enabled();
 }

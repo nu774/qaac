@@ -19,8 +19,11 @@ ALACSource::ALACSource(const std::wstring &path)
 	const char *alacprop, *chanprop;
 	const char *brand = m_file.GetStringProperty("ftyp.majorBrand");
 	if (!std::strcmp(brand, "qt  ")) {
+	    throw std::runtime_error("Not supported format");
+	    /*
 	    alacprop = "mdia.minf.stbl.stsd.alac.wave.alac.decoderConfig";
 	    chanprop = "mdia.minf.stbl.stsd.alac.wave.chan.data";
+	    */
 	} else {
 	    alacprop = "mdia.minf.stbl.stsd.alac.alac.decoderConfig";
 	    chanprop = "mdia.minf.stbl.stsd.alac.chan.data";

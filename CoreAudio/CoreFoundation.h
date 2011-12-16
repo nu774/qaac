@@ -33,10 +33,12 @@ void CFStringGetCharacters(CFStringRef theString, CFRange range, UniChar *buffer
 #define CFSTR(cStr)  __CFStringMakeConstantString("" cStr "")
 CFStringRef  __CFStringMakeConstantString(const char *cStr);
 
+typedef void (*CFDictionaryApplierFunction)(const void *key, const void *value, void *context);
 CFTypeID CFDictionaryGetTypeID(void);
 CFIndex CFDictionaryGetCount(CFDictionaryRef theDict);
 const void *CFDictionaryGetValue(CFDictionaryRef theDict, const void *key);
 void CFDictionaryGetKeysAndValues(CFDictionaryRef theDict, const void **keys, const void **values);
+void CFDictionaryApplyFunction(CFDictionaryRef theDict, CFDictionaryApplierFunction applier, void *context);
 
 typedef enum {
     kCFURLPOSIXPathStyle = 0,

@@ -65,34 +65,35 @@ namespace audiofile {
 	return 0;
     }
 
-    void fetchTags(AudioFileX &af, std::map<uint32_t, std::wstring> *result)
+    typedef std::map<uint32_t, std::wstring> tag_t;
+
+    void fetchTagDictCallback(const void *key, const void *value, void *ctx)
+    {
+	if (CFGetTypeID(key) != CFStringGetTypeID() ||
+	    CFGetTypeID(value) != CFStringGetTypeID())
+	    return;
+	tag_t *tagp = static_cast<tag_t*>(ctx);
+	std::wstring wskey = CF2W(static_cast<CFStringRef>(key));
+	std::string utf8key = w2m(wskey, utf8_codecvt_facet());
+	uint32_t id = getIDFromTagName(utf8key.c_str());
+	if (id) {
+	    std::wstring wsvalue = CF2W(static_cast<CFStringRef>(value));
+	    (*tagp)[id] = wsvalue;
+	}
+    }
+
+    void fetchTags(AudioFileX &af, tag_t *result)
     {
 	CFDictionaryRef dict = af.getInfoDictionary();
 	x::shared_ptr<const __CFDictionary> dictPtr(dict, CFRelease);
-	CFIndex elts = CFDictionaryGetCount(dict);
-	if (!elts) return;
-	std::vector<const void*> keys(elts);
-	std::vector<const void*> values(elts);
-	CFDictionaryGetKeysAndValues(dict, &keys[0], &values[0]);
-	utf8_codecvt_facet u8codec;
-	std::map<uint32_t, std::wstring> tags;
-
-	for (CFIndex i = 0; i < elts; ++i) {
-	    if (CFGetTypeID(keys[i]) != CFStringGetTypeID() ||
-		CFGetTypeID(values[i]) != CFStringGetTypeID())
-		continue;
-	    CFStringRef key = static_cast<CFStringRef>(keys[i]);
-	    CFStringRef value = static_cast<CFStringRef>(values[i]);
-	    std::string utf8key = w2m(CF2W(key), u8codec);
-	    uint32_t id = getIDFromTagName(utf8key.c_str());
-	    if (id) tags[id] = CF2W(value);
-	}
+	tag_t tags;
+	CFDictionaryApplyFunction(dict, fetchTagDictCallback, &tags);
 	result->swap(tags);
     }
 }
 
 x::shared_ptr<ISource>
-    AudioFileOpenFactory(InputStream &stream, const std::wstring &path)
+AudioFileOpenFactory(InputStream &stream, const std::wstring &path)
 {
     AudioFileID afid;
     x::shared_ptr<InputStream> streamPtr(new InputStream(stream));
@@ -101,7 +102,6 @@ x::shared_ptr<ISource>
 		streamPtr.get(), audiofile::read, 0,
 		audiofile::size, 0, 0, &afid));
     AudioFileX af(afid, true);
-    fourcc fmt(af.getFileFormat());
     AudioStreamBasicDescription asbd;
     af.getDataFormat(&asbd);
     if (asbd.mFormatID == 'lpcm')
@@ -115,8 +115,7 @@ x::shared_ptr<ISource>
 	return (chanmap.size())
 	    ? x::shared_ptr<ISource>(new ChannelMapper(src, chanmap, bitmap))
 	    : src;
-    }
-    else
+    } else
 	throw std::runtime_error("Not supported format");
 }
 
@@ -138,7 +137,9 @@ AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
 		if (bitmap & 1) m_chanmap.push_back(i + 1);
 	}
     } catch (std::exception &) {}
-    audiofile::fetchTags(m_af, &m_tags);
+    try {
+	audiofile::fetchTags(m_af, &m_tags);
+    } catch (...) {}
 }
 
 size_t AFSource::readSamples(void *buffer, size_t nsamples)
@@ -164,6 +165,8 @@ ExtAFSource::ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
     m_eaf.attach(eaf, true);
     AudioStreamBasicDescription asbd, oasbd;
     m_af.getDataFormat(&asbd);
+    if (asbd.mFormatID != 'alac')
+	throw std::runtime_error("Not supported format");
     unsigned bytesPerSample =
 	asbd.mFormatFlags == 1 ? 2 : asbd.mFormatFlags == 4 ? 4 : 3;
     oasbd = asbd;
@@ -181,8 +184,11 @@ ExtAFSource::ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
 	MP4FileX mp4file;
 	mp4file.Read(w2m(path, utf8_codecvt_facet()).c_str(), 0);
 	mp4a::fetchTags(mp4file, &m_tags);
-    } else
-	audiofile::fetchTags(m_af, &m_tags);
+    } else {
+	try {
+	    audiofile::fetchTags(m_af, &m_tags);
+	} catch (...) {}
+    }
 }
 
 size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
