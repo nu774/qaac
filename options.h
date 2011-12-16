@@ -66,6 +66,12 @@ struct Options {
     {
 	return !libsoxrate.loaded() || native_resampler;
     }
+    const wchar_t *extension() const
+    {
+	if (isMP4()) return L"m4a";
+	else if (isLPCM()) return L"wav";
+	else return L"aac";
+    }
 
     uint32_t output_format;
     int32_t method;

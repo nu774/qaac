@@ -78,9 +78,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 	else
 	    return GetFullPathNameX(opts.ofilename);
     }
-    const wchar_t *ext =
-	opts.alac_decode ? L"wav"
-			 : opts.isMP4() ? L"m4a" : L"aac";
+    const wchar_t *ext = opts.extension();
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
     if (!std::wcscmp(ifilename, L"-"))
 	return std::wstring(L"stdin.") + ext;
@@ -90,9 +88,10 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 	std::wstring ofilename = 
 	    GetFullPathNameX(format(L"%s/%s", outdir, obasename.c_str()));
 	if (GetFullPathNameX(ifilename) == ofilename) {
-	    std::wstring tl = 
-		opts.isALAC() ? std::wstring(L"alac.") + ext
-			      : std::wstring(L"aac.") + ext;
+	    std::string codec_name(fourcc(opts.output_format));
+	    while (codec_name.size() && codec_name.back() == ' ')
+		codec_name.pop_back();
+	    std::wstring tl = format(L"%s.%s", widen(codec_name).c_str(), ext);
 	    ofilename = PathReplaceExtension(ofilename, tl.c_str());
 	}
 	return ofilename;
