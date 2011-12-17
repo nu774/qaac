@@ -216,7 +216,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
     Progress progress(opts.verbose, encoder->src()->length(),
-	    encoder->getOutputDescription().mSampleRate);
+	    encoder->getInputDescription().mSampleRate);
     try {
 	FILE *statfp = statPtr.get();
 	while (encoder->encodeChunk(1)) {
