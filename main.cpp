@@ -30,9 +30,9 @@
 #include "intsrc.h"
 #include "scaler.h"
 #include "pipedreader.h"
+#include "wavsink.h"
 #ifdef REFALAC
 #include "alacenc.h"
-#include "wavsink.h"
 #else
 #include <delayimp.h>
 #include "AudioCodecX.h"
@@ -532,7 +532,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     int chanmask = opts.chanmask;
     if (chanmask < 0)
 	chanmask = chanmap ? GetChannelMask(*chanmap) : 0;
-    if (!chanmask && !opts.alac_decode) {
+    if (!chanmask && !opts.isLPCM()) {
 	if (opts.verbose >1 || opts.logfilename)
 	    LOG("Using default channel layout.\n");
 	chanmask = GetDefaultChannelMask(nchannels);
@@ -542,7 +542,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	layout = AudioChannelLayoutX::FromBitmap(chanmask);
 	*wav_layout = layout;
     }
-    if (!opts.alac_decode) {
+    if (!opts.isLPCM()) {
 	// construct mapped channel layout to AAC/ALAC order
 	int nc = layout.numChannels();
 	AudioChannelLayoutX mapped(nc);
@@ -682,7 +682,9 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     GetSystemInfo(&si);
     bool threading = opts.threading && si.dwNumberOfProcessors > 1;
 #ifndef REFALAC
-    AudioCodecX codec(opts.output_format);
+    x::shared_ptr<AudioCodecX> codec;
+    if (!opts.isLPCM())
+	codec.reset(new AudioCodecX(opts.output_format));
 #endif
     x::shared_ptr<ISource> srcx = delayed_source(src, opts);
 
@@ -697,11 +699,12 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     }
     AudioChannelLayoutX wavLayout, aacLayout;
     srcx = mapped_source(srcx, opts, &wavLayout, &aacLayout);
+    if (!opts.isLPCM()) {
 #ifndef REFALAC
-    if (!codec.isAvailableOutputChannelLayout(aacLayout->mChannelLayoutTag))
-	throw std::runtime_error("Channel layout not supported");
+	if (!codec->isAvailableOutputChannelLayout(
+					   aacLayout->mChannelLayoutTag))
+	    throw std::runtime_error("Channel layout not supported");
 #else
-    if (!opts.alac_decode) {
 	switch (aacLayout->mChannelLayoutTag) {
 	case kAudioChannelLayoutTag_Mono:
 	case kAudioChannelLayoutTag_Stereo:
@@ -715,8 +718,8 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	default:
 	    throw std::runtime_error("Not supported channel layout for ALAC");
 	}
-    }
 #endif
+    }
     AudioStreamBasicDescription iasbd;
     build_basic_description(srcx->getSampleFormat(), &iasbd);
 
@@ -727,20 +730,22 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     double rate = opts.rate > 0 ? opts.rate
 			        : opts.rate == -1 ? iasbd.mSampleRate
 						  : 0;
-#ifndef REFALAC
-    if (rate)
-	oasbd.mSampleRate = codec.getClosestAvailableOutputSampleRate(rate);
-    else if (!opts.isAAC())
-	oasbd.mSampleRate = iasbd.mSampleRate;
-    else {
-	AudioConverterX converter(iasbd, oasbd);
-	converter.setInputChannelLayout(aacLayout);
-	converter.setOutputChannelLayout(aacLayout);
-	if (opts.isAAC()) config_aac_codec(converter, opts);
-	converter.getOutputStreamDescription(&oasbd);
+    if (!opts.isAAC()) {
+	oasbd.mSampleRate = rate > 0 ? rate : iasbd.mSampleRate;
     }
-#else
-    oasbd.mSampleRate = rate > 0 ? rate : iasbd.mSampleRate;
+#ifndef REFALAC
+    else {
+	if (rate > 0)
+	    oasbd.mSampleRate =
+		codec->getClosestAvailableOutputSampleRate(rate);
+	else {
+	    AudioConverterX converter(iasbd, oasbd);
+	    converter.setInputChannelLayout(aacLayout);
+	    converter.setOutputChannelLayout(aacLayout);
+	    config_aac_codec(converter, opts);
+	    converter.getOutputStreamDescription(&oasbd);
+	}
+    }
 #endif
     if (oasbd.mSampleRate != iasbd.mSampleRate) {
 	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
@@ -781,7 +786,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	    LOG("Convert to %dbit signed integer format\n", bits);
 	srcx.reset(new IntegerSource(srcx, bits));
     }
-    if (threading && !opts.alac_decode) {
+    if (threading && !opts.isLPCM()) {
 	PipedReader *reader = new PipedReader(srcx);
 	reader->start();
 	srcx.reset(reader);
@@ -794,6 +799,40 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     if (inputDesc) *inputDesc = iasbd;
     if (outputDesc) *outputDesc = oasbd;
     return srcx;
+}
+
+static
+void decode_file(const x::shared_ptr<ISource> &src,
+		 const std::wstring &ofilename, const Options &opts,
+		 const AudioChannelLayout *layout)
+{
+    x::shared_ptr<FILE> fileptr;
+    if (opts.ofilename && !std::wcscmp(opts.ofilename, L"-")) {
+	fileptr.reset(stdout, [](FILE*){});
+	_setmode(1, _O_BINARY);
+    } else {
+	FILE *fp = wfopenx(ofilename.c_str(), L"wb");
+	fileptr.reset(fp, std::fclose);
+    }
+    unsigned bitmap = 0;
+    if (layout) bitmap = GetBitmapFromAudioChannelLayout(layout);
+    const SampleFormat &sf = src->getSampleFormat();
+    WaveSink sink(fileptr.get(), src->length(), sf, bitmap);
+    Progress progress(opts.verbose, src->length(), sf.m_rate);
+    uint32_t bpf = sf.bytesPerFrame();
+    std::vector<uint8_t> buffer(4096 * bpf);
+    try {
+	size_t nread;
+	uint64_t ntotal = 0;
+	while ((nread = src->readSamples(&buffer[0], 4096)) > 0) {
+	    ntotal += nread;
+	    progress.update(ntotal);
+	    sink.writeSamples(&buffer[0], nread * bpf, nread);
+	}
+	progress.finish(ntotal);
+    } catch (const std::exception &e) {
+	LOG("\n%s\n", e.what());
+    }
 }
 
 #ifndef REFALAC
@@ -1037,6 +1076,10 @@ void encode_file(const x::shared_ptr<ISource> &src,
     x::shared_ptr<ISource> srcx =
 	preprocess_input(src, opts, &wavLayout, &aacLayout, &iasbd, &oasbd);
 
+    if (opts.isLPCM()) {
+	decode_file(srcx, ofilename, opts, wavLayout);
+	return;
+    }
     AudioConverterX converter(iasbd, oasbd);
     converter.setInputChannelLayout(aacLayout);
     converter.setOutputChannelLayout(aacLayout);
@@ -1063,41 +1106,6 @@ void encode_file(const x::shared_ptr<ISource> &src,
     }
 }
 #else // REFALAC
-static void noop(void *) {}
-
-static
-void decode_file(const x::shared_ptr<ISource> &src,
-		 const std::wstring &ofilename, const Options &opts,
-		 const AudioChannelLayout *layout)
-{
-    x::shared_ptr<FILE> fileptr;
-    if (opts.ofilename && !std::wcscmp(opts.ofilename, L"-")) {
-	fileptr = x::shared_ptr<FILE>(stdout, noop);
-	_setmode(1, _O_BINARY);
-    } else {
-	FILE *fp = wfopenx(ofilename.c_str(), L"wb");
-	fileptr = x::shared_ptr<FILE>(fp, std::fclose);
-    }
-    unsigned bitmap = 0;
-    if (layout) bitmap = GetBitmapFromAudioChannelLayout(layout);
-    const SampleFormat &sf = src->getSampleFormat();
-    WaveSink sink(fileptr.get(), src->length(), sf, bitmap);
-    Progress progress(opts.verbose, src->length(), sf.m_rate);
-    uint32_t bpf = sf.bytesPerFrame();
-    std::vector<uint8_t> buffer(4096 * bpf);
-    try {
-	size_t nread;
-	uint64_t ntotal = 0;
-	while ((nread = src->readSamples(&buffer[0], 4096)) > 0) {
-	    ntotal += nread;
-	    progress.update(ntotal);
-	    sink.writeSamples(&buffer[0], nread * bpf, nread);
-	}
-	progress.finish(ntotal);
-    } catch (const std::exception &e) {
-	LOG("\n%s\n", e.what());
-    }
-}
 
 static
 void encode_file(const x::shared_ptr<ISource> &src,
@@ -1107,7 +1115,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
     AudioStreamBasicDescription iasbd;
     x::shared_ptr<ISource> srcx =
 	preprocess_input(src, opts, &wavLayout, &aacLayout, &iasbd, 0);
-    if (opts.alac_decode) {
+    if (opts.isLPCM()) {
 	decode_file(srcx, ofilename, opts, wavLayout);
 	return;
     }

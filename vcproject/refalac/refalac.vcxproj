@@ -167,7 +167,6 @@
     <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\version.cpp" />
-    <ClCompile Include="..\..\wavsink.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

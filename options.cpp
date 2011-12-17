@@ -5,7 +5,6 @@
 static struct option long_options[] = {
 #ifdef REFALAC
     { L"fast", no_argument, 0, 'afst' },
-    { L"decode", no_argument, 0, 'D' },
 #else
     { L"check", no_argument, 0, 'chck' },
     { L"formats", no_argument, 0, 'fmts' },
@@ -19,6 +18,7 @@ static struct option long_options[] = {
     { L"alac", no_argument, 0, 'A' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
 #endif
+    { L"decode", no_argument, 0, 'D' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"rate", required_argument, 0, 'r' },
     { L"lowpass", required_argument, 0, 'lpf ' },
@@ -120,8 +120,8 @@ void usage()
 "--native-resampler     Use Apple built-in resampler\n"
 #else
 "--fast                 Fast stereo encoding mode.\n"
-"-D, --decode           Decode mode.\n"
 #endif
+"-D, --decode           Wave output mode.\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "-r, --rate <keep|auto|n>\n"
 "                       keep: output sampling rate will be same as input\n"
@@ -207,7 +207,7 @@ void usage()
 }
 
 #ifndef REFALAC
-static const wchar_t * const short_opts = L"hAo:d:a:V:v:c:q:r:insRSN";
+static const wchar_t * const short_opts = L"hADo:d:a:V:v:c:q:r:insRSN";
 #else
 static const wchar_t * const short_opts = L"hDo:d:insRSN";
 #endif
@@ -245,8 +245,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return false;
 	    }
 	}
-	else if (ch == 'D')
-	    this->alac_decode = true;
+	else if (ch == 'D') {
+	    if (this->output_format && !isLPCM())
+		return usage(), false;
+	    this->output_format = 'lpcm';
+	}
 	else if (ch == 'nsmp')
 	    this->native_resampler = true;
 	else if (ch == 'N')
@@ -391,7 +394,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
     }
     if (!this->output_format) {
 #ifdef REFALAC
-	this->output_format = this->alac_decode ? 'lpcm' : 'alac';
+	this->output_format = 'alac';
 #else
 	this->output_format = 'aac ';
 #endif
