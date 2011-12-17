@@ -39,6 +39,7 @@ void GetChannelsFromAudioChannelLayout(const AudioChannelLayout *acl,
 	const AudioChannelDescription *desc = acl->mChannelDescriptions;
 	for (size_t i = 0; i < acl->mNumberChannelDescriptions; ++i)
 	    channels.push_back(desc[i].mChannelLabel);
+	break;
     }
     case kAudioChannelLayoutTag_Mono:
 	bitmap = 0x4; break;
