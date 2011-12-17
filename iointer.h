@@ -49,7 +49,7 @@ public:
     virtual ~ISource() {}
     virtual uint64_t length() const = 0;
     virtual const SampleFormat &getSampleFormat() const = 0;
-    virtual const std::vector<uint32_t> *getChannelMap() const = 0;
+    virtual const std::vector<uint32_t> *getChannels() const = 0;
     virtual size_t readSamples(void *buffer, size_t nsamples) = 0;
 };
 
@@ -114,9 +114,9 @@ public:
     {
 	return m_src->getSampleFormat();
     }
-    const std::vector<uint32_t> *getChannelMap() const
+    const std::vector<uint32_t> *getChannels() const
     {
-	return m_src->getChannelMap();
+	return m_src->getChannels();
     }
     const std::map<uint32_t, std::wstring> &getTags() const
     {

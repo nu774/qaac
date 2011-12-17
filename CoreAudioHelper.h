@@ -85,21 +85,15 @@ public:
 
     static AudioChannelLayoutX CreateDefault(unsigned nchannels)
     {
-	return FromBitmap(GetDefaultChannelMask(nchannels));
-    }
-    static AudioChannelLayoutX FromChannelMap(const std::vector<uint32_t> &map)
-    {
-	return FromBitmap(GetChannelMask(map));
+	return FromBitmap(chanmap::GetDefaultChannelMask(nchannels));
     }
     static AudioChannelLayoutX FromBitmap(uint32_t bitmap)
     {
-	size_t nc = bitcount(bitmap);
-	AudioChannelLayoutX layout(nc);
-	layout->mChannelLayoutTag = GetLayoutTag(bitmap);
+	AudioChannelLayoutX layout;
+	layout->mChannelLayoutTag = chanmap::GetLayoutTag(bitmap);
 	if (layout->mChannelLayoutTag
 		== kAudioChannelLayoutTag_UseChannelBitmap)
 	    layout->mChannelBitmap = bitmap;
-	MapChannelLabel(&layout->mChannelDescriptions[0], bitmap);
 	return layout;
     }
 private:

@@ -231,19 +231,6 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 }
 
 static
-x::shared_ptr<ISource> open_alac_source(const Options &opts)
-{
-    x::shared_ptr<ISource> src(new ALACSource(opts.ifilename));
-    const SampleFormat &sf = src->getSampleFormat();
-    std::vector<uint32_t> chanmap;
-    uint32_t tag = GetALACLayoutTag(sf.m_nchannels);
-    uint32_t bitmap = GetAACReversedChannelMap(tag, &chanmap);
-    return (chanmap.size())
-	? x::shared_ptr<ISource>(new ChannelMapper(src, chanmap, bitmap))
-	: src;
-}
-
-static
 x::shared_ptr<ISource> open_source(const Options &opts)
 {
     StdioChannel channel(opts.ifilename);
@@ -290,7 +277,7 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, opts.ifilename));
 
 #ifdef REFALAC
-	return open_alac_source(opts);
+	return x::shared_ptr<ISource>(new ALACSource(opts.ifilename));
 #endif
     } catch (const std::runtime_error&) {}
     throw std::runtime_error("Not available input file format");
@@ -510,93 +497,6 @@ void build_basic_description(const SampleFormat &format,
 }
 
 static
-x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
-    const Options &opts, AudioChannelLayoutX *wav_layout,
-    AudioChannelLayoutX *aac_layout)
-{
-    uint32_t nchannels = src->getSampleFormat().m_nchannels;
-    x::shared_ptr<ISource> srcx(src);
-
-    // map with --chanmap option
-    if (opts.chanmap.size()) {
-	if (opts.chanmap.size() != nchannels)
-	    throw std::runtime_error(
-		    "nchannels of input and --chanmap spec unmatch");
-	srcx.reset(new ChannelMapper(src, opts.chanmap));
-    }
-
-    // retrieve original channel layout, taking --chanmask into account
-    if (opts.chanmask > 0 && bitcount(opts.chanmask) != nchannels)
-	throw std::runtime_error("unmatch number of channels with --chanmask");
-    const std::vector<uint32_t> *chanmap = src->getChannelMap();
-    int chanmask = opts.chanmask;
-    if (chanmask < 0)
-	chanmask = chanmap ? GetChannelMask(*chanmap) : 0;
-    if (!chanmask && !opts.isLPCM()) {
-	if (opts.verbose >1 || opts.logfilename)
-	    LOG("Using default channel layout.\n");
-	chanmask = GetDefaultChannelMask(nchannels);
-    }
-    AudioChannelLayoutX layout;
-    if (chanmask) {
-	layout = AudioChannelLayoutX::FromBitmap(chanmask);
-	*wav_layout = layout;
-    }
-    if (!opts.isLPCM()) {
-	// construct mapped channel layout to AAC/ALAC order
-	int nc = layout.numChannels();
-	AudioChannelLayoutX mapped(nc);
-	mapped->mChannelLayoutTag = GetAACLayoutTag(layout);
-	std::vector<uint32_t> aacmap;
-	GetAACChannelMap(layout, nc, &aacmap);
-	if (layout->mNumberChannelDescriptions == nc) {
-	    AudioChannelDescription *origDesc = layout->mChannelDescriptions;
-	    AudioChannelDescription *newDesc = mapped->mChannelDescriptions;
-	    for (size_t i = 0; i < nc; ++i) {
-		size_t n = aacmap.size() ? aacmap[i] - 1: i;
-		newDesc[i].mChannelLabel = origDesc[n].mChannelLabel;
-	    }
-	}
-	if (aacmap.size())
-	    srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
-	*aac_layout = mapped;
-    }
-    return srcx;
-}
-
-static
-x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
-				      const Options & opts)
-{
-    double rate = src->getSampleFormat().m_rate;
-    if (opts.delay > 0) {
-	CompositeSource *cp = new CompositeSource();
-	x::shared_ptr<ISource> cpPtr(cp);
-	NullSource *ns = new NullSource(src->getSampleFormat());
-	int nsamples = lrint(0.001 * opts.delay * rate);
-	ns->setRange(0, nsamples);
-	cp->addSource(x::shared_ptr<ISource>(ns));
-	cp->addSource(src);
-	if (opts.verbose > 1 || opts.logfilename)
-	    LOG("Delay of %dms: pad %d samples\n", opts.delay,
-		nsamples);
-	return cpPtr;
-    } else if (opts.delay < 0) {
-	IPartialSource *p = dynamic_cast<IPartialSource*>(src.get());
-	if (p) {
-	    int nsamples = lrint(-0.001 * opts.delay * rate);
-	    p->setRange(nsamples, -1);
-	    if (opts.verbose > 1 || opts.logfilename)
-		LOG("Delay of %dms: trunc %d samples\n", opts.delay,
-		    nsamples);
-	}
-	else
-	    LOG("WARNING: can't set negative delay for this input\n");
-    }
-    return src;
-}
-
-static
 FILE *open_config_file(const wchar_t *file)
 {
     std::vector<std::wstring> search_paths;
@@ -665,6 +565,105 @@ void matrix_from_preset(const Options &opts,
     result->swap(matrix);
 }
 
+static
+x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
+    const Options &opts, AudioChannelLayoutX *wav_layout,
+    AudioChannelLayoutX *aac_layout, bool threading)
+{
+    uint32_t nchannels = src->getSampleFormat().m_nchannels;
+    x::shared_ptr<ISource> srcx(src);
+
+    // reorder to Microsoft (USB) order
+    const std::vector<uint32_t> *channels = src->getChannels();
+    if (channels) {
+	if (!is_strict_ordered(channels->begin(), channels->end())) {
+	    std::vector<uint32_t> mapping;
+	    chanmap::GetChannelMappingToUSBOrder(*channels,
+						 &mapping);
+	    srcx.reset(new ChannelMapper(srcx, mapping));
+	    channels = srcx->getChannels();
+	}
+    }
+    // remix
+    if ((opts.remix_preset || opts.remix_file) && opts.libsoxrate.loaded()) {
+	std::vector<std::vector<complex_t> > matrix;
+	matrix_from_preset(opts, &matrix);
+	if (opts.verbose > 1 || opts.logfilename) {
+	    LOG("Matrix mixer: %dch -> %dch\n",
+		matrix[0].size(), matrix.size());
+	}
+	srcx.reset(new MatrixMixer(srcx, opts.libsoxrate, matrix, threading));
+	channels = 0;
+    }
+    // map with --chanmap option
+    if (opts.chanmap.size()) {
+	if (opts.chanmap.size() != nchannels)
+	    throw std::runtime_error(
+		    "nchannels of input and --chanmap spec unmatch");
+	srcx.reset(new ChannelMapper(srcx, opts.chanmap));
+    }
+    // retrieve original channel layout, taking --chanmask into account
+    if (opts.chanmask > 0 && bitcount(opts.chanmask) != nchannels)
+	throw std::runtime_error("unmatch number of channels with --chanmask");
+    int chanmask = opts.chanmask;
+    if (chanmask < 0)
+	chanmask = channels ? chanmap::GetChannelMask(*channels) : 0;
+    if (!chanmask && !opts.isLPCM()) {
+	if (opts.verbose >1 || opts.logfilename)
+	    LOG("Using default channel layout.\n");
+	chanmask = chanmap::GetDefaultChannelMask(nchannels);
+    }
+    AudioChannelLayoutX layout;
+    if (chanmask) {
+	layout = AudioChannelLayoutX::FromBitmap(chanmask);
+	*wav_layout = layout;
+    }
+    if (!opts.isLPCM()) {
+	// construct mapped channel layout to AAC/ALAC order
+	int nc = layout.numChannels();
+	AudioChannelLayoutX mapped;
+	mapped->mChannelLayoutTag = chanmap::GetAACLayoutTag(layout);
+	std::vector<uint32_t> aacmap;
+	chanmap::GetAACChannelMap(layout, nc, &aacmap);
+	if (aacmap.size())
+	    srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
+	*aac_layout = mapped;
+    }
+    return srcx;
+}
+
+static
+x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
+				      const Options & opts)
+{
+    double rate = src->getSampleFormat().m_rate;
+    if (opts.delay > 0) {
+	CompositeSource *cp = new CompositeSource();
+	x::shared_ptr<ISource> cpPtr(cp);
+	NullSource *ns = new NullSource(src->getSampleFormat());
+	int nsamples = lrint(0.001 * opts.delay * rate);
+	ns->setRange(0, nsamples);
+	cp->addSource(x::shared_ptr<ISource>(ns));
+	cp->addSource(src);
+	if (opts.verbose > 1 || opts.logfilename)
+	    LOG("Delay of %dms: pad %d samples\n", opts.delay,
+		nsamples);
+	return cpPtr;
+    } else if (opts.delay < 0) {
+	IPartialSource *p = dynamic_cast<IPartialSource*>(src.get());
+	if (p) {
+	    int nsamples = lrint(-0.001 * opts.delay * rate);
+	    p->setRange(nsamples, -1);
+	    if (opts.verbose > 1 || opts.logfilename)
+		LOG("Delay of %dms: trunc %d samples\n", opts.delay,
+		    nsamples);
+	}
+	else
+	    LOG("WARNING: can't set negative delay for this input\n");
+    }
+    return src;
+}
+
 #ifndef REFALAC
 static
 void config_aac_codec(AudioConverterX &converter, const Options &opts);
@@ -688,17 +687,8 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 #endif
     x::shared_ptr<ISource> srcx = delayed_source(src, opts);
 
-    if ((opts.remix_preset || opts.remix_file) && opts.libsoxrate.loaded()) {
-	std::vector<std::vector<complex_t> > matrix;
-	matrix_from_preset(opts, &matrix);
-	if (opts.verbose > 1 || opts.logfilename) {
-	    LOG("Matrix mixer: %dch -> %dch\n",
-		matrix[0].size(), matrix.size());
-	}
-	srcx.reset(new MatrixMixer(srcx, opts.libsoxrate, matrix, threading));
-    }
     AudioChannelLayoutX wavLayout, aacLayout;
-    srcx = mapped_source(srcx, opts, &wavLayout, &aacLayout);
+    srcx = mapped_source(srcx, opts, &wavLayout, &aacLayout, threading);
     if (!opts.isLPCM()) {
 #ifndef REFALAC
 	if (!codec->isAvailableOutputChannelLayout(
@@ -815,7 +805,11 @@ void decode_file(const x::shared_ptr<ISource> &src,
 	fileptr.reset(fp, std::fclose);
     }
     unsigned bitmap = 0;
-    if (layout) bitmap = GetBitmapFromAudioChannelLayout(layout);
+    if (layout) {
+	std::vector<uint32_t> channels;
+	chanmap::GetChannelsFromAudioChannelLayout(layout, &channels);
+	bitmap = chanmap::GetChannelMask(channels);
+    }
     const SampleFormat &sf = src->getSampleFormat();
     WaveSink sink(fileptr.get(), src->length(), sf, bitmap);
     Progress progress(opts.verbose, src->length(), sf.m_rate);

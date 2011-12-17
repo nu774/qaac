@@ -41,7 +41,7 @@ ALACSource::ALACSource(const std::wstring &path)
 	    std::copy(value + 4, value + size, std::back_inserter(chan));
 	    MP4Free(value);
 	} catch (...) {}
-	if (alac.size() != 24 || (chan.size() && chan.size() != 12))
+	if (alac.size() != 24 || (chan.size() && chan.size() < 12))
 	    throw std::runtime_error("ALACSource: invalid magic cookie");
 
 	std::memset(&m_format, 0, sizeof m_format);
@@ -56,6 +56,14 @@ ALACSource::ALACSource(const std::wstring &path)
 	timeScale = b2host32(timeScale);
 	m_format.m_rate = timeScale;
 
+	AudioChannelLayout acl = { 0 };
+	if (chan.size()) {
+	    fourcc tag(reinterpret_cast<const char*>(&chan[0]));
+	    fourcc bitmap(reinterpret_cast<const char*>(&chan[4]));
+	    acl.mChannelLayoutTag = tag;
+	    acl.mChannelBitmap = bitmap;
+	    chanmap::GetChannelsFromAudioChannelLayout(&acl, &m_chanmap);
+	}
 	m_decoder = x::shared_ptr<ALACDecoder>(new ALACDecoder());
 	CHECKCA(m_decoder->Init(&alac[0], alac.size()));
 	setRange(0, m_file.GetTrackDuration(m_track_id));

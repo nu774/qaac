@@ -1,77 +1,138 @@
 #include "chanmap.h"
 
-uint32_t GetBitmapFromAudioChannelLayout(const AudioChannelLayout *acl)
+namespace chanmap {
+
+uint32_t GetChannelMask(const std::vector<uint32_t>& channels)
 {
-    if (acl->mChannelBitmap)
-	return acl->mChannelBitmap;
-    else if (acl->mNumberChannelDescriptions > 0) {
-	const AudioChannelDescription *desc = acl->mChannelDescriptions;
-	uint32_t bitmap = 0;
-	for (size_t i = 0; i < acl->mNumberChannelDescriptions - 1; ++i)
-	    if (desc[i].mChannelLabel >= desc[i+1].mChannelLabel)
-		return 0;
-	for (size_t i = 0; i < acl->mNumberChannelDescriptions; ++i) {
-	    if (desc[i].mChannelLabel >= 33)
-		return 0;
-	    bitmap |= (1 << (desc[i].mChannelLabel - 1));
-	}
-	return bitmap;
-    } else {
-	switch (acl->mChannelLayoutTag) {
-	case kAudioChannelLayoutTag_Mono: return 0x4;
-	case kAudioChannelLayoutTag_Stereo: return 0x3;
-	case kAudioChannelLayoutTag_MPEG_3_0_A: return 0x7;
-	case kAudioChannelLayoutTag_Quadraphonic:
-	case kAudioChannelLayoutTag_ITU_2_2:
-	    return 0x33;
-	case kAudioChannelLayoutTag_MPEG_4_0_A: return 0x107;
-	case kAudioChannelLayoutTag_MPEG_5_0_A: return 0x37;
-	case kAudioChannelLayoutTag_MPEG_5_1_A: return 0x3f;
-	case kAudioChannelLayoutTag_MPEG_6_1_A: return 0x13f;
-	case kAudioChannelLayoutTag_MPEG_7_1_A: return 0xff;
-	}
-    }
-    return 0;
-}
-
-/*
- * Fill in AudioChannelDescription with channel labels.
- * It seems QT looks at these labels when remix is done,
- * therefore we use this for remixing to be properly done.
- */
-void MapChannelLabel(AudioChannelDescription *desc, uint32_t bitmap)
-{
-    std::vector<uint32_t> labels;
-    bool back_in_use = ((bitmap & 0x30) == 0x30);
-    bool side_in_use = ((bitmap & 0x600) == 0x600);
-
-    for (size_t n = 0, t = bitmap; n < 32; ++n, t >>= 1)
-	if (t & 1) labels.push_back(n + 1);
-    for (size_t i = 0; i < labels.size(); ++i) {
-	if (labels[i] == kAudioChannelLabel_LeftSurroundDirect)
-	    desc[i].mChannelLabel = kAudioChannelLabel_LeftSurround;
-	else if (labels[i] == kAudioChannelLabel_RightSurroundDirect)
-	    desc[i].mChannelLabel = kAudioChannelLabel_RightSurround;
-	else if (side_in_use && labels[i] == kAudioChannelLabel_LeftSurround)
-	    desc[i].mChannelLabel = kAudioChannelLabel_RearSurroundLeft;
-	else if (side_in_use && labels[i] == kAudioChannelLabel_RightSurround)
-	    desc[i].mChannelLabel = kAudioChannelLabel_RearSurroundRight;
-	else
-	    desc[i].mChannelLabel = labels[i];
-    }
-}
-
-uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap)
-{
-    /* only accept usb order */
-    for (size_t i = 1; i < chanmap.size(); ++i)
-	if (chanmap[i-1] >= chanmap[i])
-	    throw std::runtime_error("Only USB ordered channel layout supported");
-
     uint32_t result = 0;
-    for (size_t i = 0; i < chanmap.size(); ++i)
-	result |= (1 << (chanmap[i] - 1));
+    for (size_t i = 0; i < channels.size(); ++i) {
+	if (channels[i] >= 33)
+	    throw std::runtime_error("Not supported channel layout");
+	result |= (1 << (channels[i] - 1));
+    }
     return result;
+}
+
+void GetChannelsFromBitmap(uint32_t bitmap, std::vector<uint32_t> *result,
+			   uint32_t limit)
+{
+    std::vector<uint32_t> channels;
+    for (size_t i = 0; i < 32 && channels.size() < limit; ++i) {
+	if (bitmap & (1<<i))
+	    channels.push_back(i + 1);
+    }
+    result->swap(channels);
+}
+
+void GetChannelsFromAudioChannelLayout(const AudioChannelLayout *acl,
+				       std::vector<uint32_t> *result)
+{
+    std::vector<uint32_t> channels;
+    uint32_t bitmap = 0;
+    const char *layout = 0;
+
+    switch (acl->mChannelLayoutTag) {
+    case kAudioChannelLayoutTag_UseChannelBitmap:
+	bitmap = acl->mChannelBitmap; break;
+    case kAudioChannelLayoutTag_UseChannelDescriptions:
+    {
+	const AudioChannelDescription *desc = acl->mChannelDescriptions;
+	for (size_t i = 0; i < acl->mNumberChannelDescriptions; ++i)
+	    channels.push_back(desc[i].mChannelLabel);
+    }
+    case kAudioChannelLayoutTag_Mono:
+	bitmap = 0x4; break;
+    case kAudioChannelLayoutTag_AC3_1_0_1:
+	layout = "\x03\x04"; break;
+    case kAudioChannelLayoutTag_Stereo:
+	bitmap = 0x3; break;
+    case kAudioChannelLayoutTag_MPEG_3_0_A:
+	bitmap = 0x7; break;
+    case kAudioChannelLayoutTag_MPEG_3_0_B:
+	layout = "\x03\x01\x02"; break;
+    case kAudioChannelLayoutTag_ITU_2_1:
+	bitmap = 0x103; break;
+    case kAudioChannelLayoutTag_AC3_3_0:
+	layout = "\x01\x03\x02"; break;
+    case kAudioChannelLayoutTag_AC3_3_0_1:
+	layout = "\x01\x03\x02\x04"; break;
+    case kAudioChannelLayoutTag_AC3_2_1_1:
+	layout = "\x01\x02\x09\x04"; break;
+    case kAudioChannelLayoutTag_Quadraphonic:
+    case kAudioChannelLayoutTag_ITU_2_2:
+	bitmap = 0x33; break;
+    case kAudioChannelLayoutTag_MPEG_4_0_A:
+	bitmap = 0x107; break;
+    case kAudioChannelLayoutTag_MPEG_4_0_B:
+	layout = "\x03\x01\x02\x09"; break;
+    case kAudioChannelLayoutTag_AC3_3_1:
+	layout = "\x01\x03\x02\x09"; break;
+    case kAudioChannelLayoutTag_AC3_3_1_1:
+	layout = "\x01\x03\x02\x09\x04"; break;
+    case kAudioChannelLayoutTag_MPEG_5_0_A:
+	bitmap = 0x37; break;
+    case kAudioChannelLayoutTag_MPEG_5_0_B:
+	layout = "\x01\x02\x05\x06\x03"; break;
+    case kAudioChannelLayoutTag_MPEG_5_0_C:
+	layout = "\x01\x03\x02\x05\x06"; break;
+    case kAudioChannelLayoutTag_MPEG_5_0_D:
+	layout = "\x03\x01\x02\x05\x06"; break;
+    case kAudioChannelLayoutTag_MPEG_5_1_A:
+	bitmap = 0x3f; break;
+    case kAudioChannelLayoutTag_MPEG_5_1_B:
+	layout = "\x01\x02\x05\x06\x03\x04"; break;
+    case kAudioChannelLayoutTag_MPEG_5_1_C:
+	layout = "\x01\x03\x02\x05\x06\x04"; break;
+    case kAudioChannelLayoutTag_MPEG_5_1_D:
+	layout = "\x03\x01\x02\x05\x06\x04"; break;
+    case kAudioChannelLayoutTag_AAC_6_0:
+	layout = "\x03\x01\x02\x05\x06\x09"; break;
+    case kAudioChannelLayoutTag_MPEG_6_1_A:
+	bitmap = 0x13f; break;
+    case kAudioChannelLayoutTag_AAC_6_1:
+	layout = "\x03\x01\x02\x05\x06\x09\x04"; break;
+    case kAudioChannelLayoutTag_AAC_7_0:
+	// layout = "\x03\x01\x02\x05\x06\x33\x34"; break;
+	layout = "\x03\x01\x02\x0a\x0b\x05\x06"; break;
+    case kAudioChannelLayoutTag_MPEG_7_1_A:
+	bitmap = 0xff; break;
+    case kAudioChannelLayoutTag_MPEG_7_1_B:
+	layout = "\x03\x07\x08\x01\x02\x05\x06\x04"; break;
+    case kAudioChannelLayoutTag_MPEG_7_1_C:
+	// layout = "\x01\x02\x03\x04\x05\x06\x33\x34"; break;
+	layout = "\x01\x02\x03\x04\x0a\x0b\x05\x06"; break;
+    case kAudioChannelLayoutTag_AAC_Octagonal:
+	// layout = "\x03\x01\x02\x05\x06\x33\x34\x09"; break;
+	layout = "\x03\x01\x02\x0a\x0b\x05\x06\x09"; break;
+    default:
+	throw std::runtime_error("Unsupported channel layout");
+    }
+
+    if (bitmap)
+	GetChannelsFromBitmap(bitmap, &channels);
+    else if (layout)
+	while (*layout) channels.push_back(*layout++);
+
+    result->swap(channels);
+}
+
+template <typename T>
+class IndexComparator {
+    const T *m_data;
+public:
+    IndexComparator(const T *data): m_data(data) {}
+    bool operator()(size_t l, size_t r) { return m_data[l-1] < m_data[r-1]; }
+};
+
+void GetChannelMappingToUSBOrder(const std::vector<uint32_t> &channels,
+				 std::vector<uint32_t> *result)
+{
+    std::vector<uint32_t> index(channels.size());
+    for (size_t i = 0; i < channels.size(); ++i)
+	index[i] = i + 1;
+    std::sort(index.begin(), index.end(),
+	      IndexComparator<uint32_t>(&channels[0]));
+    result->swap(index);
 }
 
 uint32_t GetDefaultChannelMask(const uint32_t nchannels)
@@ -112,71 +173,6 @@ uint32_t GetLayoutTag(uint32_t channelMask)
 	return kAudioChannelLayoutTag_MPEG_7_1_A;
     }
     return kAudioChannelLayoutTag_UseChannelBitmap;
-}
-
-uint32_t GetALACLayoutTag(uint32_t nchannels)
-{
-    static const uint32_t tab[] = {
-	kAudioChannelLayoutTag_Mono,
-	kAudioChannelLayoutTag_Stereo,
-	kAudioChannelLayoutTag_AAC_3_0,
-	kAudioChannelLayoutTag_AAC_4_0,
-	kAudioChannelLayoutTag_AAC_5_0,
-	kAudioChannelLayoutTag_AAC_5_1,
-	kAudioChannelLayoutTag_AAC_6_1,
-	kAudioChannelLayoutTag_AAC_7_1
-    };
-    return tab[nchannels-1];
-}
-
-uint32_t GetAACReversedChannelMap(uint32_t layoutTag,
-	std::vector<uint32_t> *result)
-{
-    static const uint32_t a30[] = { 2, 3, 1, 0 };
-    static const uint32_t a40[] = { 2, 3, 1, 4, 0 };
-    static const uint32_t a50[] = { 2, 3, 1, 4, 5, 0 };
-    static const uint32_t a51[] = { 2, 3, 1, 6, 4, 5, 0 };
-    static const uint32_t a60[] = { 2, 3, 1, 4, 5, 6, 0 };
-    static const uint32_t a61[] = { 2, 3, 1, 7, 4, 5, 6, 0 };
-    static const uint32_t a70[] = { 2, 3, 1, 6, 7, 4, 5, 0 };
-    static const uint32_t a71[] = { 4, 5, 1, 8, 6, 7, 2, 3, 0 };
-    static const uint32_t a80[] = { 2, 3, 1, 6, 7, 8, 4, 5, 0 };
-
-    const uint32_t *a = 0;
-    uint32_t bitmap = 0;
-
-    switch (layoutTag) {
-    case kAudioChannelLayoutTag_Mono:
-	bitmap = 0x4; break;
-    case kAudioChannelLayoutTag_Stereo:
-	bitmap = 0x3; break;
-    case kAudioChannelLayoutTag_AAC_3_0:
-	bitmap = 0x7; a = a30; break;
-    case kAudioChannelLayoutTag_Quadraphonic:
-	bitmap = 0x33; break;
-    case kAudioChannelLayoutTag_AAC_4_0:
-	bitmap = 0x107; a = a40; break;
-    case kAudioChannelLayoutTag_AAC_5_0:
-	bitmap = 0x37; a = a50; break;
-    case kAudioChannelLayoutTag_AAC_5_1:
-	bitmap = 0x3f; a = a51; break;
-    case kAudioChannelLayoutTag_AAC_6_0:
-	bitmap = 0x137; a = a60; break;
-    case kAudioChannelLayoutTag_AAC_6_1:
-	bitmap = 0x13f; a = a61; break;
-    case kAudioChannelLayoutTag_AAC_7_0:
-	bitmap = 0x637; a = a70; break;
-    case kAudioChannelLayoutTag_AAC_7_1:
-	bitmap = 0xff; a = a71; break;
-    case kAudioChannelLayoutTag_AAC_Octagonal:
-	bitmap = 0x737; a = a80; break;
-    default:
-	throw std::runtime_error("GetAACReversedLayoutTag: unknown AAC layout");
-    }
-    std::vector<uint32_t > vec;
-    while (a && *a) vec.push_back(*a++);
-    if (result) result->swap(vec);
-    return bitmap;
 }
 
 uint32_t GetAACLayoutTag(const AudioChannelLayout *layout)
@@ -279,6 +275,27 @@ void GetAACChannelMap(const AudioChannelLayout *layout,
     default: throw std::runtime_error("Not supported channel layout");
     }
     while (a && *a) result->push_back(*a++);
+}
+
+} // namespace
+
+ChannelMapper::ChannelMapper(const x::shared_ptr<ISource> &source,
+			     const std::vector<uint32_t> &chanmap,
+			     uint32_t bitmap)
+    : DelegatingSource(source)
+{
+    for (size_t i = 0; i < chanmap.size(); ++i)
+	m_chanmap.push_back(chanmap[i] - 1);
+    if (bitmap) {
+	for (size_t i = 0; i < 32; ++i, bitmap >>= 1)
+	    if (bitmap & 1) m_layout.push_back(i + 1);
+    } else {
+	const std::vector<uint32_t> *orig =
+	    DelegatingSource::getChannels();
+	if (orig)
+	    for (size_t i = 0; i < m_chanmap.size(); ++i)
+		m_layout.push_back(orig->at(m_chanmap[i]));
+    }
 }
 
 size_t ChannelMapper::readSamples(void *buffer, size_t nsamples)

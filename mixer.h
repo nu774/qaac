@@ -26,7 +26,7 @@ public:
 		const std::vector<std::vector<complex_t> > &spec, bool mt);
     uint64_t length() const { return -1; }
     const SampleFormat &getSampleFormat() const { return m_format; }
-    const std::vector<uint32_t> *getChannelMap() const { return 0; }
+    const std::vector<uint32_t> *getChannels() const { return 0; }
     size_t readSamples(void *buffer, size_t nsamples);
 private:
     size_t phaseShift(void *buffer, size_t nsamples);

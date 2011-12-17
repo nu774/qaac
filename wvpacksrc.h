@@ -54,7 +54,7 @@ public:
 		  const std::wstring &path);
     uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
-    const std::vector<uint32_t> *getChannelMap() const { return &m_chanmap; }
+    const std::vector<uint32_t> *getChannels() const { return &m_chanmap; }
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }

@@ -181,6 +181,17 @@ std::string slower(const std::string &s)
     return strtransform(s, tolower_);
 }
 
+template <typename ForwardIterator>
+bool is_strict_ordered(ForwardIterator begin, ForwardIterator end)
+{
+    if (begin == end)
+	return true;
+    for (ForwardIterator it; it = begin, ++begin != end; )
+	if (*it >= *begin)
+	    return false;
+    return true;
+}
+
 template <typename T>
 class AutoDynaCast {
     T *m_pointer;

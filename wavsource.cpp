@@ -1,4 +1,5 @@
 #include "wavsource.h"
+#include "chanmap.h"
 
 namespace wave {
     inline void want(bool expr)
@@ -81,12 +82,9 @@ void WaveSource::fetchWaveFormat()
 	wave::want(x == m_format.m_bitsPerSample);
 	// dwChannelMask
 	check_eof(read32le(&y));
-	if (y > 0 && bitcount(y) >= m_format.m_nchannels) {
-	    for (size_t i = 0;
-		 m_chanmap.size() < m_format.m_nchannels && i < 32;
-		 ++i, y >>= 1)
-		if (y & 1) m_chanmap.push_back(i + 1);
-	}
+	if (y > 0 && bitcount(y) >= m_format.m_nchannels)
+	    chanmap::GetChannelsFromBitmap(y, &m_chanmap,
+					   m_format.m_nchannels);
 	// SubFormat
 	wave::myGUID subFormat;
 	check_eof(read32le(&subFormat.Data1));

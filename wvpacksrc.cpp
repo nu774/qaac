@@ -5,6 +5,7 @@
 #include "itunetags.h"
 #include "cuesheet.h"
 #include "win32util.h"
+#include "chanmap.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
     while (0)
@@ -132,8 +133,7 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
     setRange(0, duration);
 
     unsigned mask = m_module.GetChannelMask(wpc);
-    for (size_t i = 0; i < 32; ++i, mask >>= 1)
-	if (mask & 1) m_chanmap.push_back(i + 1);
+    chanmap::GetChannelsFromBitmap(mask, &m_chanmap, m_format.m_nchannels);
 
     fetchTags();
 }

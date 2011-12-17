@@ -12,9 +12,9 @@ class CompositeSource: public ISource, public ITagParser {
     std::map<uint32_t, std::wstring> m_tags;
 public:
     CompositeSource() : m_curpos(0) {}
-    const std::vector<uint32_t> *getChannelMap() const
+    const std::vector<uint32_t> *getChannels() const
     {
-	return m_sources[0]->getChannelMap();
+	return m_sources[0]->getChannels();
     }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }

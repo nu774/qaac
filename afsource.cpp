@@ -98,24 +98,17 @@ AudioFileOpenFactory(InputStream &stream, const std::wstring &path)
     AudioFileID afid;
     x::shared_ptr<InputStream> streamPtr(new InputStream(stream));
 
-    CHECKCA(AudioFileOpenWithCallbacks(
-		streamPtr.get(), audiofile::read, 0,
-		audiofile::size, 0, 0, &afid));
+    CHECKCA(AudioFileOpenWithCallbacks(streamPtr.get(), audiofile::read, 0,
+				       audiofile::size, 0, 0, &afid));
     AudioFileX af(afid, true);
     AudioStreamBasicDescription asbd;
     af.getDataFormat(&asbd);
+
     if (asbd.mFormatID == 'lpcm')
 	return x::shared_ptr<ISource>(new AFSource(af, streamPtr));
-    else if (asbd.mFormatID == 'alac') {
-	x::shared_ptr<ISource> src(new ExtAFSource(af, streamPtr, path));
-	const SampleFormat &sf = src->getSampleFormat();
-	std::vector<uint32_t> chanmap;
-	uint32_t tag = GetALACLayoutTag(sf.m_nchannels);
-	uint32_t bitmap = GetAACReversedChannelMap(tag, &chanmap);
-	return (chanmap.size())
-	    ? x::shared_ptr<ISource>(new ChannelMapper(src, chanmap, bitmap))
-	    : src;
-    } else
+    else if (asbd.mFormatID == 'alac')
+	return x::shared_ptr<ISource>(new ExtAFSource(af, streamPtr, path));
+    else
 	throw std::runtime_error("Not supported format");
 }
 
@@ -129,14 +122,8 @@ AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
     x::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
-	uint32_t bitmap = GetBitmapFromAudioChannelLayout(acl.get());
-	if (bitmap && bitcount(bitmap) >= m_format.m_nchannels) {
-	    for (size_t i = 0;
-		 m_chanmap.size() < m_format.m_nchannels && i < 32;
-		 ++i, bitmap >>= 1)
-		if (bitmap & 1) m_chanmap.push_back(i + 1);
-	}
-    } catch (std::exception &) {}
+	chanmap::GetChannelsFromAudioChannelLayout(acl.get(), &m_chanmap);
+    } catch (...) {}
     try {
 	audiofile::fetchTags(m_af, &m_tags);
     } catch (...) {}
@@ -180,6 +167,11 @@ ExtAFSource::ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
     m_eaf.setClientDataFormat(oasbd);
     audiofile::SampleFormat_FromASBD(oasbd, &m_format);
     setRange(0, m_eaf.getFileLengthFrames());
+    x::shared_ptr<AudioChannelLayout> acl;
+    try {
+	m_af.getChannelLayout(&acl);
+	chanmap::GetChannelsFromAudioChannelLayout(acl.get(), &m_chanmap);
+    } catch (...) {}
     if (m_af.getFileFormat() == 'm4af') {
 	MP4FileX mp4file;
 	mp4file.Read(w2m(path, utf8_codecvt_facet()).c_str(), 0);

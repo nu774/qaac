@@ -11,7 +11,7 @@ public:
     {}
     uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
-    const std::vector<uint32_t> *getChannelMap() const { return 0; }
+    const std::vector<uint32_t> *getChannels() const { return 0; }
     size_t readSamples(void *buffer, size_t nsamples)
     {
 	nsamples = adjustSamplesToRead(nsamples);

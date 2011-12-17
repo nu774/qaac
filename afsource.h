@@ -26,7 +26,7 @@ public:
     ~AFSource() { m_af.attach(0, false); }
     uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
-    const std::vector<uint32_t> *getChannelMap() const
+    const std::vector<uint32_t> *getChannels() const
     {
 	return m_chanmap.size() ? &m_chanmap: 0;
     }
@@ -57,7 +57,7 @@ public:
     }
     uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
-    const std::vector<uint32_t> *getChannelMap() const
+    const std::vector<uint32_t> *getChannels() const
     {
 	return m_chanmap.size() ? &m_chanmap: 0;
     }

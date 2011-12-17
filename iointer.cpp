@@ -30,6 +30,15 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
     return readSamplesAsFloat(src, byteBuffer, &floatBuffer->at(0), nsamples);
 }
 
+inline float quantize(double v)
+{
+    const float anti_denormal = 1.0e-30f;
+    float x = v;
+    x += anti_denormal;
+    x -= anti_denormal;
+    return x;
+}
+
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 			  float *floatBuffer, size_t nsamples)
 {
@@ -56,7 +65,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 		if (sf.m_endian == SampleFormat::kIsBigEndian)
 		    bswap64buffer(bp, blen);
 		double *src = reinterpret_cast<double *>(bp);
-		std::copy(src, src + (blen >> 3), fp);
+		std::transform(src, src + (blen >> 3), fp, quantize);
 	    }
 	    break;
 	}
