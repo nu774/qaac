@@ -3,8 +3,7 @@
 #include "iointer.h"
 #include "mp4v2wrapper.h"
 
-class ALACSource:
-    public ISource, public ITagParser, public PartialSource<ALACSource>
+class ALACSource: public ITagParser, public PartialSource<ALACSource>
 {
     struct DecodeBuffer {
 	uint32_t nsamples;

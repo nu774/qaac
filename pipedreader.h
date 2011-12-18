@@ -7,6 +7,7 @@
 
 class PipedReader: public DelegatingSource {
     x::shared_ptr<void> m_readPipe, m_writePipe, m_thread;
+    uint64_t m_samples_read;
 public:
     PipedReader(x::shared_ptr<ISource> &src);
     ~PipedReader();
@@ -18,6 +19,7 @@ public:
 	    throw std::runtime_error(std::strerror(errno));
 	m_thread.reset(reinterpret_cast<HANDLE>(h), CloseHandle);
     }
+    uint64_t getSamplesRead() const { return m_samples_read; }
 private:
     void inputThreadProc();
     static unsigned __stdcall staticInputThreadProc(void *arg)

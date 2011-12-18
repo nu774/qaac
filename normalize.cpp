@@ -4,7 +4,7 @@
 #include "win32util.h"
 
 Normalizer::Normalizer(const x::shared_ptr<ISource> &src)
-    : DelegatingSource(src), m_peak(0.0), m_processed(0)
+    : DelegatingSource(src), m_peak(0.0), m_processed(0), m_samples_read(0)
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
     if (srcFormat.m_bitsPerSample == 64)
@@ -46,5 +46,7 @@ size_t Normalizer::readSamples(void *buffer, size_t nsamples)
 	    *fp++ = nfp;
 	}
     }
-    return nc / m_format.m_nchannels;
+    nsamples = nc / m_format.m_nchannels;
+    m_samples_read += nsamples;
+    return nsamples;
 }

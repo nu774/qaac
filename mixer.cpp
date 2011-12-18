@@ -78,7 +78,7 @@ MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
 			 const std::vector<std::vector<complex_t> > &spec,
 			 bool mt)
     : DelegatingSource(source), m_module(module), m_matrix(spec),
-      m_input_frames(0), m_end_of_input(false)
+      m_input_frames(0), m_end_of_input(false), m_samples_read(0)
 {
     const SampleFormat &fmt = source->getSampleFormat();
     if (!validateMatrix(m_matrix, &m_shiftMask))
@@ -136,6 +136,7 @@ size_t MatrixMixer::readSamples(void *buffer, size_t nsamples)
 	    *op++ = value;
 	}
     }
+    m_samples_read += nsamples;
     return nsamples;
 }
 

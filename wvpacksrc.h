@@ -39,7 +39,7 @@ public:
 };
 
 class WavpackSource:
-    public ISource, public ITagParser, public PartialSource<WavpackSource>
+    public ITagParser, public PartialSource<WavpackSource>
 {
     WavpackModule m_module;
     InputStream m_stream;

@@ -8,7 +8,7 @@
 #include "flacmodule.h"
 
 class FLACSource :
-    public ISource, public ITagParser, public PartialSource<FLACSource>
+    public ITagParser, public PartialSource<FLACSource>
 {
     typedef x::shared_ptr<FLAC__StreamDecoder> decoder_t;
     FLACModule m_module;

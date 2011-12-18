@@ -27,7 +27,7 @@ namespace wave
 }
 
 class WaveSource :
-    public ISource, private RIFFParser, public PartialSource<WaveSource>
+    private RIFFParser, public PartialSource<WaveSource>
 {
     SampleFormat m_format;
     std::vector<uint32_t> m_chanmap;

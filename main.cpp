@@ -215,12 +215,20 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 	statPtr = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
-    Progress progress(opts.verbose, encoder->src()->length(),
-	    encoder->getInputDescription().mSampleRate);
+    ISource *src = encoder->src();
+    if (src->length() == -1) {
+	DelegatingSource *dsrc = dynamic_cast<DelegatingSource*>(src);
+	while (dsrc && !dynamic_cast<PipedReader*>(src)) {
+	    src = dsrc->source();
+	    dsrc = dynamic_cast<DelegatingSource*>(src);
+	}
+    }
+    Progress progress(opts.verbose, src->length(),
+		      src->getSampleFormat().m_rate);
     try {
 	FILE *statfp = statPtr.get();
 	while (encoder->encodeChunk(1)) {
-	    progress.update(stat->samplesRead());
+	    progress.update(src->getSamplesRead());
 	    if (statfp)
 		std::fprintf(statfp, "%g\n", stat->currentBitrate());
 	}
@@ -594,6 +602,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	}
 	srcx.reset(new MatrixMixer(srcx, opts.libsoxrate, matrix, threading));
 	channels = 0;
+	nchannels = srcx->getSampleFormat().m_nchannels;
     }
     // map with --chanmap option
     if (opts.chanmap.size()) {
@@ -812,18 +821,26 @@ void decode_file(const x::shared_ptr<ISource> &src,
     }
     const SampleFormat &sf = src->getSampleFormat();
     WaveSink sink(fileptr.get(), src->length(), sf, bitmap);
-    Progress progress(opts.verbose, src->length(), sf.m_rate);
+
+    ISource *srcp = src.get();
+    if (srcp->length() == -1) {
+	DelegatingSource *dsrc = dynamic_cast<DelegatingSource*>(srcp);
+	while (dsrc && !dynamic_cast<PipedReader*>(srcp)) {
+	    srcp = dsrc->source();
+	    dsrc = dynamic_cast<DelegatingSource*>(srcp);
+	}
+    }
+    Progress progress(opts.verbose, srcp->length(),
+		      srcp->getSampleFormat().m_rate);
     uint32_t bpf = sf.bytesPerFrame();
     std::vector<uint8_t> buffer(4096 * bpf);
     try {
 	size_t nread;
-	uint64_t ntotal = 0;
 	while ((nread = src->readSamples(&buffer[0], 4096)) > 0) {
-	    ntotal += nread;
-	    progress.update(ntotal);
+	    progress.update(srcp->getSamplesRead());
 	    sink.writeSamples(&buffer[0], nread * bpf, nread);
 	}
-	progress.finish(ntotal);
+	progress.finish(srcp->getSamplesRead());
     } catch (const std::exception &e) {
 	LOG("\n%s\n", e.what());
     }

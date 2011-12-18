@@ -138,7 +138,8 @@ TakSource::TakSource(const TakModule &module, InputStream &stream)
 
 void TakSource::skipSamples(int64_t count)
 {
-    TRYTAK(m_module.SSD_Seek(m_decoder.get(), getSamplesRead() + count));
+    TRYTAK(m_module.SSD_Seek(m_decoder.get(),
+	PartialSource::getSamplesRead() + count));
 }
 
 size_t TakSource::readSamples(void *buffer, size_t nsamples)

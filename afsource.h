@@ -8,8 +8,7 @@
 x::shared_ptr<ISource>
 AudioFileOpenFactory(InputStream &stream, const std::wstring &path);
 
-class AFSource: public ISource, public ITagParser,
-    public PartialSource<AFSource>
+class AFSource: public ITagParser, public PartialSource<AFSource>
 {
     AudioFileX m_af;
     uint64_t m_offset;
@@ -37,8 +36,7 @@ public:
 	*getChapters() const { return 0; }
 };
 
-class ExtAFSource: public ISource, public ITagParser,
-    public PartialSource<ExtAFSource>
+class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
 {
     AudioFileX m_af;
     ExtAudioFileX m_eaf;

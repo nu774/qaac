@@ -51,6 +51,7 @@ public:
     virtual const SampleFormat &getSampleFormat() const = 0;
     virtual const std::vector<uint32_t> *getChannels() const = 0;
     virtual size_t readSamples(void *buffer, size_t nsamples) = 0;
+    virtual uint64_t getSamplesRead() const = 0;
 };
 
 class ISink {
@@ -74,7 +75,7 @@ struct IPartialSource {
 };
 
 template <class Source>
-class PartialSource: public IPartialSource {
+class PartialSource: public ISource, public IPartialSource {
     uint64_t m_duration;
     uint64_t m_samples_read;
 public:
@@ -110,6 +111,7 @@ public:
     void setSource(x::shared_ptr<ISource> src) { m_src = src; }
     ISource *source() { return m_src.get(); }
     uint64_t length() const { return m_src->length(); }
+    uint64_t getSamplesRead() const { return m_src->getSamplesRead(); }
     const SampleFormat &getSampleFormat() const
     {
 	return m_src->getSampleFormat();

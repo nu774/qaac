@@ -30,8 +30,7 @@ public:
     sf_count_t (*read_double)(SNDFILE *, double *, sf_count_t);
 };
 
-class LibSndfileSource:
-    public ISource, public PartialSource<LibSndfileSource>
+class LibSndfileSource: public PartialSource<LibSndfileSource>
 {
     typedef x::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;

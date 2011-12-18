@@ -10,8 +10,9 @@ class CompositeSource: public ISource, public ITagParser {
     SampleFormat m_format;
     size_t m_curpos;
     std::map<uint32_t, std::wstring> m_tags;
+    uint64_t m_samples_read;
 public:
-    CompositeSource() : m_curpos(0) {}
+    CompositeSource() : m_curpos(0), m_samples_read(0) {}
     const std::vector<uint32_t> *getChannels() const
     {
 	return m_sources[0]->getChannels();
@@ -47,6 +48,7 @@ public:
 	if (m_curpos == m_sources.size())
 	    return 0;
 	size_t rc = m_sources[m_curpos]->readSamples(buffer, nsamples);
+	m_samples_read += rc;
 	if (rc == nsamples)
 	    return rc;
 	if (rc == 0) {
@@ -61,6 +63,7 @@ public:
     {
 	throw std::runtime_error("CompositeSource::setRange: not implemented");
     }
+    uint64_t getSamplesRead() const { return m_samples_read; }
 };
 
 #endif

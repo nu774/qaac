@@ -3,7 +3,7 @@
 
 #include "iointer.h"
 
-class NullSource: public ISource, public PartialSource<NullSource> {
+class NullSource: public PartialSource<NullSource> {
     SampleFormat m_format;
 public:
     NullSource(const SampleFormat &format):

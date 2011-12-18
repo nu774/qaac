@@ -141,7 +141,7 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
 void WavpackSource::skipSamples(int64_t count)
 {
     if (!m_module.SeekSample(m_wpc.get(),
-		static_cast<int32_t>(getSamplesRead() + count)))
+	static_cast<int32_t>(PartialSource::getSamplesRead() + count)))
 	throw std::runtime_error("WavpackSeekSample");
 
 }

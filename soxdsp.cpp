@@ -40,7 +40,7 @@ SoxModule::SoxModule(const std::wstring &path)
 SoxDSPProcessor::SoxDSPProcessor(const x::shared_ptr<ISoxDSPEngine> &engine,
 				 const x::shared_ptr<ISource> &src)
     : DelegatingSource(src), m_engine(engine),
-      m_end_of_input(false), m_input_frames(0)
+      m_end_of_input(false), m_input_frames(0), m_samples_read(0)
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
     if (srcFormat.m_bitsPerSample == 64)
@@ -87,7 +87,9 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
 	std::memmove(&this->m_fbuffer[0], src,
 		     m_input_frames * nchannels * sizeof(float));
     }
-    return (dst - static_cast<float*>(buffer)) / nchannels;
+    nsamples = (dst - static_cast<float*>(buffer)) / nchannels;
+    m_samples_read += nsamples;
+    return nsamples;
 }
 
 SoxResampler::SoxResampler(const SoxModule &module, const SampleFormat &format,

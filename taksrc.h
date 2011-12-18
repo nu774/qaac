@@ -37,7 +37,7 @@ public:
 };
 
 class TakSource:
-    public ISource, public ITagParser, public PartialSource<TakSource>
+    public ITagParser, public PartialSource<TakSource>
 {
     TakModule m_module;
     x::shared_ptr<void> m_decoder;

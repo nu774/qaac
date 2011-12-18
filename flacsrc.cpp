@@ -77,7 +77,7 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
 void FLACSource::skipSamples(int64_t count)
 {
     TRYFL(m_module.stream_decoder_seek_absolute(m_decoder.get(),
-		getSamplesRead() + count));
+		PartialSource::getSamplesRead() + count));
 }
 
 template <class MemorySink>

@@ -3,7 +3,7 @@
 
 #include "iointer.h"
 
-class RawSource: public ISource, public PartialSource<RawSource> {
+class RawSource: public PartialSource<RawSource> {
     InputStream m_stream;
     SampleFormat m_format;
 public:
