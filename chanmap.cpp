@@ -93,17 +93,17 @@ void GetChannelsFromAudioChannelLayout(const AudioChannelLayout *acl,
     case kAudioChannelLayoutTag_AAC_6_1:
 	layout = "\x03\x01\x02\x05\x06\x09\x04"; break;
     case kAudioChannelLayoutTag_AAC_7_0:
-	// layout = "\x03\x01\x02\x05\x06\x33\x34"; break;
+	// layout = "\x03\x01\x02\x05\x06\x21\x22"; break;
 	layout = "\x03\x01\x02\x0a\x0b\x05\x06"; break;
     case kAudioChannelLayoutTag_MPEG_7_1_A:
 	bitmap = 0xff; break;
     case kAudioChannelLayoutTag_MPEG_7_1_B:
 	layout = "\x03\x07\x08\x01\x02\x05\x06\x04"; break;
     case kAudioChannelLayoutTag_MPEG_7_1_C:
-	// layout = "\x01\x02\x03\x04\x05\x06\x33\x34"; break;
+	// layout = "\x01\x02\x03\x04\x05\x06\x21\x22"; break;
 	layout = "\x01\x02\x03\x04\x0a\x0b\x05\x06"; break;
     case kAudioChannelLayoutTag_AAC_Octagonal:
-	// layout = "\x03\x01\x02\x05\x06\x33\x34\x09"; break;
+	// layout = "\x03\x01\x02\x05\x06\x21\x22\x09"; break;
 	layout = "\x03\x01\x02\x0a\x0b\x05\x06\x09"; break;
     default:
 	throw std::runtime_error("Unsupported channel layout");
