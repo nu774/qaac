@@ -17,7 +17,7 @@ void GetChannelsFromBitmap(uint32_t bitmap, std::vector<uint32_t> *result,
 			   uint32_t limit)
 {
     std::vector<uint32_t> channels;
-    for (size_t i = 0; i < 32 && channels.size() < limit; ++i) {
+    for (unsigned i = 0; i < 32 && channels.size() < limit; ++i) {
 	if (bitmap & (1<<i))
 	    channels.push_back(i + 1);
     }
@@ -149,7 +149,7 @@ void GetChannelMappingToUSBOrder(const std::vector<uint32_t> &channels,
 				 std::vector<uint32_t> *result)
 {
     std::vector<uint32_t> index(channels.size());
-    for (size_t i = 0; i < channels.size(); ++i)
+    for (unsigned i = 0; i < channels.size(); ++i)
 	index[i] = i + 1;
     std::sort(index.begin(), index.end(),
 	      IndexComparator<uint32_t>(&channels[0]));
@@ -308,7 +308,7 @@ ChannelMapper::ChannelMapper(const x::shared_ptr<ISource> &source,
     for (size_t i = 0; i < chanmap.size(); ++i)
 	m_chanmap.push_back(chanmap[i] - 1);
     if (bitmap) {
-	for (size_t i = 0; i < 32; ++i, bitmap >>= 1)
+	for (unsigned i = 0; i < 32; ++i, bitmap >>= 1)
 	    if (bitmap & 1) m_layout.push_back(i + 1);
     } else {
 	const std::vector<uint32_t> *orig =

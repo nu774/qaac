@@ -61,7 +61,7 @@ private:
     }
     CueSegment *lastSegment()
     {
-	for (int i = m_tracks.size() - 1; i >= 0; --i)
+	for (ssize_t i = m_tracks.size() - 1; i >= 0; --i)
 	    if (m_tracks[i].m_segments.size())
 		return &m_tracks[i].m_segments.back();
 	return 0;

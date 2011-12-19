@@ -17,7 +17,7 @@ public:
 	nsamples = adjustSamplesToRead(nsamples);
 	if (nsamples) {
 	    size_t nblocks = m_format.bytesPerFrame();
-	    std::memset(buffer, nsamples * nblocks, 0);
+	    std::memset(buffer, 0, nsamples * nblocks);
 	    addSamplesRead(nsamples);
 	}
 	return nsamples;

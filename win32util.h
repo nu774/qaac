@@ -33,7 +33,8 @@ std::wstring GetFullPathNameX(const std::wstring &path)
 {
     DWORD length = GetFullPathNameW(path.c_str(), 0, 0, 0);
     std::vector<wchar_t> buffer(length);
-    length = GetFullPathNameW(path.c_str(), buffer.size(), &buffer[0], 0);
+    length = GetFullPathNameW(path.c_str(), static_cast<DWORD>(buffer.size()),
+			      &buffer[0], 0);
     return std::wstring(&buffer[0], &buffer[length]);
 }
 
@@ -68,7 +69,7 @@ std::wstring GetCurrentDirectoryX()
 {
     DWORD len = GetCurrentDirectoryW(0, 0);
     std::vector<wchar_t> buffer(len + 1);
-    len = GetCurrentDirectoryW(buffer.size(), &buffer[0]);
+    len = GetCurrentDirectoryW(static_cast<DWORD>(buffer.size()), &buffer[0]);
     return std::wstring(&buffer[0], &buffer[len]);
 }
 
@@ -76,10 +77,12 @@ inline
 std::wstring GetModuleFileNameX(HMODULE module)
 {
     std::vector<wchar_t> buffer(32);
-    DWORD cclen = GetModuleFileNameW(module, &buffer[0], buffer.size());
+    DWORD cclen = GetModuleFileNameW(module, &buffer[0],
+				     static_cast<DWORD>(buffer.size()));
     while (cclen >= buffer.size() - 1) {
 	buffer.resize(buffer.size() * 2);
-	cclen = GetModuleFileNameW(module, &buffer[0], buffer.size());
+	cclen = GetModuleFileNameW(module, &buffer[0],
+				   static_cast<DWORD>(buffer.size()));
     }
     return std::wstring(&buffer[0], &buffer[cclen]);
 }

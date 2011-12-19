@@ -1,3 +1,4 @@
+#include <limits>
 #include "options.h"
 #include "getopt.h"
 #include "itunetags.h"
@@ -285,7 +286,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		else 
 		    return usage(), false;
 	    }
-	    uint32_t low = INT_MAX;
+	    uint32_t low = std::numeric_limits<int>::max();
 	    uint32_t high = 0;
 	    for (size_t i = 0; i < this->chanmap.size(); ++i) {
 		uint32_t n = this->chanmap[i];

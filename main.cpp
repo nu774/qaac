@@ -1167,15 +1167,6 @@ void load_modules(Options &opts)
 #endif
 }
 
-struct FNConverter {
-    wchar_t operator()(wchar_t ch) {
-	if (std::wcschr(L":/\\?|<>*\"", ch))
-	    return L'_';
-	else
-	    return ch;
-    }
-};
-
 struct TagLookup {
     typedef std::map<uint32_t, std::wstring> meta_t;
     const CueTrack &track;
@@ -1262,7 +1253,13 @@ void handle_cue_sheet(Options &opts)
 	    ? opts.fname_format : L"${tracknumber}${title& }${title}";
 	std::wstring ofilename =
 	    process_template(formatstr, TagLookup(track, track_tags));
-	ofilename = strtransform(ofilename, FNConverter()) + L".stub";
+
+	struct F {
+	    static wchar_t trans(wchar_t ch) {
+		return std::wcschr(L":/\\?|<>*\"", ch) ? L'_' : ch;
+	    }
+	};
+	ofilename = strtransform(ofilename, F::trans) + L".stub";
 	ofilename = get_output_filename(ofilename.c_str(), opts);
 	LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
 	encode_file(source, ofilename, opts);

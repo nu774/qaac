@@ -3,6 +3,7 @@
 
 #include <libsoxrate.h>
 #include "iointer.h"
+#include "util.h"
 
 struct HINSTANCE__;
 
@@ -34,8 +35,8 @@ public:
 struct ISoxDSPEngine {
     virtual ~ISoxDSPEngine() {}
     virtual const SampleFormat &getSampleFormat() = 0;
-    virtual int process(const float * const *ibuf, float **obuf, size_t *ilen,
-			size_t *olen, size_t istride, size_t ostride) = 0;
+    virtual ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
+			    size_t *olen, size_t istride, size_t ostride) = 0;
 };
 
 class SoxDSPProcessor: public DelegatingSource {
@@ -63,8 +64,8 @@ public:
     SoxResampler(const SoxModule &module, const SampleFormat &format,
 		 uint32_t Fp, bool mt);
     const SampleFormat &getSampleFormat() { return m_format; }
-    int process(const float * const *ibuf, float **obuf, size_t *ilen,
-		size_t *olen, size_t istride, size_t ostride)
+    ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
+		    size_t *olen, size_t istride, size_t ostride)
     {
 	return m_module.rate_process(m_processor.get(), ibuf, obuf,
 				     ilen, olen, istride, ostride);
@@ -79,8 +80,8 @@ public:
     SoxLowpassFilter(const SoxModule &module, const SampleFormat &format,
 		     uint32_t rate, bool mt);
     const SampleFormat &getSampleFormat() { return m_format; }
-    int process(const float * const *ibuf, float **obuf, size_t *ilen,
-		size_t *olen, size_t istride, size_t ostride)
+    ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
+		    size_t *olen, size_t istride, size_t ostride)
     {
 	return m_module.fir_process(m_processor.get(), ibuf, obuf,
 				    ilen, olen, istride, ostride);

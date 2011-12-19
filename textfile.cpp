@@ -31,7 +31,7 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     HR(stream->Seek(li, STREAM_SEEK_END, &ui));
     if (ui.QuadPart > 0x100000)
 	throw std::runtime_error(format("%ls: file too big", path.c_str()));
-    size_t fileSize = ui.QuadPart;
+    size_t fileSize = ui.LowPart;
     HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
 
     IMultiLanguage2 *mlang;

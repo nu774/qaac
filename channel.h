@@ -9,10 +9,6 @@
 #include <stdint.h>
 #include "util.h"
 
-#ifdef _MSC_VER
-typedef intptr_t ssize_t;
-#endif
-
 struct IChannel {
     virtual ~IChannel() {}
     virtual IChannel *copy() = 0;
@@ -158,7 +154,7 @@ namespace __InputStreamImpl {
 	}
 	void pushback(const char *s, size_t count)
 	{
-	    for (int i = count - 1; i >= 0; --i)
+	    for (ssize_t i = count - 1; i >= 0; --i)
 		pushback(s[i]);
 	}
 	int64_t seek_forward(int64_t count);

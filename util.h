@@ -17,6 +17,10 @@
 #endif
 
 #ifdef _MSC_VER
+typedef intptr_t ssize_t;
+#endif
+
+#ifdef _MSC_VER
 #ifdef _M_IX86
 inline int lrint(double x)
 {
@@ -43,13 +47,13 @@ inline int _wtoi(const wchar_t *s) { return std::wcstol(s, 0, 10); }
 template <typename T, size_t size>
 inline size_t array_size(const T (&)[size]) { return size; }
 
-inline intptr_t strindex(const char *s, int ch)
+inline ssize_t strindex(const char *s, int ch)
 {
     const char *p = std::strchr(s, ch);
     return p ? p - s : -1;
 }
 
-inline intptr_t strindex(const wchar_t *s, int ch)
+inline ssize_t strindex(const wchar_t *s, int ch)
 {
     const wchar_t *p = std::wcschr(s, ch);
     return p ? p - s : -1;

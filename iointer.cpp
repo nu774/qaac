@@ -33,7 +33,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 inline float quantize(double v)
 {
     const float anti_denormal = 1.0e-30f;
-    float x = v;
+    float x = static_cast<float>(v);
     x += anti_denormal;
     x -= anti_denormal;
     return x;
