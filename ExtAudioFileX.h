@@ -14,7 +14,10 @@ public:
     }
     void attach(ExtAudioFileRef file, bool takeOwn)
     {
-	m_file.reset(file, takeOwn ? ExtAudioFileDispose : fakeDispose);
+	struct F {
+	    static OSStatus dispose(ExtAudioFileRef) { return 0; }
+	};
+	m_file.reset(file, takeOwn ? ExtAudioFileDispose : F::dispose);
     }
     operator ExtAudioFileRef() { return m_file.get(); }
 
@@ -82,11 +85,6 @@ public:
 					kExtAudioFileProperty_AudioConverter,
 					&size, &result));
 	return result;
-    }
-private:
-    static OSStatus fakeDispose(ExtAudioFileRef file)
-    {
-	return 0;
     }
 };
 

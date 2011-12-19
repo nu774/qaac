@@ -14,9 +14,10 @@ public:
     }
     void attach(AudioFileID file, bool takeOwn)
     {
-	OSStatus (*dispose)(AudioFileID) =
-	    takeOwn ? AudioFileClose : fakeDispose;
-	m_file = x::shared_ptr<OpaqueAudioFileID>(file, dispose);
+	struct F {
+	    static OSStatus dispose(AudioFileID af) { return 0; }
+	};
+	m_file.reset(file, takeOwn ? AudioFileClose : F::dispose);
     }
     operator AudioFileID() { return m_file.get(); }
 
@@ -78,12 +79,6 @@ public:
 		    kAudioFilePropertyInfoDictionary,
 		    &size, &dict));
 	return dict;
-    }
-
-private:
-    static OSStatus fakeDispose(AudioFileID file)
-    {
-	return 0;
     }
 };
 

@@ -3,6 +3,7 @@
 
 #include "CoreAudioToolbox.h"
 #include "CoreAudioHelper.h"
+#include <limits>
 
 class AudioConverterX {
     x::shared_ptr<OpaqueAudioConverter> m_converter;
@@ -21,9 +22,11 @@ public:
     }
     void attach(AudioConverterRef converter, bool takeOwn)
     {
-	OSStatus (*dispose)(AudioConverterRef) =
-	    takeOwn ? AudioConverterDispose : fakeDispose;
-	m_converter = x::shared_ptr<OpaqueAudioConverter>(converter, dispose);
+	struct F {
+	    static OSStatus dispose(AudioConverterRef) { return 0; }
+	};
+	m_converter.reset(converter, takeOwn ? AudioConverterDispose
+					     : F::dispose);
     }
     operator AudioConverterRef() { return m_converter.get(); }
 
@@ -229,7 +232,7 @@ public:
     {
 	std::vector<AudioValueRange> rates;
 	getApplicableEncodeBitRates(&rates);
-	double distance = DBL_MAX;
+	double distance = std::numeric_limits<double>::max();
 	double pick = 0;
 	std::vector<AudioValueRange>::const_iterator it = rates.begin();
 	for (; it != rates.end(); ++it) {
@@ -242,8 +245,6 @@ public:
 	}
 	return pick;
     }
-private:
-    static OSStatus fakeDispose(AudioConverterRef) { return 0; }
 };
 
 #endif

@@ -26,11 +26,13 @@ public:
     }
     void attach(AudioCodec codec, bool takeOwn)
     {
-	OSStatus (*dispose)(AudioCodec) =
-	    takeOwn ? reinterpret_cast<OSStatus (*)(AudioCodec)>(
-			AudioComponentInstanceDispose)
-		    : fakeDispose;
-	m_codec = x::shared_ptr<ComponentInstanceRecord>(codec, dispose);
+	typedef OSStatus (*disposer_t)(AudioCodec);
+	struct F {
+	    static OSStatus dispose(AudioCodec) { return 0; }
+	};
+	disposer_t acdispose =
+	    reinterpret_cast<disposer_t>(AudioComponentInstanceDispose);
+	m_codec.reset(codec, takeOwn ? acdispose : F::dispose);
     }
     operator AudioCodec() { return m_codec.get(); }
 
@@ -125,8 +127,6 @@ public:
 	}
 	return pick;
     }
-private:
-    static OSStatus fakeDispose(AudioCodec) { return 0; }
 };
 
 #endif
