@@ -30,7 +30,7 @@ void throw_win32_error(const std::string &msg, DWORD code)
 FILE *win32_tmpfile(const wchar_t *prefix)
 {
     std::wstring sprefix = format(L"%s.%d.", prefix, GetCurrentProcessId());
-    wchar_t *tmpname = _wtempnam(GetTempPathX().c_str(), sprefix.c_str());
+    wchar_t *tmpname = _wtempnam(0, sprefix.c_str());
     HANDLE fh = CreateFileW(get_prefixed_fullpath(tmpname).c_str(),
 	    GENERIC_READ|GENERIC_WRITE,
 	    0, 0, CREATE_ALWAYS,
