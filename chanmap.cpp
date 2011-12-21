@@ -42,48 +42,48 @@ void GetChannelsFromAudioChannelLayout(const AudioChannelLayout *acl,
 	break;
     }
     case kAudioChannelLayoutTag_Mono:
-	bitmap = 0x4; break;
+	layout = "\x03"; break;
     case kAudioChannelLayoutTag_AC3_1_0_1:
 	layout = "\x03\x04"; break;
     case kAudioChannelLayoutTag_Stereo:
-	bitmap = 0x3; break;
+	layout = "\x01\x02"; break;
     case kAudioChannelLayoutTag_DVD_4:
-	bitmap = 0xb; break;
+	layout = "\x01\x02\x04"; break;
     case kAudioChannelLayoutTag_MPEG_3_0_A:
-	bitmap = 0x7; break;
+	layout = "\x01\x02\x03"; break;
     case kAudioChannelLayoutTag_MPEG_3_0_B:
 	layout = "\x03\x01\x02"; break;
-    case kAudioChannelLayoutTag_ITU_2_1:
-	bitmap = 0x103; break;
     case kAudioChannelLayoutTag_AC3_3_0:
 	layout = "\x01\x03\x02"; break;
-    case kAudioChannelLayoutTag_DVD_5:
-	bitmap = 0x10b; break;
+    case kAudioChannelLayoutTag_ITU_2_1:
+	layout = "\x01\x02\x09"; break;
     case kAudioChannelLayoutTag_DVD_10:
-	bitmap = 0xf; break;
+	layout = "\x01\x02\x03\x04"; break;
     case kAudioChannelLayoutTag_AC3_3_0_1:
 	layout = "\x01\x03\x02\x04"; break;
+    case kAudioChannelLayoutTag_DVD_5:
+	layout = "\x01\x02\x04\x09"; break;
     case kAudioChannelLayoutTag_AC3_2_1_1:
 	layout = "\x01\x02\x09\x04"; break;
     case kAudioChannelLayoutTag_Quadraphonic:
     case kAudioChannelLayoutTag_ITU_2_2:
-	bitmap = 0x33; break;
+	layout = "\x01\x02\x05\x06"; break;
     case kAudioChannelLayoutTag_MPEG_4_0_A:
-	bitmap = 0x107; break;
+	layout = "\x01\x02\x03\x09"; break;
     case kAudioChannelLayoutTag_MPEG_4_0_B:
 	layout = "\x03\x01\x02\x09"; break;
     case kAudioChannelLayoutTag_AC3_3_1:
 	layout = "\x01\x03\x02\x09"; break;
     case kAudioChannelLayoutTag_DVD_6:
-	bitmap = 0x3b; break;
-    case kAudioChannelLayoutTag_DVD_11:
-	bitmap = 0x10f; break;
-    case kAudioChannelLayoutTag_AC3_3_1_1:
-	layout = "\x01\x03\x02\x09\x04"; break;
+	layout = "\x01\x02\x04\x05\x06"; break;
     case kAudioChannelLayoutTag_DVD_18:
 	layout = "\x01\x02\x05\x06\x04"; break;
+    case kAudioChannelLayoutTag_DVD_11:
+	layout = "\x01\x02\x03\x04\x09"; break;
+    case kAudioChannelLayoutTag_AC3_3_1_1:
+	layout = "\x01\x03\x02\x09\x04"; break;
     case kAudioChannelLayoutTag_MPEG_5_0_A:
-	bitmap = 0x37; break;
+	layout = "\x01\x02\x03\x05\x06"; break;
     case kAudioChannelLayoutTag_MPEG_5_0_B:
 	layout = "\x01\x02\x05\x06\x03"; break;
     case kAudioChannelLayoutTag_MPEG_5_0_C:
@@ -91,7 +91,7 @@ void GetChannelsFromAudioChannelLayout(const AudioChannelLayout *acl,
     case kAudioChannelLayoutTag_MPEG_5_0_D:
 	layout = "\x03\x01\x02\x05\x06"; break;
     case kAudioChannelLayoutTag_MPEG_5_1_A:
-	bitmap = 0x3f; break;
+	layout = "\x01\x02\x03\x04\x05\x06"; break;
     case kAudioChannelLayoutTag_MPEG_5_1_B:
 	layout = "\x01\x02\x05\x06\x03\x04"; break;
     case kAudioChannelLayoutTag_MPEG_5_1_C:
@@ -104,7 +104,7 @@ void GetChannelsFromAudioChannelLayout(const AudioChannelLayout *acl,
     case kAudioChannelLayoutTag_AAC_6_0:
 	layout = "\x03\x01\x02\x05\x06\x09"; break;
     case kAudioChannelLayoutTag_MPEG_6_1_A:
-	bitmap = 0x13f; break;
+	layout = "\x01\x02\x03\x04\x05\x06\x09"; break;
     case kAudioChannelLayoutTag_AAC_6_1:
 	layout = "\x03\x01\x02\x05\x06\x09\x04"; break;
     case kAudioChannelLayoutTag_AudioUnit_7_0:
@@ -114,7 +114,7 @@ void GetChannelsFromAudioChannelLayout(const AudioChannelLayout *acl,
     case kAudioChannelLayoutTag_AAC_7_0:
 	layout = "\x03\x01\x02\x0a\x0b\x05\x06"; break;
     case kAudioChannelLayoutTag_MPEG_7_1_A:
-	bitmap = 0xff; break;
+	layout = "\x01\x02\x03\x04\x05\x06\x07\x08"; break;
     case kAudioChannelLayoutTag_MPEG_7_1_B:
 	layout = "\x03\x07\x08\x01\x02\x05\x06\x04"; break;
     case kAudioChannelLayoutTag_MPEG_7_1_C:

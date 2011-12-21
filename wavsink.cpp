@@ -23,16 +23,13 @@ namespace wave {
 	if (format.m_endian == SampleFormat::kIsBigEndian)
 	    throw std::runtime_error("Sorry, can't handle big endian LPCM");
 
+	uint16_t fmt;
 	// wFormatTag
 	{
-	    uint16_t fmt;
-	    if (format.m_nchannels > 2)
-		fmt = kFormatExtensible;
-	    else if (format.m_type == SampleFormat::kIsFloat)
-		fmt = kFormatFloat;
-	    else
-		fmt = kFormatPCM;
-	    put(result, static_cast<uint16_t>(fmt));
+	    fmt = (chanmask || format.m_nchannels > 2
+		   || format.m_bitsPerSample > 16)
+		    ? kFormatExtensible : kFormatPCM;
+	    put(result, fmt);
 	}
 	// nChannels
 	put(result, static_cast<uint16_t>(format.m_nchannels));
@@ -48,9 +45,7 @@ namespace wave {
 	put(result, static_cast<uint16_t>(format.m_bitsPerSample));
 
 	// cbSize
-	if (format.m_nchannels <= 2)
-	    put(result, static_cast<uint16_t>(0));
-	else {
+	if (fmt != kFormatPCM) {
 	    // WAVEFORMATEXTENSIBLE
 	    put(result, static_cast<uint16_t>(22));
 	    // Samples
