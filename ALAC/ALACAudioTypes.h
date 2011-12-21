@@ -102,7 +102,7 @@ enum
 {
     kALACChannelLayoutTag_Mono          = (100<<16) | 1,    // C
     kALACChannelLayoutTag_Stereo        = (101<<16) | 2,	// L R
-    kALACChannelLayoutTag_MPEG_3_0_B    = (113<<16) | 3,	// C L R
+    kALACChannelLayoutTag_MPEG_3_0_B    = (114<<16) | 3,	// C L R
     kALACChannelLayoutTag_MPEG_4_0_B    = (116<<16) | 4,	// C L R Cs
     kALACChannelLayoutTag_MPEG_5_0_D    = (120<<16) | 5,    // C L R Ls Rs
     kALACChannelLayoutTag_MPEG_5_1_D    = (124<<16) | 6,	// C L R Ls Rs LFE
