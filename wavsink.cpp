@@ -14,15 +14,6 @@ namespace wave {
     void buildHeader(const SampleFormat &format, uint32_t chanmask,
 		     std::streambuf *result)
     {
-	if (format.m_nchannels > 8)
-	    throw std::runtime_error(
-		    "Sorry, can't handle more than 8 channels");
-	if (format.m_bitsPerSample == 8 &&
-		format.m_type == SampleFormat::kIsSignedInteger)
-	    throw std::runtime_error("Sorry, can't handle 8bit signed LPCM");
-	if (format.m_endian == SampleFormat::kIsBigEndian)
-	    throw std::runtime_error("Sorry, can't handle big endian LPCM");
-
 	uint16_t fmt;
 	// wFormatTag
 	{
@@ -65,7 +56,7 @@ WaveSink::WaveSink(FILE *fp,
 		   uint64_t duration,
 		   const SampleFormat &format,
 		   uint32_t chanmask)
-	: m_file(fp), m_bytes_written(0)
+	: m_file(fp), m_bytes_written(0), m_format(format)
 {
     std::ostringstream os;
     wave::buildHeader(format, chanmask, os.rdbuf());
@@ -91,6 +82,35 @@ WaveSink::WaveSink(FILE *fp,
     m_data_pos = 28 + hdrsize;
 }
 
+void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
+{
+    uint8_t *bp = static_cast<uint8_t *>(const_cast<void*>(data));
+    std::vector<uint8_t> buf;
+    if (m_format.m_endian == SampleFormat::kIsBigEndian) {
+	buf.resize(length);
+	bp = &buf[0];
+	std::memcpy(bp, data, length);
+	switch (m_format.m_bitsPerSample) {
+	case 16: bswap16buffer(bp, length); break;
+	case 24: bswap24buffer(bp, length); break;
+	case 32: bswap32buffer(bp, length); break;
+	case 64: bswap64buffer(bp, length); break;
+	}
+    }
+    if (m_format.m_bitsPerSample == 8 &&
+	m_format.m_type == SampleFormat::kIsSignedInteger) {
+	if (!buf.size() != length) {
+	    buf.resize(length);
+	    bp = &buf[0];
+	    std::memcpy(bp, data, length);
+	}
+	for (size_t i = 0; i < length; ++i)
+	    bp[i] ^= 0x80;
+    }
+    write(bp, length);
+    m_bytes_written += length;
+}
+
 void WaveSink::finishWrite()
 {
     if (m_bytes_written & 1) write("\0", 1);
@@ -109,3 +129,5 @@ void WaveSink::finishWrite()
 	}
     }
 }
+
+
