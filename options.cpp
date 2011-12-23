@@ -7,7 +7,6 @@ static struct option long_options[] = {
 #ifdef REFALAC
     { L"fast", no_argument, 0, 'afst' },
 #else
-    { L"check", no_argument, 0, 'chck' },
     { L"formats", no_argument, 0, 'fmts' },
     { L"abr", required_argument, 0, 'a' },
     { L"tvbr", required_argument, 0, 'V' },
@@ -19,6 +18,7 @@ static struct option long_options[] = {
     { L"alac", no_argument, 0, 'A' },
     { L"native-resampler", no_argument, 0, 'nsmp' },
 #endif
+    { L"check", no_argument, 0, 'chck' },
     { L"decode", no_argument, 0, 'D' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"rate", required_argument, 0, 'r' },
@@ -36,6 +36,7 @@ static struct option long_options[] = {
     { L"stat", no_argument, 0, 'S' },
     { L"threading", no_argument, 0, 'thrd' },
     { L"nice", no_argument, 0, 'n' },
+    { L"tmpdir", required_argument, 0, 'tmpd' },
     { L"text-codepage", required_argument, 0, 'txcp' },
     { L"raw", no_argument, 0, 'R' },
     { L"raw-channels", required_argument, 0,  'Rchn' },
@@ -104,8 +105,7 @@ void usage()
 "\n"
 "Main options:\n"
 #ifndef REFALAC
-"--check                Show QT version etc, and exit\n"
-"--formats              Print available AAC formats, and exit\n"
+"--formats              Show available AAC formats and exit\n"
 "-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
 "-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
 "-v, --cvbr <bitrate>   AAC Constrained VBR mode / bitrate\n"
@@ -114,7 +114,7 @@ void usage()
 "                       Highest bitrate available is automatically chosen.\n"
 "                       For LC, default is -V90\n"
 "                       For HE, default is -v0\n"
-"--he                   HE AAC mode (Can't use TVBR)\n"
+"--he                   HE AAC mode (TVBR is not available)\n"
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
 "-A, --alac             ALAC encoding mode\n"
@@ -122,6 +122,7 @@ void usage()
 #else
 "--fast                 Fast stereo encoding mode.\n"
 #endif
+"--check                Show library versions and exit\n"
 "-D, --decode           Wave output mode.\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "-r, --rate <keep|auto|n>\n"
@@ -153,7 +154,8 @@ void usage()
 "                       If --chanmask 0 is specified, qaac treats it as if\n"
 "                       no channel mask is present in the source, and pick\n"
 "                       default layout.\n"
-"-d <dirname>           Output directory, default is cwd\n"
+"-d <dirname>           Output directory. Default is current working dir\n"
+"--tmpdir <dirname>     Temporary directory. Default is %TMP%\n"
 "-s, --silent           Suppress console messages\n"
 "--verbose              More verbose console messages\n"
 "-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
@@ -275,6 +277,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->no_optimize = true;
 	else if (ch == 'nfmt')
 	    this->fname_format = optarg;
+	else if (ch == 'tmpd')
+	    this->tmpdir = optarg;
 	else if (ch == 'cmap') {
 	    std::vector<wchar_t> buff(wcslen(optarg)+1);
 	    wchar_t *bp = &buff[0], *tok;

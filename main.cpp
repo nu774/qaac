@@ -1376,6 +1376,11 @@ int wmain1(int argc, wchar_t **argv)
 	//mp4v2::impl::log.setVerbosity(MP4_LOG_VERBOSE4);
 
 	load_lyrics_file(&opts);
+	if (opts.tmpdir) {
+	    std::wstring env(L"TMP=");
+	    env += GetFullPathNameX(opts.tmpdir);
+	    _wputenv(env.c_str());
+	}
 
 	while ((opts.ifilename = *argv++)) {
 	    const wchar_t *name = L"<stdin>";
