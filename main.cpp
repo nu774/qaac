@@ -1332,7 +1332,9 @@ int wmain1(int argc, wchar_t **argv)
 	__pfnDliFailureHook2 = DllImportHook;
 	set_dll_directories(opts.verbose);
 	HMODULE hDll = LoadLibraryW(L"CoreAudioToolbox.dll");
-	if (hDll) {
+	if (!hDll)
+	    throw_win32_error("CoreAudioToolbox.dll", GetLastError());
+	else {
 	    std::string ver = GetCoreAudioVersion(hDll);
 	    encoder_name = format("%s, CoreAudioToolbox %s",
 		    encoder_name.c_str(), ver.c_str());
