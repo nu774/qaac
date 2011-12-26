@@ -113,7 +113,7 @@ void bswap32buffer(uint8_t *buffer, size_t size)
 
 void bswap64buffer(uint8_t *buffer, size_t size)
 {
-    for (uint8_t *p = buffer; p < buffer + size; p += 4) {
+    for (uint8_t *p = buffer; p < buffer + size; p += 8) {
 	uint8_t tmp = p[0];
 	p[0] = p[7];
 	p[7] = tmp;
