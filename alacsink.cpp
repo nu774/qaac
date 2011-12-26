@@ -2,35 +2,32 @@
 #include "utf8_codecvt_facet.hpp"
 #include "strcnv.h"
 #include "alacsink.h"
-
-static
-bool get32BE(uint8_t const ** pos, const uint8_t *end, uint32_t *n)
-{
-    if (end - *pos < 4) return false;
-    const uint8_t *p = *pos;
-    *n = ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]);
-    *pos += 4;
-    return true;
-}
+#include "channel.h"
 
 static
 void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
 	std::vector<uint8_t> *alac,
 	std::vector<uint8_t> *chan)
 {
-    const uint8_t *beg = &cookie[0];
-    const uint8_t *end = beg + cookie.size();
+    MemoryReader reader(&cookie[0], cookie.size());
     uint32_t chunk_size, chunk_name;
 
-    while (get32BE(&beg, end, &chunk_size)) {
-	if (chunk_size < 8 || !get32BE(&beg, end, &chunk_name))
+    while (reader.read32be(&chunk_size)) {
+	if (chunk_size < 8 || !reader.read32be(&chunk_name))
 	    break;
 	chunk_size -= 8;
-	if (chunk_name == 'alac')
-	    std::copy(beg + 4, beg + chunk_size, std::back_inserter(*alac));
-	else if (chunk_name == 'chan')
-	    std::copy(beg + 4, beg + chunk_size, std::back_inserter(*chan));
-	beg += chunk_size;
+	if (chunk_name == 'alac') {
+	    chunk_size -= 4;
+	    if (reader.skip(4) != 4) break;
+	    alac->resize(chunk_size);
+	    if (reader.read(&(*alac)[0], chunk_size) != chunk_size) break;
+	} else if (chunk_name == 'chan') {
+	    chunk_size -= 4;
+	    if (reader.skip(4) != 4) break;
+	    chan->resize(chunk_size);
+	    if (reader.read(&(*chan)[0], chunk_size) != chunk_size) break;
+	} else if (reader.skip(chunk_size) != chunk_size)
+	    break;
     }
 }
 

@@ -92,6 +92,38 @@ public:
     }
 };
 
+class MemoryReader: public BinaryRead<MemoryReader>
+{
+    const uint8_t *m_position;
+    const uint8_t *m_end;
+public:
+    MemoryReader(const void *beg, size_t size)
+    {
+	m_position = static_cast<const uint8_t*>(beg);
+	m_end = m_position + size;
+    }
+    MemoryReader(const void *beg, const void *end)
+    {
+	m_position = static_cast<const uint8_t*>(beg);
+	m_position = static_cast<const uint8_t*>(end);
+    }
+    ssize_t read(void *buffer, size_t count)
+    {
+	size_t n = std::min(m_end - m_position,
+			    static_cast<ptrdiff_t>(count));
+	std::memcpy(buffer, m_position, n);
+	m_position += n;
+	return n;
+    }
+    size_t skip(size_t count)
+    {
+	size_t n = std::min(m_end - m_position,
+			    static_cast<ptrdiff_t>(count));
+	m_position += n;
+	return n;
+    }
+};
+
 namespace __InputStreamImpl {
 
     struct Impl {
