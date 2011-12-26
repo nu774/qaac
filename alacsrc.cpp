@@ -19,11 +19,9 @@ ALACSource::ALACSource(const std::wstring &path)
 	const char *alacprop, *chanprop;
 	const char *brand = m_file.GetStringProperty("ftyp.majorBrand");
 	if (!std::strcmp(brand, "qt  ")) {
-	    throw std::runtime_error("Not supported format");
-	    /*
+	    // throw std::runtime_error("Not supported format");
 	    alacprop = "mdia.minf.stbl.stsd.alac.wave.alac.decoderConfig";
 	    chanprop = "mdia.minf.stbl.stsd.alac.wave.chan.data";
-	    */
 	} else {
 	    alacprop = "mdia.minf.stbl.stsd.alac.alac.decoderConfig";
 	    chanprop = "mdia.minf.stbl.stsd.alac.chan.data";
@@ -94,7 +92,18 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
 	while (nread < nsamples) {
 	    MP4SampleId sid =
 		m_file.GetSampleIdFromTime(m_track_id, m_position);
-	    uint32_t size = m_file.GetSampleSize(m_track_id, sid);
+	    uint32_t size;
+	    try {
+		size = m_file.GetSampleSize(m_track_id, sid);
+	    } catch (mp4v2::impl::Exception *e) {
+		/*
+		 * Come here when we try to read more samples beyond the end.
+		 * This usually happens when stts entries are incorrect.
+		 * We just treat this as EOF.
+		 */
+		delete e;
+		break;
+	    }
 	    MP4Timestamp start;
 	    MP4Duration duration;
 	    std::vector<uint8_t> ivec(size);
