@@ -581,9 +581,16 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     uint32_t nchannels = src->getSampleFormat().m_nchannels;
     x::shared_ptr<ISource> srcx(src);
 
-    // reorder to Microsoft (USB) order
     const std::vector<uint32_t> *channels = src->getChannels();
     if (channels) {
+#ifndef REFALAC
+	AudioChannelLayoutX layout =
+	    AudioChannelLayoutX::FromChannels(*channels);
+	if (opts.verbose > 1) {
+	    LOG("Input layout: %ls\n", layout.layoutName().c_str());
+	}
+#endif
+	// reorder to Microsoft (USB) order
 	if (!is_strict_ordered(channels->begin(), channels->end())) {
 	    std::vector<uint32_t> mapping;
 	    chanmap::GetChannelMappingToUSBOrder(*channels,
@@ -626,6 +633,10 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     if (chanmask) {
 	layout = AudioChannelLayoutX::FromBitmap(chanmask);
 	*wav_layout = layout;
+#ifndef REFALAC
+	if (opts.isLPCM() && opts.verbose > 1)
+	    LOG("Output layout: %ls\n", wav_layout->layoutName().c_str());
+#endif
     }
     if (!opts.isLPCM()) {
 	// construct mapped channel layout to AAC/ALAC order
@@ -637,6 +648,10 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	if (aacmap.size())
 	    srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
 	*aac_layout = mapped;
+#ifndef REFALAC
+	if (opts.verbose > 1)
+	    LOG("Output layout: %ls\n", aac_layout->layoutName().c_str());
+#endif
     }
     return srcx;
 }
@@ -906,13 +921,7 @@ void show_available_codec_setttings(UInt32 fmt)
 	    if (tags[j] == 0) continue;
 	    AudioChannelLayoutX acl;
 	    acl->mChannelLayoutTag = tags[j];
-	    CFStringRef name;
-	    UInt32 size = sizeof(CFStringRef);
-	    CHECKCA(AudioFormatGetProperty(
-			kAudioFormatProperty_ChannelLayoutName,
-			sizeof(AudioChannelLayout), acl, &size, &name));
-	    std::wstring wname = CF2W(name);
-	    CFRelease(name);
+	    std::wstring wname = acl.layoutName();
 
 	    AudioStreamBasicDescription iasbd = { 0 };
 	    iasbd.mFormatID = 'lpcm';

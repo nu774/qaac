@@ -82,7 +82,6 @@ public:
 	return AudioChannelLayoutTag_GetNumberOfChannels(
 		m_instance->mChannelLayoutTag);
     }
-
     static AudioChannelLayoutX CreateDefault(unsigned nchannels)
     {
 	return FromBitmap(chanmap::GetDefaultChannelMask(nchannels));
@@ -96,6 +95,39 @@ public:
 	    layout->mChannelBitmap = bitmap;
 	return layout;
     }
+#ifndef REFALAC
+    static
+    AudioChannelLayoutX FromChannels(const std::vector<uint32_t> &channels)
+    {
+	AudioChannelLayoutX layout(channels.size());
+	layout->mChannelLayoutTag
+	    = kAudioChannelLayoutTag_UseChannelDescriptions;
+	for (size_t i = 0; i < channels.size(); ++i)
+	    layout->mChannelDescriptions[i].mChannelLabel = channels[i];
+	UInt32 tag;
+	UInt32 size = sizeof tag;
+	try {
+	    CHECKCA(AudioFormatGetProperty(
+		    kAudioFormatProperty_TagForChannelLayout,
+		    sizeof(AudioChannelLayout), layout,
+		    &size, &tag));
+	    layout->mChannelLayoutTag = tag;
+	} catch (...) {}
+	return layout;
+    }
+    std::wstring layoutName() const
+    {
+	CFStringRef name;
+	UInt32 size = sizeof(CFStringRef);
+	CHECKCA(AudioFormatGetProperty(
+		    kAudioFormatProperty_ChannelLayoutName,
+		    sizeof(AudioChannelLayout), m_instance.get(),
+		    &size, &name));
+	std::wstring wname = CF2W(name);
+	CFRelease(name);
+	return wname;
+    }
+#endif
 private:
     void create(size_t channel_count)
     {
