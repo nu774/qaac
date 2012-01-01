@@ -60,7 +60,7 @@ ALACSource::ALACSource(const std::wstring &path)
 	    fourcc bitmap(reinterpret_cast<const char*>(&chan[4]));
 	    acl.mChannelLayoutTag = tag;
 	    acl.mChannelBitmap = bitmap;
-	    chanmap::GetChannelsFromAudioChannelLayout(&acl, &m_chanmap);
+	    chanmap::GetChannels(&acl, &m_chanmap);
 	}
 	m_decoder = x::shared_ptr<ALACDecoder>(new ALACDecoder());
 	CHECKCA(m_decoder->Init(&alac[0], alac.size()));

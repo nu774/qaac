@@ -133,7 +133,7 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
     setRange(0, duration);
 
     unsigned mask = m_module.GetChannelMask(wpc);
-    chanmap::GetChannelsFromBitmap(mask, &m_chanmap, m_format.m_nchannels);
+    chanmap::GetChannels(mask, &m_chanmap, m_format.m_nchannels);
 
     fetchTags();
 }

@@ -122,7 +122,7 @@ AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
     x::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
-	chanmap::GetChannelsFromAudioChannelLayout(acl.get(), &m_chanmap);
+	chanmap::GetChannels(acl.get(), &m_chanmap);
     } catch (...) {}
     try {
 	audiofile::fetchTags(m_af, &m_tags);
@@ -170,7 +170,7 @@ ExtAFSource::ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
     x::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
-	chanmap::GetChannelsFromAudioChannelLayout(acl.get(), &m_chanmap);
+	chanmap::GetChannels(acl.get(), &m_chanmap);
     } catch (...) {}
     if (m_af.getFileFormat() == 'm4af') {
 	MP4FileX mp4file;

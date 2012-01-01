@@ -83,8 +83,7 @@ void WaveSource::fetchWaveFormat()
 	// dwChannelMask
 	check_eof(read32le(&y));
 	if (y > 0 && bitcount(y) >= m_format.m_nchannels)
-	    chanmap::GetChannelsFromBitmap(y, &m_chanmap,
-					   m_format.m_nchannels);
+	    chanmap::GetChannels(y, &m_chanmap, m_format.m_nchannels);
 	// SubFormat
 	wave::myGUID subFormat;
 	check_eof(read32le(&subFormat.Data1));

@@ -5,23 +5,20 @@
 #include "iointer.h"
 
 namespace chanmap {
+    std::string GetChannelNames(const std::vector<uint32_t> &channels);
     uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap);
-    void GetChannelsFromBitmap(uint32_t bitmap, std::vector<uint32_t> *result,
-			       uint32_t limit=UINT32_MAX);
-    void GetChannelsFromAudioChannelLayout(const AudioChannelLayout *layout,
-					   std::vector<uint32_t> *result);
+    void GetChannels(uint32_t bitmap, std::vector<uint32_t> *result,
+		     uint32_t limit=UINT32_MAX);
+    void GetChannels(const AudioChannelLayout *layout,
+		     std::vector<uint32_t> *result);
+    void ConvertChannelsFromAppleLayout(const std::vector<uint32_t> &from,
+					std::vector<uint32_t> *to);
     void GetChannelMappingToUSBOrder(const std::vector<uint32_t> &channels,
 				     std::vector<uint32_t> *result);
     uint32_t GetDefaultChannelMask(uint32_t nchannels);
-    uint32_t GetLayoutTag(uint32_t chanmask);
-
-    /*
-     * Workaround for CoreAudioToolbox >= 7.9.4.0 bug.
-     * returns new layout tag and original -> AAC channel transform map.
-     */
-    uint32_t GetAACLayoutTag(const AudioChannelLayout *layout);
-    void GetAACChannelMap(const AudioChannelLayout *layout,
-	    size_t nchannels, std::vector<uint32_t> *result);
+    uint32_t GetLayoutTag(uint32_t bitmap);
+    uint32_t GetAACLayoutTag(uint32_t bitmap);
+    void GetAACChannelMap(uint32_t bitmap, std::vector<uint32_t> *result);
 }
 
 class ChannelMapper: public DelegatingSource {
