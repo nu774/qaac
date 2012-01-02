@@ -51,11 +51,9 @@ int64_t StdioChannel::seek(int64_t offset, int whence)
 	DWORD low = GetFileSize(raw_handle(), &high);
 	off += ((static_cast<int64_t>(high) << 32) | low);
     }
-    if (std::fsetpos(m_fp.get(), &off))
-	throw std::runtime_error(std::strerror(errno));
+    CHECKCRT(std::fsetpos(m_fp.get(), &off));
 #else
-    if (_fseeki64(m_fp.get(), offset, whence))
-	throw std::runtime_error(std::strerror(errno));
+    CHECKCRT(_fseeki64(m_fp.get(), offset, whence));
 #endif
     return tell();
 }
@@ -63,8 +61,7 @@ int64_t StdioChannel::seek(int64_t offset, int whence)
 int64_t StdioChannel::tell()
 {
     fpos_t off;
-    if (std::fgetpos(m_fp.get(), &off))
-	throw std::runtime_error(std::strerror(errno));
+    CHECKCRT(std::fgetpos(m_fp.get(), &off));
     return off;
 }
 

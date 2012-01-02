@@ -41,12 +41,12 @@ FILE *win32_tmpfile(const wchar_t *prefix)
 	    _O_BINARY|_O_RDWR);
     if (fd == -1) {
 	CloseHandle(fh);
-	throw std::runtime_error(std::strerror(errno));
+	throw_crt_error("win32_tmpfile: open_osfhandle()");
     }
     FILE *fp = _fdopen(fd, "w+");
     if (!fp) {
 	_close(fd);
-	throw std::runtime_error(std::strerror(errno));
+	throw_crt_error("win32_tmpfile: _fdopen()");
     }
     return fp;
 }

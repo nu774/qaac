@@ -15,7 +15,7 @@ protected:
     bool m_closed;
 public:
     MP4SinkBase(const std::wstring &path, bool temp=false);
-    ~MP4SinkBase() { close(); }
+    ~MP4SinkBase() { try { close(); } catch(...) {} }
     MP4FileX *getFile() { return &m_mp4file; }
     void close();
 };

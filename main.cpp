@@ -233,8 +233,9 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 		std::fprintf(statfp, "%g\n", stat->currentBitrate());
 	}
 	progress.finish(stat->samplesRead());
-    } catch (const std::exception &e) {
-	LOG("\n%s\n", e.what());
+    } catch (...) {
+	LOG("\n");
+	throw;
     }
 }
 
@@ -851,6 +852,7 @@ void decode_file(const x::shared_ptr<ISource> &src,
     } catch (const std::exception &e) {
 	LOG("\n%s\n", e.what());
     }
+    sink.finishWrite();
 }
 
 #ifndef REFALAC
@@ -1117,6 +1119,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
 		encoder_config);
 	    if (!opts.no_optimize)
 		do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
+	    asink->close();
 	}
     }
 }

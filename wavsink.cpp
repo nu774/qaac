@@ -56,7 +56,7 @@ WaveSink::WaveSink(FILE *fp,
 		   uint64_t duration,
 		   const SampleFormat &format,
 		   uint32_t chanmask)
-	: m_file(fp), m_bytes_written(0), m_format(format)
+	: m_file(fp), m_bytes_written(0), m_closed(false), m_format(format)
 {
     std::ostringstream os;
     wave::buildHeader(format, chanmask, os.rdbuf());
@@ -113,6 +113,8 @@ void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 
 void WaveSink::finishWrite()
 {
+    if (m_closed) return;
+    m_closed = true;
     if (m_bytes_written & 1) write("\0", 1);
     uint64_t datasize64 = m_bytes_written;
     uint64_t riffsize64 = datasize64 + m_data_pos - 8;
@@ -125,7 +127,6 @@ void WaveSink::finishWrite()
 		size32 = static_cast<uint32_t>(riffsize64);
 		write(&size32, 4);
 	    }
-	    std::fsetpos(m_file, &pos);
 	}
     }
 }

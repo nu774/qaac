@@ -2,6 +2,7 @@
 #include "utf8_codecvt_facet.hpp"
 #include "strcnv.h"
 #include "sink.h"
+#include "util.h"
 #include "win32util.h"
 #include "bitstream.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -212,5 +213,5 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
     std::fwrite(bs.data(), 1, 7, m_fp.get());
     std::fwrite(data, 1, length, m_fp.get());
     if (ferror(m_fp.get()))
-	throw std::runtime_error("write error");
+	throw_crt_error("fwrite()");
 }

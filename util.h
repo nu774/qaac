@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
+#include <cerrno>
 #include <stdint.h> // To avoid conflict with QT
 
 #if defined _MSC_VER
@@ -285,4 +286,16 @@ void bswap24buffer(uint8_t *buffer, size_t size);
 void bswap32buffer(uint8_t *buffer, size_t size);
 
 void bswap64buffer(uint8_t *buffer, size_t size);
+
+inline void throw_crt_error(const char *message)
+{
+    throw std::runtime_error(format("%s: %s", message,
+				    std::strerror(errno)));
+}
+#define CHECKCRT(expr) \
+    do { \
+	if (expr) { \
+	    throw_crt_error(#expr); \
+	} \
+    } while (0)
 #endif

@@ -24,8 +24,7 @@ size_t Normalizer::process(size_t nsamples)
 	std::fwrite(&m_fbuffer[0], sizeof(float), nc * m_format.m_nchannels,
 		    m_tmpfile.get());
 	if (std::ferror(m_tmpfile.get()))
-	    throw std::runtime_error(format("fwrite: %s",
-					    std::strerror(errno)));
+	    throw_crt_error("fwrite()");
 	for (size_t i = 0; i < m_fbuffer.size(); ++i) {
 	    float x = std::fabs(m_fbuffer[i]);
 	    if (x > m_peak) m_peak = x;
