@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <stdint.h>
 #undef FindAtom
-#include "impl.h"
+#include "src/impl.h"
 #include "util.h"
 
 std::string format_mp4error(const mp4v2::impl::Exception &e);

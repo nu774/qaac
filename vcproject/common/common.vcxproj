@@ -136,13 +136,12 @@
     <ClCompile Include="..\..\alacsink.cpp" />
     <ClCompile Include="..\..\bitstream.cpp" />
     <ClCompile Include="..\..\chanmap.cpp" />
-    <ClCompile Include="..\..\channel.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\flacmodule.cpp" />
     <ClCompile Include="..\..\flacsrc.cpp" />
-    <ClCompile Include="..\..\getopt.c" />
     <ClCompile Include="..\..\iff.cpp" />
     <ClCompile Include="..\..\intsrc.cpp" />
+    <ClCompile Include="..\..\ioabst.cpp" />
     <ClCompile Include="..\..\iointer.cpp" />
     <ClCompile Include="..\..\itunetags.cpp" />
     <ClCompile Include="..\..\libsndfilesrc.cpp" />
@@ -161,6 +160,7 @@
     <ClCompile Include="..\..\util.cpp" />
     <ClCompile Include="..\..\wavsink.cpp" />
     <ClCompile Include="..\..\wavsource.cpp" />
+    <ClCompile Include="..\..\wgetopt.cpp" />
     <ClCompile Include="..\..\wicimage.cpp" />
     <ClCompile Include="..\..\win32util.cpp" />
     <ClCompile Include="..\..\wvpacksrc.cpp" />

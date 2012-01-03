@@ -56,7 +56,11 @@ static
 int seek(void *fh, int64_t pos)
 {
     FILE *fp = reinterpret_cast<FILE*>(fh);
+#if defined(_MSC_VER) || defined(__MINGW32__)
     return std::fsetpos(fp, static_cast<fpos_t*>(&pos));
+#else
+    return fseeko(fp, pos, SEEK_SET);
+#endif
 }
 
 static
@@ -372,7 +376,7 @@ void MP4FileCopy::finish()
 
 bool MP4FileCopy::copyNextChunk()
 {
-    uint32_t nextTrack = -1;
+    uint32_t nextTrack = 0xffffffff;
     MP4Timestamp nextTime = MP4_INVALID_TIMESTAMP;
     size_t numTracks = m_mp4file->GetNumberOfTracks();
     for (size_t i = 0; i < numTracks; ++i) {
@@ -392,7 +396,7 @@ bool MP4FileCopy::copyNextChunk()
 	nextTime = m_state[i].time;
 	nextTrack = i;
     }
-    if (nextTrack == -1) return false;
+    if (nextTrack == 0xffffffff) return false;
     MP4Track *track = m_mp4file->m_pTracks[nextTrack];
     m_mp4file->m_file = m_src;
     uint8_t *chunk;

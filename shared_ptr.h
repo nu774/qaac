@@ -1,4 +1,4 @@
-#ifdef __MINGW32__
+#ifdef __GNUC__
 #include <tr1/memory>
 namespace x {
 using std::tr1::shared_ptr;

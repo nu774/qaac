@@ -3,7 +3,7 @@
 
 #include "AudioFileX.h"
 #include "ExtAudioFileX.h"
-#include "channel.h"
+#include "ioabst.h"
 
 x::shared_ptr<ISource>
 AudioFileOpenFactory(InputStream &stream, const std::wstring &path);

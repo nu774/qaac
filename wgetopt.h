@@ -40,10 +40,7 @@
 #ifndef _GETOPT_H_
 #define _GETOPT_H_
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace wide {
 
 /*
  * GNU-like getopt_long()/getopt_long_only() with 4.4BSD optreset extension.
@@ -83,8 +80,6 @@ extern int optind, opterr, optopt;
 extern int optreset;		/* getopt(3) external variable */
 #endif
  
-#ifdef __cplusplus
 }
-#endif
 
 #endif /* !_GETOPT_H_ */

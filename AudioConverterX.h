@@ -4,6 +4,7 @@
 #include "CoreAudioToolbox.h"
 #include "CoreAudioHelper.h"
 #include <limits>
+#include <cmath>
 
 class AudioConverterX {
     x::shared_ptr<OpaqueAudioConverter> m_converter;
@@ -112,8 +113,8 @@ public:
     }
     void setInputChannelLayout(const AudioChannelLayout *value)
     {
-	size_t size = offsetof(AudioChannelLayout,
-		mChannelDescriptions[value->mNumberChannelDescriptions]);
+	size_t size =
+	    AudioChannelLayoutX::calcSize(value->mNumberChannelDescriptions);
 	CHECKCA(AudioConverterSetProperty(m_converter.get(),
 		kAudioConverterInputChannelLayout, size, value));
     }
@@ -132,8 +133,8 @@ public:
     }
     void setOutputChannelLayout(const AudioChannelLayout *value)
     {
-	size_t size = offsetof(AudioChannelLayout,
-		mChannelDescriptions[value->mNumberChannelDescriptions]);
+	size_t size =
+	    AudioChannelLayoutX::calcSize(value->mNumberChannelDescriptions);
 	CHECKCA(AudioConverterSetProperty(m_converter.get(),
 		kAudioConverterOutputChannelLayout, size, value));
     }

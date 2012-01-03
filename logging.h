@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <vector>
-#include "win32util.h"
+#include "ioabst.h"
 #include "shared_ptr.h"
 
 /* non-thread safe */

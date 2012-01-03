@@ -145,7 +145,9 @@ void *xcalloc(size_t count, size_t size)
     return memory;
 }
 
+#ifndef _BSD_SOURCE
 char *strsep(char **stringp, const char *delim);
+#endif
 wchar_t *wcssep(wchar_t **stringp, const wchar_t *delim);
 
 std::string format(const char *fmt, ...);
@@ -287,9 +289,9 @@ void bswap32buffer(uint8_t *buffer, size_t size);
 
 void bswap64buffer(uint8_t *buffer, size_t size);
 
-inline void throw_crt_error(const char *message)
+inline void throw_crt_error(const std::string &message)
 {
-    throw std::runtime_error(format("%s: %s", message,
+    throw std::runtime_error(format("%s: %s", message.c_str(),
 				    std::strerror(errno)));
 }
 #define CHECKCRT(expr) \

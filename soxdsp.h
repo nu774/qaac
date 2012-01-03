@@ -4,17 +4,14 @@
 #include <libsoxrate.h>
 #include "iointer.h"
 #include "util.h"
-
-struct HINSTANCE__;
+#include "dl.h"
 
 class SoxModule {
-    typedef x::shared_ptr<HINSTANCE__> module_t;
-    module_t m_module;
-    bool m_loaded;
+    DL m_dl;
 public:
-    SoxModule(): m_loaded(false) {}
+    SoxModule() {}
     SoxModule(const std::wstring &path);
-    bool loaded() const { return m_loaded; }
+    bool loaded() const { return m_dl.loaded(); }
 
     const char *(*version_string)();
     lsx_rate_t *(*rate_create)(unsigned, unsigned, unsigned);

@@ -4,7 +4,9 @@
 #include <apetag.h>
 #include "id3v1genres.h"
 #include "itunetags.h"
+#ifdef _WIN32
 #include "win32util.h"
+#endif
 #include "strcnv.h"
 #include "mp4v2wrapper.h"
 #include "wicimage.h"
@@ -88,7 +90,11 @@ public:
 
 void TagEditor::fetchAiffID3Tags(const wchar_t *filename)
 {
+#ifdef _WIN32
     std::wstring fullname = get_prefixed_fullpath(filename);
+#else
+    std::string fullname = w2m(filename);
+#endif
     TagLib::RIFF::AIFF::File file(fullname.c_str());
     if (!file.isOpen())
 	throw std::runtime_error("taglib: can't open file");
@@ -117,7 +123,11 @@ void TagEditor::fetchAiffID3Tags(const wchar_t *filename)
 void TagEditor::fetchAPETags(const wchar_t *filename, uint32_t sampleRate,
 	uint64_t duration)
 {
+#ifdef _WIN32
     std::wstring fullname = get_prefixed_fullpath(filename);
+#else
+    std::string fullname = w2m(filename);
+#endif
     TagLib::APE::File file(fullname.c_str(), false);
     if (!file.isOpen())
 	throw std::runtime_error("taglib: can't open file");
@@ -176,6 +186,7 @@ void TagEditor::save(MP4FileX &file)
 
 void TagEditor::saveArtworks(MP4FileX &file)
 {
+#ifdef _WIN32
     try {
 	for (size_t i = 0; i < m_artworks.size(); ++i) {
 	    uint64_t size;
@@ -194,6 +205,7 @@ void TagEditor::saveArtworks(MP4FileX &file)
     } catch (Exception *e) {
 	handle_mp4error(e);
     }
+#endif
 }
 
 namespace ID3 {

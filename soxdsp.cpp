@@ -1,40 +1,32 @@
 #include <cstdio>
 #include <cstring>
 #include <vector>
-#include "win32util.h"
 #include "soxdsp.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
     while (0)
 
 SoxModule::SoxModule(const std::wstring &path)
+    : m_dl(path)
 {
-    HMODULE hDll;
-    hDll = LoadLibraryW(path.c_str());
-    m_loaded = (hDll != NULL);
-    if (!m_loaded)
+    if (!m_dl.loaded())
 	return;
     try {
-	CHECK(version_string = ProcAddress(hDll, "lsx_rate_version_string"));
-	CHECK(rate_create = ProcAddress(hDll, "lsx_rate_create"));
-	CHECK(rate_close = ProcAddress(hDll, "lsx_rate_close"));
-	CHECK(rate_config = ProcAddress(hDll, "lsx_rate_config"));
-	CHECK(rate_start = ProcAddress(hDll, "lsx_rate_start"));
-	CHECK(rate_process =
-	      ProcAddress(hDll, "lsx_rate_process_noninterleaved"));
-	CHECK(fir_create = ProcAddress(hDll, "lsx_fir_create"));
-	CHECK(fir_close = ProcAddress(hDll, "lsx_fir_close"));
-	CHECK(fir_start = ProcAddress(hDll, "lsx_fir_start"));
-	CHECK(fir_process =
-	      ProcAddress(hDll, "lsx_fir_process_noninterleaved")); 
-	CHECK(design_lpf = ProcAddress(hDll, "lsx_design_lpf"));
-	CHECK(free = ProcAddress(hDll, "lsx_free"));
+	CHECK(version_string = m_dl.fetch("lsx_rate_version_string"));
+	CHECK(rate_create = m_dl.fetch("lsx_rate_create"));
+	CHECK(rate_close = m_dl.fetch("lsx_rate_close"));
+	CHECK(rate_config = m_dl.fetch("lsx_rate_config"));
+	CHECK(rate_start = m_dl.fetch("lsx_rate_start"));
+	CHECK(rate_process = m_dl.fetch("lsx_rate_process_noninterleaved"));
+	CHECK(fir_create = m_dl.fetch("lsx_fir_create"));
+	CHECK(fir_close = m_dl.fetch("lsx_fir_close"));
+	CHECK(fir_start = m_dl.fetch("lsx_fir_start"));
+	CHECK(fir_process = m_dl.fetch("lsx_fir_process_noninterleaved")); 
+	CHECK(design_lpf = m_dl.fetch("lsx_design_lpf"));
+	CHECK(free = m_dl.fetch("lsx_free"));
     } catch (...) {
-	FreeLibrary(hDll);
-	m_loaded = false;
-	return;
+	m_dl.reset();
     }
-    m_module = module_t(hDll, FreeLibrary);
 }
 
 SoxDSPProcessor::SoxDSPProcessor(const x::shared_ptr<ISoxDSPEngine> &engine,

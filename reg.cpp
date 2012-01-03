@@ -1,11 +1,12 @@
-#include <cwctype>
-#include <shlwapi.h>
-#include "expand.h"
-#include "win32util.h"
-#include "logging.h"
 #include "reg.h"
+#include <cwctype>
+#ifdef _WIN32
+#include <shlwapi.h>
+#include "win32util.h"
+#endif
+#include "expand.h"
+#include "logging.h"
 
-DWORD g_pid__;
 
 int hex2dec(int c)
 {
@@ -213,6 +214,10 @@ int RegParser::evalValue(int c)
     return c;
 }
 
+#ifdef _WIN32
+
+DWORD g_pid__;
+
 static void cleanup()
 {
     RegOverridePredefKey(HKEY_LOCAL_MACHINE, 0);
@@ -271,3 +276,4 @@ void RegAction::show()
     }
     LOG("==== Registry setting end ====\n");
 }
+#endif

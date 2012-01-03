@@ -67,7 +67,10 @@ static wchar_t *rcsid = "$OpenBSD: getopt_long.c,v 1.16 2004/02/04 18:17:25 mill
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
-#include "getopt.h"
+#include <wchar.h>
+#include "wgetopt.h"
+
+namespace wide {
 
 #define GNU_COMPATIBLE	    /* Be more compatible, configure's use us! */
 
@@ -517,7 +520,7 @@ start:
 
     if ((optchar = (int)*place++) == (int)':' ||
 	(optchar == (int)'-' && *place != '\0') ||
-	(oli = wcschr(options, optchar)) == NULL) {
+	(oli = (wchar_t*)(wcschr(options, optchar))) == NULL) {
 	/*
 	 * If the user specified "-" and  '-' isn't listed in
 	 * options, return -1 (non-option) as per POSIX.
@@ -627,4 +630,6 @@ getopt_long_only(int nargc, wchar_t * const *nargv, const wchar_t *options,
 
     return (getopt_internal(nargc, nargv, options, long_options, idx,
 	FLAG_PERMUTE|FLAG_LONGONLY));
+}
+
 }

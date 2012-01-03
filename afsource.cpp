@@ -1,5 +1,7 @@
 #include "afsource.h"
+#ifdef _WIN32
 #include "win32util.h"
+#endif
 #include "CoreAudioHelper.h"
 #include "AudioConverterX.h"
 #include "mp4v2wrapper.h"

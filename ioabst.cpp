@@ -1,68 +1,66 @@
 #include <cstdlib>
 #include <cstring>
-#include "channel.h"
+#include "ioabst.h"
 #include "util.h"
+#include "strcnv.h"
+#ifdef _WIN32
 #include "win32util.h"
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 StdioChannel::StdioChannel(const wchar_t *name)
 {
     if (!std::wcscmp(name, L"-")) {
 	m_name = "<stdin>";
+#ifdef _WIN32
 	_setmode(0, _O_BINARY);
+#endif
 	m_fp = fileptr_t(stdin, no_close);
     } else {
 	m_name = format("%ls", name);
-	m_fp = fileptr_t(wfopenx(name, L"rb"), fclose);
+	m_fp = fileptr_t(wfopenx(name, L"rb"), std::fclose);
     }
     test_seekable();
 }
 
 void StdioChannel::test_seekable()
 {
+#if defined(_MSC_VER) || defined(__MINGW32__)
     m_is_seekable = GetFileType(raw_handle()) == FILE_TYPE_DISK;
+#else
+    struct stat stb;
+    fstat(fileno(m_fp.get()), &stb);
+    m_is_seekable = !S_ISFIFO(stb.st_mode) && !S_ISSOCK(stb.st_mode);
+#endif
 }
 
 ssize_t StdioChannel::read(void *buf, size_t count)
 {
-    return fread(buf, 1, count, m_fp.get());
+    return std::fread(buf, 1, count, m_fp.get());
 }
 
 int64_t StdioChannel::seek(int64_t offset, int whence)
 {
-    /*
-     * XXX: By SPEC, we can only fsetpos() to where we have retrieved
-     * pos_t via fgetpos().
-     *
-     * However, In VC++, fgetpos()/fsetpos() are nothing but 
-     * _ftelli64()/_fseeki64() wrappers, and fpos_t is just an
-     * 64 bit integer offset.
-     * Therefore we can safely fsetpos() to anywhere, just like fseek().
-     *
-     * We can use _ftelli64()/_fseeki64() from VC8.0, but VC7.1 doesn't
-     * export them, though it has them internally.
-     * Therefore ugly #ifdef is needed..
-     */
-#if _MSC_VER < 1400
-    fpos_t off = offset;
-    if (whence == 1) 
-	off += tell();
-    else if (whence == 2) {
-	DWORD high;
-	DWORD low = GetFileSize(raw_handle(), &high);
-	off += ((static_cast<int64_t>(high) << 32) | low);
-    }
-    CHECKCRT(std::fsetpos(m_fp.get(), &off));
-#else
+#if defined(_MSC_VER) || defined(__MINGW32)
     CHECKCRT(_fseeki64(m_fp.get(), offset, whence));
+#else
+    CHECKCRT(fseeko(m_fp.get(), offset, whence));
 #endif
     return tell();
 }
 
 int64_t StdioChannel::tell()
 {
+#ifdef _MSC_VER
     fpos_t off;
     CHECKCRT(std::fgetpos(m_fp.get(), &off));
     return off;
+#else
+    return ftello(m_fp.get());
+#endif
 }
 
 namespace __InputStreamImpl {

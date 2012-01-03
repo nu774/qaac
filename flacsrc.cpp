@@ -3,7 +3,6 @@
 #include "strcnv.h"
 #include "itunetags.h"
 #include "cuesheet.h"
-#include "win32util.h"
 
 namespace flac {
     template <typename T> void try__(T expr, const char *msg)

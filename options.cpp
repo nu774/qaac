@@ -1,9 +1,9 @@
 #include <limits>
 #include "options.h"
-#include "getopt.h"
+#include "wgetopt.h"
 #include "itunetags.h"
 
-static struct option long_options[] = {
+static wide::option long_options[] = {
 #ifdef REFALAC
     { L"fast", no_argument, 0, 'afst' },
 #else
@@ -218,7 +218,8 @@ static const wchar_t * const short_opts = L"hDo:d:insRSN";
 bool Options::parse(int &argc, wchar_t **&argv)
 {
     int ch, pos;
-    while ((ch = getopt_long(argc, argv, short_opts, long_options, 0)) != EOF)
+    while ((ch = wide::getopt_long(argc, argv,
+				   short_opts, long_options, 0)) != EOF)
     {
 	if (ch == 'h')
 	    return usage(), false;
@@ -227,11 +228,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	else if (ch == 'fmts')
 	    this->print_available_formats = true;
 	else if (ch == 'o')
-	    this->ofilename = optarg;
+	    this->ofilename = wide::optarg;
 	else if (ch == 'd')
-	    this->outdir = optarg;
+	    this->outdir = wide::optarg;
 	else if (ch == 'log ')
-	    this->logfilename = optarg;
+	    this->logfilename = wide::optarg;
 	else if (ch == 'A') {
 	    if ((this->output_format && !isALAC()) || this->method != -1)
 		return usage(), false;
@@ -243,7 +244,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->output_format = 'aach';
 	}
 	else if (ch == 'q') {
-	    if (std::swscanf(optarg, L"%u", &this->quality) != 1) {
+	    if (std::swscanf(wide::optarg, L"%u", &this->quality) != 1) {
 		std::fputs("Quality value must be an integer\n", stderr);
 		return false;
 	    }
@@ -276,13 +277,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	else if (ch == 'noop')
 	    this->no_optimize = true;
 	else if (ch == 'nfmt')
-	    this->fname_format = optarg;
+	    this->fname_format = wide::optarg;
 	else if (ch == 'tmpd')
-	    this->tmpdir = optarg;
+	    this->tmpdir = wide::optarg;
 	else if (ch == 'cmap') {
-	    std::vector<wchar_t> buff(wcslen(optarg)+1);
+	    std::vector<wchar_t> buff(std::wcslen(wide::optarg)+1);
 	    wchar_t *bp = &buff[0], *tok;
-	    std::wcscpy(bp, optarg);
+	    std::wcscpy(bp, wide::optarg);
 	    while ((tok = wcssep(&bp, L",")) != 0) {
 		unsigned n;
 		if (std::swscanf(tok, L"%u", &n) == 1)
@@ -303,93 +304,94 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    }
 	}
 	else if (ch == 'r') {
-	    if (!std::wcscmp(optarg, L"keep"))
+	    if (!std::wcscmp(wide::optarg, L"keep"))
 		this->rate = -1;
-	    else if (!std::wcscmp(optarg, L"auto"))
+	    else if (!std::wcscmp(wide::optarg, L"auto"))
 		this->rate = 0;
-	    else if (std::swscanf(optarg, L"%u", &this->rate) != 1) {
+	    else if (std::swscanf(wide::optarg, L"%u", &this->rate) != 1) {
 		std::fputs("Invalid rate value\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'mask') {
-	    if (std::swscanf(optarg, L"%i", &this->chanmask) != 1) {
+	    if (std::swscanf(wide::optarg, L"%i", &this->chanmask) != 1) {
 		std::fputs("Integer required for channel mask.\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'Rchn') {
-	    if (std::swscanf(optarg, L"%u", &this->raw_channels) != 1) {
+	    if (std::swscanf(wide::optarg, L"%u", &this->raw_channels) != 1) {
 		std::fputs("Raw channels must be an integer\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'Rrat') {
-	    if (std::swscanf(optarg, L"%u", &this->raw_sample_rate) != 1) {
+	    if (std::swscanf(wide::optarg, L"%u",
+			     &this->raw_sample_rate) != 1) {
 		std::fputs("Raw sample rate must be an integer\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'Rfmt')
-	    this->raw_format = optarg;
+	    this->raw_format = wide::optarg;
 	else if (ch == 'afst')
 	    this->alac_fast = true;
 	else if ((pos = strindex("cavV", ch)) >= 0) {
 	    if ((this->output_format && !isAAC()) || this->method != -1)
 		return usage(), false;
 	    this->method = pos;
-	    if (std::swscanf(optarg, L"%u", &this->bitrate) != 1) {
+	    if (std::swscanf(wide::optarg, L"%u", &this->bitrate) != 1) {
 		std::fputs("AAC Bitrate/Quality must be an integer\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'gain') {
-	    if (std::swscanf(optarg, L"%lf", &this->gain) != 1) {
+	    if (std::swscanf(wide::optarg, L"%lf", &this->gain) != 1) {
 		std::fputs("gain must be an floating point number\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'lpf ') {
-	    if (std::swscanf(optarg, L"%u", &this->lowpass) != 1) {
+	    if (std::swscanf(wide::optarg, L"%u", &this->lowpass) != 1) {
 		std::fputs("lowpass must be an integer\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'dlay') {
-	    if (std::swscanf(optarg, L"%d", &this->delay) != 1) {
+	    if (std::swscanf(wide::optarg, L"%d", &this->delay) != 1) {
 		std::fputs("Delay must be an integer in millis\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'txcp') {
-	    if (std::swscanf(optarg, L"%u", &this->textcp) != 1) {
+	    if (std::swscanf(wide::optarg, L"%u", &this->textcp) != 1) {
 		std::fputs(
 			"--text-codepage requires code page number\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == 'atsz') {
-	    if (std::swscanf(optarg, L"%u", &this->artwork_size) != 1) {
+	    if (std::swscanf(wide::optarg, L"%u", &this->artwork_size) != 1) {
 		std::fputs("Invalid artwork-size option arg\n", stderr);
 		return false;
 	    }
 	}
 	else if (ch == Tag::kArtwork)
-	    this->artworks.push_back(optarg);
+	    this->artworks.push_back(wide::optarg);
 	else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end)
 	    this->tagopts[ch]
-		= (ch == Tag::kCompilation) ? L"1" : optarg;
+		= (ch == Tag::kCompilation) ? L"1" : wide::optarg;
 	else if (ch == 'chap')
-	    this->chapter_file = optarg;
+	    this->chapter_file = wide::optarg;
 	else if (ch == 'mixp')
-	    this->remix_preset = optarg;
+	    this->remix_preset = wide::optarg;
 	else if (ch == 'mixm')
-	    this->remix_file = optarg;
+	    this->remix_file = wide::optarg;
 	else
 	    return false;
     }
-    argc -= optind;
-    argv += optind;
+    argc -= wide::optind;
+    argv += wide::optind;
 
     if (!argc && !this->check_only && !this->print_available_formats)
 	return usage(), false;

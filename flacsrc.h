@@ -4,7 +4,7 @@
 #include <deque>
 #include <FLAC/all.h>
 #include "iointer.h"
-#include "channel.h"
+#include "ioabst.h"
 #include "flacmodule.h"
 
 class FLACSource :

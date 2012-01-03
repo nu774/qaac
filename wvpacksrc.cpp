@@ -4,43 +4,34 @@
 #include "strcnv.h"
 #include "itunetags.h"
 #include "cuesheet.h"
-#include "win32util.h"
 #include "chanmap.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
     while (0)
 
 WavpackModule::WavpackModule(const std::wstring &path)
+    : m_dl(path)
 {
-    HMODULE hDll;
-    hDll = LoadLibraryW(path.c_str());
-    m_loaded = (hDll != NULL);
-    if (!m_loaded)
-	return;
+    if (!m_dl.loaded()) return;
     try {
 	CHECK(GetLibraryVersionString =
-		ProcAddress(hDll, "WavpackGetLibraryVersionString"));
-	CHECK(OpenFileInputEx = ProcAddress(hDll, "WavpackOpenFileInputEx"));
-	CHECK(CloseFile = ProcAddress(hDll, "WavpackCloseFile"));
-	CHECK(GetMode = ProcAddress(hDll, "WavpackGetMode"));
-	CHECK(GetNumChannels = ProcAddress(hDll, "WavpackGetNumChannels"));
-	CHECK(GetSampleRate = ProcAddress(hDll, "WavpackGetSampleRate"));
-	CHECK(GetBitsPerSample =
-		ProcAddress(hDll, "WavpackGetBitsPerSample"));
-	CHECK(GetNumSamples = ProcAddress(hDll, "WavpackGetNumSamples"));
-	CHECK(GetChannelMask = ProcAddress(hDll, "WavpackGetChannelMask"));
-	CHECK(GetNumTagItems = ProcAddress(hDll, "WavpackGetNumTagItems"));
-	CHECK(GetTagItem = ProcAddress(hDll, "WavpackGetTagItem"));
-	CHECK(GetTagItemIndexed =
-		ProcAddress(hDll, "WavpackGetTagItemIndexed"));
-	CHECK(SeekSample = ProcAddress(hDll, "WavpackSeekSample"));
-	CHECK(UnpackSamples = ProcAddress(hDll, "WavpackUnpackSamples"));
+	      m_dl.fetch( "WavpackGetLibraryVersionString"));
+	CHECK(OpenFileInputEx = m_dl.fetch( "WavpackOpenFileInputEx"));
+	CHECK(CloseFile = m_dl.fetch( "WavpackCloseFile"));
+	CHECK(GetMode = m_dl.fetch( "WavpackGetMode"));
+	CHECK(GetNumChannels = m_dl.fetch( "WavpackGetNumChannels"));
+	CHECK(GetSampleRate = m_dl.fetch( "WavpackGetSampleRate"));
+	CHECK(GetBitsPerSample = m_dl.fetch( "WavpackGetBitsPerSample"));
+	CHECK(GetNumSamples = m_dl.fetch( "WavpackGetNumSamples"));
+	CHECK(GetChannelMask = m_dl.fetch( "WavpackGetChannelMask"));
+	CHECK(GetNumTagItems = m_dl.fetch( "WavpackGetNumTagItems"));
+	CHECK(GetTagItem = m_dl.fetch( "WavpackGetTagItem"));
+	CHECK(GetTagItemIndexed = m_dl.fetch( "WavpackGetTagItemIndexed"));
+	CHECK(SeekSample = m_dl.fetch( "WavpackSeekSample"));
+	CHECK(UnpackSamples = m_dl.fetch( "WavpackUnpackSamples"));
     } catch (...) {
-	FreeLibrary(hDll);
-	m_loaded = false;
-	return;
+	m_dl.reset();
     }
-    m_module = module_t(hDll, FreeLibrary);
 }
 
 namespace wavpack {
@@ -80,7 +71,6 @@ namespace wavpack {
 	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
 	return pT->seekable();
     }
-    int32_t write(void *, void *, int32_t) { return -1; }
 }
 
 struct WavpackStreamReaderImpl: public WavpackStreamReader
@@ -89,7 +79,7 @@ struct WavpackStreamReaderImpl: public WavpackStreamReader
     {
 	static WavpackStreamReader t = {
 	    wavpack::read, wavpack::tell, wavpack::seek_abs, wavpack::seek,
-	    wavpack::pushback, wavpack::size, wavpack::seekable, wavpack::write
+	    wavpack::pushback, wavpack::size, wavpack::seekable, 0/*write*/
 	};
 	std::memcpy(this, &t, sizeof(WavpackStreamReader));
     }

@@ -37,31 +37,26 @@ uint32_t convert_chanmap(uint32_t value)
     while (0)
 
 LibSndfileModule::LibSndfileModule(const std::wstring &path)
+    : m_dl(path)
 {
-    HMODULE hDll;
-    hDll = LoadLibraryW(path.c_str());
-    m_loaded = (hDll != NULL);
-    if (!m_loaded)
+    if (!m_dl.loaded())
 	return;
     try {
-	CHECK(version_string = ProcAddress(hDll, "sf_version_string"));
-	CHECK(wchar_open = ProcAddress(hDll, "sf_wchar_open"));
-	CHECK(open_fd = ProcAddress(hDll, "sf_open_fd"));
-	CHECK(close = ProcAddress(hDll, "sf_close"));
-	CHECK(strerror = ProcAddress(hDll, "sf_strerror"));
-	CHECK(command = ProcAddress(hDll, "sf_command"));
-	CHECK(seek = ProcAddress(hDll, "sf_seek"));
-	CHECK(read_short = ProcAddress(hDll, "sf_read_short"));
-	CHECK(read_int = ProcAddress(hDll, "sf_read_int"));
-	CHECK(read_float = ProcAddress(hDll, "sf_read_float"));
-	CHECK(read_double = ProcAddress(hDll, "sf_read_double"));
-	CHECK(close = ProcAddress(hDll, "sf_close"));
+	CHECK(version_string = m_dl.fetch("sf_version_string"));
+	CHECK(wchar_open = m_dl.fetch("sf_wchar_open"));
+	CHECK(open_fd = m_dl.fetch("sf_open_fd"));
+	CHECK(close = m_dl.fetch("sf_close"));
+	CHECK(strerror = m_dl.fetch("sf_strerror"));
+	CHECK(command = m_dl.fetch("sf_command"));
+	CHECK(seek = m_dl.fetch("sf_seek"));
+	CHECK(read_short = m_dl.fetch("sf_read_short"));
+	CHECK(read_int = m_dl.fetch("sf_read_int"));
+	CHECK(read_float = m_dl.fetch("sf_read_float"));
+	CHECK(read_double = m_dl.fetch("sf_read_double"));
+	CHECK(close = m_dl.fetch("sf_close"));
     } catch (...) {
-	FreeLibrary(hDll);
-	m_loaded = false;
-	return;
+	m_dl.reset();
     }
-    m_module = module_t(hDll, FreeLibrary);
 }
 
 

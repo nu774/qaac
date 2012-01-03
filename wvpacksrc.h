@@ -1,10 +1,10 @@
 #ifndef _WVPACKSRC_H
 #define _WVPACKSRC_H
 
-#include "channel.h"
+#include "ioabst.h"
 #include "iointer.h"
+#include "dl.h"
 
-struct HINSTANCE__;
 /*
  * XXX
  * wavpack.h conflicts with QT header, therefore we don't want to
@@ -13,13 +13,11 @@ struct HINSTANCE__;
 typedef void WavpackContext;
 
 class WavpackModule {
-    typedef x::shared_ptr<HINSTANCE__> module_t;
-    module_t m_module;
-    bool m_loaded;
+    DL m_dl;
 public:
-    WavpackModule(): m_loaded(false) {}
+    WavpackModule() {}
     explicit WavpackModule(const std::wstring &path);
-    bool loaded() const { return m_loaded; }
+    bool loaded() const { return m_dl.loaded(); }
 
     const char *(*GetLibraryVersionString)();
     WavpackContext *(*OpenFileInputEx)(void *,

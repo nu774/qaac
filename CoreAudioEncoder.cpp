@@ -31,10 +31,14 @@ bool CoreAudioEncoder::encodeChunk(UInt32 npackets)
     AudioBufferList *abl = m_output_abl.get();
     AudioStreamPacketDescription *aspd = &m_packet_desc[0];
 
+#if defined(_MSC_VER) && defined(_DEBUG)
     _CrtCheckMemory();
+#endif
     CHECKCA(AudioConverterFillComplexBuffer(m_converter, staticInputDataProc,
 		this, &npackets, abl, aspd));
+#if defined(_MSC_VER) && defined(_DEBUG)
     _CrtCheckMemory();
+#endif
 
     if (npackets == 0 && abl->mBuffers[0].mDataByteSize == 0)
 	return false;
@@ -65,9 +69,13 @@ long CoreAudioEncoder::inputDataProc(UInt32 *npackets, AudioBufferList *abl)
     prepareInputBuffer(abl, *npackets);
     AudioBuffer &ab = abl->mBuffers[0];
     try {
+#if defined(_MSC_VER) && defined(_DEBUG)
 	_CrtCheckMemory();
+#endif
 	*npackets = m_src->readSamples(ab.mData, *npackets);
+#if defined(_MSC_VER) && defined(_DEBUG)
 	_CrtCheckMemory();
+#endif
     } catch (...) {
 	return -39; // eofError
     }

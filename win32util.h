@@ -17,17 +17,6 @@
 
 void throw_win32_error(const std::string& msg, DWORD error);
 
-class ProcAddress {
-    FARPROC fp_;
-public:
-    ProcAddress(HMODULE module, LPCSTR name) {
-	fp_ = GetProcAddress(module, name);
-    }
-    template <typename T> operator T() const {
-	return reinterpret_cast<T>(fp_);
-    }
-};
-
 inline
 std::wstring GetFullPathNameX(const std::wstring &path)
 {
@@ -98,17 +87,6 @@ std::wstring get_prefixed_fullpath(const wchar_t *path)
     else
 	fullpath.insert(0, L"\\\\?\\");
     return fullpath;
-}
-
-inline
-FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
-{
-    std::wstring fullpath = get_prefixed_fullpath(path);
-    FILE *fp = _wfopen(fullpath.c_str(), mode);
-    if (!fp)
-	throw std::runtime_error(format("_wfopen: %ls: %s",
-		    fullpath.c_str(), std::strerror(errno)));
-    return fp;
 }
 
 FILE *win32_tmpfile(const wchar_t *prefix);

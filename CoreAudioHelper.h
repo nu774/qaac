@@ -1,6 +1,7 @@
 #ifndef CoreAudioHelper_H
 #define CoreAudioHelper_H
 
+#include <cstddef>
 #include <vector>
 #include <sstream>
 #include <stdexcept>
@@ -60,11 +61,14 @@ public:
     operator const AudioChannelLayout *() const { return m_instance.get(); }
     AudioChannelLayout *operator->() { return m_instance.get(); }
 
+    static size_t calcSize(int n)
+    {
+	return offsetof(AudioChannelLayout, mChannelDescriptions[1])
+		+ std::max(0, n - 1) * sizeof(AudioChannelDescription);
+    }
     void attach(const AudioChannelLayout *layout)
     {
-	size_t size =
-	    offsetof(AudioChannelLayout,
-	    mChannelDescriptions[layout->mNumberChannelDescriptions]);
+	size_t size = calcSize(layout->mNumberChannelDescriptions);
 	owner_t p = owner_t(
 	    reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
 	    std::free);
@@ -129,14 +133,13 @@ public:
     }
 #endif
 private:
-    void create(size_t channel_count)
+    void create(size_t n)
     {
-	size_t size =
-	    offsetof(AudioChannelLayout, mChannelDescriptions[channel_count]);
+	size_t size = calcSize(n);
 	owner_t p = owner_t(
 		reinterpret_cast<AudioChannelLayout*>(xcalloc(1, size)),
 		std::free);
-	p->mNumberChannelDescriptions = channel_count;
+	p->mNumberChannelDescriptions = n;
 	m_instance.swap(p);
     }
 };

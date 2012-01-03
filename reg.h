@@ -6,16 +6,19 @@
 #include <string>
 #include <vector>
 #include <map>
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
 #include "shared_ptr.h"
 #include "util.h"
 #include "expand.h"
+#ifdef _WIN32
+#include "win32util.h"
+#else
+typedef unsigned DWORD;
+typedef unsigned char BYTE;
+#define REG_SZ 1
+#define REG_EXPAND_SZ 2
+#define REG_BINARY 3
+#define REG_DWORD 4
+#endif
 
 struct IRegAction {
     ~IRegAction() {}
@@ -122,6 +125,7 @@ private:
     }
 };
 
+#ifdef _WIN32
 struct RegEntry {
     DWORD type;
     std::vector<BYTE> value;
@@ -195,5 +199,6 @@ public:
     void realize();
     void show();
 };
+#endif
 
 #endif

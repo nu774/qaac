@@ -3,9 +3,9 @@
 #include "strcnv.h"
 #include "sink.h"
 #include "util.h"
-#include "win32util.h"
 #include "bitstream.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
+#include "win32util.h"
 #include <io.h>
 #include <fcntl.h>
 #endif
@@ -93,7 +93,6 @@ void parseDecSpecificConfig(const std::vector<uint8_t> &config,
 	96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 
 	16000, 12000, 11025, 8000, 7350, 0, 0, 0
     };
-    const uint8_t *p = &config[0];
     BitStream bs(const_cast<uint8_t*>(&config[0]), config.size());
     unsigned objtype = bs.get(5);
     *sampling_rate_index = bs.get(4);
@@ -177,9 +176,9 @@ ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
 #if defined(_MSC_VER) || defined(__MINGW32__)
 	_setmode(_fileno(stdout), _O_BINARY);
 #endif
-	m_fp = file_ptr_t(stdout, noop);
+	m_fp.reset(stdout, noop);
     } else {
-	m_fp = file_ptr_t(wfopenx(path.c_str(), L"wb"), fclose);
+	m_fp.reset(wfopenx(path.c_str(), L"wb"), std::fclose);
     }
     std::vector<uint8_t> config;
     parseMagicCookieAAC(cookie, &config);

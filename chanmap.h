@@ -1,14 +1,15 @@
 #ifndef _CHANMAP_H
 #define _CHANMAP_H
 
-#include "CoreAudioTypes.h"
+#include <stdint.h>
+#include "CoreAudio/CoreAudioTypes.h"
 #include "iointer.h"
 
 namespace chanmap {
     std::string GetChannelNames(const std::vector<uint32_t> &channels);
     uint32_t GetChannelMask(const std::vector<uint32_t>& chanmap);
     void GetChannels(uint32_t bitmap, std::vector<uint32_t> *result,
-		     uint32_t limit=UINT32_MAX);
+		     uint32_t limit=-1);
     void GetChannels(const AudioChannelLayout *layout,
 		     std::vector<uint32_t> *result);
     void ConvertChannelsFromAppleLayout(const std::vector<uint32_t> &from,

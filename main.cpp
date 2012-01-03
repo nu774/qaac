@@ -819,14 +819,17 @@ void decode_file(const x::shared_ptr<ISource> &src,
 		 const std::wstring &ofilename, const Options &opts,
 		 uint32_t chanmask)
 {
+    struct F { static void close(FILE *) {} };
+
     x::shared_ptr<FILE> fileptr;
     if (opts.ofilename && !std::wcscmp(opts.ofilename, L"-")) {
-	fileptr.reset(stdout, [](FILE*){});
+	fileptr.reset(stdout, F::close);
+#if defined(_MSC_VER) || defined(__MINGW32__)
 	_setmode(1, _O_BINARY);
-    } else {
-	FILE *fp = wfopenx(ofilename.c_str(), L"wb");
-	fileptr.reset(fp, std::fclose);
-    }
+#endif
+    } else
+	fileptr.reset(wfopenx(ofilename.c_str(), L"wb"), std::fclose);
+
     const SampleFormat &sf = src->getSampleFormat();
     WaveSink sink(fileptr.get(), src->length(), sf, chanmask);
 
@@ -985,7 +988,8 @@ static
 void setup_aach_codec(HMODULE hDll)
 {
     CFPlugInFactoryFunction aachFactory =
-	ProcAddress(hDll, "ACMP4AACHighEfficiencyEncoderFactory");
+	AutoCast<void>(GetProcAddress(hDll,
+		"ACMP4AACHighEfficiencyEncoderFactory"));
     if (aachFactory) {
 	AudioComponentDescription desc = { 'aenc', 'aach', 0 };
 	AudioComponentRegister(&desc,

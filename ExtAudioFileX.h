@@ -1,7 +1,7 @@
 #ifndef ExtAudioFileX_H
 #define ExtAudioFileX_H
 
-#include "ExtAudioFile.h"
+#include "CoreAudio/ExtAudioFile.h"
 #include "CoreAudioHelper.h"
 
 class ExtAudioFileX {

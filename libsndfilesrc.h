@@ -5,17 +5,16 @@
 #include "shared_ptr.h"
 #include <sndfile.h>
 #include "iointer.h"
+#include "dl.h"
 
 struct HINSTANCE__;
 
 class LibSndfileModule {
-    typedef x::shared_ptr<HINSTANCE__> module_t;
-    module_t m_module;
-    bool m_loaded;
+    DL m_dl;
 public:
-    LibSndfileModule(): m_loaded(false) {}
+    LibSndfileModule() {}
     LibSndfileModule(const std::wstring &path);
-    bool loaded() const { return m_loaded; }
+    bool loaded() const { return m_dl.loaded(); }
 
     const char *(*version_string)();
     SNDFILE *(*wchar_open)(const wchar_t *, int, SF_INFO *);

@@ -1,7 +1,7 @@
 #ifndef AudioFileX_H
 #define AudioFileX_H
 
-#include "AudioFile.h"
+#include "CoreAudio/AudioFile.h"
 #include "CoreAudioHelper.h"
 
 class AudioFileX {

@@ -6,7 +6,9 @@
 #include "libsndfilesrc.h"
 #include "flacsrc.h"
 #include "wvpacksrc.h"
+#ifdef _WIN32
 #include "taksrc.h"
+#endif
 #include "itunetags.h"
 #include "soxdsp.h"
 
@@ -108,7 +110,9 @@ struct Options {
     FLACModule libflac;
     WavpackModule libwavpack;
     SoxModule libsoxrate;
+#ifdef _WIN32
     TakModule libtak;
+#endif
 };
 
 #endif

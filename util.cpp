@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <cstdarg>
 #include <vector>
 #include "util.h"
@@ -8,6 +9,7 @@
 #endif
 #endif
 
+#ifndef _BSD_SOURCE
 char *strsep(char **strp, const char *sep)
 {
     char *tok, *s;
@@ -21,6 +23,7 @@ char *strsep(char **strp, const char *sep)
 	*strp = 0;
     return tok;
 }
+#endif
 
 wchar_t *wcssep(wchar_t **strp, const wchar_t *sep)
 {

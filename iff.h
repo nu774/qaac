@@ -3,7 +3,7 @@
 
 #include <map>
 #include "util.h"
-#include "channel.h"
+#include "ioabst.h"
 
 class IFFParser: public BinaryRead<IFFParser> {
     InputStream m_stream;

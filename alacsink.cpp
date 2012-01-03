@@ -2,7 +2,7 @@
 #include "utf8_codecvt_facet.hpp"
 #include "strcnv.h"
 #include "alacsink.h"
-#include "channel.h"
+#include "ioabst.h"
 
 static
 void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,

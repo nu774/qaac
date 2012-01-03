@@ -2,20 +2,17 @@
 #define _TAKSRC_H
 
 #include <tak_deco_lib.h>
-#include "channel.h"
+#include "ioabst.h"
 #include "iointer.h"
-
-struct HINSTANCE__;
+#include "dl.h"
 
 class TakModule {
-    typedef x::shared_ptr<HINSTANCE__> module_t;
-    module_t m_module;
-    bool m_loaded;
+    DL m_dl;
     bool m_compatible;
 public:
-    TakModule(): m_loaded(false) {}
+    TakModule() {}
     explicit TakModule(const std::wstring &path);
-    bool loaded() const { return m_loaded; }
+    bool loaded() const { return m_dl.loaded(); }
     bool compatible() const { return m_compatible; }
 
     TtakResult (*GetLibraryVersion)(TtakInt32 *, TtakInt32 *);

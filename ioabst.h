@@ -1,13 +1,41 @@
 #ifndef _CHANNEL_H
 #define _CHANNEL_H
+#include <cstddef>
 #include <cstdio>
-#include <io.h>
 #include <fcntl.h>
 #include <string>
 #include <vector>
-#include "shared_ptr.h"
 #include <stdint.h>
+#include "shared_ptr.h"
 #include "util.h"
+#include "strcnv.h"
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#include <io.h>
+#include "win32util.h"
+#endif
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
+inline
+FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
+{
+    std::wstring fullpath = get_prefixed_fullpath(path);
+    FILE *fp = _wfopen(fullpath.c_str(), mode);
+    if (!fp)
+	throw_crt_error(format("_wfopen(): %ls", fullpath.c_str()));
+    return fp;
+}
+#else
+inline
+FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
+{
+    std::string spath = w2m(path);
+    std::string smode = nallow(mode);
+    FILE *fp = std::fopen(spath.c_str(), smode.c_str());
+    if (!fp)
+	throw_crt_error(format("fopen(): %ls", path));
+    return fp;
+}
+#endif
 
 struct IChannel {
     virtual ~IChannel() {}
@@ -41,7 +69,9 @@ public:
 	 : m_fp(handle, no_close),
 	   m_name("<stdin>")
     {
+#ifdef _WIN32
 	_setmode(0, _O_BINARY);
+#endif
 	test_seekable();
     }
     StdioChannel(const wchar_t *name);
@@ -52,9 +82,11 @@ public:
     int64_t seek(int64_t offset, int whence);
     int64_t tell();
 private:
+#if defined(_MSC_VER) || defined(__MINGW32__)
     HANDLE raw_handle() {
 	return reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(m_fp.get())));
     }
+#endif
     static void no_close(FILE *handle) {}
     void test_seekable();
 };

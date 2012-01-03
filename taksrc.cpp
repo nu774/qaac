@@ -9,34 +9,28 @@
     while (0)
 
 TakModule::TakModule(const std::wstring &path)
+    : m_dl(path)
 {
-    HMODULE hDll;
-    hDll = LoadLibraryW(path.c_str());
-    m_loaded = (hDll != NULL);
-    if (!m_loaded)
+    if (!m_dl.loaded())
 	return;
     try {
-	CHECK(GetLibraryVersion = ProcAddress(hDll, "tak_GetLibraryVersion"));
-	CHECK(SSD_Create_FromStream =
-		ProcAddress(hDll, "tak_SSD_Create_FromStream"));
-	CHECK(SSD_Destroy = ProcAddress(hDll, "tak_SSD_Destroy"));
-	CHECK(SSD_GetStreamInfo = ProcAddress(hDll, "tak_SSD_GetStreamInfo"));
-	CHECK(SSD_Seek = ProcAddress(hDll, "tak_SSD_Seek"));
-	CHECK(SSD_ReadAudio = ProcAddress(hDll, "tak_SSD_ReadAudio"));
-	CHECK(SSD_GetAPEv2Tag = ProcAddress(hDll, "tak_SSD_GetAPEv2Tag"));
-	CHECK(APE_GetItemNum = ProcAddress(hDll, "tak_APE_GetItemNum"));
-	CHECK(APE_GetItemKey = ProcAddress(hDll, "tak_APE_GetItemKey"));
-	CHECK(APE_GetItemValue = ProcAddress(hDll, "tak_APE_GetItemValue"));
+	CHECK(GetLibraryVersion = m_dl.fetch("tak_GetLibraryVersion"));
+	CHECK(SSD_Create_FromStream = m_dl.fetch("tak_SSD_Create_FromStream"));
+	CHECK(SSD_Destroy = m_dl.fetch("tak_SSD_Destroy"));
+	CHECK(SSD_GetStreamInfo = m_dl.fetch("tak_SSD_GetStreamInfo"));
+	CHECK(SSD_Seek = m_dl.fetch("tak_SSD_Seek"));
+	CHECK(SSD_ReadAudio = m_dl.fetch("tak_SSD_ReadAudio"));
+	CHECK(SSD_GetAPEv2Tag = m_dl.fetch("tak_SSD_GetAPEv2Tag"));
+	CHECK(APE_GetItemNum = m_dl.fetch("tak_APE_GetItemNum"));
+	CHECK(APE_GetItemKey = m_dl.fetch("tak_APE_GetItemKey"));
+	CHECK(APE_GetItemValue = m_dl.fetch("tak_APE_GetItemValue"));
     } catch (...) {
-	FreeLibrary(hDll);
-	m_loaded = false;
-	return;
+	m_dl.reset();
     }
-    m_module = module_t(hDll, FreeLibrary);
     TtakInt32 ver, comp;
     GetLibraryVersion(&ver, &comp);
     m_compatible = (comp <= tak_InterfaceVersion
-	&& tak_InterfaceVersion <= ver);
+		    && tak_InterfaceVersion <= ver);
 }
 
 namespace tak {
@@ -59,18 +53,6 @@ namespace tak {
 	ssize_t rc = pT->read(buf, n);
 	if (nr) *nr = rc;
 	return tak_True;
-    }
-    TtakBool write(void *ctx, const void *buf, TtakInt32 n)
-    {
-	return tak_False;
-    }
-    TtakBool flush(void *ctx)
-    {
-	return tak_False;
-    }
-    TtakBool truncate(void *ctx)
-    {
-	return tak_False;
     }
     TtakBool seek(void *ctx, TtakInt64 pos)
     {
@@ -98,7 +80,7 @@ struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
     TakStreamIoInterfaceImpl() {
 	static TtakStreamIoInterface t = {
 	    tak::readable, tak::writable, tak::seekable, tak::read,
-	    tak::write, tak::flush, tak::truncate, tak::seek, tak::size
+	    0/*write*/, 0/*flush*/, 0/*truncate*/, tak::seek, tak::size
 	};
 	std::memcpy(this, &t, sizeof(TtakStreamIoInterface));
     }
