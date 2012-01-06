@@ -46,10 +46,10 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     /*
      * Usually DetectCodepageInIStream() puts the most appropriate choice
      * in the first place.
-     * However, it tends to pick 1252(latin-1) for UTF-8 encoded latin-1 file.
+     * However, it tends to pick 8bit locale charset for the first place,
+     * even if it is really an UTF-8 encoded file.
      */
-    size_t pick =
-	encoding[0].nCodePage == 1252 && encoding[1].nCodePage == 65001;
+    size_t pick = encoding[1].nCodePage == 65001;
 
     HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
 
