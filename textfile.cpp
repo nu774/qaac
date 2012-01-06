@@ -39,32 +39,34 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 		IID_IMultiLanguage2, (void**)(&mlang)));
     x::shared_ptr<IMultiLanguage2> mlangPtr(mlang, release);
 
-    DetectEncodingInfo encoding[2];
-    INT nscores = 2;
-    HR(mlang->DetectCodepageInIStream(0, codepage,
-		stream, encoding, &nscores));
-    /*
-     * Usually DetectCodepageInIStream() puts the most appropriate choice
-     * in the first place.
-     * However, it tends to pick 1252(latin-1) for UTF-8 encoded latin-1 file.
-     */
-    size_t pick =
-	encoding[0].nCodePage == 1252 && encoding[1].nCodePage == 65001;
+    if (!codepage) {
+	DetectEncodingInfo encoding[2];
+	INT nscores = 2;
+	HR(mlang->DetectCodepageInIStream(0, codepage,
+		    stream, encoding, &nscores));
+	/*
+	 * Usually DetectCodepageInIStream() puts the most appropriate choice
+	 * in the first place.
+	 * However, it tends to pick 8bit locale charset for the first place,
+	 * even if it is really an UTF-8 encoded file.
+	 */
+	size_t pick = encoding[1].nCodePage == 65001;
+	codepage = encoding[pick].nCodePage;
 
-    HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
-
+	HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
+    }
     std::vector<char> ibuf(fileSize);
     ULONG nread;
     HR(stream->Read(&ibuf[0], ibuf.size(), &nread));
 
     DWORD ctx = 0;
     UINT size = ibuf.size(), cnt;
-    HR(mlang->ConvertStringToUnicode(&ctx, encoding[pick].nCodePage,
-		&ibuf[0], &size, 0, &cnt));
+    HR(mlang->ConvertStringToUnicode(&ctx, codepage,
+				     &ibuf[0], &size, 0, &cnt));
     std::vector<wchar_t> obuf(cnt);
     size = ibuf.size();
-    HR(mlang->ConvertStringToUnicode(&ctx, encoding[pick].nCodePage,
-		&ibuf[0], &size, &obuf[0], &cnt));
+    HR(mlang->ConvertStringToUnicode(&ctx, codepage,
+				     &ibuf[0], &size, &obuf[0], &cnt));
     obuf.push_back(0);
     // chop off BOM
     size_t bom = obuf.size() && obuf[0] == 0xfeff;
