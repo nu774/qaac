@@ -628,8 +628,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	chanmask = chanmap::GetDefaultChannelMask(nchannels);
     }
     AudioChannelLayoutX layout;
+    *wav_chanmask = chanmask;
     if (chanmask) {
-	*wav_chanmask = chanmask;
 	if (opts.isLPCM() && opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
 	    chanmap::GetChannels(chanmask, &vec);
