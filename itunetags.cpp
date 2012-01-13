@@ -154,14 +154,13 @@ void TagEditor::save(MP4FileX &file)
     try {
 	if (m_nsamples) {
 	    std::string value = format(iTunSMPB_template,
-				    m_encoder_delay,
-				    m_padding,
-				    int32_t(m_nsamples >> 32),
-				    int32_t(m_nsamples & 0xffffffff));
+				       m_encoder_delay,
+				       m_padding,
+				       int32_t(m_nsamples >> 32),
+				       int32_t(m_nsamples & 0xffffffff));
 	    m_long_tags["iTunSMPB"] = widen(value);
 	}
 	utf8_codecvt_facet u8codec;
-
 	if (m_chapters.size()) {
 	    uint64_t timeScale = file.GetIntegerProperty("moov.mvhd.timeScale");
 	    MP4TrackId track = file.AddChapterTextTrack(1);

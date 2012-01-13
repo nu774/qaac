@@ -1,8 +1,8 @@
 const char *get_qaac_version()
 {
 #ifdef REFALAC
-    return "0.31";
+    return "0.32";
 #else
-    return "1.20";
+    return "1.21";
 #endif
 }

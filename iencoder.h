@@ -67,7 +67,8 @@ public:
     }
     double calcBitrate(uint64_t bytes, uint64_t samples) const
     {
-	return (bytes * m_desc.mSampleRate * 8) / (1000.0 * samples);
+	return samples ? (bytes * m_desc.mSampleRate * 8) / (1000.0 * samples)
+		       : 0.0;
     }
 };
 

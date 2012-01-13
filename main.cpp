@@ -389,7 +389,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     editor.setTag(opts.tagopts);
     editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
 #ifndef REFALAC
-    if (opts.isAAC()) {
+    if (opts.isAAC() && stat->samplesWritten()) {
 	AudioConverterX converter =
 	    dynamic_cast<CoreAudioEncoder*>(encoder)->getConverter();
 	AudioConverterPrimeInfo info;
@@ -1115,16 +1115,14 @@ void encode_file(const x::shared_ptr<ISource> &src,
     x::shared_ptr<ISink> sink = open_sink(ofilename, opts, cookie);
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, opts);
-    if (encoder.framesWritten()) {
-	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
-	MP4SinkBase *asink = dynamic_cast<MP4SinkBase*>(sink.get());
-	if (asink) {
-	    write_tags(asink->getFile(), opts, src.get(), &encoder,
-		encoder_config);
-	    if (!opts.no_optimize)
-		do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
-	    asink->close();
-	}
+    LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
+    MP4SinkBase *asink = dynamic_cast<MP4SinkBase*>(sink.get());
+    if (asink) {
+	write_tags(asink->getFile(), opts, src.get(), &encoder,
+	    encoder_config);
+	if (!opts.no_optimize)
+	    do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
+	asink->close();
     }
 }
 #else // REFALAC
@@ -1153,13 +1151,11 @@ void encode_file(const x::shared_ptr<ISource> &src,
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, opts);
     ALACSink *asink = dynamic_cast<ALACSink*>(sink.get());
-    if (encoder.framesWritten()) {
-	LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
-	write_tags(asink->getFile(), opts, src.get(), &encoder,
-	    L"Apple Lossless Encoder");
-	if (!opts.no_optimize)
-	    do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
-    }
+    LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
+    write_tags(asink->getFile(), opts, src.get(), &encoder,
+	       L"Apple Lossless Encoder");
+    if (!opts.no_optimize)
+	do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
 }
 #endif
 

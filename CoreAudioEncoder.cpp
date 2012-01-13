@@ -40,6 +40,9 @@ bool CoreAudioEncoder::encodeChunk(UInt32 npackets)
     _CrtCheckMemory();
 #endif
 
+    if (samplesRead() == 0)
+	return false;
+
     if (npackets == 0 && abl->mBuffers[0].mDataByteSize == 0)
 	return false;
 
