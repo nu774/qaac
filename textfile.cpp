@@ -9,7 +9,7 @@ const GUID IID_IMultiLanguage2 = { 0xdccfc164, 0x2b38, 0x11d2,
     { 0xb7, 0xec, 0x00, 0xc0, 0x4f,0x8f,0x5d,0x9a } };
 #endif
 
-inline
+static inline
 void throwIfError(HRESULT expr, const char *msg)
 {
     if (FAILED(expr))
@@ -17,14 +17,16 @@ void throwIfError(HRESULT expr, const char *msg)
 }
 #define HR(expr) (void)(throwIfError((expr), #expr))
 
-void release(IUnknown *x) { x->Release(); }
-
 std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 {
+    struct F {
+	static void release(IUnknown *x) {  x->Release(); }
+    };
+
     IStream *stream;
     HR(SHCreateStreamOnFileW(path.c_str(),
-		STGM_READ | STGM_SHARE_DENY_WRITE, &stream));
-    x::shared_ptr<IStream> streamPtr(stream, release);
+			     STGM_READ | STGM_SHARE_DENY_WRITE, &stream));
+    x::shared_ptr<IStream> streamPtr(stream, F::release);
 
     LARGE_INTEGER li = { 0 };
     ULARGE_INTEGER ui;
@@ -37,13 +39,13 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     IMultiLanguage2 *mlang;
     HR(CoCreateInstance(CLSID_CMultiLanguage, 0, CLSCTX_INPROC_SERVER,
 		IID_IMultiLanguage2, (void**)(&mlang)));
-    x::shared_ptr<IMultiLanguage2> mlangPtr(mlang, release);
+    x::shared_ptr<IMultiLanguage2> mlangPtr(mlang, F::release);
 
     if (!codepage) {
 	DetectEncodingInfo encoding[2];
 	INT nscores = 2;
 	HR(mlang->DetectCodepageInIStream(0, codepage,
-		    stream, encoding, &nscores));
+					  stream, encoding, &nscores));
 	/*
 	 * Usually DetectCodepageInIStream() puts the most appropriate choice
 	 * in the first place.

@@ -7,8 +7,7 @@
 #include "expand.h"
 #include "logging.h"
 
-
-int hex2dec(int c)
+static int hex2dec(int c)
 {
     switch (c) {
     case '1': return 1;
@@ -216,7 +215,7 @@ int RegParser::evalValue(int c)
 
 #ifdef _WIN32
 
-DWORD g_pid__;
+static DWORD g_pid__;
 
 static void cleanup()
 {

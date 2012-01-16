@@ -34,39 +34,6 @@ TakModule::TakModule(const std::wstring &path)
 }
 
 namespace tak {
-    TtakBool readable(void *ctx)
-    {
-	return tak_True;
-    }
-    TtakBool writable(void *ctx)
-    {
-	return tak_False;
-    }
-    TtakBool seekable(void *ctx)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
-	return pT->seekable();
-    }
-    TtakBool read(void *ctx, void *buf, TtakInt32 n, TtakInt32 *nr)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
-	ssize_t rc = pT->read(buf, n);
-	if (nr) *nr = rc;
-	return tak_True;
-    }
-    TtakBool seek(void *ctx, TtakInt64 pos)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
-	return pT->seek(pos, ISeekable::kBegin) >= 0;
-    }
-    TtakBool size(void *ctx, TtakInt64 *len)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
-	int64_t rc = pT->size();
-	if (len && rc >= 0) *len = rc;
-	return rc >= 0;
-    }
-
     template <typename T> void try__(T expr, const char *s)
     {
 	if (expr != tak_res_Ok)
@@ -79,10 +46,42 @@ namespace tak {
 struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
     TakStreamIoInterfaceImpl() {
 	static TtakStreamIoInterface t = {
-	    tak::readable, tak::writable, tak::seekable, tak::read,
-	    0/*write*/, 0/*flush*/, 0/*truncate*/, tak::seek, tak::size
+	    readable, writable, seekable, read,
+	    0/*write*/, 0/*flush*/, 0/*truncate*/, seek, size
 	};
 	std::memcpy(this, &t, sizeof(TtakStreamIoInterface));
+    }
+    static TtakBool readable(void *ctx)
+    {
+	return tak_True;
+    }
+    static TtakBool writable(void *ctx)
+    {
+	return tak_False;
+    }
+    static TtakBool seekable(void *ctx)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
+	return pT->seekable();
+    }
+    static TtakBool read(void *ctx, void *buf, TtakInt32 n, TtakInt32 *nr)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
+	ssize_t rc = pT->read(buf, n);
+	if (nr) *nr = rc;
+	return tak_True;
+    }
+    static TtakBool seek(void *ctx, TtakInt64 pos)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
+	return pT->seek(pos, ISeekable::kBegin) >= 0;
+    }
+    static TtakBool size(void *ctx, TtakInt64 *len)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
+	int64_t rc = pT->size();
+	if (len && rc >= 0) *len = rc;
+	return rc >= 0;
     }
 };
 

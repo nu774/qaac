@@ -1,6 +1,6 @@
 #include "intsrc.h"
 
-inline double clip(double x, double max, double min)
+static inline double clip(double x, double max, double min)
 {
     if (x > max) x = max;
     else if (x < min) x = min;

@@ -1,7 +1,7 @@
 #include <cstdio>
 #include "iointer.h"
 
-static
+static inline
 void die() { throw std::runtime_error("Invalid sample format"); }
 
 SampleFormat::SampleFormat(const char *spec, unsigned nchannels, unsigned rate)

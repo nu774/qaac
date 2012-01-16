@@ -34,54 +34,50 @@ WavpackModule::WavpackModule(const std::wstring &path)
     }
 }
 
-namespace wavpack {
-    int32_t read(void *cookie, void *data, int32_t count)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->read(data, count);
-    }
-    uint32_t tell(void *cookie)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return static_cast<uint32_t>(pT->tell());
-    }
-    int seek_abs(void *cookie, uint32_t pos)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seek(pos, ISeekable::kBegin) >= 0 ? 0 : -1;
-    }
-    int seek(void *cookie, int32_t off, int whence)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seek(off, whence) >= 0 ? 0 : -1;
-    }
-    int pushback(void *cookie, int c)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	pT->pushback(c);
-	return c;
-    }
-    uint32_t size(void *cookie)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->size();
-    }
-    int seekable(void *cookie)
-    {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seekable();
-    }
-}
-
 struct WavpackStreamReaderImpl: public WavpackStreamReader
 {
     WavpackStreamReaderImpl()
     {
 	static WavpackStreamReader t = {
-	    wavpack::read, wavpack::tell, wavpack::seek_abs, wavpack::seek,
-	    wavpack::pushback, wavpack::size, wavpack::seekable, 0/*write*/
+	    read, tell, seek_abs, seek, pushback, size, seekable, 0/*write*/
 	};
 	std::memcpy(this, &t, sizeof(WavpackStreamReader));
+    }
+    static int32_t read(void *cookie, void *data, int32_t count)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->read(data, count);
+    }
+    static uint32_t tell(void *cookie)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return static_cast<uint32_t>(pT->tell());
+    }
+    static int seek_abs(void *cookie, uint32_t pos)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->seek(pos, ISeekable::kBegin) >= 0 ? 0 : -1;
+    }
+    static int seek(void *cookie, int32_t off, int whence)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->seek(off, whence) >= 0 ? 0 : -1;
+    }
+    static int pushback(void *cookie, int c)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	pT->pushback(c);
+	return c;
+    }
+    static uint32_t size(void *cookie)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->size();
+    }
+    static int seekable(void *cookie)
+    {
+	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
+	return pT->seekable();
     }
 };
 

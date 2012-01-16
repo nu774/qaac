@@ -4,7 +4,7 @@
 #include "cuesheet.h"
 #include "itunetags.h"
 
-inline
+static inline
 unsigned msf2frames(unsigned mm, unsigned ss, unsigned ff)
 {
     return (mm * 60 + ss) * 75 + ff;

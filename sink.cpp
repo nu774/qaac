@@ -85,6 +85,7 @@ void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
 	    "Magic cookie format is different from expected!!");
 }
 
+static
 void parseDecSpecificConfig(const std::vector<uint8_t> &config,
 	unsigned *sampling_rate_index, unsigned *sampling_rate,
 	unsigned *channel_config)

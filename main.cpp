@@ -4,9 +4,6 @@
 #include <clocale>
 #include <algorithm>
 #include <functional>
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 #include "strcnv.h"
 #include "win32util.h"
 #include <shellapi.h>
