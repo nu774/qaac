@@ -790,14 +790,20 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 		opts.gain, scale);
 	srcx.reset(new Scaler(srcx, scale));
     }
-    if (opts.output_format == 'alac' &&
-	srcx->getSampleFormat().m_type == SampleFormat::kIsFloat) {
+    if (opts.output_format == 'alac') {
 	int32_t bits = src->getSampleFormat().m_bitsPerSample;
-	if (bits == 8) bits = 16;
-	else if (bits > 24) bits = 24;
-	if (opts.verbose > 1 || opts.logfilename)
-	    LOG("Convert to %dbit signed integer format\n", bits);
-	srcx.reset(new IntegerSource(srcx, bits));
+	if (bits != 16 && bits != 24 && bits != 32) {
+	    std::string s = format("Not supported sample format for ALAC",
+				   bits);
+	    throw std::runtime_error(s);
+	}
+	if (srcx->getSampleFormat().m_type == SampleFormat::kIsFloat) {
+	    if (bits == 8) bits = 16;
+	    else if (bits > 24) bits = 24;
+	    if (opts.verbose > 1 || opts.logfilename)
+		LOG("Convert to %dbit signed integer format\n", bits);
+	    srcx.reset(new IntegerSource(srcx, bits));
+	}
     }
     if (threading && !opts.isLPCM()) {
 	PipedReader *reader = new PipedReader(srcx);
