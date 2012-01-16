@@ -232,7 +232,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 	    if (statfp)
 		std::fprintf(statfp, "%g\n", stat->currentBitrate());
 	}
-	progress.finish(stat->samplesRead());
+	progress.finish(src->getSamplesRead());
     } catch (...) {
 	LOG("\n");
 	throw;
