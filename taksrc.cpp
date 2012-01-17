@@ -5,7 +5,7 @@
 #include "itunetags.h"
 #include "cuesheet.h"
 
-#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
+#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
 TakModule::TakModule(const std::wstring &path)
@@ -36,8 +36,7 @@ TakModule::TakModule(const std::wstring &path)
 namespace tak {
     template <typename T> void try__(T expr, const char *s)
     {
-	if (expr != tak_res_Ok)
-	    throw std::runtime_error(format("ERROR: %s", s));
+	if (expr != tak_res_Ok) throw std::runtime_error(s);
     }
 }
 

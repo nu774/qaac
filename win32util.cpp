@@ -21,9 +21,9 @@ void throw_win32_error(const std::string &msg, DWORD code)
 	LocalFree(pszMsg);
     }
     else if (code < 0xfe00)
-	ss = format("ERROR %d: %s", code, msg.c_str());
+	ss = format("%d: %s", code, msg.c_str());
     else
-	ss = format("ERROR %08x: %s", code, msg.c_str());
+	ss = format("%08x: %s", code, msg.c_str());
     throw std::runtime_error(ss);
 }
 

@@ -3,7 +3,7 @@
 #include <vector>
 #include "soxdsp.h"
 
-#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
+#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
 SoxModule::SoxModule(const std::wstring &path)
@@ -92,11 +92,11 @@ SoxResampler::SoxResampler(const SoxModule &module, const SampleFormat &format,
     lsx_rate_t *converter = m_module.rate_create(
 	    format.m_nchannels, format.m_rate, rate);
     if (!converter)
-	throw std::runtime_error("ERROR: SoxResampler");
+	throw std::runtime_error("lsx_rate_create()");
     m_processor = x::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
     m_module.rate_config(converter, SOX_RATE_USE_THREADS, static_cast<int>(mt));
     if (m_module.rate_start(converter) < 0)
-	throw std::runtime_error("ERROR: SoxResampler");
+	throw std::runtime_error("lsx_rate_config()");
 }
 
 SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
@@ -111,14 +111,14 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
     int num_taps = 0;
     double *coefs = m_module.design_lpf(Fp, Fc, Fn, 0, 120.0, &num_taps, 0);
     if (!coefs)
-	throw std::runtime_error("SoxLowpassFilter: failed to design lpf");
+	throw std::runtime_error("lsx_design_lpf()");
     x::shared_ptr<double> __delete_lator__(coefs, m_module.free);
     lsx_fir_t *converter =
 	m_module.fir_create(format.m_nchannels, coefs, num_taps,
 			    num_taps >> 1, mt);
     if (!converter)
-	throw std::runtime_error("ERROR: SoxLowpassFilter");
+	throw std::runtime_error("lsx_fir_create()");
     m_processor = x::shared_ptr<lsx_fir_t>(converter, m_module.fir_close);
     if (m_module.fir_start(converter) < 0)
-	throw std::runtime_error("ERROR: SoxLowpassFilter");
+	throw std::runtime_error("lsx_fir_start()");
 }

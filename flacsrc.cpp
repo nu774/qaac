@@ -7,7 +7,7 @@
 namespace flac {
     template <typename T> void try__(T expr, const char *msg)
     {
-	if (!expr) throw std::runtime_error(format("ERROR: %s", msg));
+	if (!expr) throw std::runtime_error(msg);
     }
 
     inline void want(bool expr)

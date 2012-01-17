@@ -33,7 +33,7 @@ uint32_t convert_chanmap(uint32_t value)
     }
 }
 
-#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
+#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
 LibSndfileModule::LibSndfileModule(const std::wstring &path)

@@ -6,7 +6,7 @@
 #include "cuesheet.h"
 #include "chanmap.h"
 
-#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
+#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
 WavpackModule::WavpackModule(const std::wstring &path)
@@ -101,7 +101,7 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
 	m_module.OpenFileInputEx(&reader, &m_stream, m_cstream.get(),
 				 error, flags, 0);
     if (!wpc)
-	throw std::runtime_error(format("WavpackOpenFileInputEx: %s", error));
+	throw std::runtime_error(format("WavpackOpenFileInputEx(): %s", error));
     m_wpc = x::shared_ptr<WavpackContext>(wpc, m_module.CloseFile);
 
     int mode = m_module.GetMode(wpc);
@@ -126,10 +126,9 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
 
 void WavpackSource::skipSamples(int64_t count)
 {
-    if (!m_module.SeekSample(m_wpc.get(),
-	static_cast<int32_t>(PartialSource::getSamplesRead() + count)))
-	throw std::runtime_error("WavpackSeekSample");
-
+    uint64_t cur = PartialSource::getSamplesRead();
+    if (!m_module.SeekSample(m_wpc.get(), static_cast<int32_t>(cur + count)))
+	throw std::runtime_error("WavpackSeekSample()");
 }
 
 template <class MemorySink>

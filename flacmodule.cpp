@@ -1,6 +1,6 @@
 #include "flacmodule.h"
 
-#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("ERROR"); } \
+#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!!!"); } \
     while (0)
 
 FLACModule::FLACModule(const std::wstring &path)

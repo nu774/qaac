@@ -15,7 +15,7 @@
 	long err = expr; \
 	if (err) { \
 	    std::stringstream ss; \
-	    ss << "ERROR " << err << ": " << #expr; \
+	    ss << err << ": " << #expr; \
 	    throw std::runtime_error(ss.str()); \
 	} \
     } while (0)

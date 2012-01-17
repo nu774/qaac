@@ -595,16 +595,21 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	channels = srcx->getChannels();
     }
     // remix
-    if ((opts.remix_preset || opts.remix_file) && opts.libsoxrate.loaded()) {
-	std::vector<std::vector<complex_t> > matrix;
-	matrix_from_preset(opts, &matrix);
-	if (opts.verbose > 1 || opts.logfilename) {
-	    LOG("Matrix mixer: %dch -> %dch\n",
-		matrix[0].size(), matrix.size());
+    if (opts.remix_preset || opts.remix_file) {
+	if (!opts.libsoxrate.loaded())
+	    LOG("WARNING: mixer requires libsoxrate. Mixing disabled\n");
+	else {
+	    std::vector<std::vector<complex_t> > matrix;
+	    matrix_from_preset(opts, &matrix);
+	    if (opts.verbose > 1 || opts.logfilename) {
+		LOG("Matrix mixer: %dch -> %dch\n",
+		    matrix[0].size(), matrix.size());
+	    }
+	    srcx.reset(new MatrixMixer(srcx, opts.libsoxrate,
+				       matrix, threading));
+	    channels = 0;
+	    nchannels = srcx->getSampleFormat().m_nchannels;
 	}
-	srcx.reset(new MatrixMixer(srcx, opts.libsoxrate, matrix, threading));
-	channels = 0;
-	nchannels = srcx->getSampleFormat().m_nchannels;
     }
     // map with --chanmap option
     if (opts.chanmap.size()) {
@@ -673,6 +678,8 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 	IPartialSource *p = dynamic_cast<IPartialSource*>(src.get());
 	if (p) {
 	    int nsamples = lrint(-0.001 * opts.delay * rate);
+	    if (src->length() >= 0 && nsamples > src->length())
+		nsamples = src->length();
 	    p->setRange(nsamples, -1);
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG("Delay of %dms: trunc %d samples\n", opts.delay,
@@ -768,15 +775,19 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	    srcx.reset(new SoxDSPProcessor(engine, srcx));
 	}
     }
-    if (opts.lowpass > 0 && opts.libsoxrate.loaded()) {
-	if (opts.verbose > 1 || opts.logfilename)
-	    LOG("Applying LPF: %dHz\n", opts.lowpass);
-	x::shared_ptr<ISoxDSPEngine>
-	    engine(new SoxLowpassFilter(opts.libsoxrate,
-					srcx->getSampleFormat(),
-					opts.lowpass,
-					threading));
-	srcx.reset(new SoxDSPProcessor(engine, srcx));
+    if (opts.lowpass > 0) {
+	if (!opts.libsoxrate.loaded())
+	    LOG("WARNING: --lowpass requires libsoxrate. LPF disabled\n");
+        else {
+	    if (opts.verbose > 1 || opts.logfilename)
+		LOG("Applying LPF: %dHz\n", opts.lowpass);
+	    x::shared_ptr<ISoxDSPEngine>
+		engine(new SoxLowpassFilter(opts.libsoxrate,
+					    srcx->getSampleFormat(),
+					    opts.lowpass,
+					    threading));
+	    srcx.reset(new SoxDSPProcessor(engine, srcx));
+	}
     }
     if (opts.normalize)
 	srcx = do_normalize(srcx, opts);
@@ -1413,7 +1424,7 @@ int wmain1(int argc, wchar_t **argv)
     } catch (const std::exception &e) {
 	if (opts.print_available_formats)
 	    Log::instance()->enable_stderr();
-	LOG("%s\n", e.what());
+	LOG("ERROR: %s\n", e.what());
 	result = 2;
     }
     delete Log::instance();
