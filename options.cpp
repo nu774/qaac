@@ -21,6 +21,7 @@ static wide::option long_options[] = {
     { L"check", no_argument, 0, 'chck' },
     { L"decode", no_argument, 0, 'D' },
     { L"no-optimize", no_argument, 0, 'noop' },
+    { L"bites-per-sample", required_argument, 0, 'b' },
     { L"rate", required_argument, 0, 'r' },
     { L"lowpass", required_argument, 0, 'lpf ' },
     { L"normalize", no_argument, 0, 'N' },
@@ -125,6 +126,8 @@ void usage()
 "--check                Show library versions and exit\n"
 "-D, --decode           Wave output mode.\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
+"-b, --bites-per-sample <n>\n"
+"                       Bits per sample of output (for WAV/ALAC) [16/24]\n"
 "-r, --rate <keep|auto|n>\n"
 "                       keep: output sampling rate will be same as input\n"
 "                             if possible.\n"
@@ -210,9 +213,9 @@ void usage()
 }
 
 #ifndef REFALAC
-static const wchar_t * const short_opts = L"hADo:d:a:V:v:c:q:r:insRSN";
+static const wchar_t * const short_opts = L"hDo:d:b:r:insRSNAa:V:v:c:q:";
 #else
-static const wchar_t * const short_opts = L"hDo:d:insRSN";
+static const wchar_t * const short_opts = L"hDo:d:b:r:insRSN";
 #endif
 
 bool Options::parse(int &argc, wchar_t **&argv)
@@ -331,6 +334,15 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		std::fputs("Raw sample rate must be an integer\n", stderr);
 		return false;
 	    }
+	}
+	else if (ch == 'b') {
+	    uint32_t n;
+	    if (std::swscanf(wide::optarg, L"%u", &n) != 1
+		|| (n != 16 && n != 24)) {
+		std::fputs("Bits per sample shall be 16 or 24\n", stderr);
+		return false;
+	    }
+	    this->bits_per_sample = n;
 	}
 	else if (ch == 'Rfmt')
 	    this->raw_format = wide::optarg;

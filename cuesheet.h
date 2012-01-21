@@ -41,10 +41,12 @@ struct CueTrack {
 
 class CueSheet {
 public:
+    CueSheet(): m_has_multiple_files(false) {}
     void parse(std::wstreambuf *src);
 
     std::vector<CueTrack> m_tracks;
     std::map<std::wstring, std::wstring> m_meta;
+    bool m_has_multiple_files;
 private:
     void arrange();
     void parseFile(const std::wstring *args);
@@ -57,7 +59,7 @@ private:
     void die(const std::string &msg)
     {
 	throw std::runtime_error(
-		format("%s at line %d", msg.c_str(), m_lineno));
+		format("cuesheet: %s at line %d", msg.c_str(), m_lineno));
     }
     CueSegment *lastSegment()
     {

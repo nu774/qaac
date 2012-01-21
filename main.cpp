@@ -798,19 +798,23 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 		opts.gain, scale);
 	srcx.reset(new Scaler(srcx, scale));
     }
-    if (opts.output_format == 'alac') {
-	int32_t bits = src->getSampleFormat().m_bitsPerSample;
-	if (bits != 16 && bits != 24 && bits != 32) {
-	    std::string s = format("Not supported sample format for ALAC",
-				   bits);
-	    throw std::runtime_error(s);
-	}
-	if (srcx->getSampleFormat().m_type == SampleFormat::kIsFloat) {
-	    if (bits == 8) bits = 16;
-	    else if (bits > 24) bits = 24;
+    if (opts.bits_per_sample) {
+	if (opts.isAAC())
+	    LOG("WARNING: --bits-per-sample has no effect for AAC\n");
+	else if (srcx->getSampleFormat().m_bitsPerSample
+		 != opts.bits_per_sample) {
+	    srcx.reset(new IntegerSource(srcx, opts.bits_per_sample));
 	    if (opts.verbose > 1 || opts.logfilename)
-		LOG("Convert to %dbit signed integer format\n", bits);
-	    srcx.reset(new IntegerSource(srcx, bits));
+		LOG("Convert to %s\n", srcx->getSampleFormat().str().c_str());
+	}
+    }
+    if (opts.output_format == 'alac') {
+	const SampleFormat &sf = srcx->getSampleFormat();
+	uint32_t bits = sf.m_bitsPerSample;
+	if (sf.m_type != SampleFormat::kIsSignedInteger
+	    || bits != 16 && bits != 24 && bits != 32) {
+	    throw std::runtime_error(format(
+		"Not supported sample format for ALAC: %s", sf.str().c_str()));
 	}
     }
     if (threading && !opts.isLPCM()) {
@@ -1209,6 +1213,12 @@ struct TagLookup {
     }
 };
 
+static inline
+uint64_t cue_frame_to_sample(uint32_t sampling_rate, uint32_t nframe)
+{
+    return static_cast<uint64_t>(nframe / 75.0 * sampling_rate + 0.5);
+}
+
 static
 void handle_cue_sheet(Options &opts)
 {
@@ -1227,44 +1237,33 @@ void handle_cue_sheet(Options &opts)
     Cue::ConvertToItunesTags(cue.m_meta, &album_tags, true);
     for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
 	CueTrack &track = cue.m_tracks[i];
-	if (!track.m_segments.size())
-	    continue;
-
-	meta_t tmp;
-	Cue::ConvertToItunesTags(track.m_meta, &tmp);
 	meta_t track_tags = album_tags;
-	for (meta_t::iterator it = tmp.begin(); it != tmp.end(); ++it)
-	    track_tags[it->first] = it->second;
-	track_tags[Tag::kTrack] = widen(format("%d/%d", track.m_number,
-		cue.m_tracks.size()));
-	if (track_tags.find(Tag::kArtist) == track_tags.end()) {
-	    if (track_tags.find(Tag::kAlbumArtist) != track_tags.end())
-		track_tags[Tag::kArtist] = track_tags[Tag::kAlbumArtist];
+	{
+	    meta_t tmp;
+	    Cue::ConvertToItunesTags(track.m_meta, &tmp);
+	    for (meta_t::iterator it = tmp.begin(); it != tmp.end(); ++it)
+		track_tags[it->first] = it->second;
+	    track_tags[Tag::kTrack] = widen(format("%d/%d", track.m_number,
+		    cue.m_tracks.back().m_number));
 	}
-
 	CompositeSource *csp = new CompositeSource();
 	csp->setTags(track_tags);
-	x::shared_ptr<ISource> source(csp);
 	std::wstring ifilename;
 	x::shared_ptr<ISource> src;
 	for (size_t j = 0; j < track.m_segments.size(); ++j) {
 	    CueSegment &seg = track.m_segments[j];
 	    if (seg.m_filename == L"__GAP__") {
-		opts.ifilename = L"GAP";
-		if (!src)
-		    throw std::runtime_error("Pre/Postgap command before song");
-		src = x::shared_ptr<ISource>(
-			new NullSource(src->getSampleFormat()));
+		if (!src.get()) continue;
+		src.reset(new NullSource(src->getSampleFormat()));
 	    } else {
 		ifilename = PathCombineX(cuedir, seg.m_filename);
 		opts.ifilename = const_cast<wchar_t*>(ifilename.c_str());
 		src = open_source(opts);
 	    }
 	    unsigned rate = src->getSampleFormat().m_rate;
-	    int64_t begin = static_cast<int64_t>(seg.m_begin) * rate / 75;
-	    int64_t end = -1;
-	    if (seg.m_end != -1)
-		end = static_cast<int64_t>(seg.m_end) * rate / 75 - begin;
+	    int64_t begin = cue_frame_to_sample(rate, seg.m_begin);
+	    int64_t end = seg.m_end == -1 ? -1:
+		cue_frame_to_sample(rate, seg.m_end) - begin;
 	    IPartialSource *psrc = dynamic_cast<IPartialSource*>(src.get());
 	    if (!psrc)
 		throw std::runtime_error("Cannot set range this filetype");
@@ -1284,7 +1283,7 @@ void handle_cue_sheet(Options &opts)
 	ofilename = strtransform(ofilename, F::trans) + L".stub";
 	ofilename = get_output_filename(ofilename.c_str(), opts);
 	LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
-	encode_file(source, ofilename, opts);
+	encode_file(x::shared_ptr<ISource>(csp), ofilename, opts);
     }
 }
 

@@ -22,7 +22,7 @@ bool CueTokenizer<CharT>::nextline()
 	    while (traits_type::not_eof(c = m_sb->sbumpc())) {
 		if (c == '\n')
 		    throw std::runtime_error(format(
-				"Runaway string at line %d", m_lineno + 1));
+			"cuesheet: runaway string at line %d", m_lineno + 1));
 		else if (c != '"')
 		    field.push_back(c);
 		else if (m_sb->sgetc() != '"') // closing quote
@@ -88,7 +88,7 @@ void CueSheet::parse(std::wstreambuf *src)
 	    if (tokenizer.m_fields.size() == p->nargs)
 		(this->*p->mf)(&tokenizer.m_fields[0]);
 	    else if (cmd != L"REM")
-		die(format("Wrong num args for %ls command", p->cmd));
+		die(format("wrong num args for %ls command", p->cmd));
 	    break;
 	}
 	// if (!p->cmd) die("Unknown command");
@@ -98,10 +98,24 @@ void CueSheet::parse(std::wstreambuf *src)
 
 void CueSheet::arrange()
 {
+    for (size_t i = 0; i < m_tracks.size(); ++i) {
+	bool index1_found = false;
+	int64_t last_index = -1;
+	CueTrack &track = m_tracks[i];
+	for (size_t j = 0; j < track.m_segments.size(); ++j) {
+	    if (last_index >= track.m_segments[j].m_index)
+		throw std::runtime_error(format("cuesheet: INDEX must be in "
+						"strictly ascending order: "
+						"track %d", track.m_number));
+	    last_index = track.m_segments[j].m_index;
+	    if (last_index == 1) index1_found = true;
+	}
+	if (!index1_found)
+	    throw std::runtime_error(format("cuesheet: INDEX01 not found on "
+					    "track %d", track.m_number));
+    }
     /* move INDEX00 segment to previous track's end */
     for (size_t i = 0; i < m_tracks.size(); ++i) {
-	if (!m_tracks[i].m_segments.size())
-	    continue;
 	if (m_tracks[i].m_segments[0].m_index == 0) {
 	    if (i > 0)
 		m_tracks[i-1].m_segments.push_back(m_tracks[i].m_segments[0]);
@@ -129,6 +143,8 @@ void CueSheet::arrange()
 
 void CueSheet::parseFile(const std::wstring *args)
 {
+    if (!m_cur_file.empty() && m_cur_file != args[1])
+	this->m_has_multiple_files = true;
     m_cur_file = args[1];
 }
 void CueSheet::parseTrack(const std::wstring *args)
@@ -144,15 +160,22 @@ void CueSheet::parseIndex(const std::wstring *args)
 {
     if (!m_tracks.size())
 	die("INDEX command before TRACK");
+    if (m_cur_file.empty())
+	die("INDEX command before FILE");
     unsigned no, mm, ss, ff, nframes;
     if (std::swscanf(args[1].c_str(), L"%u", &no) != 1)
 	die("Invalid INDEX number");
     if (std::swscanf(args[2].c_str(), L"%u:%u:%u", &mm, &ss, &ff) != 3)
 	die("Invalid INDEX time format");
+    if (ss > 59 || ff > 74)
+	die("Invalid INDEX time format");
     nframes = msf2frames(mm, ss, ff);
     CueSegment *lastseg = lastSegment();
-    if (lastseg && lastseg->m_filename == m_cur_file)
+    if (lastseg && lastseg->m_filename == m_cur_file) {
 	lastseg->m_end = nframes;
+	if (lastseg->m_begin >= nframes)
+	    die("INDEX time must be in ascending order");
+    }
     CueSegment segment(m_cur_file, no);
     segment.m_begin = nframes;
     m_tracks.back().m_segments.push_back(segment);
@@ -208,6 +231,8 @@ namespace Cue {
 	    else if (key == L"songwriter")
 		ikey = Tag::kComposer;
 	    if (ikey) result[ikey] = it->second;
+	    if (ikey == Tag::kAlbumArtist)
+		result[Tag::kArtist] = it->second;
 	}
 	to->swap(result);
     }
@@ -220,27 +245,25 @@ namespace Cue {
 	std::wstringbuf strbuf(cuesheet);
 	CueSheet parser;
 	parser.parse(&strbuf);
+	if (parser.m_has_multiple_files)
+	    throw std::runtime_error("Multiple FILE in embedded cuesheet");
 	ConvertToItunesTags(parser.m_meta, meta, true);
 	std::vector<std::pair<std::wstring, int64_t> > chaps;
 
 	int64_t dur_acc = 0;
 	for (size_t i = 0; i < parser.m_tracks.size(); ++i) {
 	    CueTrack &track = parser.m_tracks[i];
-	    if (track.m_segments.size() != 1)
-		throw std::runtime_error("Invalid Cuesheet");
-	    std::map<std::wstring, std::wstring>::iterator it;
-	    it = track.m_meta.find(L"TITLE");
-	    if (it == track.m_meta.end())
-		throw std::runtime_error("Track has no Title");
-	    std::wstring title = it->second;
+	    std::map<std::wstring, std::wstring>::iterator
+		it = track.m_meta.find(L"TITLE");
+	    std::wstring title =
+		it == track.m_meta.end() ? format(L"Chapter %02d",
+						  track.m_number)
+					 : it->second;
 	    unsigned beg = track.m_segments[0].m_begin;
 	    unsigned end = track.m_segments[0].m_end;
 	    int64_t dur;
-	    if (end == -1 && i < parser.m_tracks.size() - 1)
-		throw std::runtime_error("Invalid Cuesheet");
 	    if (end != -1) {
-		dur = static_cast<int64_t>(end) - beg;
-		dur = dur * sample_rate * 588 / 44100;
+		dur = (double(end) - beg) * sample_rate / 75.0 + 0.5;
 		dur_acc += dur;
 	    }
 	    else
