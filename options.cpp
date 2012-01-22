@@ -407,9 +407,9 @@ bool Options::parse(int &argc, wchar_t **&argv)
 
     if (!argc && !this->check_only && !this->print_available_formats)
 	return usage(), false;
-    if (argc > 1 && (this->ofilename || this->tagopts.size())) {
-	this->ofilename = 0;
-	this->tagopts.clear();
+    if (argc > 1 && this->ofilename) {
+	std::fputs("-o is not available for multiple input\n", stderr);
+	return false;
     }
     if (!this->output_format) {
 #ifdef REFALAC
@@ -419,12 +419,16 @@ bool Options::parse(int &argc, wchar_t **&argv)
 #endif
     }
     if (isSBR() && this->method == kTVBR) {
-	std::fputs("Can't use TVBR method in HE encoding mode\n", stderr);
+	std::fputs("TVBR is not available for HE\n", stderr);
 	return false;
     }
     if (isAAC() && this->method == -1) {
 	this->method = isSBR() ? kCVBR : kTVBR;
 	this->bitrate = isSBR() ? 0 : 90;
+    }
+    if (isMP4() && this->ofilename && !std::wcscmp(this->ofilename, L"-")) {
+	std::fputs("MP4 piping is not supported\n", stderr);
+	return false;
     }
     if (!isAAC() && this->is_adts) {
 	std::fputs("--adts is only available for AAC\n", stderr);
@@ -436,7 +440,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
     }
     if (this->ignore_length && this->is_raw) {
 	std::fputs("Can't use --ignorelength and --raw at the same time\n",
-		stderr);
+		   stderr);
 	return false;
     }
     if (this->quality == -1)

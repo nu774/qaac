@@ -1,6 +1,12 @@
 #include <cstdio>
 #include <iostream>
 #include <sstream>
+#include <sys/stat.h>
+#if defined(_MSC_VER ) || defined(__MINGW32__)
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 #include "wavsource.h"
 #include "wavsink.h"
 
@@ -56,8 +62,13 @@ WaveSink::WaveSink(FILE *fp,
 		   uint64_t duration,
 		   const SampleFormat &format,
 		   uint32_t chanmask)
-	: m_file(fp), m_bytes_written(0), m_closed(false), m_format(format)
+	: m_file(fp), m_bytes_written(0), m_closed(false),
+	  m_seekable(false), m_format(format)
 {
+    struct stat stb = { 0 };
+    if (fstat(fileno(fp), &stb))
+	throw_crt_error("fstat()");
+    m_seekable = !!(stb.st_mode & S_IFREG);
     std::ostringstream os;
     wave::buildHeader(format, chanmask, os.rdbuf());
     std::string header = os.str();
@@ -116,9 +127,10 @@ void WaveSink::finishWrite()
     if (m_closed) return;
     m_closed = true;
     if (m_bytes_written & 1) write("\0", 1);
+    if (!m_seekable) return;
     uint64_t datasize64 = m_bytes_written;
     uint64_t riffsize64 = datasize64 + m_data_pos - 8;
-    fpos_t pos;
+    fpos_t pos = 0;
     if (riffsize64 >> 32 == 0 && std::fgetpos(m_file, &pos) == 0) {
 	if (std::fseek(m_file, m_data_pos - 4, SEEK_SET) == 0) {
 	    uint32_t size32 = static_cast<uint32_t>(datasize64);

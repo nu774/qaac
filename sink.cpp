@@ -169,23 +169,20 @@ MP4Sink::MP4Sink(const std::wstring &path,
     }
 }
 
-static void noop(void *) {}
-
 ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
 {
+    struct F { static void close(FILE *) {} };
+    const wchar_t *spath = path.c_str();
     if (path == L"-") {
-#if defined(_MSC_VER) || defined(__MINGW32__)
-	_setmode(_fileno(stdout), _O_BINARY);
-#endif
-	m_fp.reset(stdout, noop);
+	m_fp.reset(stdout, F::close);
     } else {
-	m_fp.reset(wfopenx(path.c_str(), L"wb"), std::fclose);
+	m_fp.reset(wfopenx(spath, L"wb"), std::fclose);
     }
     std::vector<uint8_t> config;
     parseMagicCookieAAC(cookie, &config);
     unsigned rate;
     parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
-	    &m_channel_config);
+			   &m_channel_config);
 }
 
 void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)

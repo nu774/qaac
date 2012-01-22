@@ -840,13 +840,11 @@ void decode_file(const x::shared_ptr<ISource> &src,
     struct F { static void close(FILE *) {} };
 
     x::shared_ptr<FILE> fileptr;
-    if (opts.ofilename && !std::wcscmp(opts.ofilename, L"-")) {
+    const wchar_t *spath = ofilename.c_str();
+    if (ofilename == L"-")
 	fileptr.reset(stdout, F::close);
-#if defined(_MSC_VER) || defined(__MINGW32__)
-	_setmode(1, _O_BINARY);
-#endif
-    } else
-	fileptr.reset(wfopenx(ofilename.c_str(), L"wb"), std::fclose);
+    else
+	fileptr.reset(wfopenx(spath, L"wb"), std::fclose);
 
     const SampleFormat &sf = src->getSampleFormat();
     WaveSink sink(fileptr.get(), src->length(), sf, chanmask);
@@ -1405,6 +1403,19 @@ int wmain1(int argc, wchar_t **argv)
 	    _wputenv(env.c_str());
 	}
 
+	if (opts.ofilename) {
+	    std::wstring fullpath = GetFullPathNameX(opts.ofilename);
+	    const wchar_t *ws = fullpath.c_str();
+	    if (!std::wcscmp(opts.ofilename, L"-"))
+		_setmode(1, _O_BINARY);
+	    else if (std::wcsstr(ws, L"\\\\.\\pipe\\") == ws) {
+		if (opts.isMP4())
+		    throw std::runtime_error("MP4 piping is not supported");
+		opts.ofilename = L"-";
+		_dup2(win32_create_named_pipe(ws), 1);
+		_setmode(1, _O_BINARY);
+	    }
+	}
 	while ((opts.ifilename = *argv++)) {
 	    const wchar_t *name = L"<stdin>";
 	    if (std::wcscmp(opts.ifilename, L"-"))

@@ -70,3 +70,16 @@ char *load_with_mmap(const wchar_t *path, uint64_t *size)
     CloseHandle(hMap);
     return view;
 }
+
+int win32_create_named_pipe(const wchar_t *path)
+{
+    HANDLE fh = CreateNamedPipeW(path,
+				 PIPE_ACCESS_OUTBOUND,
+				 PIPE_TYPE_BYTE | PIPE_WAIT,
+				 1, 0, 0, 0, 0);
+    if (fh == INVALID_HANDLE_VALUE)
+	throw_win32_error(format("CreateNamedPipeW(): %ls", path),
+			  GetLastError());
+    ConnectNamedPipe(fh, 0);
+    return _open_osfhandle(reinterpret_cast<intptr_t>(fh), _O_WRONLY|_O_BINARY);
+}

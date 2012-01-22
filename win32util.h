@@ -93,6 +93,8 @@ FILE *win32_tmpfile(const wchar_t *prefix);
 
 char *load_with_mmap(const wchar_t *path, uint64_t *size);
 
+int win32_create_named_pipe(const wchar_t *path);
+
 #ifdef __MINGW32__
 #ifndef _STARTUP_INFO_DEFINED
 typedef struct
