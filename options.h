@@ -26,7 +26,8 @@ struct Options {
 	chanmask(-1),
 	artwork_size(0),
 	bits_per_sample(0),
-	ifilename(0), ofilename(0), outdir(0),
+	ofilename(0),
+	outdir(0),
 	raw_format(L"S16LE"),
 	fname_format(0),
 	chapter_file(0),
@@ -88,7 +89,7 @@ struct Options {
                      others: use the value as chanmask     */
     uint32_t artwork_size;
     uint32_t bits_per_sample;
-    wchar_t *ifilename, *ofilename, *outdir, *raw_format, *fname_format;
+    wchar_t *ofilename, *outdir, *raw_format, *fname_format;
     wchar_t *chapter_file;
     wchar_t *logfilename;
     wchar_t *remix_preset;

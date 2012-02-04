@@ -237,9 +237,10 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 }
 
 static
-x::shared_ptr<ISource> open_source(const Options &opts)
+x::shared_ptr<ISource> open_source(const wchar_t *ifilename,
+				   const Options &opts)
 {
-    StdioChannel channel(opts.ifilename);
+    StdioChannel channel(ifilename);
     InputStream stream(channel);
 
 #define MAKE_SHARED(Foo) x::shared_ptr<ISource>(new Foo)
@@ -268,22 +269,22 @@ x::shared_ptr<ISource> open_source(const Options &opts)
 
 	if (opts.libwavpack.loaded())
 	    TRY_MAKE_SHARED(WavpackSource(opts.libwavpack, stream,
-					  opts.ifilename));
+					  ifilename));
 
 	if (opts.libtak.loaded() && opts.libtak.compatible())
 	    TRY_MAKE_SHARED(TakSource(opts.libtak, stream));
 #ifndef REFALAC
 	try {
-	    return AudioFileOpenFactory(stream, opts.ifilename);
+	    return AudioFileOpenFactory(stream, ifilename);
 	} catch (...) {
 	    stream.rewind();
 	}
 #endif
 	if (opts.libsndfile.loaded())
-	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, opts.ifilename));
+	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, ifilename));
 
 #ifdef REFALAC
-	return x::shared_ptr<ISource>(new ALACSource(opts.ifilename));
+	return x::shared_ptr<ISource>(new ALACSource(ifilename));
 #endif
     } catch (const std::runtime_error&) {}
     throw std::runtime_error("Not available input file format");
@@ -1201,16 +1202,16 @@ uint64_t cue_frame_to_sample(uint32_t sampling_rate, uint32_t nframe)
 }
 
 static
-void handle_cue_sheet(Options &opts)
+void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
 {
-    std::wstring cuepath = opts.ifilename;
+    std::wstring cuepath = ifilename;
     std::wstring cuedir = L".";
     for (size_t i = 0; i < cuepath.size(); ++i)
 	if (cuepath[i] == L'/') cuepath[i] = L'\\';
     const wchar_t *p = std::wcsrchr(cuepath.c_str(), L'\\');
     if (p) cuedir = cuepath.substr(0, p - cuepath.c_str());
 
-    std::wstringbuf istream(load_text_file(opts.ifilename, opts.textcp));
+    std::wstringbuf istream(load_text_file(ifilename, opts.textcp));
     CueSheet cue;
     cue.parse(&istream);
     typedef std::map<uint32_t, std::wstring> meta_t;
@@ -1229,7 +1230,6 @@ void handle_cue_sheet(Options &opts)
 	}
 	CompositeSource *csp = new CompositeSource();
 	csp->setTags(track_tags);
-	std::wstring ifilename;
 	x::shared_ptr<ISource> src;
 	for (size_t j = 0; j < track.m_segments.size(); ++j) {
 	    CueSegment &seg = track.m_segments[j];
@@ -1237,9 +1237,8 @@ void handle_cue_sheet(Options &opts)
 		if (!src.get()) continue;
 		src.reset(new NullSource(src->getSampleFormat()));
 	    } else {
-		ifilename = PathCombineX(cuedir, seg.m_filename);
-		opts.ifilename = const_cast<wchar_t*>(ifilename.c_str());
-		src = open_source(opts);
+		std::wstring ifilename = PathCombineX(cuedir, seg.m_filename);
+		src = open_source(ifilename.c_str(), opts);
 	    }
 	    unsigned rate = src->getSampleFormat().m_rate;
 	    int64_t begin = cue_frame_to_sample(rate, seg.m_begin);
@@ -1399,17 +1398,18 @@ int wmain1(int argc, wchar_t **argv)
 		_setmode(1, _O_BINARY);
 	    }
 	}
-	while ((opts.ifilename = *argv++)) {
+	const wchar_t *ifilename;
+	while ((ifilename = *argv++)) {
 	    const wchar_t *name = L"<stdin>";
-	    if (std::wcscmp(opts.ifilename, L"-"))
-		name = PathFindFileNameW(opts.ifilename);
+	    if (std::wcscmp(ifilename, L"-"))
+		name = PathFindFileNameW(ifilename);
 	    LOG("\n%ls\n", name);
-	    if (wslower(PathFindExtension(opts.ifilename)) == L".cue")
-		handle_cue_sheet(opts);
+	    if (wslower(PathFindExtension(ifilename)) == L".cue")
+		handle_cue_sheet(ifilename, opts);
 	    else {
 		std::wstring ofilename
-		    = get_output_filename(opts.ifilename, opts);
-		x::shared_ptr<ISource> src(open_source(opts));
+		    = get_output_filename(ifilename, opts);
+		x::shared_ptr<ISource> src(open_source(ifilename, opts));
 		encode_file(src, ofilename, opts);
 	    }
 	}
