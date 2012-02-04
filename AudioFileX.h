@@ -45,6 +45,20 @@ public:
 		    &size, &value));
 	return value;
     }
+    void getPacketTableInfo(AudioFilePacketTableInfo *result)
+    {
+	UInt32 size = sizeof(AudioFilePacketTableInfo);
+	CHECKCA(AudioFileGetProperty(m_file.get(),
+				     kAudioFilePropertyPacketTableInfo,
+				     &size, result));
+    }
+    void setPacketTableInfo(const AudioFilePacketTableInfo *info)
+    {
+	CHECKCA(AudioFileSetProperty(m_file.get(),
+				     kAudioFilePropertyPacketTableInfo,
+				     sizeof(AudioFilePacketTableInfo),
+				     info));
+    }
     void getChannelLayout(x::shared_ptr<AudioChannelLayout> *layout)
     {
 	UInt32 size;

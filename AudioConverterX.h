@@ -74,6 +74,11 @@ public:
 	CHECKCA(AudioConverterGetProperty(m_converter.get(),
 	    kAudioConverterPrimeInfo, &size, result));
     }
+    void setPrimeInfo(const AudioConverterPrimeInfo *info)
+    {
+	CHECKCA(AudioConverterSetProperty(m_converter.get(),
+	    kAudioConverterPrimeInfo, sizeof(*info), info));
+    }
     void getCompressionMagicCookie(std::vector<uint8_t> *result)
     {
 	UInt32 size;

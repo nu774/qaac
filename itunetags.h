@@ -52,7 +52,9 @@ namespace Vorbis {
 }
 
 namespace mp4a {
-    void fetchTags(MP4FileX &file, std::map<uint32_t, std::wstring> *result);
+    void fetchTags(MP4FileX &file,
+		   std::map<uint32_t, std::wstring> *shortTags,
+		   std::map<std::string, std::wstring> *longTags=0);
 }
 
 const char * const iTunSMPB_template = " 00000000 %08X %08X %08X%08X "

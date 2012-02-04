@@ -375,10 +375,12 @@ namespace mp4a
 	return L"";
     }
 
-    void fetchTags(MP4FileX &file, std::map<uint32_t, std::wstring> *result)
+    void fetchTags(MP4FileX &file, std::map<uint32_t, std::wstring> *shortTags,
+		   std::map<std::string, std::wstring> *longTags)
     {
 	utf8_codecvt_facet u8codec;
-	std::map<uint32_t, std::wstring> tags;
+	std::map<uint32_t, std::wstring> stags;
+	std::map<std::string, std::wstring> ltags;
 	try {
 	    MP4ItmfItemList *itemlist =
 		mp4v2::impl::itmf::genericGetItems(file);
@@ -392,12 +394,16 @@ namespace mp4a
 		MP4ItmfData &data = item.dataList.elements[0];
 		if (!data.value)
 		    continue;
-		if (fcc != '----') {
-		    std::wstring v = parseValue(fcc, data, u8codec);
-		    if (!v.empty()) tags[fcc] = v;
+		std::wstring v = parseValue(fcc, data, u8codec);
+		if (!v.empty()) {
+		    if (fcc == '----')
+			ltags[item.name] = v;
+		    else
+			stags[fcc] = v;
 		}
 	    }
-	    result->swap(tags);
+	    if (shortTags) shortTags->swap(stags);
+	    if (longTags) longTags->swap(ltags);
 	} catch (mp4v2::impl::Exception *e) {
 	    handle_mp4error(e);
 	}

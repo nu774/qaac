@@ -371,6 +371,13 @@ OSStatus AudioFileRemoveUserData (
    UInt32      inIndex
 );
 
+OSStatus AudioFileSetProperty (
+    AudioFileID         inAudioFile,
+    AudioFilePropertyID inPropertyID,
+    UInt32              inDataSize,
+    const void          *inPropertyData
+);
+
 OSStatus AudioFileWriteBytes (
    AudioFileID inAudioFile,
    Boolean     inUseCache,
