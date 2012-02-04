@@ -1421,8 +1421,7 @@ int wmain1(int argc, wchar_t **argv)
 	    if (std::wcscmp(opts.ifilename, L"-"))
 		name = PathFindFileNameW(opts.ifilename);
 	    LOG("\n%ls\n", name);
-	    size_t len = std::wcslen(opts.ifilename);
-	    if (len > 4 && wslower(opts.ifilename + (len - 4)) == L".cue")
+	    if (wslower(PathFindExtension(opts.ifilename)) == L".cue")
 		handle_cue_sheet(opts);
 	    else {
 		std::wstring ofilename
