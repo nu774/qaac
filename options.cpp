@@ -44,6 +44,7 @@ static wide::option long_options[] = {
     { L"raw-rate", required_argument, 0,  'Rrat' },
     { L"raw-format", required_argument, 0,  'Rfmt' },
     { L"ignorelength", no_argument, 0, 'i' },
+    { L"concat-cuesheet", no_argument, 0, 'conc' },
     { L"fname-format", required_argument, 0, 'nfmt' },
     { L"log", required_argument, 0, 'log ' },
     { L"title", required_argument, 0, Tag::kTitle },
@@ -279,6 +280,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->is_adts = true;
 	else if (ch == 'noop')
 	    this->no_optimize = true;
+	else if (ch == 'conc')
+	    this->concat_cue = true;
 	else if (ch == 'nfmt')
 	    this->fname_format = wide::optarg;
 	else if (ch == 'tmpd')

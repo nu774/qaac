@@ -10,6 +10,7 @@ class CompositeSource: public ISource, public ITagParser {
     SampleFormat m_format;
     size_t m_curpos;
     std::map<uint32_t, std::wstring> m_tags;
+    std::vector<std::pair<std::wstring, int64_t> > m_chapters;
     uint64_t m_samples_read;
 public:
     CompositeSource() : m_curpos(0), m_samples_read(0) {}
@@ -21,11 +22,18 @@ public:
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<std::pair<std::wstring, int64_t> > *getChapters() const
     {
-	return 0;
+	if (m_chapters.size())
+	    return &m_chapters;
+	else
+	    return 0;
     }
     void setTags(const std::map<uint32_t, std::wstring> &tags)
     {
 	m_tags = tags;
+    }
+    void setChapters(const std::vector<std::pair<std::wstring, int64_t> > &x)
+    {
+	m_chapters = x;
     }
     void addSource(const x::shared_ptr<ISource> &src)
     {

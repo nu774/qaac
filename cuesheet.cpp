@@ -253,12 +253,7 @@ namespace Cue {
 	int64_t dur_acc = 0;
 	for (size_t i = 0; i < parser.m_tracks.size(); ++i) {
 	    CueTrack &track = parser.m_tracks[i];
-	    std::map<std::wstring, std::wstring>::iterator
-		it = track.m_meta.find(L"TITLE");
-	    std::wstring title =
-		it == track.m_meta.end() ? format(L"Chapter %02d",
-						  track.m_number)
-					 : it->second;
+	    std::wstring title = track.getName(L"Chapter ");
 	    unsigned beg = track.m_segments[0].m_begin;
 	    unsigned end = track.m_segments[0].m_end;
 	    int64_t dur;

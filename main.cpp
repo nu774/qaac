@@ -1211,12 +1211,22 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
     const wchar_t *p = std::wcsrchr(cuepath.c_str(), L'\\');
     if (p) cuedir = cuepath.substr(0, p - cuepath.c_str());
 
-    std::wstringbuf istream(load_text_file(ifilename, opts.textcp));
+    std::wstring cuetext = load_text_file(ifilename, opts.textcp);
+    std::wstringbuf istream(cuetext);
     CueSheet cue;
     cue.parse(&istream);
     typedef std::map<uint32_t, std::wstring> meta_t;
     meta_t album_tags;
     Cue::ConvertToItunesTags(cue.m_meta, &album_tags, true);
+
+    CompositeSource *concat_sp = 0;
+    std::shared_ptr<ISource> concat_spPtr;
+    std::vector<std::pair<std::wstring, int64_t> > chapters;
+    if (opts.concat_cue) {
+	concat_sp = new CompositeSource();
+	concat_spPtr.reset(concat_sp);
+	concat_sp->setTags(album_tags);
+    }
     for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
 	CueTrack &track = cue.m_tracks[i];
 	meta_t track_tags = album_tags;
@@ -1229,6 +1239,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
 		    cue.m_tracks.back().m_number));
 	}
 	CompositeSource *csp = new CompositeSource();
+	x::shared_ptr<ISource> csPtr(csp);
 	csp->setTags(track_tags);
 	x::shared_ptr<ISource> src;
 	for (size_t j = 0; j < track.m_segments.size(); ++j) {
@@ -1250,20 +1261,33 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
 	    psrc->setRange(begin, end);
 	    csp->addSource(src);
 	}
-	std::wstring formatstr = opts.fname_format
-	    ? opts.fname_format : L"${tracknumber}${title& }${title}";
-	std::wstring ofilename =
-	    process_template(formatstr, TagLookup(track, track_tags));
+	if (opts.concat_cue) {
+	    concat_sp->addSource(csPtr);
+	    std::map<std::wstring, std::wstring>::iterator
+		it = track.m_meta.find(L"TITLE");
+	    std::wstring title = track.getName(L"Chapter ");
+	    chapters.push_back(std::make_pair(title, csPtr->length()));
+	} else {
+	    std::wstring formatstr = opts.fname_format
+		? opts.fname_format : L"${tracknumber}${title& }${title}";
+	    std::wstring ofilename =
+		process_template(formatstr, TagLookup(track, track_tags));
 
-	struct F {
-	    static wchar_t trans(wchar_t ch) {
-		return std::wcschr(L":/\\?|<>*\"", ch) ? L'_' : ch;
-	    }
-	};
-	ofilename = strtransform(ofilename, F::trans) + L".stub";
-	ofilename = get_output_filename(ofilename.c_str(), opts);
-	LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
-	encode_file(x::shared_ptr<ISource>(csp), ofilename, opts);
+	    struct F {
+		static wchar_t trans(wchar_t ch) {
+		    return std::wcschr(L":/\\?|<>*\"", ch) ? L'_' : ch;
+		}
+	    };
+	    ofilename = strtransform(ofilename, F::trans) + L".stub";
+	    ofilename = get_output_filename(ofilename.c_str(), opts);
+	    LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
+	    encode_file(csPtr, ofilename, opts);
+	}
+    }
+    if (opts.concat_cue) {
+	concat_sp->setChapters(chapters);
+	std::wstring ofilename = get_output_filename(ifilename, opts);
+	encode_file(concat_spPtr, ofilename, opts);
     }
 }
 
