@@ -176,6 +176,7 @@ void usage()
 "-o <filename>          Output filename\n"
 "\n"
 "Option for cue sheet input:\n"
+"--concat-cuesheet         Output single file rather than split by tracks\n"
 "--fname-format <string>   Format string for output filename\n"
 "\n"
 "Options for Raw PCM input only:\n"
