@@ -4,6 +4,8 @@
 #include "win32util.h"
 #include "itunetags.h"
 #include "cuesheet.h"
+#include <apefile.h>
+#include <apetag.h>
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -110,10 +112,8 @@ TakSource::TakSource(const TakModule &module, InputStream &stream)
 		format("blocksize: %d is different from expected",
 		    info.Audio.BlockSize));
     setRange(0, info.Sizes.SampleNum);
-    /*
     if (stream.seekable())
 	fetchTags();
-    */
 }
 
 void TakSource::skipSamples(int64_t count)
@@ -141,6 +141,39 @@ size_t TakSource::readSamples(void *buffer, size_t nsamples)
     return total;
 }
 
+void TakSource::fetchTags()
+{
+    std::wstring filename = m_stream.name();
+#ifdef _WIN32
+    std::wstring fullname = get_prefixed_fullpath(filename.c_str());
+#else
+    std::string fullname = w2m(filename);
+#endif
+    TagLib::APE::File file(fullname.c_str(), false);
+    if (!file.isOpen())
+	throw std::runtime_error("taglib: can't open file");
+    TagLib::APE::Tag *tag = file.APETag(false);
+    const TagLib::APE::ItemListMap &itemListMap = tag->itemListMap();
+    TagLib::APE::ItemListMap::ConstIterator it;
+    for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
+	std::wstring key = it->first.toWString();
+	std::string skey = nallow(key);
+	std::wstring value = it->second.toString().toWString();
+	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
+	if (id)
+	    m_tags[id] = value;
+	else if (!strcasecmp(skey.c_str(), "cuesheet")) {
+	    std::map<uint32_t, std::wstring> meta;
+	    Cue::CueSheetToChapters(value, m_format.m_rate, getDuration(),
+				    &m_chapters, &meta);
+	    std::map<uint32_t, std::wstring>::iterator it;
+	    for (it = meta.begin(); it != meta.end(); ++it)
+		m_tags[it->first] = it->second;
+	}
+    }
+}
+
+#if 0
 void TakSource::fetchTags()
 {
     TtakAPEv2Tag tag = m_module.SSD_GetAPEv2Tag(m_decoder.get());
@@ -186,3 +219,4 @@ void TakSource::fetchTags()
     for (it = tags.begin(); it != tags.end(); ++it)
 	m_tags[it->first] = it->second;
 }
+#endif

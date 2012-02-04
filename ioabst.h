@@ -40,7 +40,7 @@ FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
 struct IChannel {
     virtual ~IChannel() {}
     virtual IChannel *copy() = 0;
-    virtual const char *name() = 0;
+    virtual const wchar_t *name() = 0;
     virtual ssize_t read(void *buf, size_t count) = 0;
 };
 
@@ -62,12 +62,12 @@ typedef void *HANDLE;
 class StdioChannel : public ISeekable {
     typedef x::shared_ptr<FILE> fileptr_t;
     fileptr_t m_fp;
-    std::string m_name;
+    std::wstring m_name;
     bool m_is_seekable;
 public:
     explicit StdioChannel(FILE *handle)
 	 : m_fp(handle, no_close),
-	   m_name("<stdin>")
+	   m_name(L"<stdin>")
     {
 #ifdef _WIN32
 	_setmode(0, _O_BINARY);
@@ -76,7 +76,7 @@ public:
     }
     StdioChannel(const wchar_t *name);
     virtual StdioChannel *copy() { return new StdioChannel(*this); }
-    const char *name() { return m_name.c_str(); }
+    const wchar_t *name() { return m_name.c_str(); }
     bool seekable() { return m_is_seekable; }
     ssize_t read(void *buf, size_t count);
     int64_t seek(int64_t offset, int whence);
@@ -160,6 +160,7 @@ namespace __InputStreamImpl {
 
     struct Impl {
 	virtual ~Impl() {}
+	virtual const wchar_t *name() = 0;
 	virtual size_t read(void *buf, size_t count) = 0;
 	virtual int64_t seek(int64_t offset, int whence) = 0;
 	virtual int64_t tell() = 0;
@@ -175,6 +176,7 @@ namespace __InputStreamImpl {
     public:
 	Seekable(ISeekable &channel):
 	    m_channel(dynamic_cast<ISeekable*>(channel.copy())) {}
+	const wchar_t *name() { return m_channel->name(); }
 	size_t read(void *buf, size_t count);
 	int64_t seek(int64_t offset, int whence)
 	{
@@ -208,6 +210,7 @@ namespace __InputStreamImpl {
 	uint64_t m_pos;
     public:
 	NonSeekable(IChannel &channel): m_channel(channel.copy()), m_pos(0) {}
+	const wchar_t *name() { return m_channel->name(); }
 	size_t read(void *buf, size_t count);
 	int64_t seek(int64_t, int) { return -1; }
 	int64_t tell() { return m_pos; }
@@ -244,6 +247,7 @@ public:
 	impl_t foo(ptr);
 	m_impl.swap(foo);
     }
+    const wchar_t *name() { return m_impl->name(); }
     void pushback(char ch) { m_impl->pushback(ch); }
     void pushback(const char *s, size_t count) { m_impl->pushback(s, count); }
     size_t read(void *buf, size_t count) { return m_impl->read(buf, count); }

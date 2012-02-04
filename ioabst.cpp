@@ -14,13 +14,13 @@
 StdioChannel::StdioChannel(const wchar_t *name)
 {
     if (!std::wcscmp(name, L"-")) {
-	m_name = "<stdin>";
+	m_name = L"<stdin>";
 #ifdef _WIN32
 	_setmode(0, _O_BINARY);
 #endif
 	m_fp = fileptr_t(stdin, no_close);
     } else {
-	m_name = format("%ls", name);
+	m_name = name;
 	m_fp = fileptr_t(wfopenx(name, L"rb"), std::fclose);
     }
     test_seekable();

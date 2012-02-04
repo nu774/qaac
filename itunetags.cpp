@@ -120,35 +120,6 @@ void TagEditor::fetchAiffID3Tags(const wchar_t *filename)
     }
 }
 
-void TagEditor::fetchAPETags(const wchar_t *filename, uint32_t sampleRate,
-	uint64_t duration)
-{
-#ifdef _WIN32
-    std::wstring fullname = get_prefixed_fullpath(filename);
-#else
-    std::string fullname = w2m(filename);
-#endif
-    TagLib::APE::File file(fullname.c_str(), false);
-    if (!file.isOpen())
-	throw std::runtime_error("taglib: can't open file");
-    TagLib::APE::Tag *tag = file.APETag(false);
-    const TagLib::APE::ItemListMap &itemListMap = tag->itemListMap();
-    TagLib::APE::ItemListMap::ConstIterator it;
-    for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
-	std::wstring key = it->first.toWString();
-	std::string skey = nallow(key);
-	std::wstring value = it->second.toString().toWString();
-	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
-	if (id) setTag(id, value);
-	if (!strcasecmp(skey.c_str(), "cuesheet")) {
-	    std::map<uint32_t, std::wstring> meta;
-	    Cue::CueSheetToChapters(value, sampleRate, duration,
-		    &m_chapters, &meta);
-	    setTag(meta);
-	}
-    }
-}
-
 void TagEditor::save(MP4FileX &file)
 {
     try {

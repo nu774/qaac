@@ -106,8 +106,6 @@ public:
 	m_artwork_size = size;
     }
     void fetchAiffID3Tags(const wchar_t *filename);
-    void fetchAPETags(const wchar_t *filename, uint32_t sampleRate,
-	    uint64_t duration);
     void save(MP4FileX &mp4file);
     void saveArtworks(MP4FileX &mp4file);
 };
