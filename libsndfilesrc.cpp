@@ -1,5 +1,6 @@
 #include "libsndfilesrc.h"
 #include "win32util.h"
+#include "itunetags.h"
 
 static
 uint32_t convert_chanmap(uint32_t value)
@@ -107,6 +108,11 @@ LibSndfileSource::LibSndfileSource(
     else
 	std::transform(m_chanmap.begin(), m_chanmap.end(),
 		m_chanmap.begin(), convert_chanmap);
+    if (m_format_name == "aiff") {
+	try {
+	    ID3::fetchAiffID3Tags(path, &m_tags);
+	} catch (...) {}
+    }
 }
 
 void LibSndfileSource::skipSamples(int64_t count)

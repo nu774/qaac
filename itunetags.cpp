@@ -88,38 +88,6 @@ public:
     }
 };
 
-void TagEditor::fetchAiffID3Tags(const wchar_t *filename)
-{
-#ifdef _WIN32
-    std::wstring fullname = get_prefixed_fullpath(filename);
-#else
-    std::string fullname = w2m(filename);
-#endif
-    TagLib::RIFF::AIFF::File file(fullname.c_str());
-    if (!file.isOpen())
-	throw std::runtime_error("taglib: can't open file");
-    TagLib::ID3v2::Tag *tag = file.tag();
-    const TagLib::ID3v2::FrameList &frameList = tag->frameList();
-    TagLib::ID3v2::FrameList::ConstIterator it;
-    for (it = frameList.begin(); it != frameList.end(); ++it) {
-	TagLib::ByteVector vID = (*it)->frameID();
-	std::string sID(vID.data(), vID.data() + vID.size());
-	std::wstring value = (*it)->toString().toWString();
-	uint32_t id = ID3::GetIDFromTagName(sID.c_str());
-	if (id) {
-	    if (id == Tag::kGenre) {
-		wchar_t *endp;
-		long n = std::wcstol(value.c_str(), &endp, 10);
-		if (!*endp) {
-		    id = Tag::kGenreID3;
-		    value = widen(format("%d", n + 1));
-		}
-	    }
-	    setTag(id, value);
-	}
-    }
-}
-
 void TagEditor::save(MP4FileX &file)
 {
     try {
@@ -203,6 +171,40 @@ namespace ID3 {
 	    if (!std::strcmp(map->name, name))
 		return map->id;
 	return 0;
+    }
+    void fetchAiffID3Tags(const wchar_t *filename,
+			  std::map<uint32_t, std::wstring> *result)
+    {
+	std::map<uint32_t, std::wstring> tags;
+#ifdef _WIN32
+	std::wstring fullname = get_prefixed_fullpath(filename);
+#else
+	std::string fullname = w2m(filename);
+#endif
+	TagLib::RIFF::AIFF::File file(fullname.c_str());
+	if (!file.isOpen())
+	    throw std::runtime_error("taglib: can't open file");
+	TagLib::ID3v2::Tag *tag = file.tag();
+	const TagLib::ID3v2::FrameList &frameList = tag->frameList();
+	TagLib::ID3v2::FrameList::ConstIterator it;
+	for (it = frameList.begin(); it != frameList.end(); ++it) {
+	    TagLib::ByteVector vID = (*it)->frameID();
+	    std::string sID(vID.data(), vID.data() + vID.size());
+	    std::wstring value = (*it)->toString().toWString();
+	    uint32_t id = ID3::GetIDFromTagName(sID.c_str());
+	    if (id) {
+		if (id == Tag::kGenre) {
+		    wchar_t *endp;
+		    long n = std::wcstol(value.c_str(), &endp, 10);
+		    if (!*endp) {
+			id = Tag::kGenreID3;
+			value = widen(format("%d", n + 1));
+		    }
+		}
+		tags[id] = value;
+	    }
+	}
+	result->swap(tags);
     }
 }
 

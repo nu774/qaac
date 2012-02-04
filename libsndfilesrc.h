@@ -29,7 +29,8 @@ public:
     sf_count_t (*read_double)(SNDFILE *, double *, sf_count_t);
 };
 
-class LibSndfileSource: public PartialSource<LibSndfileSource>
+class LibSndfileSource:
+    public ITagParser, public PartialSource<LibSndfileSource>
 {
     typedef x::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
@@ -37,6 +38,7 @@ class LibSndfileSource: public PartialSource<LibSndfileSource>
     SampleFormat m_format;
     std::vector<uint32_t> m_chanmap;
     std::string m_format_name;
+    std::map<uint32_t, std::wstring> m_tags;
 public:
     LibSndfileSource(const LibSndfileModule &module, const wchar_t *path);
     uint64_t length() const { return getDuration(); }
@@ -48,6 +50,12 @@ public:
     }
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);
+    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
+    const std::vector<std::pair<std::wstring, int64_t> >
+	*getChapters() const
+    {
+	    return 0;
+    }
 private:
     size_t readSamples8(void *buffer, size_t nsamples);
     size_t readSamples24(void *buffer, size_t nsamples);

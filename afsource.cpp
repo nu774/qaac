@@ -117,6 +117,7 @@ AudioFileOpenFactory(InputStream &stream, const std::wstring &path)
 AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
     : m_af(af), m_offset(0), m_stream(stream)
 {
+    fourcc fcc(m_af.getFileFormat());
     AudioStreamBasicDescription asbd;
     m_af.getDataFormat(&asbd);
     audiofile::SampleFormat_FromASBD(asbd, &m_format);
@@ -127,7 +128,10 @@ AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
 	chanmap::GetChannels(acl.get(), &m_chanmap);
     } catch (...) {}
     try {
-	audiofile::fetchTags(m_af, &m_tags);
+	if (fcc == 'AIFF')
+	    ID3::fetchAiffID3Tags(m_stream->name(), &m_tags);
+	else
+	    audiofile::fetchTags(m_af, &m_tags);
     } catch (...) {}
 }
 

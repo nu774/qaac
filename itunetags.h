@@ -38,6 +38,8 @@ namespace Tag {
 
 namespace ID3 {
     uint32_t GetIDFromTagName(const char *name);
+    void fetchAiffID3Tags(const wchar_t *filename,
+			  std::map<uint32_t, std::wstring> *result);
 }
 
 namespace Vorbis {
@@ -105,7 +107,6 @@ public:
     {
 	m_artwork_size = size;
     }
-    void fetchAiffID3Tags(const wchar_t *filename);
     void save(MP4FileX &mp4file);
     void saveArtworks(MP4FileX &mp4file);
 };

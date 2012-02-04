@@ -366,17 +366,6 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	    }
 	}
     }
-    if (!opts.is_raw && std::wcscmp(opts.ifilename, L"-")) {
-	try {
-	    {
-		StdioChannel channel(opts.ifilename);
-		InputStream stream(channel);
-		IFFParser parser(stream);
-		parser.parse();
-	    }
-	    editor.fetchAiffID3Tags(opts.ifilename);
-	} catch (const std::exception &) {}
-    }
     editor.setTag(opts.tagopts);
     editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
 #ifndef REFALAC
