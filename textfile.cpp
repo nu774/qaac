@@ -24,8 +24,10 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     };
 
     IStream *stream;
-    HR(SHCreateStreamOnFileW(path.c_str(),
-			     STGM_READ | STGM_SHARE_DENY_WRITE, &stream));
+    HRESULT hr = SHCreateStreamOnFileW(path.c_str(),
+				       STGM_READ | STGM_SHARE_DENY_WRITE,
+				       &stream);
+    if (FAILED(hr)) throw_win32_error(path, hr);
     x::shared_ptr<IStream> streamPtr(stream, F::release);
 
     LARGE_INTEGER li = { 0 };

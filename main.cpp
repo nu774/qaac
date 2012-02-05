@@ -397,14 +397,15 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     if (opts.chapter_file) {
 	std::vector<std::pair<std::wstring, int64_t> > chaps;
 	load_chapter_file(opts, &chaps);
-	// convert from absolute millis to dulation in samples
-	for (size_t i = 0; i < chaps.size() - 1; ++i) {
-	    int64_t dur = chaps[i+1].second - chaps[i].second;
-	    dur = dur / 1000.0 * oformat.mSampleRate + 0.5;
-	    chaps[i].second = dur;
-	}
-	// last entry needs calculation from media length
 	if (chaps.size()) {
+	    size_t i = 0;
+	    // convert from absolute millis to dulation in samples
+	    for (i = 0; i < chaps.size() - 1; ++i) {
+		int64_t dur = chaps[i+1].second - chaps[i].second;
+		dur = dur / 1000.0 * oformat.mSampleRate + 0.5;
+		chaps[i].second = dur;
+	    }
+	    // last entry needs calculation from media length
 	    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 	    size_t pos = chaps.size() - 1;
 	    int64_t beg =
@@ -412,16 +413,15 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	    double ratio = oformat.mSampleRate / iformat.mSampleRate;
 	    int64_t dur = stat->samplesRead() * ratio - beg;
 	    chaps[pos].second = dur;
-	}
-	// sanity check
-	size_t i = 0;
-	for (i = 0; i < chaps.size(); ++i) {
-	    if (chaps[i].second < 0) {
-		LOG(L"WARNING: invalid chapter time\n");
-		break;
+	    // sanity check
+	    for (i = 0; i < chaps.size(); ++i) {
+		if (chaps[i].second < 0) {
+		    LOG(L"WARNING: invalid chapter time\n");
+		    break;
+		}
 	    }
+	    if (i == chaps.size()) editor.setChapters(chaps);
 	}
-	if (i == chaps.size()) editor.setChapters(chaps);
     }
     editor.save(*mp4file);
     try {
