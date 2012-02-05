@@ -130,6 +130,10 @@ void TagEditor::saveArtworks(MP4FileX &file)
 	    uint64_t size;
 	    char *data = load_with_mmap(m_artworks[i].c_str(), &size);
 	    x::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
+	    mp4v2::impl::itmf::BasicType tc =
+		mp4v2::impl::itmf::computeBasicType(data, size);
+	    if (tc == mp4v2::impl::itmf::BT_IMPLICIT)
+		throw std::runtime_error("Unknown artwork image type");
 	    std::vector<char> vec;
 	    if (m_artwork_size) {
 		bool res = WICConvertArtwork(data, size, m_artwork_size, &vec);
