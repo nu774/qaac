@@ -44,6 +44,7 @@ static wide::option long_options[] = {
     { L"raw-rate", required_argument, 0,  'Rrat' },
     { L"raw-format", required_argument, 0,  'Rfmt' },
     { L"ignorelength", no_argument, 0, 'i' },
+    { L"concat", no_argument, 0, 'cat ' },
     { L"concat-cuesheet", no_argument, 0, 'conc' },
     { L"fname-format", required_argument, 0, 'nfmt' },
     { L"log", required_argument, 0, 'log ' },
@@ -127,6 +128,8 @@ void usage()
 "--check                Show library versions and exit\n"
 "-D, --decode           Wave output mode.\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
+"--concat               Encode whole inputs into single file. \n"
+"                       Requires output filename (with -o)\n"
 "-b, --bites-per-sample <n>\n"
 "                       Bits per sample of output (for WAV/ALAC) [16/24]\n"
 "-r, --rate <keep|auto|n>\n"
@@ -281,6 +284,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->is_adts = true;
 	else if (ch == 'noop')
 	    this->no_optimize = true;
+	else if (ch == 'cat ')
+	    this->concat = this->concat_cue = true;
 	else if (ch == 'conc')
 	    this->concat_cue = true;
 	else if (ch == 'nfmt')
@@ -411,8 +416,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 
     if (!argc && !this->check_only && !this->print_available_formats)
 	return usage(), false;
-    if (argc > 1 && this->ofilename) {
-	std::fputs("-o is not available for multiple input\n", stderr);
+    if (argc > 1 && this->ofilename && !this->concat) {
+	std::fputs("-o is not available for multiple output\n", stderr);
 	return false;
     }
     if (!this->output_format) {
@@ -444,6 +449,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
     }
     if (this->ignore_length && this->is_raw) {
 	std::fputs("Can't use --ignorelength and --raw at the same time\n",
+		   stderr);
+	return false;
+    }
+    if (this->concat && argc > 1 && !this->ofilename) {
+	std::fputs("--concat requires output filename (use -o option)\n",
 		   stderr);
 	return false;
     }

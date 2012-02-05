@@ -1202,7 +1202,8 @@ uint64_t cue_frame_to_sample(uint32_t sampling_rate, uint32_t nframe)
 }
 
 static
-void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
+void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
+		      x::shared_ptr<ISource> *result=0)
 {
     std::wstring cuepath = ifilename;
     std::wstring cuedir = L".";
@@ -1219,14 +1220,10 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
     meta_t album_tags;
     Cue::ConvertToItunesTags(cue.m_meta, &album_tags, true);
 
-    CompositeSource *concat_sp = 0;
-    std::shared_ptr<ISource> concat_spPtr;
+    CompositeSource *concat_sp = new CompositeSource();
+    x::shared_ptr<ISource> concat_spPtr(concat_sp);
     std::vector<std::pair<std::wstring, int64_t> > chapters;
-    if (opts.concat_cue) {
-	concat_sp = new CompositeSource();
-	concat_spPtr.reset(concat_sp);
-	concat_sp->setTags(album_tags);
-    }
+
     for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
 	CueTrack &track = cue.m_tracks[i];
 	meta_t track_tags = album_tags;
@@ -1261,6 +1258,8 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
 	    psrc->setRange(begin, end);
 	    csp->addSource(src);
 	}
+	if (csp->count() == 1)
+	    csPtr = csp->first();
 	if (opts.concat_cue) {
 	    concat_sp->addSource(csPtr);
 	    std::wstring title = track.getName(L"Chapter ");
@@ -1283,9 +1282,14 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
 	}
     }
     if (opts.concat_cue) {
+	concat_sp->setTags(album_tags);
 	concat_sp->setChapters(chapters);
-	std::wstring ofilename = get_output_filename(ifilename, opts);
-	encode_file(concat_spPtr, ofilename, opts);
+	if (opts.concat)
+	    result->swap(concat_spPtr);
+	else {
+	    std::wstring ofilename = get_output_filename(ifilename, opts);
+	    encode_file(concat_spPtr, ofilename, opts);
+	}
     }
 }
 
@@ -1420,20 +1424,32 @@ int wmain1(int argc, wchar_t **argv)
 		_setmode(1, _O_BINARY);
 	    }
 	}
-	const wchar_t *ifilename;
-	while ((ifilename = *argv++)) {
+	CompositeSource *csp = new CompositeSource();
+	x::shared_ptr<ISource> csPtr(csp);
+	const wchar_t *ifilename = 0;
+	for (int i = 0; i < argc; ++i) {
+	    ifilename = argv[i];
+	    x::shared_ptr<ISource> src;
 	    const wchar_t *name = L"<stdin>";
 	    if (std::wcscmp(ifilename, L"-"))
 		name = PathFindFileNameW(ifilename);
-	    LOG("\n%ls\n", name);
+	    if (!opts.concat) LOG("\n%ls\n", name);
 	    if (wslower(PathFindExtension(ifilename)) == L".cue")
-		handle_cue_sheet(ifilename, opts);
+		handle_cue_sheet(ifilename, opts, &src);
 	    else {
 		std::wstring ofilename
 		    = get_output_filename(ifilename, opts);
-		x::shared_ptr<ISource> src(open_source(ifilename, opts));
-		encode_file(src, ofilename, opts);
+		src = open_source(ifilename, opts);
+		if (!opts.concat) encode_file(src, ofilename, opts);
 	    }
+	    if (opts.concat) csp->addSource(src);
+	}
+	if (opts.concat) {
+	    if (csp->count() == 1)
+		csPtr = csp->first();
+	    std::wstring ofilename = get_output_filename(ifilename, opts);
+	    LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
+	    encode_file(csPtr, ofilename, opts);
 	}
     } catch (const std::exception &e) {
 	if (opts.print_available_formats)

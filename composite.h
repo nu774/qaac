@@ -14,6 +14,8 @@ class CompositeSource: public ISource, public ITagParser {
     uint64_t m_samples_read;
 public:
     CompositeSource() : m_curpos(0), m_samples_read(0) {}
+    size_t count() const { return m_sources.size(); }
+    x::shared_ptr<ISource> first() const { return m_sources[0]; }
     const std::vector<uint32_t> *getChannels() const
     {
 	return m_sources[0]->getChannels();
