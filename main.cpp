@@ -1263,8 +1263,6 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts)
 	}
 	if (opts.concat_cue) {
 	    concat_sp->addSource(csPtr);
-	    std::map<std::wstring, std::wstring>::iterator
-		it = track.m_meta.find(L"TITLE");
 	    std::wstring title = track.getName(L"Chapter ");
 	    chapters.push_back(std::make_pair(title, csPtr->length()));
 	} else {
