@@ -256,23 +256,23 @@ void RegAction::show()
 {
     hive_t::const_iterator ii;
     section_t::const_iterator jj;
-    LOG("==== Registry setting start ====\n");
+    LOG(L"==== Registry setting start ====\n");
     for (ii = m_entries.begin(); ii != m_entries.end(); ++ii) {
-	LOG("KEY: [%ls]\n", ii->first.c_str());
+	LOG(L"KEY: [%s]\n", ii->first.c_str());
 	for (jj = ii->second.begin(); jj != ii->second.end(); ++jj) {
 	    const std::vector<BYTE> &vec = jj->second.value;
 	    if (jj->second.type == REG_SZ)
-		LOG("  VALUE: [%ls]=[%ls]\n", jj->first.c_str(), &vec[0]);
+		LOG(L"  VALUE: [%s]=[%s]\n", jj->first.c_str(), &vec[0]);
 	    else {
-		LOG("  VALUE: [%ls][0x%x]=",
+		LOG(L"  VALUE: [%s][0x%x]=",
 			jj->first.c_str(), jj->second.type);
 		std::vector<BYTE>::const_iterator kk;
 		for (kk = vec.begin(); kk != vec.end(); ++kk)
-		    LOG("%02x ", *kk & 0xff);
-		LOG("\n");
+		    LOG(L"%02x ", *kk & 0xff);
+		LOG(L"\n");
 	    }
 	}
     }
-    LOG("==== Registry setting end ====\n");
+    LOG(L"==== Registry setting end ====\n");
 }
 #endif

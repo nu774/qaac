@@ -118,30 +118,30 @@ static int nonopt_start = -1; /* first non option argument (for permute) */
 static int nonopt_end = -1;   /* first option after non options (for permute) */
 
 /* Error messages */
-static const char recargchar[] = "option requires an argument -- %lc";
-static const char illoptchar[] = "illegal option -- %lc"; /* From P1003.2 */
+static const wchar_t recargchar[] = L"option requires an argument -- %c";
+static const wchar_t illoptchar[] = L"illegal option -- %c"; /* From P1003.2 */
 #ifdef GNU_COMPATIBLE
 static int dash_prefix = NO_PREFIX;
-static const char gnuoptchar[] = "invalid option -- %lc";
+static const wchar_t gnuoptchar[] = L"invalid option -- %c";
 
-static const char recargstring[] = "option `%ls%ls' requires an argument";
-static const char ambig[] = "option `%ls%.*ls' is ambiguous";
-static const char noarg[] = "option `%ls%.*ls' doesn't allow an argument";
-static const char illoptstring[] = "unrecognized option `%ls%ls'";
+static const wchar_t recargstring[] = L"option `%s%s' requires an argument";
+static const wchar_t ambig[] = L"option `%s%.*s' is ambiguous";
+static const wchar_t noarg[] = L"option `%s%.*s' doesn't allow an argument";
+static const wchar_t illoptstring[] = L"unrecognized option `%s%s'";
 #else
-static const char recargstring[] = "option requires an argument -- %ls";
-static const char ambig[] = "ambiguous option -- %.*ls";
-static const char noarg[] = "option doesn't take an argument -- %.*ls";
-static const char illoptstring[] = "unknown option -- %ls";
+static const wchar_t recargstring[] = L"option requires an argument -- %s";
+static const wchar_t ambig[] = L"ambiguous option -- %.*s";
+static const wchar_t noarg[] = L"option doesn't take an argument -- %.*s";
+static const wchar_t illoptstring[] = L"unknown option -- %s";
 #endif
 
 static void
-warnx(const char *fmt, ...)
+warnx(const wchar_t *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    putc('\n', stderr);
+    vfwprintf(stderr, fmt, args);
+    putwc(L'\n', stderr);
     va_end(args);
 }
 

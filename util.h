@@ -9,7 +9,9 @@
 #include <iterator>
 #include <stdexcept>
 #include <cerrno>
-#include <stdint.h> // To avoid conflict with QT
+#include <stdint.h>
+#include "strcnv.h"
+#include "utf8_codecvt_facet.hpp"
 
 #if defined _MSC_VER
 #ifndef strcasecmp
@@ -289,6 +291,12 @@ void bswap32buffer(uint8_t *buffer, size_t size);
 
 void bswap64buffer(uint8_t *buffer, size_t size);
 
+inline void throw_crt_error(const std::wstring &message)
+{
+    std::wstring s = format(L"%s: %s", message.c_str(),
+			    widen(std::strerror(errno)).c_str());
+    throw std::runtime_error(w2m(s, utf8_codecvt_facet()));
+}
 inline void throw_crt_error(const std::string &message)
 {
     throw std::runtime_error(format("%s: %s", message.c_str(),

@@ -46,6 +46,12 @@
 #define PROGNAME "qaac"
 #endif
 
+inline
+std::wstring errormsg(const std::exception &ex)
+{
+    return m2w(ex.what(), utf8_codecvt_facet());
+}
+
 std::wstring get_module_directory()
 {
     std::wstring selfpath = GetModuleFileNameX(0);
@@ -62,7 +68,7 @@ void load_lyrics_file(Options *opts)
 	if (it != opts->tagopts.end())
 	    it->second = load_text_file(it->second.c_str(), opts->textcp);
     } catch (const std::exception &e) {
-	LOG("WARNING: %s\n", e.what());
+	LOG(L"WARNING: %s\n", errormsg(e).c_str());
     }
 }
 
@@ -107,12 +113,12 @@ void secondsToHMS(double seconds, int *h, int *m, int *s, int *millis)
 }
 
 static
-std::string formatSeconds(double seconds)
+std::wstring formatSeconds(double seconds)
 {
     int h, m, s, millis;
     secondsToHMS(seconds, &h, &m, &s, &millis);
-    return h ? format("%d:%02d:%02d.%03d", h, m, s, millis)
-	     : format("%d:%02d.%03d", m, s, millis);
+    return h ? format(L"%d:%02d:%02d.%03d", h, m, s, millis)
+	     : format(L"%d:%02d.%03d", m, s, millis);
 }
 
 class Timer {
@@ -127,7 +133,7 @@ public:
 class PeriodicDisplay {
     uint32_t m_interval;
     uint32_t m_last_tick;
-    std::string m_message;
+    std::wstring m_message;
     bool m_verbose;
     bool m_console_visible;
 public:
@@ -138,7 +144,7 @@ public:
     {
 	m_console_visible = IsWindowVisible(GetConsoleWindow());
     }
-    void put(const std::string &message) {
+    void put(const std::wstring &message) {
 	m_message = message;
 	uint32_t tick = GetTickCount();
 	if (tick - m_last_tick > m_interval) {
@@ -147,12 +153,13 @@ public:
 	}
     }
     void flush() {
-	if (m_verbose) std::fputs(m_message.c_str(), stderr);
+	if (m_verbose) std::fputws(m_message.c_str(), stderr);
 	if (m_console_visible) {
-	    std::vector<char> s(m_message.size() + 1);
-	    std::strcpy(&s[0], m_message.c_str());
-	    squeeze(&s[0], "\r");
-	    SetConsoleTitleA(format(PROGNAME " %s", &s[0]).c_str());
+	    std::vector<wchar_t> s(m_message.size() + 1);
+	    std::wcscpy(&s[0], m_message.c_str());
+	    squeeze(&s[0], L"\r");
+	    SetConsoleTitleW(format(L"%s %s", widen(PROGNAME).c_str(),
+				    &s[0]).c_str());
 	}
     }
 };
@@ -162,7 +169,7 @@ class Progress {
     bool m_verbose;
     uint64_t m_total;
     uint32_t m_rate;
-    std::string m_tstamp;
+    std::wstring m_tstamp;
     Timer m_timer;
     bool m_console_visible;
 public:
@@ -184,20 +191,20 @@ public:
 	double eta = ellapsed * (m_total / fcurrent - 1);
 	double speed = ellapsed ? seconds/ellapsed : 0.0;
 	if (m_total == -1)
-	    m_disp.put(format("\r%s (%.1fx)   ",
+	    m_disp.put(format(L"\r%s (%.1fx)   ",
 		formatSeconds(seconds).c_str(), speed));
 	else
-	    m_disp.put(format("\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
+	    m_disp.put(format(L"\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
 		percent, formatSeconds(seconds).c_str(), m_tstamp.c_str(),
 		speed, formatSeconds(eta).c_str()));
     }
     void finish(uint64_t current)
     {
 	m_disp.flush();
-	if (m_verbose) fputc('\n', stderr);
+	if (m_verbose) fputwc('\n', stderr);
 	double ellapsed = m_timer.ellapsed();
-	LOG("%" PRId64 "/%" PRId64 " samples processed in %s\n",
-		current, m_total, formatSeconds(ellapsed).c_str());
+	LOG(L"%lld/%lld samples processed in %s\n",
+	    current, m_total, formatSeconds(ellapsed).c_str());
     }
 };
 
@@ -227,11 +234,11 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 	while (encoder->encodeChunk(1)) {
 	    progress.update(src->getSamplesRead());
 	    if (statfp)
-		std::fprintf(statfp, "%g\n", stat->currentBitrate());
+		std::fwprintf(statfp, L"%g\n", stat->currentBitrate());
 	}
 	progress.finish(src->getSamplesRead());
     } catch (...) {
-	LOG("\n");
+	LOG(L"\n");
 	throw;
     }
 }
@@ -327,7 +334,7 @@ void load_chapter_file(const Options &opts,
 	}
 	chapters->swap(chaps);
     } catch (const std::exception &e) {
-	LOG("WARNING: %s\n", e.what());
+	LOG(L"WARNING: %s\n", errormsg(e).c_str());
     }
 }
 
@@ -410,7 +417,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	size_t i = 0;
 	for (i = 0; i < chaps.size(); ++i) {
 	    if (chaps[i].second < 0) {
-		LOG("WARNING: invalid chapter time\n");
+		LOG(L"WARNING: invalid chapter time\n");
 		break;
 	    }
 	}
@@ -420,7 +427,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     try {
 	editor.saveArtworks(*mp4file);
     } catch (const std::exception &e) {
-	LOG("WARNING: %s\n", e.what());
+	LOG(L"WARNING: %s\n", errormsg(e).c_str());
     }
 }
 
@@ -433,11 +440,11 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
 	uint64_t total = optimizer.getTotalChunks();
 	PeriodicDisplay disp(100, verbose);
 	for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
-	    disp.put(format("\r%" PRId64 "/%" PRId64
-		    " chunks written (optimizing)", i, total).c_str());
+	    disp.put(format(L"\r%lld/%lld chunks written (optimizing)",
+			    i, total).c_str());
 	}
 	disp.flush();
-	if (verbose) std::putc('\n', stderr);
+	if (verbose) std::putwc(L'\n', stderr);
     } catch (mp4v2::impl::Exception *e) {
 	handle_mp4error(e);
     }
@@ -450,7 +457,7 @@ x::shared_ptr<ISource> do_normalize(
     Normalizer *normalizer = new Normalizer(src);
     x::shared_ptr<ISource> new_src(normalizer);
 
-    LOG("Scanning maximum peak...\n");
+    LOG(L"Scanning maximum peak...\n");
     uint64_t n = 0, rc;
     Progress progress(opts.verbose, src->length(),
 	    src->getSampleFormat().m_rate);
@@ -459,7 +466,7 @@ x::shared_ptr<ISource> do_normalize(
 	progress.update(normalizer->samplesRead());
     }
     progress.finish(normalizer->samplesRead());
-    LOG("Peak value: %g\n", normalizer->getPeak());
+    LOG(L"Peak value: %g\n", normalizer->getPeak());
     return new_src;
 }
 
@@ -566,8 +573,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     const std::vector<uint32_t> *channels = src->getChannels();
     if (channels) {
 	if (opts.verbose > 1) {
-	    LOG("Input layout: %s\n",
-		chanmap::GetChannelNames(*channels).c_str());
+	    LOG(L"Input layout: %s\n",
+		widen(chanmap::GetChannelNames(*channels)).c_str());
 	}
 	// reorder to Microsoft (USB) order
 	std::vector<uint32_t> work;
@@ -581,12 +588,12 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     // remix
     if (opts.remix_preset || opts.remix_file) {
 	if (!opts.libsoxrate.loaded())
-	    LOG("WARNING: mixer requires libsoxrate. Mixing disabled\n");
+	    LOG(L"WARNING: mixer requires libsoxrate. Mixing disabled\n");
 	else {
 	    std::vector<std::vector<complex_t> > matrix;
 	    matrix_from_preset(opts, &matrix);
 	    if (opts.verbose > 1 || opts.logfilename) {
-		LOG("Matrix mixer: %dch -> %dch\n",
+		LOG(L"Matrix mixer: %dch -> %dch\n",
 		    matrix[0].size(), matrix.size());
 	    }
 	    srcx.reset(new MatrixMixer(srcx, opts.libsoxrate,
@@ -610,7 +617,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	chanmask = channels ? chanmap::GetChannelMask(*channels) : 0;
     if (!chanmask && !opts.isLPCM()) {
 	if (opts.verbose >1 || opts.logfilename)
-	    LOG("Using default channel layout.\n");
+	    LOG(L"Using default channel layout.\n");
 	chanmask = chanmap::GetDefaultChannelMask(nchannels);
     }
     AudioChannelLayoutX layout;
@@ -619,7 +626,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	if (opts.isLPCM() && opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
 	    chanmap::GetChannels(chanmask, &vec);
-	    LOG("Output layout: %s\n", chanmap::GetChannelNames(vec).c_str());
+	    LOG(L"Output layout: %s\n",
+		widen(chanmap::GetChannelNames(vec)).c_str());
 	}
     }
     if (!opts.isLPCM()) {
@@ -635,7 +643,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	if (opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
 	    chanmap::GetChannels(mapped, &vec);
-	    LOG("Output layout: %s\n", chanmap::GetChannelNames(vec).c_str());
+	    LOG(L"Output layout: %s\n",
+		widen(chanmap::GetChannelNames(vec)).c_str());
 	}
     }
     return srcx;
@@ -655,7 +664,7 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 	cp->addSource(x::shared_ptr<ISource>(ns));
 	cp->addSource(src);
 	if (opts.verbose > 1 || opts.logfilename)
-	    LOG("Delay of %dms: pad %d samples\n", opts.delay,
+	    LOG(L"Delay of %dms: pad %d samples\n", opts.delay,
 		nsamples);
 	return cpPtr;
     } else if (opts.delay < 0) {
@@ -666,11 +675,11 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 		nsamples = src->length();
 	    p->setRange(nsamples, -1);
 	    if (opts.verbose > 1 || opts.logfilename)
-		LOG("Delay of %dms: trunc %d samples\n", opts.delay,
+		LOG(L"Delay of %dms: truncate %d samples\n", opts.delay,
 		    nsamples);
 	}
 	else
-	    LOG("WARNING: can't set negative delay for this input\n");
+	    LOG(L"WARNING: can't set negative delay for this input\n");
     }
     return src;
 }
@@ -749,7 +758,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     }
 #endif
     if (oasbd.mSampleRate != iasbd.mSampleRate) {
-	LOG("%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
+	LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
 	if (!opts.native_resampler && opts.libsoxrate.loaded()) {
 	    x::shared_ptr<ISoxDSPEngine>
 		engine(new SoxResampler(opts.libsoxrate,
@@ -761,10 +770,10 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     }
     if (opts.lowpass > 0) {
 	if (!opts.libsoxrate.loaded())
-	    LOG("WARNING: --lowpass requires libsoxrate. LPF disabled\n");
+	    LOG(L"WARNING: --lowpass requires libsoxrate. LPF disabled\n");
         else {
 	    if (opts.verbose > 1 || opts.logfilename)
-		LOG("Applying LPF: %dHz\n", opts.lowpass);
+		LOG(L"Applying LPF: %dHz\n", opts.lowpass);
 	    x::shared_ptr<ISoxDSPEngine>
 		engine(new SoxLowpassFilter(opts.libsoxrate,
 					    srcx->getSampleFormat(),
@@ -778,18 +787,19 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     if (opts.gain) {
 	double scale = dB_to_scale(opts.gain);
 	if (opts.verbose > 1 || opts.logfilename)
-	    LOG("Gain adjustment: %gdB, scale factor %g\n",
+	    LOG(L"Gain adjustment: %gdB, scale factor %g\n",
 		opts.gain, scale);
 	srcx.reset(new Scaler(srcx, scale));
     }
     if (opts.bits_per_sample) {
 	if (opts.isAAC())
-	    LOG("WARNING: --bits-per-sample has no effect for AAC\n");
+	    LOG(L"WARNING: --bits-per-sample has no effect for AAC\n");
 	else if (srcx->getSampleFormat().m_bitsPerSample
 		 != opts.bits_per_sample) {
 	    srcx.reset(new IntegerSource(srcx, opts.bits_per_sample));
 	    if (opts.verbose > 1 || opts.logfilename)
-		LOG("Convert to %s\n", srcx->getSampleFormat().str().c_str());
+		LOG(L"Convert to %s\n",
+		    widen(srcx->getSampleFormat().str()).c_str());
 	}
     }
     if (opts.output_format == 'alac') {
@@ -806,7 +816,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	reader->start();
 	srcx.reset(reader);
 	if (opts.verbose > 1 || opts.logfilename)
-	    LOG("Enable threading\n");
+	    LOG(L"Enable threading\n");
     }
     build_basic_description(srcx->getSampleFormat(), &iasbd);
     if (wChanmask) *wChanmask = wavChanmask;
@@ -853,7 +863,7 @@ void decode_file(const x::shared_ptr<ISource> &src,
 	}
 	progress.finish(srcp->getSamplesRead());
     } catch (const std::exception &e) {
-	LOG("\n%s\n", e.what());
+	LOG(L"\nERROR: %s\n", errormsg(e).c_str());
     }
     sink.finishWrite();
 }
@@ -945,15 +955,15 @@ void show_available_codec_setttings(UInt32 fmt)
 	    std::vector<AudioValueRange> bits;
 	    converter.getApplicableEncodeBitRates(&bits);
 
-	    std::printf("%s %gHz %s --",
-		    fmt == 'aac ' ? "LC" : "HE",
-		    srates[i].mMinimum, name.c_str());
+	    std::wprintf(L"%s %gHz %s --",
+		    fmt == 'aac ' ? L"LC" : L"HE",
+		    srates[i].mMinimum, widen(name).c_str());
 	    for (size_t k = 0; k < bits.size(); ++k) {
 		if (!bits[k].mMinimum) continue;
-		int delim = k == 0 ? ' ' : ',';
-		std::printf("%c%g", delim, bits[k].mMinimum / 1000.0);
+		int delim = k == 0 ? L' ' : L',';
+		std::wprintf(L"%c%g", delim, bits[k].mMinimum / 1000.0);
 	    }
-	    std::puts("");
+	    std::putwchar(L'\n');
 	}
     }
 }
@@ -1016,14 +1026,14 @@ void override_registry(int verbose)
 	return;
     }
     if (verbose > 1)
-	LOG("Found qaac.reg, overriding registry\n");
+	LOG(L"Found qaac.reg, overriding registry\n");
     x::shared_ptr<FILE> fptr(fp, std::fclose);
     RegAction action;
     RegParser parser;
     try {
 	parser.parse(fptr, &action);
     } catch (const std::exception &e) {
-	LOG("WARNING: %s\n", e.what());
+	LOG(L"WARNING: %s\n", errormsg(e).c_str());
 	return;
     }
     if (verbose > 1)
@@ -1107,7 +1117,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
     if (opts.isAAC()) config_aac_codec(converter, opts);
 
     std::wstring encoder_config = get_encoder_config(converter);
-    LOG("%ls\n", encoder_config.c_str());
+    LOG(L"%s\n", encoder_config.c_str());
     std::vector<uint8_t> cookie;
     converter.getCompressionMagicCookie(&cookie);
     CoreAudioEncoder encoder(converter);
@@ -1115,7 +1125,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
     x::shared_ptr<ISink> sink = open_sink(ofilename, opts, cookie);
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, opts);
-    LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
+    LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
     MP4SinkBase *asink = dynamic_cast<MP4SinkBase*>(sink.get());
     if (asink) {
 	write_tags(asink->getFile(), opts, src.get(), &encoder,
@@ -1151,7 +1161,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, opts);
     ALACSink *asink = dynamic_cast<ALACSink*>(sink.get());
-    LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
+    LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
     write_tags(asink->getFile(), opts, src.get(), &encoder,
 	       L"Apple Lossless Encoder");
     if (!opts.no_optimize)
@@ -1277,7 +1287,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 	    };
 	    ofilename = strtransform(ofilename, F::trans) + L".stub";
 	    ofilename = get_output_filename(ofilename.c_str(), opts);
-	    LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
+	    LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
 	    encode_file(csPtr, ofilename, opts);
 	}
     }
@@ -1331,6 +1341,10 @@ int wmain1(int argc, wchar_t **argv)
     SetDllDirectoryW(L"");
     std::setlocale(LC_CTYPE, "");
     std::setbuf(stderr, 0);
+#ifdef _MSC_VER
+    _setmode(1, _O_U8TEXT);
+    _setmode(2, _O_U8TEXT);
+#endif
 
 #ifdef DEBUG_ATTACH
     FILE *fp = std::fopen("CON", "r");
@@ -1371,27 +1385,30 @@ int wmain1(int argc, wchar_t **argv)
 #endif
 	opts.encoder_name = widen(encoder_name);
 	if (!opts.print_available_formats)
-	    LOG("%s\n", encoder_name.c_str());
+	    LOG(L"%s\n", opts.encoder_name.c_str());
 
 	load_modules(opts);
 
 	if (opts.check_only) {
 	    if (opts.libsoxrate.loaded())
-		LOG("libsoxrate %s\n", opts.libsoxrate.version_string());
+		LOG(L"libsoxrate %s\n",
+		    widen(opts.libsoxrate.version_string()).c_str());
 	    if (opts.libsndfile.loaded())
-		LOG("%s\n", opts.libsndfile.version_string());
+		LOG(L"%s\n",
+		    widen(opts.libsndfile.version_string()).c_str());
 	    if (opts.libflac.loaded())
-		LOG("libFLAC %s\n", opts.libflac.VERSION_STRING);
+		LOG(L"libFLAC %s\n",
+		    widen(opts.libflac.VERSION_STRING).c_str());
 	    if (opts.libwavpack.loaded())
-		LOG("wavpackdll %s\n",
-			opts.libwavpack.GetLibraryVersionString());
+		LOG(L"wavpackdll %s\n",
+		    widen(opts.libwavpack.GetLibraryVersionString()).c_str());
 	    if (opts.libtak.loaded()) {
 		TtakInt32 var, comp;
 		opts.libtak.GetLibraryVersion(&var, &comp);
-		LOG("tak_deco_lib %d.%d.%d %s\n",
+		LOG(L"tak_deco_lib %d.%d.%d %s\n",
 			var >> 16, (var >> 8) & 0xff, var & 0xff,
-			opts.libtak.compatible() ? "compatible"
-			                         : "incompatible");
+			opts.libtak.compatible() ? L"compatible"
+			                         : L"incompatible");
 	    }
 	    return 0;
 	}
@@ -1433,7 +1450,7 @@ int wmain1(int argc, wchar_t **argv)
 	    const wchar_t *name = L"<stdin>";
 	    if (std::wcscmp(ifilename, L"-"))
 		name = PathFindFileNameW(ifilename);
-	    if (!opts.concat) LOG("\n%ls\n", name);
+	    if (!opts.concat) LOG(L"\n%s\n", name);
 	    if (wslower(PathFindExtension(ifilename)) == L".cue")
 		handle_cue_sheet(ifilename, opts, &src);
 	    else {
@@ -1448,13 +1465,13 @@ int wmain1(int argc, wchar_t **argv)
 	    if (csp->count() == 1)
 		csPtr = csp->first();
 	    std::wstring ofilename = get_output_filename(ifilename, opts);
-	    LOG("\n%ls\n", PathFindFileNameW(ofilename.c_str()));
+	    LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
 	    encode_file(csPtr, ofilename, opts);
 	}
     } catch (const std::exception &e) {
 	if (opts.print_available_formats)
 	    Log::instance()->enable_stderr();
-	LOG("ERROR: %s\n", e.what());
+	LOG(L"ERROR: %s\n", errormsg(e).c_str());
 	result = 2;
     }
     delete Log::instance();

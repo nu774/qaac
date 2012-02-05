@@ -15,7 +15,13 @@
 #include <shlwapi.h>
 #include "util.h"
 
-void throw_win32_error(const std::string& msg, DWORD error);
+void throw_win32_error(const std::wstring& msg, DWORD error);
+
+inline
+void throw_win32_error(const std::string& msg, DWORD error)
+{
+    throw_win32_error(widen(msg), error);
+}
 
 inline
 std::wstring GetFullPathNameX(const std::wstring &path)

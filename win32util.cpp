@@ -4,27 +4,27 @@
 #include <fcntl.h>
 #include "strcnv.h"
 
-void throw_win32_error(const std::string &msg, DWORD code)
+void throw_win32_error(const std::wstring &msg, DWORD code)
 {
-    LPSTR pszMsg;
-    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
+    LPWSTR pszMsg;
+    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
 		   0,
 		   code,
 		   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		   (LPSTR)&pszMsg,
+		   (LPWSTR)&pszMsg,
 		   0,
 		   0);
-    std::string ss;
+    std::wstring ss;
     if (pszMsg) {
-	squeeze(pszMsg, "\r\n");
-	ss = format("%s: %s", msg.c_str(), pszMsg);
+	squeeze(pszMsg, L"\r\n");
+	ss = format(L"%s: %s", msg.c_str(), pszMsg);
 	LocalFree(pszMsg);
     }
     else if (code < 0xfe00)
-	ss = format("%d: %s", code, msg.c_str());
+	ss = format(L"%d: %s", code, msg.c_str());
     else
-	ss = format("%08x: %s", code, msg.c_str());
-    throw std::runtime_error(ss);
+	ss = format(L"%08x: %s", code, msg.c_str());
+    throw std::runtime_error(w2m(ss, utf8_codecvt_facet()));
 }
 
 FILE *win32_tmpfile(const wchar_t *prefix)
@@ -36,7 +36,7 @@ FILE *win32_tmpfile(const wchar_t *prefix)
 	    0, 0, CREATE_ALWAYS,
 	    FILE_ATTRIBUTE_TEMPORARY|FILE_FLAG_DELETE_ON_CLOSE, 0);
     if (fh == INVALID_HANDLE_VALUE)
-	throw_win32_error(format("%ls", tmpname).c_str(), GetLastError());
+	throw_win32_error(tmpname, GetLastError());
     int fd = _open_osfhandle(reinterpret_cast<intptr_t>(fh),
 	    _O_BINARY|_O_RDWR);
     if (fd == -1) {
@@ -57,7 +57,7 @@ char *load_with_mmap(const wchar_t *path, uint64_t *size)
     HANDLE hFile = CreateFileW(fullpath.c_str(), GENERIC_READ,
 	    0, 0, OPEN_EXISTING, 0, 0);
     if (hFile == INVALID_HANDLE_VALUE)
-	throw_win32_error(w2m(fullpath), GetLastError());
+	throw_win32_error(fullpath, GetLastError());
     DWORD sizeHi, sizeLo;
     sizeLo = GetFileSize(hFile, &sizeHi);
     *size = (static_cast<uint64_t>(sizeHi) << 32) | sizeLo;
@@ -78,8 +78,7 @@ int win32_create_named_pipe(const wchar_t *path)
 				 PIPE_TYPE_BYTE | PIPE_WAIT,
 				 1, 0, 0, 0, 0);
     if (fh == INVALID_HANDLE_VALUE)
-	throw_win32_error(format("CreateNamedPipeW(): %ls", path),
-			  GetLastError());
+	throw_win32_error(path, GetLastError());
     ConnectNamedPipe(fh, 0);
     return _open_osfhandle(reinterpret_cast<intptr_t>(fh), _O_WRONLY|_O_BINARY);
 }

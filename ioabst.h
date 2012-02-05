@@ -21,7 +21,7 @@ FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
     std::wstring fullpath = get_prefixed_fullpath(path);
     FILE *fp = _wfopen(fullpath.c_str(), mode);
     if (!fp)
-	throw_crt_error(format("_wfopen(): %ls", fullpath.c_str()));
+	throw_crt_error(fullpath.c_str());
     return fp;
 }
 #else
@@ -32,7 +32,7 @@ FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
     std::string smode = nallow(mode);
     FILE *fp = std::fopen(spath.c_str(), smode.c_str());
     if (!fp)
-	throw_crt_error(format("fopen(): %ls", path));
+	throw_crt_error(path);
     return fp;
 }
 #endif

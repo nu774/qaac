@@ -24,30 +24,25 @@ public:
     {
 	try {
 	    FILE *fp = wfopenx(filename, L"w");
+#ifdef _MSC_VER
+	    _setmode(_fileno(fp), _O_U8TEXT);
+#endif
 	    std::setbuf(fp, 0);
 	    m_streams.push_back(x::shared_ptr<FILE>(fp, std::fclose));
 	} catch (...) {}
     }
-    void vprintf(const char *fmt, va_list args)
+    void vwprintf(const wchar_t *fmt, va_list args)
     {
 	for (size_t i = 0; i < m_streams.size(); ++i)
-	    std::vfprintf(m_streams[i].get(), fmt, args);
-    }
-    void printf(const char *fmt, ...)
-    {
-	va_list ap;
-	va_start(ap, fmt);
-	for (size_t i = 0; i < m_streams.size(); ++i)
-	    std::vfprintf(m_streams[i].get(), fmt, ap);
-	va_end(ap);
+	    std::vfwprintf(m_streams[i].get(), fmt, args);
     }
 };
 
-inline void LOG(const char *fmt, ...)
+inline void LOG(const wchar_t *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    Log::instance()->vprintf(fmt, ap);
+    Log::instance()->vwprintf(fmt, ap);
     va_end(ap);
 }
 

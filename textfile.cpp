@@ -42,8 +42,8 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     x::shared_ptr<IMultiLanguage2> mlangPtr(mlang, F::release);
 
     if (!codepage) {
-	DetectEncodingInfo encoding[2];
-	INT nscores = 2;
+	DetectEncodingInfo encoding[5];
+	INT nscores = 5;
 	HR(mlang->DetectCodepageInIStream(0, codepage,
 					  stream, encoding, &nscores));
 	/*
@@ -52,9 +52,12 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 	 * However, it tends to pick 8bit locale charset for the first place,
 	 * even if it is really an UTF-8 encoded file.
 	 */
-	size_t pick = encoding[1].nCodePage == 65001;
-	codepage = encoding[pick].nCodePage;
-
+	codepage = encoding[0].nCodePage;
+	for (size_t i = 0; i < nscores; ++i)
+	    if (encoding[i].nCodePage == 65001) {
+		codepage = 65001;
+		break;
+	    }
 	HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
     }
     std::vector<char> ibuf(fileSize);
