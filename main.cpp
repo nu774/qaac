@@ -1268,8 +1268,6 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 	    psrc->setRange(begin, end);
 	    csp->addSource(src);
 	}
-	if (csp->count() == 1)
-	    csPtr = csp->first();
 	if (opts.concat_cue) {
 	    concat_sp->addSource(csPtr);
 	    std::wstring title = track.getName(L"Chapter ");

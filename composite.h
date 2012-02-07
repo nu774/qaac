@@ -18,10 +18,16 @@ public:
     x::shared_ptr<ISource> first() const { return m_sources[0]; }
     const std::vector<uint32_t> *getChannels() const
     {
-	return m_sources[0]->getChannels();
+	return first()->getChannels();
     }
     const SampleFormat &getSampleFormat() const { return m_format; }
-    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
+    const std::map<uint32_t, std::wstring> &getTags() const
+    {
+	if (m_tags.size()) return m_tags;
+	x::shared_ptr<ISource> src = first();
+	ITagParser *tp = dynamic_cast<ITagParser*>(src.get());
+	return tp ? tp->getTags() : m_tags;
+    }
     const std::vector<std::pair<std::wstring, int64_t> > *getChapters() const
     {
 	if (m_chapters.size())
@@ -39,7 +45,7 @@ public:
     }
     void addSource(const x::shared_ptr<ISource> &src)
     {
-	if (!m_sources.size())
+	if (!count())
 	    m_format = src->getSampleFormat();
 	else if (m_format != src->getSampleFormat())
 	    throw std::runtime_error(
