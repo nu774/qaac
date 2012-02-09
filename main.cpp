@@ -94,7 +94,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 	    std::string codec_name(fourcc(opts.output_format));
 	    while (codec_name.size() && codec_name.back() == ' ')
 		codec_name.pop_back();
-	    std::wstring tl = format(L"%s.%s", widen(codec_name).c_str(), ext);
+	    std::wstring tl = format(L"%hs.%s", codec_name.c_str(), ext);
 	    ofilename = PathReplaceExtension(ofilename, tl.c_str());
 	}
 	return ofilename;
@@ -158,8 +158,7 @@ public:
 	    std::vector<wchar_t> s(m_message.size() + 1);
 	    std::wcscpy(&s[0], m_message.c_str());
 	    squeeze(&s[0], L"\r");
-	    SetConsoleTitleW(format(L"%s %s", widen(PROGNAME).c_str(),
-				    &s[0]).c_str());
+	    SetConsoleTitleW(format(L"%hs %s", PROGNAME, &s[0]).c_str());
 	}
     }
 };
@@ -573,8 +572,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     const std::vector<uint32_t> *channels = src->getChannels();
     if (channels) {
 	if (opts.verbose > 1) {
-	    LOG(L"Input layout: %s\n",
-		widen(chanmap::GetChannelNames(*channels)).c_str());
+	    LOG(L"Input layout: %hs\n",
+		chanmap::GetChannelNames(*channels).c_str());
 	}
 	// reorder to Microsoft (USB) order
 	std::vector<uint32_t> work;
@@ -626,8 +625,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	if (opts.isLPCM() && opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
 	    chanmap::GetChannels(chanmask, &vec);
-	    LOG(L"Output layout: %s\n",
-		widen(chanmap::GetChannelNames(vec)).c_str());
+	    LOG(L"Output layout: %hs\n",
+		chanmap::GetChannelNames(vec).c_str());
 	}
     }
     if (!opts.isLPCM()) {
@@ -643,8 +642,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	if (opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
 	    chanmap::GetChannels(mapped, &vec);
-	    LOG(L"Output layout: %s\n",
-		widen(chanmap::GetChannelNames(vec)).c_str());
+	    LOG(L"Output layout: %hs\n",
+		chanmap::GetChannelNames(vec).c_str());
 	}
     }
     return srcx;
@@ -798,8 +797,8 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 		 != opts.bits_per_sample) {
 	    srcx.reset(new IntegerSource(srcx, opts.bits_per_sample));
 	    if (opts.verbose > 1 || opts.logfilename)
-		LOG(L"Convert to %s\n",
-		    widen(srcx->getSampleFormat().str()).c_str());
+		LOG(L"Convert to %hs\n",
+		    srcx->getSampleFormat().str().c_str());
 	}
     }
     if (opts.output_format == 'alac') {
@@ -955,9 +954,9 @@ void show_available_codec_setttings(UInt32 fmt)
 	    std::vector<AudioValueRange> bits;
 	    converter.getApplicableEncodeBitRates(&bits);
 
-	    std::wprintf(L"%s %gHz %s --",
-		    fmt == 'aac ' ? L"LC" : L"HE",
-		    srates[i].mMinimum, widen(name).c_str());
+	    std::wprintf(L"%hs %gHz %hs --",
+		    fmt == 'aac ' ? "LC" : "HE",
+		    srates[i].mMinimum, name.c_str());
 	    for (size_t k = 0; k < bits.size(); ++k) {
 		if (!bits[k].mMinimum) continue;
 		int delim = k == 0 ? L' ' : L',';
@@ -1242,8 +1241,9 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 	    Cue::ConvertToItunesTags(track.m_meta, &tmp);
 	    for (meta_t::iterator it = tmp.begin(); it != tmp.end(); ++it)
 		track_tags[it->first] = it->second;
-	    track_tags[Tag::kTrack] = widen(format("%d/%d", track.m_number,
-		    cue.m_tracks.back().m_number));
+	    track_tags[Tag::kTrack] =
+		widen(format("%d/%d", track.m_number,
+			     cue.m_tracks.back().m_number));
 	}
 	CompositeSource *csp = new CompositeSource();
 	x::shared_ptr<ISource> csPtr(csp);
@@ -1389,24 +1389,22 @@ int wmain1(int argc, wchar_t **argv)
 
 	if (opts.check_only) {
 	    if (opts.libsoxrate.loaded())
-		LOG(L"libsoxrate %s\n",
-		    widen(opts.libsoxrate.version_string()).c_str());
+		LOG(L"libsoxrate %hs\n",
+		    opts.libsoxrate.version_string());
 	    if (opts.libsndfile.loaded())
-		LOG(L"%s\n",
-		    widen(opts.libsndfile.version_string()).c_str());
+		LOG(L"%hs\n", opts.libsndfile.version_string());
 	    if (opts.libflac.loaded())
-		LOG(L"libFLAC %s\n",
-		    widen(opts.libflac.VERSION_STRING).c_str());
+		LOG(L"libFLAC %hs\n", opts.libflac.VERSION_STRING);
 	    if (opts.libwavpack.loaded())
-		LOG(L"wavpackdll %s\n",
-		    widen(opts.libwavpack.GetLibraryVersionString()).c_str());
+		LOG(L"wavpackdll %hs\n",
+		    opts.libwavpack.GetLibraryVersionString());
 	    if (opts.libtak.loaded()) {
 		TtakInt32 var, comp;
 		opts.libtak.GetLibraryVersion(&var, &comp);
-		LOG(L"tak_deco_lib %d.%d.%d %s\n",
+		LOG(L"tak_deco_lib %d.%d.%d %hs\n",
 			var >> 16, (var >> 8) & 0xff, var & 0xff,
-			opts.libtak.compatible() ? L"compatible"
-			                         : L"incompatible");
+			opts.libtak.compatible() ? "compatible"
+			                         : "incompatible");
 	    }
 	    return 0;
 	}

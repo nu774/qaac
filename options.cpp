@@ -97,13 +97,12 @@ const char *get_qaac_version();
 static
 void usage()
 {
-    std::wprintf(L"%s %s\n", widen(PROGNAME).c_str(), get_qaac_version());
-    std::fputws(widen(
+    std::wprintf(L"%hs %hs\n%hs", PROGNAME, get_qaac_version(),
 "Usage: " PROGNAME " [options] infiles....\n"
 "\n"
 "\"-\" as infile means stdin.\n"
 #ifndef REFALAC
-"In ADTS output mode, \"-\" as outfile means stdout.\n"
+"On ADTS/WAV output mode, \"-\" as outfile means stdout.\n"
 #endif
 "\n"
 "Main options:\n"
@@ -214,7 +213,7 @@ void usage()
 "                      this, artwork is automatically resized.\n"
 "--chapter <filename>\n"
 "                      Set chapter from file.\n"
-    ).c_str(), stdout);
+    );
 }
 
 #ifndef REFALAC
