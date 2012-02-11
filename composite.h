@@ -70,7 +70,13 @@ public:
 		    if (Tag::isAlbumTag(tagit->first))
 			m_tags[tagit->first] = tagit->second;
 		    if (tagit->first == Tag::kAlbumArtist)
-			m_tags[Tag::kAlbum] = tagit->second;
+			m_tags[Tag::kArtist] = tagit->second;
+		    else if (tagit->first == Tag::kArtist) {
+			std::map<uint32_t, std::wstring>::const_iterator it
+			    = m_tags.find(Tag::kArtist);
+			if (it == m_tags.end())
+			    m_tags[Tag::kArtist] = tagit->second;
+		    }
 		}
 	    }
 	    const std::vector<std::pair<std::wstring, int64_t> > *chaps;
