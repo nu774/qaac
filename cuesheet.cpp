@@ -253,7 +253,6 @@ namespace Cue {
 	int64_t dur_acc = 0;
 	for (size_t i = 0; i < parser.m_tracks.size(); ++i) {
 	    CueTrack &track = parser.m_tracks[i];
-	    std::wstring title = track.getName(L"Chapter ");
 	    unsigned beg = track.m_segments[0].m_begin;
 	    unsigned end = track.m_segments[0].m_end;
 	    int64_t dur;
@@ -263,7 +262,7 @@ namespace Cue {
 	    }
 	    else
 		dur = duration - dur_acc;
-	    chaps.push_back(std::make_pair(title, dur));
+	    chaps.push_back(std::make_pair(track.getName(), dur));
 	}
 	chapters->swap(chaps);
     }

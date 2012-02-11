@@ -1270,8 +1270,8 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 	}
 	if (opts.concat_cue) {
 	    concat_sp->addSource(csPtr);
-	    std::wstring title = track.getName(L"Chapter ");
-	    chapters.push_back(std::make_pair(title, csPtr->length()));
+	    chapters.push_back(std::make_pair(track.getName(),
+					      csPtr->length()));
 	} else {
 	    std::wstring formatstr = opts.fname_format
 		? opts.fname_format : L"${tracknumber}${title& }${title}";
@@ -1455,11 +1455,9 @@ int wmain1(int argc, wchar_t **argv)
 		src = open_source(ifilename, opts);
 		if (!opts.concat) encode_file(src, ofilename, opts);
 	    }
-	    if (opts.concat) csp->addSource(src);
+	    if (opts.concat) csp->addSourceWithChapter(src);
 	}
 	if (opts.concat) {
-	    if (csp->count() == 1)
-		csPtr = csp->first();
 	    std::wstring ofilename = get_output_filename(ifilename, opts);
 	    LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
 	    encode_file(csPtr, ofilename, opts);

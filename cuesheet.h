@@ -37,15 +37,13 @@ struct CueTrack {
     std::map<std::wstring, std::wstring> m_meta;
 
     CueTrack(unsigned number) : m_number(number) {}
-    std::wstring getName(const wchar_t *prefix=0)
+    std::wstring getName()
     {
 	std::map<std::wstring, std::wstring>::iterator
 	    it = m_meta.find(L"TITLE");
 	if (it != m_meta.end())
 	    return it->second;
-	std::wstring name = prefix ? prefix : L"";
-	name += widen(format("%02d", m_number));
-	return name;
+	return L"";
     }
 };
 

@@ -34,6 +34,17 @@ namespace Tag {
 	const char *name;
 	uint32_t id;
     };
+
+    inline bool isAlbumTag(uint32_t tag)
+    {
+	if (tag == kAlbumArtist || tag == kAlbum || tag == kGenre ||
+	    tag == kGenreID3 || tag == kDate || tag == kDisk ||
+	    tag == kCopyright || tag == kCompilation || tag == kTool ||
+	    tag == kArtwork)
+	    return true;
+	else
+	    return false;
+    }
 }
 
 namespace ID3 {

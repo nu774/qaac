@@ -3,6 +3,7 @@
 
 #include "shared_ptr.h"
 #include "iointer.h"
+#include "itunetags.h"
 
 class CompositeSource: public ISource, public ITagParser {
     typedef x::shared_ptr<ISource> source_t;
@@ -43,6 +44,10 @@ public:
     {
 	m_chapters = x;
     }
+    void addChapter(std::wstring title, int64_t length)
+    {
+	m_chapters.push_back(std::make_pair(title, length));
+    }
     void addSource(const x::shared_ptr<ISource> &src)
     {
 	if (!count())
@@ -51,6 +56,39 @@ public:
 	    throw std::runtime_error(
 		    "CompositeSource: can't compose different sample format");
 	m_sources.push_back(src);
+    }
+    void addSourceWithChapter(const x::shared_ptr<ISource> &src)
+    {
+	addSource(src);
+	ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
+	if (parser) {
+	    const std::map<uint32_t, std::wstring> &tags
+		= parser->getTags();
+	    std::map<uint32_t, std::wstring>::const_iterator tagit;
+	    if (count() == 1) {
+		for (tagit = tags.begin(); tagit != tags.end(); ++tagit) {
+		    if (Tag::isAlbumTag(tagit->first))
+			m_tags[tagit->first] = tagit->second;
+		    if (tagit->first == Tag::kAlbumArtist)
+			m_tags[Tag::kAlbum] = tagit->second;
+		}
+	    }
+	    const std::vector<std::pair<std::wstring, int64_t> > *chaps;
+	    chaps = parser->getChapters();
+	    if (chaps) {
+		for (size_t i = 0; i < chaps->size(); ++i)
+		    m_chapters.push_back(chaps->at(i));
+		return;
+	    }
+	    tagit = tags.find(Tag::kTitle);
+	    if (tagit != tags.end()) {
+		addChapter(tagit->second, src->length());
+		return;
+	    }
+	}
+	std::wstring title = format(L"",
+				    static_cast<int>(m_chapters.size() + 1));
+	addChapter(title, src->length());
     }
     uint64_t length() const
     {

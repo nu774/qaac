@@ -106,6 +106,8 @@ void TagEditor::save(MP4FileX &file)
 	    int64_t samples = 0;
 	    for (size_t i = 0; i < m_chapters.size(); ++i) {
 		std::string name = w2m(m_chapters[i].first, u8codec);
+		if (name.empty())
+		    name = format("Track %02d", i + 1);
 		file.AddChapter(track, m_chapters[i].second, name.c_str());
 		int64_t stamp = static_cast<double>(samples)
 			* 10000000 / timeScale + 0.5;
