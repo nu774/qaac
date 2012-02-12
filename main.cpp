@@ -351,6 +351,9 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	&iformat = encoder->getInputDescription(),
 	&oformat = encoder->getOutputDescription();
 
+    double oSampleRate = oformat.mSampleRate;
+    if (opts.isSBR()) oSampleRate /= 2;
+
     ITagParser *parser = dynamic_cast<ITagParser*>(src);
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 
@@ -358,8 +361,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	editor.setTag(parser->getTags());
 	const std::vector<std::pair<std::wstring, int64_t> > *chapters
 	    = parser->getChapters();
-	double rate_ratio
-	    = oformat.mSampleRate / src->getSampleFormat().m_rate;
+	double rate_ratio = oSampleRate / src->getSampleFormat().m_rate;
 	if (chapters) {
 	    if (rate_ratio == 1.0)
 		editor.setChapters(*chapters);
@@ -401,15 +403,14 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	    // convert from absolute millis to dulation in samples
 	    for (i = 0; i < chaps.size() - 1; ++i) {
 		int64_t dur = chaps[i+1].second - chaps[i].second;
-		dur = dur / 1000.0 * oformat.mSampleRate + 0.5;
+		dur = dur / 1000.0 * oSampleRate + 0.5;
 		chaps[i].second = dur;
 	    }
 	    // last entry needs calculation from media length
 	    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 	    size_t pos = chaps.size() - 1;
-	    int64_t beg =
-		chaps[pos].second / 1000.0 * oformat.mSampleRate + 0.5;
-	    double ratio = oformat.mSampleRate / iformat.mSampleRate;
+	    int64_t beg = chaps[pos].second / 1000.0 * oSampleRate + 0.5;
+	    double ratio = oSampleRate / iformat.mSampleRate;
 	    int64_t dur = stat->samplesRead() * ratio - beg;
 	    chaps[pos].second = dur;
 	    // sanity check
