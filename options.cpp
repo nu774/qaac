@@ -21,7 +21,7 @@ static wide::option long_options[] = {
     { L"check", no_argument, 0, 'chck' },
     { L"decode", no_argument, 0, 'D' },
     { L"no-optimize", no_argument, 0, 'noop' },
-    { L"bites-per-sample", required_argument, 0, 'b' },
+    { L"bits-per-sample", required_argument, 0, 'b' },
     { L"rate", required_argument, 0, 'r' },
     { L"lowpass", required_argument, 0, 'lpf ' },
     { L"normalize", no_argument, 0, 'N' },
@@ -129,7 +129,7 @@ void usage()
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
 "--concat               Encode whole inputs into single file. \n"
 "                       Requires output filename (with -o)\n"
-"-b, --bites-per-sample <n>\n"
+"-b, --bits-per-sample <n>\n"
 "                       Bits per sample of output (for WAV/ALAC) [16/24]\n"
 "-r, --rate <keep|auto|n>\n"
 "                       keep: output sampling rate will be same as input\n"
@@ -138,7 +138,7 @@ void usage()
 "                             chosen by encoder.\n"
 "                       n: desired output sampling rate in Hz\n"
 "--lowpass <number>     Specify lowpass filter cut-off frequency in Hz\n"
-"                       Use this whe you want lower cut-off than\n"
+"                       Use this when you want lower cut-off than\n"
 "                       Apple default.\n"
 "--gain <f>             Adjust gain by f dB.\n"
 "                       Use negative value to decrese gain, when you want to\n"
