@@ -95,8 +95,8 @@ void TagEditor::save(MP4FileX &file)
 	    std::string value = format(iTunSMPB_template,
 				       m_encoder_delay,
 				       m_padding,
-				       int32_t(m_nsamples >> 32),
-				       int32_t(m_nsamples & 0xffffffff));
+				       uint32_t(m_nsamples >> 32),
+				       uint32_t(m_nsamples & 0xffffffff));
 	    m_long_tags["iTunSMPB"] = widen(value);
 	}
 	utf8_codecvt_facet u8codec;
@@ -107,7 +107,7 @@ void TagEditor::save(MP4FileX &file)
 	    for (size_t i = 0; i < m_chapters.size(); ++i) {
 		std::string name = w2m(m_chapters[i].first, u8codec);
 		if (name.empty())
-		    name = format("Track %02d", i + 1);
+		    name = format("Track %02u", static_cast<uint32_t>(i + 1));
 		file.AddChapter(track, m_chapters[i].second, name.c_str());
 		int64_t stamp = static_cast<double>(samples)
 			* 10000000 / timeScale + 0.5;
@@ -294,22 +294,22 @@ namespace Vorbis {
 	    const char *name = GetNameFromTagID(ii->first);
 	    if (!name) continue;
 	    if (ii->first == Tag::kTrack) {
-		int n, t = 0;
-		if (swscanf(ii->second.c_str(), L"%d/%d", &n, &t) < 1)
+		unsigned n, t = 0;
+		if (swscanf(ii->second.c_str(), L"%u/%u", &n, &t) < 1)
 		    continue;
-		result["tracknumber"] = format("%d", n);
-		if (t > 0) result["tracktotal"] = format("%d", t);
+		result["tracknumber"] = format("%u", n);
+		if (t > 0) result["tracktotal"] = format("%u", t);
 	    }
 	    else if (ii->first == Tag::kDisk) {
-		int n, t = 0;
-		if (swscanf(ii->second.c_str(), L"%d/%d", &n, &t) < 1)
+		unsigned n, t = 0;
+		if (swscanf(ii->second.c_str(), L"%u/%u", &n, &t) < 1)
 		    continue;
-		result["discnumber"] = format("%d", n);
-		if (t > 0) result["disctotal"] = format("%d", t);
+		result["discnumber"] = format("%u", n);
+		if (t > 0) result["disctotal"] = format("%u", t);
 	    }
 	    else if (ii->first == Tag::kGenreID3) {
-		int n;
-		if (swscanf(ii->second.c_str(), L"%d", &n) == 1) {
+		unsigned n;
+		if (swscanf(ii->second.c_str(), L"%u", &n) == 1) {
 		    TagLib::String v = TagLib::ID3v1::genre(n-1);
 		    result[name] = v.toCString();
 		}
@@ -329,12 +329,12 @@ namespace mp4a
 	uint8_t *value = data.value;
 
 	if (fcc == Tag::kGenreID3) {
-	    int v = (value[0] << 8) | value[1];
-	    return widen(format("%d", v));
+	    unsigned v = (value[0] << 8) | value[1];
+	    return widen(format("%u", v));
 	} else if (fcc == Tag::kDisk || fcc == Tag::kTrack) {
-	    int index = (value[2] << 8) | value[3];
-	    int total = (value[4] << 8) | value[5];
-	    return widen(format("%d/%d", index, total));
+	    unsigned index = (value[2] << 8) | value[3];
+	    unsigned total = (value[4] << 8) | value[5];
+	    return widen(format("%u/%u", index, total));
 	} else if (data.typeCode == MP4_ITMF_BT_INTEGER) {
 	    int v;
 	    if (data.valueSize == 1)

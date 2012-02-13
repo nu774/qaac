@@ -20,8 +20,7 @@ namespace itmf = mp4v2::impl::itmf;
 
 std::string format_mp4error(const mp4v2::impl::Exception &e)
 {
-    std::wstring wmsg = m2w(e.msg(), utf8_codecvt_facet());
-    return format("libmp4v2: %ls", wmsg.c_str());
+    return format("libmp4v2: %s", e.msg().c_str());
 }
 
 class MP4AlacAtom: public MP4Atom {

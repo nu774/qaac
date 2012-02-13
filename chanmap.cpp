@@ -32,7 +32,10 @@ std::string GetChannelNames(const std::vector<uint32_t> &channels)
     }
     size_t count = channels.size();
     count -= lfe_count;
-    return format("%d.%d (%s)", count, lfe_count, result.c_str());
+    return format("%u.%u (%s)",
+		  static_cast<uint32_t>(count),
+		  static_cast<uint32_t>(lfe_count),
+		  result.c_str());
 }
 
 uint32_t GetChannelMask(const std::vector<uint32_t>& channels)

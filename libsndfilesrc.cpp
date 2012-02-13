@@ -30,7 +30,7 @@ uint32_t convert_chanmap(uint32_t value)
 	case SF_CHANNEL_MAP_TOP_REAR_CENTER: return 17;
 	case SF_CHANNEL_MAP_TOP_REAR_RIGHT: return 18;
 	default:
-	    throw std::runtime_error(format("Unknown channel: %d", value));
+	    throw std::runtime_error(format("Unknown channel: %u", value));
     }
 }
 

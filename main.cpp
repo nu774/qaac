@@ -440,7 +440,7 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
 	uint64_t total = optimizer.getTotalChunks();
 	PeriodicDisplay disp(100, verbose);
 	for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
-	    disp.put(format(L"\r%lld/%lld chunks written (optimizing)",
+	    disp.put(format(L"\r%llu/%llu chunks written (optimizing)",
 			    i, total).c_str());
 	}
 	disp.flush();
@@ -593,8 +593,9 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	    std::vector<std::vector<complex_t> > matrix;
 	    matrix_from_preset(opts, &matrix);
 	    if (opts.verbose > 1 || opts.logfilename) {
-		LOG(L"Matrix mixer: %dch -> %dch\n",
-		    matrix[0].size(), matrix.size());
+		LOG(L"Matrix mixer: %uch -> %uch\n",
+		    static_cast<uint32_t>(matrix[0].size()),
+		    static_cast<uint32_t>(matrix.size()));
 	    }
 	    srcx.reset(new MatrixMixer(srcx, opts.libsoxrate,
 				       matrix, threading));
@@ -1402,7 +1403,7 @@ int wmain1(int argc, wchar_t **argv)
 	    if (opts.libtak.loaded()) {
 		TtakInt32 var, comp;
 		opts.libtak.GetLibraryVersion(&var, &comp);
-		LOG(L"tak_deco_lib %d.%d.%d %hs\n",
+		LOG(L"tak_deco_lib %u.%u.%u %hs\n",
 			var >> 16, (var >> 8) & 0xff, var & 0xff,
 			opts.libtak.compatible() ? "compatible"
 			                         : "incompatible");

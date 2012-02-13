@@ -22,7 +22,8 @@ bool CueTokenizer<CharT>::nextline()
 	    while (traits_type::not_eof(c = m_sb->sbumpc())) {
 		if (c == '\n')
 		    throw std::runtime_error(format(
-			"cuesheet: runaway string at line %d", m_lineno + 1));
+			"cuesheet: runaway string at line %u",
+			static_cast<uint32_t>(m_lineno) + 1));
 		else if (c != '"')
 		    field.push_back(c);
 		else if (m_sb->sgetc() != '"') // closing quote
@@ -106,13 +107,13 @@ void CueSheet::arrange()
 	    if (last_index >= track.m_segments[j].m_index)
 		throw std::runtime_error(format("cuesheet: INDEX must be in "
 						"strictly ascending order: "
-						"track %d", track.m_number));
+						"track %u", track.m_number));
 	    last_index = track.m_segments[j].m_index;
 	    if (last_index == 1) index1_found = true;
 	}
 	if (!index1_found)
 	    throw std::runtime_error(format("cuesheet: INDEX01 not found on "
-					    "track %d", track.m_number));
+					    "track %u", track.m_number));
     }
     /* move INDEX00 segment to previous track's end */
     for (size_t i = 0; i < m_tracks.size(); ++i) {
