@@ -44,22 +44,17 @@ size_t PipedReader::readSamples(void *buffer, size_t nsamples)
 
 void PipedReader::inputThreadProc()
 {
-    ISource *src = source();
-    uint32_t bpf = src->getSampleFormat().bytesPerFrame();
-    std::vector<uint8_t> buffer(4096 * bpf);
-    uint8_t *bp = &buffer[0];
-    HANDLE ph = m_writePipe.get();
-    for (;;) {
-	try {
-	    size_t nsamples;
-	    DWORD nb;
-	    if ((nsamples = src->readSamples(bp, 4096)) == 0)
-		break;
-	    else if (!WriteFile(ph, bp, nsamples * bpf, &nb, 0))
-		break;
-	} catch (...) {
-	    break; // XXX
-	}
-    }
+    try {
+	ISource *src = source();
+	uint32_t bpf = src->getSampleFormat().bytesPerFrame();
+	std::vector<uint8_t> buffer(4096 * bpf);
+	uint8_t *bp = &buffer[0];
+	HANDLE ph = m_writePipe.get();
+	size_t n;
+	DWORD nb;
+	while ((n = src->readSamples(bp, 4096)) > 0
+	       && WriteFile(ph, bp, n * bpf, &nb, 0))
+	    ;
+    } catch (...) {}
     m_writePipe.reset(); // close
 }

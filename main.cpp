@@ -1198,7 +1198,7 @@ struct TagLookup {
 	std::wstring namex = wslower(name);
 	if (namex == L"tracknumber")
 	    return widen(format("%02d", track.m_number));
-	std::string skey = format("%ls", namex.c_str());
+	std::string skey = nallow(namex);
 	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
 	if (id == 0) return L"";
 	meta_t::const_iterator iter = tracktags.find(id);

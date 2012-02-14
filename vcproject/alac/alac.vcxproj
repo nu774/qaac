@@ -134,9 +134,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\..\ALAC\ag_dec.c" />
     <ClCompile Include="..\..\ALAC\ag_enc.c" />
     <ClCompile Include="..\..\ALAC\ALACBitUtilities.c" />
