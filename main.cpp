@@ -979,20 +979,29 @@ void show_available_aac_settings()
 static
 std::string GetCoreAudioVersion(HMODULE hDll)
 {
-    std::wstring dllpath = GetModuleFileNameX(hDll);
-    DWORD dwhandle = 0;
-    DWORD size = GetFileVersionInfoSizeW(dllpath.c_str(), &dwhandle);
-    std::vector<BYTE> vec(size * 4);
-    GetFileVersionInfoW(dllpath.c_str(), dwhandle, vec.size(), &vec[0]);
-    UINT len = 0;
-    VS_FIXEDFILEINFO *vsfi;
-    VerQueryValueW(&vec[0], L"\\", (void**)(&vsfi), &len);
-    WORD vers[4];
-    vers[0] = HIWORD(vsfi->dwFileVersionMS);
-    vers[1] = LOWORD(vsfi->dwFileVersionMS);
-    vers[2] = HIWORD(vsfi->dwFileVersionLS);
-    vers[3] = LOWORD(vsfi->dwFileVersionLS);
-    return format("%d.%d.%d.%d", vers[0], vers[1], vers[2], vers[3]);
+    HRSRC hRes = FindResourceExW(hDll,
+			         RT_VERSION,
+			         MAKEINTRESOURCEW(VS_VERSION_INFO),
+				 MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
+    if (!hRes)
+	throw_win32_error("FindResourceExW", GetLastError());
+    std::string data;
+    {
+	DWORD cbres = SizeofResource(hDll, hRes);
+	HGLOBAL hMem = LoadResource(hDll, hRes);
+	char *pc = static_cast<char*>(LockResource(hMem));
+	data.assign(pc, cbres);
+    }
+    // find dwSignature of VS_FIXEDFILEINFO
+    size_t pos = data.find("\xbd\x04\xef\xfe");
+    VS_FIXEDFILEINFO vfi;
+    std::memcpy(&vfi, data.c_str() + pos, sizeof vfi);
+    WORD v[4];
+    v[0] = HIWORD(vfi.dwFileVersionMS);
+    v[1] = LOWORD(vfi.dwFileVersionMS);
+    v[2] = HIWORD(vfi.dwFileVersionLS);
+    v[3] = LOWORD(vfi.dwFileVersionLS);
+    return format("%u.%u.%u.%u", v[0],v[1],v[2],v[3]);
 }
 
 static
