@@ -598,7 +598,8 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 		    static_cast<uint32_t>(matrix.size()));
 	    }
 	    srcx.reset(new MatrixMixer(srcx, opts.libsoxrate,
-				       matrix, threading));
+				       matrix, threading,
+				       !opts.no_matrix_normalize));
 	    channels = 0;
 	    nchannels = srcx->getSampleFormat().m_nchannels;
 	}

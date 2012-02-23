@@ -40,6 +40,7 @@ struct Options {
 	no_optimize(false), native_resampler(false), check_only(false),
 	normalize(false), print_available_formats(false), alac_fast(false),
 	threading(false), concat_cue(false), concat(false),
+	no_matrix_normalize(false),
 	textcp(0),
 	delay(0),
 	gain(0.0),
@@ -99,7 +100,7 @@ struct Options {
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
 	 ignore_length, no_optimize, native_resampler, check_only,
 	 normalize, print_available_formats, alac_fast, threading,
-	 concat_cue, concat;
+	 concat_cue, concat, no_matrix_normalize;
     uint32_t textcp;
     int delay;
     double gain;

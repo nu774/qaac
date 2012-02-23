@@ -76,7 +76,8 @@ static double calcGain(double *coefs, size_t numcoefs)
 MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
 			 const SoxModule &module,
 			 const std::vector<std::vector<complex_t> > &spec,
-			 bool mt)
+			 bool mt,
+			 bool normalize)
     : DelegatingSource(source), m_module(module), m_matrix(spec),
       m_input_frames(0), m_end_of_input(false), m_samples_read(0)
 {
@@ -85,7 +86,8 @@ MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
 	throw std::runtime_error("invalid/unsupported matrix spec");
     if (m_matrix[0].size() != fmt.m_nchannels)
 	throw std::runtime_error("unmatch number of channels with matrix");
-    normalizeMatrix(m_matrix);
+    if (normalize)
+	normalizeMatrix(m_matrix);
     m_format = SampleFormat("F32LE", spec.size(), fmt.m_rate);
 
     if (m_shiftMask) {

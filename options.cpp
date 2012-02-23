@@ -29,6 +29,7 @@ static wide::option long_options[] = {
     { L"delay", required_argument, 0, 'dlay' },
     { L"matrix-preset", required_argument, 0, 'mixp' },
     { L"matrix-file", required_argument, 0, 'mixm' },
+    { L"no-matrix-normalize", no_argument, 0, 'nmxn' },
     { L"chanmap", required_argument, 0, 'cmap' },
     { L"chanmask", required_argument, 0, 'mask' },
     { L"help", no_argument, 0, 'h' },
@@ -151,6 +152,8 @@ void usage()
 "                       dropped from the beginning.\n"
 "--matrix-preset <name> Specify preset remixing matrix name.\n"
 "--matrix-file <file>   Specify file containing remixing matrix.\n"
+"--no-matrix-normalize  Don't automatically normalize(scale) matrix\n"
+"                       coefficients for the matrix mixer.\n"
 "--chanmap <n1,n2...>   Re-arrange channels to the specified order.\n"
 "                       For N-ch input, you take numbers 1,2..N, and\n"
 "                       arrange them with comma-seperated, to the order\n"
@@ -291,6 +294,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->fname_format = wide::optarg;
 	else if (ch == 'tmpd')
 	    this->tmpdir = wide::optarg;
+	else if (ch == 'nmxn')
+	    this->no_matrix_normalize = true;
 	else if (ch == 'cmap') {
 	    std::vector<wchar_t> buff(std::wcslen(wide::optarg)+1);
 	    wchar_t *bp = &buff[0], *tok;

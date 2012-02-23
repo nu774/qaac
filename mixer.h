@@ -24,7 +24,8 @@ class MatrixMixer: public DelegatingSource {
     uint64_t m_samples_read;
 public:
     MatrixMixer(const x::shared_ptr<ISource> &source, const SoxModule &module,
-		const std::vector<std::vector<complex_t> > &spec, bool mt);
+		const std::vector<std::vector<complex_t> > &spec, bool mt,
+		bool normalize=true);
     uint64_t length() const { return -1; }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannels() const { return 0; }
