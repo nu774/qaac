@@ -800,17 +800,15 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 		 != opts.bits_per_sample) {
 	    srcx.reset(new IntegerSource(srcx, opts.bits_per_sample));
 	    if (opts.verbose > 1 || opts.logfilename)
-		LOG(L"Convert to %hs\n",
-		    srcx->getSampleFormat().str().c_str());
+		LOG(L"Convert to %hs\n", srcx->getSampleFormat().str().c_str());
 	}
-    }
-    if (opts.output_format == 'alac') {
+    } else if (opts.output_format == 'alac') {
 	const SampleFormat &sf = srcx->getSampleFormat();
 	uint32_t bits = sf.m_bitsPerSample;
-	if (sf.m_type != SampleFormat::kIsSignedInteger
-	    || bits != 16 && bits != 24 && bits != 32) {
-	    throw std::runtime_error(format(
-		"Not supported sample format for ALAC: %s", sf.str().c_str()));
+	if (sf.m_type != SampleFormat::kIsSignedInteger) {
+	    srcx.reset(new IntegerSource(srcx, 16));
+	    if (opts.verbose > 1 || opts.logfilename)
+		LOG(L"Convert to %hs\n", srcx->getSampleFormat().str().c_str());
 	}
     }
     if (threading && !opts.isLPCM()) {
