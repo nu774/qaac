@@ -144,4 +144,27 @@ private:
     }
 };
 
+inline
+void BuildASBDFromSampleFormat(const SampleFormat &format,
+			       AudioStreamBasicDescription *result)
+{
+    AudioStreamBasicDescription desc = { 0 };
+    desc.mFormatID = 'lpcm';
+    desc.mFormatFlags = kAudioFormatFlagIsPacked;
+    if (format.m_type == SampleFormat::kIsSignedInteger)
+	desc.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+    else if (format.m_type == SampleFormat::kIsFloat)
+	desc.mFormatFlags |= kAudioFormatFlagIsFloat;
+    if (format.m_endian == SampleFormat::kIsBigEndian)
+	desc.mFormatFlags |= kAudioFormatFlagIsBigEndian;
+    desc.mFramesPerPacket = 1;
+    desc.mChannelsPerFrame = format.m_nchannels;
+    desc.mSampleRate = format.m_rate;
+    desc.mBitsPerChannel = format.m_bitsPerSample;
+    desc.mBytesPerPacket
+	= desc.mBytesPerFrame
+	= format.m_nchannels * format.m_bitsPerSample >> 3;
+    std::memcpy(result, &desc, sizeof desc);
+}
+
 #endif

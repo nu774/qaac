@@ -54,10 +54,6 @@ namespace mp4v2 { namespace platform {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define MP4V2_PATH_MAX PATH_MAX
-
-///////////////////////////////////////////////////////////////////////////////
-
 // win32 platform requires O_BINARY when using old open() calls so we add
 // this harmless bit-flag for posix to avoid .cpp platform conditionals
 #ifndef O_BINARY

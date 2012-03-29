@@ -36,6 +36,7 @@
 #include "CoreAudioEncoder.h"
 #include "afsource.h"
 #include "reg.h"
+#include "CoreAudioResampler.h"
 #endif
 #include <ShlObj.h>
 #include <crtdbg.h>
@@ -471,29 +472,6 @@ x::shared_ptr<ISource> do_normalize(
 }
 
 static
-void build_basic_description(const SampleFormat &format,
-	AudioStreamBasicDescription *result)
-{
-    AudioStreamBasicDescription desc = { 0 };
-    desc.mFormatID = 'lpcm';
-    desc.mFormatFlags = kAudioFormatFlagIsPacked;
-    if (format.m_type == SampleFormat::kIsSignedInteger)
-	desc.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
-    else if (format.m_type == SampleFormat::kIsFloat)
-	desc.mFormatFlags |= kAudioFormatFlagIsFloat;
-    if (format.m_endian == SampleFormat::kIsBigEndian)
-	desc.mFormatFlags |= kAudioFormatFlagIsBigEndian;
-    desc.mFramesPerPacket = 1;
-    desc.mChannelsPerFrame = format.m_nchannels;
-    desc.mSampleRate = format.m_rate;
-    desc.mBitsPerChannel = format.m_bitsPerSample;
-    desc.mBytesPerPacket
-	= desc.mBytesPerFrame
-	= format.m_nchannels * format.m_bitsPerSample >> 3;
-    std::memcpy(result, &desc, sizeof desc);
-}
-
-static
 FILE *open_config_file(const wchar_t *file)
 {
     std::vector<std::wstring> search_paths;
@@ -689,6 +667,12 @@ x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 #ifndef REFALAC
 static
 void config_aac_codec(AudioConverterX &converter, const Options &opts);
+
+inline uint32_t bound_quality(uint32_t n)
+{
+    return std::min(n, static_cast<uint32_t>(kAudioConverterQuality_Max));
+}
+
 #endif
 
 static x::shared_ptr<ISource> 
@@ -732,8 +716,22 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	}
 #endif
     }
+    if (opts.lowpass > 0) {
+	if (!opts.libsoxrate.loaded())
+	    LOG(L"WARNING: --lowpass requires libsoxrate. LPF disabled\n");
+        else {
+	    if (opts.verbose > 1 || opts.logfilename)
+		LOG(L"Applying LPF: %dHz\n", opts.lowpass);
+	    x::shared_ptr<ISoxDSPEngine>
+		engine(new SoxLowpassFilter(opts.libsoxrate,
+					    srcx->getSampleFormat(),
+					    opts.lowpass,
+					    threading));
+	    srcx.reset(new SoxDSPProcessor(engine, srcx));
+	}
+    }
     AudioStreamBasicDescription iasbd;
-    build_basic_description(srcx->getSampleFormat(), &iasbd);
+    BuildASBDFromSampleFormat(srcx->getSampleFormat(), &iasbd);
 
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mFormatID = opts.output_format;
@@ -762,26 +760,39 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     if (oasbd.mSampleRate != iasbd.mSampleRate) {
 	LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
 	if (!opts.native_resampler && opts.libsoxrate.loaded()) {
+	    if (opts.verbose > 1 || opts.logfilename)
+		LOG(L"Using libsoxrate SRC\n");
 	    x::shared_ptr<ISoxDSPEngine>
 		engine(new SoxResampler(opts.libsoxrate,
 					srcx->getSampleFormat(),
 					oasbd.mSampleRate,
 					threading));
 	    srcx.reset(new SoxDSPProcessor(engine, srcx));
-	}
-    }
-    if (opts.lowpass > 0) {
-	if (!opts.libsoxrate.loaded())
-	    LOG(L"WARNING: --lowpass requires libsoxrate. LPF disabled\n");
-        else {
-	    if (opts.verbose > 1 || opts.logfilename)
-		LOG(L"Applying LPF: %dHz\n", opts.lowpass);
-	    x::shared_ptr<ISoxDSPEngine>
-		engine(new SoxLowpassFilter(opts.libsoxrate,
-					    srcx->getSampleFormat(),
-					    opts.lowpass,
-					    threading));
-	    srcx.reset(new SoxDSPProcessor(engine, srcx));
+	} else {
+#ifdef REFALAC
+	    oasbd.mSampleRate = iasbd.mSampleRate;
+	    LOG(L"WARNING: --rate requires libsoxrate\n");
+#else
+	    if (opts.native_resampler_quality >= 0 ||
+		opts.native_resampler_complexity >= 0 ||
+		opts.isLPCM())
+	    {
+		uint32_t quality = opts.native_resampler_quality;
+		uint32_t complexity = opts.native_resampler_complexity;
+		if (quality == -1) quality = kAudioConverterQuality_Medium;
+		if (complexity == -1) complexity = 'norm';
+		CoreAudioResampler *resampler =
+		    new CoreAudioResampler(srcx, oasbd.mSampleRate,
+					   bound_quality(quality), complexity);
+		srcx.reset(resampler);
+		if (opts.verbose > 1 || opts.logfilename)
+		    LOG(L"Using CoreAudio SRC: complexity %hs quality %u\n",
+			fourcc(resampler->getComplexity()).svalue,
+			resampler->getQuality());
+	    }
+	    else if (opts.verbose > 1 || opts.logfilename)
+		LOG(L"Using CoreAudio codec default SRC\n");
+#endif
 	}
     }
     if (opts.normalize)
@@ -818,7 +829,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	if (opts.verbose > 1 || opts.logfilename)
 	    LOG(L"Enable threading\n");
     }
-    build_basic_description(srcx->getSampleFormat(), &iasbd);
+    BuildASBDFromSampleFormat(srcx->getSampleFormat(), &iasbd);
     if (wChanmask) *wChanmask = wavChanmask;
     if (aLayout) *aLayout = aacLayout;
     if (inputDesc) *inputDesc = iasbd;
@@ -1084,11 +1095,6 @@ void set_dll_directories(int verbose)
     std::wstring dir = get_module_directory() + L"QTfiles";
     searchPaths = format(L"%s;%s", dir.c_str(), searchPaths.c_str());
     SetEnvironmentVariableW(L"PATH", searchPaths.c_str());
-}
-
-inline uint32_t bound_quality(uint32_t n)
-{
-    return std::min(n, static_cast<uint32_t>(kAudioConverterQuality_Max));
 }
 
 static

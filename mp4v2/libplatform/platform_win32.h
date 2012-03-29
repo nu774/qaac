@@ -40,11 +40,6 @@ namespace mp4v2 { namespace platform {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// From http://msdn.microsoft.com/en-us/library/aa365247%28v=vs.85%29.aspx#maxpath
-#define MP4V2_PATH_MAX (32767 + 1)
-
-///////////////////////////////////////////////////////////////////////////////
-
 // fprintf macros for unsigned types - mingw32 is a good source if more needed
 #define PRId8   "d"
 #define PRId16  "d"

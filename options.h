@@ -44,7 +44,9 @@ struct Options {
 	textcp(0),
 	delay(0),
 	gain(0.0),
-	is_console_visible(true)
+	is_console_visible(true),
+	native_resampler_quality(-1),
+	native_resampler_complexity(-1)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -90,6 +92,8 @@ struct Options {
                      others: use the value as chanmask     */
     uint32_t artwork_size;
     uint32_t bits_per_sample;
+    int native_resampler_quality;
+    int native_resampler_complexity;
     wchar_t *ofilename, *outdir, *raw_format, *fname_format;
     wchar_t *chapter_file;
     wchar_t *logfilename;

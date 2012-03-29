@@ -416,10 +416,12 @@ Tags::fetchGenre( const CodeItemMap& cim, uint16_t& cpp, const uint16_t*& c )
     c = NULL;
 
     CodeItemMap::const_iterator f = cim.find( CODE_GENRETYPE );
-    if( f == cim.end() )
+    if( f == cim.end() || 0 == f->second->dataList.size )
         return;
 
     MP4ItmfData& data = f->second->dataList.elements[0];
+    if( NULL == data.value )
+        return;
 
     cpp = (uint16_t(data.value[0]) <<  8)
         | (uint16_t(data.value[1])      );
@@ -437,10 +439,13 @@ Tags::fetchDisk( const CodeItemMap& cim, MP4TagDisk& cpp, const MP4TagDisk*& c )
     c = NULL;
 
     CodeItemMap::const_iterator f = cim.find( CODE_DISK );
-    if( f == cim.end() )
+    if( f == cim.end() || 0 == f->second->dataList.size )
         return;
 
     MP4ItmfData& data = f->second->dataList.elements[0];
+
+    if( NULL == data.value )
+        return;
 
     cpp.index = (uint16_t(data.value[2]) <<  8)
               | (uint16_t(data.value[3])      );
@@ -461,10 +466,13 @@ Tags::fetchTrack( const CodeItemMap& cim, MP4TagTrack& cpp, const MP4TagTrack*& 
     c = NULL;
 
     CodeItemMap::const_iterator f = cim.find( CODE_TRACK );
-    if( f == cim.end() )
+    if( f == cim.end() || 0 == f->second->dataList.size )
         return;
 
     MP4ItmfData& data = f->second->dataList.elements[0];
+
+    if( NULL == data.value )
+        return;
 
     cpp.index = (uint16_t(data.value[2]) <<  8)
               | (uint16_t(data.value[3])      );
@@ -484,10 +492,13 @@ Tags::fetchInteger( const CodeItemMap& cim, const string& code, uint8_t& cpp, co
     c = NULL;
 
     CodeItemMap::const_iterator f = cim.find( code );
-    if( f == cim.end() )
+    if( f == cim.end() || 0 == f->second->dataList.size )
         return;
 
     MP4ItmfData& data = f->second->dataList.elements[0];
+    if( NULL == data.value )
+        return;
+
     cpp = data.value[0];
     c = &cpp;
 }
@@ -501,10 +512,13 @@ Tags::fetchInteger( const CodeItemMap& cim, const string& code, uint16_t& cpp, c
     c = NULL;
 
     CodeItemMap::const_iterator f = cim.find( code );
-    if( f == cim.end() )
+    if( f == cim.end() || 0 == f->second->dataList.size )
         return;
 
     MP4ItmfData& data = f->second->dataList.elements[0];
+
+    if( NULL == data.value )
+        return;
 
     cpp = (uint16_t(data.value[0]) <<  8)
         | (uint16_t(data.value[1])      );
@@ -521,10 +535,13 @@ Tags::fetchInteger( const CodeItemMap& cim, const string& code, uint32_t& cpp, c
     c = NULL;
 
     CodeItemMap::const_iterator f = cim.find( code );
-    if( f == cim.end() )
+    if( f == cim.end() || 0 == f->second->dataList.size )
         return;
 
     MP4ItmfData& data = f->second->dataList.elements[0];
+
+    if( NULL == data.value )
+        return;
 
     cpp = (uint32_t(data.value[0]) << 24)
         | (uint32_t(data.value[1]) << 16)
@@ -543,10 +560,13 @@ Tags::fetchInteger( const CodeItemMap& cim, const string& code, uint64_t& cpp, c
     c = NULL;
 
     CodeItemMap::const_iterator f = cim.find( code );
-    if( f == cim.end() )
+    if( f == cim.end() || 0 == f->second->dataList.size )
         return;
 
     MP4ItmfData& data = f->second->dataList.elements[0];
+
+    if( NULL == data.value )
+        return;
 
     cpp = (uint64_t(data.value[0]) << 56)
         | (uint64_t(data.value[1]) << 48)
@@ -569,10 +589,14 @@ Tags::fetchString( const CodeItemMap& cim, const string& code, string& cpp, cons
     c = NULL;
 
     CodeItemMap::const_iterator f = cim.find( code );
-    if( f == cim.end() )
+    if( f == cim.end() || 0 == f->second->dataList.size )
         return;
 
     MP4ItmfData& data = f->second->dataList.elements[0];
+
+    if( NULL == data.value )
+        return;
+
     cpp.append( reinterpret_cast<char*>( data.value ), data.valueSize );
     c = cpp.c_str();
 }

@@ -16,7 +16,7 @@ static wide::option long_options[] = {
     { L"quality", required_argument, 0, 'q' },
     { L"adts", no_argument, 0, 'ADTS' },
     { L"alac", no_argument, 0, 'A' },
-    { L"native-resampler", no_argument, 0, 'nsmp' },
+    { L"native-resampler", optional_argument, 0, 'nsrc' },
 #endif
     { L"check", no_argument, 0, 'chck' },
     { L"decode", no_argument, 0, 'D' },
@@ -121,15 +121,12 @@ void usage()
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
 "-A, --alac             ALAC encoding mode\n"
-"--native-resampler     Use Apple built-in resampler\n"
 #else
 "--fast                 Fast stereo encoding mode.\n"
 #endif
 "--check                Show library versions and exit\n"
 "-D, --decode           Wave output mode.\n"
 "--no-optimize          Don't optimize MP4 container file after encoding\n"
-"--concat               Encode whole inputs into single file. \n"
-"                       Requires output filename (with -o)\n"
 "-b, --bits-per-sample <n>\n"
 "                       Bits per sample of output (for WAV/ALAC) [16/24]\n"
 "-r, --rate <keep|auto|n>\n"
@@ -177,11 +174,13 @@ void usage()
 "-S, --stat             Save bitrate statistics into file\n"
 "--log <filename>       Output message to file\n"
 "\n"
-"Option for single input mode only:\n"
+"Option for single output file:\n"
 "-o <filename>          Output filename\n"
+"--concat               Encode whole inputs into single file. \n"
+"                       Requires output filename (with -o)\n"
 "\n"
 "Option for cue sheet input:\n"
-"--concat-cuesheet         Output single file rather than split by tracks\n"
+"--concat-cuesheet         Output single file rather than splitting by tracks\n"
 "--fname-format <string>   Format string for output filename\n"
 "\n"
 "Options for Raw PCM input only:\n"
@@ -194,6 +193,28 @@ void usage()
 "                       Last part: L(ittle Endian) | B(ig Endian)\n"
 "                       Cases are ignored. u8b is OK.\n"
 "\n"
+#ifndef REFALAC
+"Options for CoreAudio sample rate converter:\n"
+"--native-resampler[=line|norm|bats,n]\n"
+"                       Arguments are optional.\n"
+"                       Without argument, codec default SRC is used.\n"
+"                       With argument, dedicated AudioConverter is used for\n"
+"                       sample rate conversion.\n"
+"                       '--native-resampler' and arguments must be delimited\n"
+"                       by a '=' (space is not usable here).\n"
+"                       Arguments must be delimited by a ','(comma).\n"
+"                       First argument is sample rate converter complexity,\n"
+"                       and one of line, norm, bats.\n"
+"                         line: linear (worst, don't use this)\n"
+"                         norm: normal\n"
+"                         bats: mastering (best, but quite sloooow)\n"
+"                       Second argument is sample rate converter quality,\n"
+"                       which is an integer between 0-127.\n"
+"                       Example:\n"
+"                         --native-resampler\n"
+"                         --native-resampler=norm,96\n"
+"\n"
+#endif
 "Tagging options:\n"
 " (same value is set to all files, so use with care for multiple files)\n"
 "--title <string>\n"
@@ -264,8 +285,27 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return usage(), false;
 	    this->output_format = 'lpcm';
 	}
-	else if (ch == 'nsmp')
+	else if (ch == 'nsrc') {
 	    this->native_resampler = true;
+	    if (wide::optarg) {
+		std::vector<wchar_t> buffer(std::wcslen(wide::optarg) + 1);
+		wchar_t *p = &buffer[0], *tok;
+		std::wcscpy(p, wide::optarg);
+		while (tok = wcssep(&p, L",")) {
+		    int n;
+		    if (std::swscanf(tok, L"%u", &n) == 1)
+			this->native_resampler_quality = n;
+		    else if (std::wcslen(tok) == 4)
+			this->native_resampler_complexity =
+			    fourcc(nallow(tok).c_str());
+		    else {
+			std::fputws(L"Invalid optarg for --native-resampler\n",
+				    stderr);
+			return false;
+		    }
+		}
+	    }
+	}
 	else if (ch == 'N')
 	    this->normalize = true;
 	else if (ch == 's')

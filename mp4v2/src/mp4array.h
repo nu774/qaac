@@ -37,7 +37,7 @@ public:
     }
 
     inline bool ValidIndex(MP4ArrayIndex index) {
-        return (index < m_numElements && index >= 0);
+        return (index < m_numElements);
     }
 
     inline MP4ArrayIndex Size(void) {

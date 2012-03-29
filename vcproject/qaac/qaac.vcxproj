@@ -199,6 +199,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\afsource.cpp" />
     <ClCompile Include="..\..\CoreAudioEncoder.cpp" />
+    <ClCompile Include="..\..\CoreAudioResampler.cpp" />
     <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\reg.cpp" />
