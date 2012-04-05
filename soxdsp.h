@@ -25,7 +25,7 @@ public:
     int (*fir_start)(lsx_fir_t *);
     int (*fir_process)(lsx_fir_t *, const float * const *, float **,
 		       size_t *, size_t *, size_t, size_t);
-    double *(*design_lpf)(double, double, double, int, double, int *, int);
+    double *(*design_lpf)(double, double, double, int, double, int *, int, int);
     void (*free)(void*);
 };
 

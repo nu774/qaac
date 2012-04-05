@@ -109,7 +109,7 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
     if (Fp == 0 || Fc > Fn)
 	throw std::runtime_error("SoxLowpassFilter: invalid target rate");
     int num_taps = 0;
-    double *coefs = m_module.design_lpf(Fp, Fc, Fn, 0, 120.0, &num_taps, 0);
+    double *coefs = m_module.design_lpf(Fp, Fc, Fn, 0, 120.0, &num_taps, 0, -1);
     if (!coefs)
 	throw std::runtime_error("lsx_design_lpf()");
     x::shared_ptr<double> __delete_lator__(coefs, m_module.free);
