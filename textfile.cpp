@@ -48,7 +48,7 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     if (!codepage) {
 	DetectEncodingInfo encoding[5];
 	INT nscores = 5;
-	HR(mlang->DetectCodepageInIStream(0, codepage,
+	HR(mlang->DetectCodepageInIStream(0, GetACP(),
 					  stream, encoding, &nscores));
 	/*
 	 * Usually DetectCodepageInIStream() puts the most appropriate choice

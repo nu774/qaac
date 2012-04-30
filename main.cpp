@@ -1236,6 +1236,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 	if (cuepath[i] == L'/') cuepath[i] = L'\\';
     const wchar_t *p = std::wcsrchr(cuepath.c_str(), L'\\');
     if (p) cuedir = cuepath.substr(0, p - cuepath.c_str());
+    cuedir = GetFullPathNameX(cuedir);
 
     std::wstring cuetext = load_text_file(ifilename, opts.textcp);
     std::wstringbuf istream(cuetext);
