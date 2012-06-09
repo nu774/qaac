@@ -23,7 +23,7 @@ namespace wave {
 	uint16_t fmt;
 	// wFormatTag
 	{
-	    fmt = (chanmask || format.m_nchannels > 2
+	    fmt = ((chanmask && format.m_nchannels > 2)
 		   || format.m_bitsPerSample > 16)
 		    ? kFormatExtensible : kFormatPCM;
 	    put(result, fmt);
