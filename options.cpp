@@ -61,7 +61,7 @@ static wide::option long_options[] = {
     { L"date", required_argument, 0, Tag::kDate },
     { L"track", required_argument, 0, Tag::kTrack },
     { L"disk", required_argument, 0, Tag::kDisk },
-    { L"compilation", no_argument, 0, Tag::kCompilation },
+    { L"compilation", optional_argument, 0, Tag::kCompilation },
     { L"lyrics", required_argument, 0, Tag::kLyrics },
     { L"artwork", required_argument, 0, Tag::kArtwork },
     { L"artwork-size", required_argument, 0, 'atsz' },
@@ -229,10 +229,13 @@ void usage()
 "--date <string>\n"
 "--track <number[/total]>\n"
 "--disk <number[/total]>\n"
-"--compilation\n"
+"--compilation[=0|1]\n"
+"                      By default, iTunes compilation flag is not set.\n"
+"                      --compilation or --compilation=1 sets flag on.\n"
+"                      --compilation=0 is same as default.\n"
 "--lyrics <filename>\n"
 "--artwork <filename>\n"
-"--artwork-size <n>    Specify maximum width/height of artwork in pixels.\n"
+"--artwork-size <n>    Specify maximum width or height of artwork in pixels.\n"
 "                      If specified artwork (with --artwork) is larger than\n"
 "                      this, artwork is automatically resized.\n"
 "--chapter <filename>\n"
@@ -444,9 +447,20 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	}
 	else if (ch == Tag::kArtwork)
 	    this->artworks.push_back(wide::optarg);
-	else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end)
-	    this->tagopts[ch]
-		= (ch == Tag::kCompilation) ? L"1" : wide::optarg;
+	else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end) {
+	    if (ch != Tag::kCompilation)
+		this->tagopts[ch] = wide::optarg;
+	    else if (!wide::optarg)
+		this->tagopts[ch] = L"1";
+	    else {
+		int n;
+		if (std::swscanf(wide::optarg, L"%d", &n) != 1) {
+		    std::fputws(L"Invalid --compilation option arg", stderr);
+		    return false;
+		}
+		this->tagopts[ch] = wide::optarg;
+	    }
+	}
 	else if (ch == 'chap')
 	    this->chapter_file = wide::optarg;
 	else if (ch == 'mixp')
