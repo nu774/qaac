@@ -123,7 +123,7 @@ typedef struct MP4ItmfItem_s
     char*           code;     /**< four-char code identifing atom type. NULL-terminated. */
     char*           mean;     /**< may be NULL. UTF-8 meaning. NULL-terminated. */
     char*           name;     /**< may be NULL. UTF-8 name. NULL-terminated. */
-    MP4ItmfDataList dataList; /**< list of data. size is always >= 1. */
+    MP4ItmfDataList dataList; /**< list of data. can be zero length. */
 } MP4ItmfItem;
 
 /** List of items. */

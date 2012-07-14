@@ -20,7 +20,7 @@ m4_define([PRJ_version_hex],m4_format([0x%04x%02x%02x],PRJ_version_major,PRJ_ver
 
 m4_define([PRJ_version],ifelse(
     PRJ_repo_type,[stable],m4_format([%s],PRJ_repo_branch),
-    m4_format([%s-r%d],PRJ_repo_branch,PRJ_repo_rev)))
+    m4_format([%s-r%s],PRJ_repo_branch,PRJ_repo_rev)))
 
 ###############################################################################
 # initialization

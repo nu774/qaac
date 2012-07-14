@@ -160,12 +160,9 @@ MP4Atom* MP4Atom::ReadAtom(MP4File& file, MP4Atom* pParentAtom)
                       hdrSize,
                       dataSize,
                       pos + hdrSize + dataSize);
-#if 0
-        throw new Exception("invalid atom size", __FILE__, __LINE__, __FUNCTION__);
-#else
+
         // skip to end of atom
         dataSize = pParentAtom->GetEnd() - pos - hdrSize;
-#endif
     }
 
     MP4Atom* pAtom = CreateAtom(file, pParentAtom, type);

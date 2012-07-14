@@ -788,13 +788,6 @@ void MP4Track::UpdateSampleSizes(MP4SampleId sampleId, uint32_t numBytes)
     }
     // either way, we increment the number of samples.
     m_pStszSampleCountProperty->IncrementValue();
-#if 0
-    printf("track %u sample id %u bytes %u fixed %u count %u prop %u\n",
-           m_trackId, sampleId, numBytes,
-           m_pStszFixedSampleSizeProperty->GetValue(),
-           m_pStszSampleSizeProperty->GetCount(),
-           m_pStszSampleCountProperty->GetValue());
-#endif
 }
 
 uint32_t MP4Track::GetAvgBitrate()

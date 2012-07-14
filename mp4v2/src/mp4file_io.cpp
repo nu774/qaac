@@ -184,26 +184,6 @@ uint64_t MP4File::ReadUInt(uint8_t size)
     }
 }
 
-#if 0
-void MP4File::WriteUInt(uint64_t value, uint8_t size)
-{
-    switch (size) {
-    case 1:
-        WriteUInt8(value);
-    case 2:
-        WriteUInt16(value);
-    case 3:
-        WriteUInt24(value);
-    case 4:
-        WriteUInt32(value);
-    case 8:
-        WriteUInt64(value);
-    default:
-        ASSERT(false);
-    }
-}
-#endif
-
 uint8_t MP4File::ReadUInt8()
 {
     uint8_t data;

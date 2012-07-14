@@ -151,29 +151,6 @@ MP4Descriptor* MP4QosQualifierProperty::CreateDescriptor(MP4Atom &parentAtom, ui
 {
     MP4Descriptor* pDescriptor = NULL;
     switch (tag) {
-#if 0
-    case MP4MaxDelayQosTag:
-        pDescriptor = new MP4MaxDelayQosQualifier(parentAtom);
-        break;
-    case MP4PrefMaxDelayQosTag:
-        pDescriptor = new MP4PrefMaxDelayQosQualifier(parentAtom);
-        break;
-    case MP4LossProbQosTag:
-        pDescriptor = new MP4LossProbQosQualifier(parentAtom);
-        break;
-    case MP4MaxGapLossQosTag:
-        pDescriptor = new MP4MaxGapLossQosQualifier(parentAtom);
-        break;
-    case MP4MaxAUSizeQosTag:
-        pDescriptor = new MP4MaxAUSizeQosQualifier(parentAtom);
-        break;
-    case MP4AvgAUSizeQosTag:
-        pDescriptor = new MP4AvgAUSizeQosQualifier(parentAtom);
-        break;
-    case MP4MaxAURateQosTag:
-        pDescriptor = new MP4MaxAURateQosQualifier(parentAtom);
-        break;
-#else
     case MP4MaxDelayQosTag:
     case MP4PrefMaxDelayQosTag:
     case MP4LossProbQosTag:
@@ -183,7 +160,6 @@ MP4Descriptor* MP4QosQualifierProperty::CreateDescriptor(MP4Atom &parentAtom, ui
     case MP4MaxAURateQosTag:
         pDescriptor = new MP4QosDescriptorBase(parentAtom, tag);
         break;
-#endif
     default:
         pDescriptor = new MP4UnknownQosQualifier(parentAtom);
         pDescriptor->SetTag(tag);

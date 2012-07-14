@@ -28,16 +28,6 @@ namespace impl {
 ///////////////////////////////////////////////////////////////////////////////
 
 const uint8_t MP4QosDescrTag                = 0x0C;
-
-#if 0
-class MP4QosDescriptor : public MP4Descriptor {
-public:
-    MP4QosDescriptor(MP4Atom &parentAtom);
-};
-
-typedef MP4Descriptor MP4QosQualifier;
-#endif
-
 const uint8_t MP4QosTagsStart               = 0x01;
 const uint8_t MP4MaxDelayQosTag         = 0x01;
 const uint8_t MP4PrefMaxDelayQosTag     = 0x02;
@@ -48,42 +38,6 @@ const uint8_t MP4AvgAUSizeQosTag            = 0x42;
 const uint8_t MP4MaxAURateQosTag            = 0x43;
 const uint8_t MP4QosTagsEnd             = 0xFF;
 
-#if 0
-class MP4MaxDelayQosQualifier : public MP4QosQualifier {
-public:
-    MP4MaxDelayQosQualifier(MP4Atom &parentAtom);
-};
-
-class MP4PrefMaxDelayQosQualifier : public MP4QosQualifier {
-public:
-    MP4PrefMaxDelayQosQualifier(MP4Atom &parentAtom);
-};
-
-class MP4LossProbQosQualifier : public MP4QosQualifier {
-public:
-    MP4LossProbQosQualifier(MP4Atom &parentAtom);
-};
-
-class MP4MaxGapLossQosQualifier : public MP4QosQualifier {
-public:
-    MP4MaxGapLossQosQualifier(MP4Atom &parentAtom);
-};
-
-class MP4MaxAUSizeQosQualifier : public MP4QosQualifier {
-public:
-    MP4MaxAUSizeQosQualifier(MP4Atom &parentAtom);
-};
-
-class MP4AvgAUSizeQosQualifier : public MP4QosQualifier {
-public:
-    MP4AvgAUSizeQosQualifier(MP4Atom &parentAtom);
-};
-
-class MP4MaxAURateQosQualifier : public MP4QosQualifier {
-public:
-    MP4MaxAURateQosQualifier(MP4Atom &parentAtom);
-};
-#else
 class MP4QosDescriptorBase : public MP4Descriptor {
 public:
     MP4QosDescriptorBase(MP4Atom &parentAtom, uint8_t tag);
@@ -93,7 +47,6 @@ private:
     MP4QosDescriptorBase &operator= ( const MP4QosDescriptorBase &src );
 };
 
-#endif
 class MP4UnknownQosQualifier : public MP4Descriptor {
 public:
     MP4UnknownQosQualifier(MP4Atom &parentAtom);
