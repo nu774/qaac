@@ -218,6 +218,7 @@ namespace Cue {
     {
 	std::map<std::wstring, std::wstring>::const_iterator it;
 	std::map<uint32_t, std::wstring> result;
+	int discnumber = 0, totaldiscs = 0;
 	for (it = from.begin(); it != from.end(); ++it) {
 	    std::wstring key = wslower(it->first);
 	    uint32_t ikey = 0;
@@ -231,9 +232,18 @@ namespace Cue {
 		ikey = Tag::kDate;
 	    else if (key == L"songwriter")
 		ikey = Tag::kComposer;
+	    else if (key == L"discnumber")
+		discnumber = _wtoi(it->second.c_str());
+	    else if (key == L"totaldiscs")
+		totaldiscs = _wtoi(it->second.c_str());
 	    if (ikey) result[ikey] = it->second;
 	    if (ikey == Tag::kAlbumArtist)
 		result[Tag::kArtist] = it->second;
+	}
+	if (discnumber) {
+	    result[Tag::kDisk] =
+		totaldiscs ? widen(format("%d/%d", discnumber, totaldiscs))
+			   : widen(format("%d", discnumber));
 	}
 	to->swap(result);
     }
