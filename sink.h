@@ -40,6 +40,7 @@ class ADTSSink: public ISink {
     file_ptr_t m_fp;
     uint32_t m_sample_rate_index;
     uint32_t m_channel_config;
+    bool m_seekable;
 public:
     ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie);
     void writeSamples(const void *data, size_t length, size_t nsamples);

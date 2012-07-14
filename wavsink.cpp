@@ -68,7 +68,7 @@ WaveSink::WaveSink(FILE *fp,
     struct stat stb = { 0 };
     if (fstat(fileno(fp), &stb))
 	throw_crt_error("fstat()");
-    m_seekable = !!(stb.st_mode & S_IFREG);
+    m_seekable = ((stb.st_mode & S_IFMT) == S_IFREG);
     std::ostringstream os;
     wave::buildHeader(format, chanmask, os.rdbuf());
     std::string header = os.str();
@@ -91,6 +91,7 @@ WaveSink::WaveSink(FILE *fp,
     write("data", 4);
     write(&datasize, 4);
     m_data_pos = 28 + hdrsize;
+    if (!m_seekable) std::fflush(fp);
 }
 
 void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
@@ -119,6 +120,7 @@ void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 	    bp[i] ^= 0x80;
     }
     write(bp, length);
+    if (!m_seekable) std::fflush(m_file);
     m_bytes_written += length;
 }
 

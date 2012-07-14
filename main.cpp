@@ -1357,7 +1357,6 @@ int wmain1(int argc, wchar_t **argv)
     std::setlocale(LC_CTYPE, "");
     std::setbuf(stderr, 0);
 #ifdef _MSC_VER
-    _setmode(1, _O_U8TEXT);
     _setmode(2, _O_U8TEXT);
 #endif
 

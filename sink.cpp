@@ -9,6 +9,7 @@
 #include <io.h>
 #include <fcntl.h>
 #endif
+#include <sys/stat.h>
 
 static
 bool getDescripterHeader(const uint8_t **p, const uint8_t *end,
@@ -178,6 +179,10 @@ ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
     } else {
 	m_fp.reset(wfopenx(spath, L"wb"), std::fclose);
     }
+    struct stat stb = { 0 };
+    if (fstat(fileno(m_fp.get()), &stb))
+	throw_crt_error("fstat()");
+    m_seekable = ((stb.st_mode & S_IFMT) == S_IFREG);
     std::vector<uint8_t> config;
     parseMagicCookieAAC(cookie, &config);
     unsigned rate;
@@ -211,4 +216,5 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
     std::fwrite(data, 1, length, m_fp.get());
     if (ferror(m_fp.get()))
 	throw_crt_error("fwrite()");
+    if (!m_seekable) std::fflush(m_fp.get());
 }
