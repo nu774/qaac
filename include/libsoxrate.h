@@ -116,7 +116,6 @@ double * lsx_design_lpf(
     double Fp,      /* End of pass-band; ~= 0.01dB point */
     double Fc,      /* Start of stop-band */
     double Fn,      /* Nyquist freq; e.g. 0.5, 1, PI */
-    int allow_aliasing,
     double att,     /* Stop-band attenuation in dB */
     int * num_taps, /* (Single phase.)  0: value will be estimated */
     int k,          /* Number of phases; 0 for single-phase */
