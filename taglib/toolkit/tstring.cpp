@@ -26,8 +26,9 @@
 #include "tstring.h"
 #include "unicode.h"
 #include "tdebug.h"
+#include "tstringlist.h"
 
-#include <ostream>
+#include <iostream>
 
 #include <string.h>
 
@@ -232,8 +233,9 @@ std::string String::to8Bit(bool unicode) const
                                 &target, targetBuffer + outputBufferSize,
                                 Unicode::lenientConversion);
 
-  if(result != Unicode::conversionOK)
+  if(result != Unicode::conversionOK) {
     debug("String::to8Bit() - Unicode conversion error.");
+  }
 
   int newSize = target - targetBuffer;
   s.resize(newSize);
@@ -258,7 +260,16 @@ const char *String::toCString(bool unicode) const
 
   std::string buffer = to8Bit(unicode);
   d->CString = new char[buffer.size() + 1];
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1400)  // VC++2005 or later
+
+  strcpy_s(d->CString, buffer.size() + 1, buffer.c_str());
+
+#else
+
   strcpy(d->CString, buffer.c_str());
+
+#endif                                          
 
   return d->CString;
 }
@@ -304,6 +315,26 @@ int String::rfind(const String &s, int offset) const
     return -1;
 }
 
+StringList String::split(const String &separator) const
+{
+  StringList list;
+  for(int index = 0;;)
+  {
+    int sep = find(separator, index);
+    if(sep < 0)
+    {
+      list.append(substr(index, size() - index));
+      break;
+    }
+    else
+    {
+      list.append(substr(index, sep - index));
+      index = sep + separator.size();
+    }
+  }
+  return list;
+}
+
 bool String::startsWith(const String &s) const
 {
   if(s.length() > length())
@@ -314,9 +345,6 @@ bool String::startsWith(const String &s) const
 
 String String::substr(uint position, uint n) const
 {
-  if(n > position + d->data.size())
-    n = d->data.size() - position;
-
   String s;
   s.d->data = d->data.substr(position, n);
   return s;
@@ -546,6 +574,11 @@ bool String::operator==(const String &s) const
   return d == s.d || d->data == s.d->data;
 }
 
+bool String::operator!=(const String &s) const
+{
+  return !operator==(s);
+}
+
 String &String::operator+=(const String &s)
 {
   detach();
@@ -753,9 +786,9 @@ void String::prepare(Type t)
                                   &target, targetBuffer + bufferSize,
                                   Unicode::lenientConversion);
 
-    if(result != Unicode::conversionOK)
+    if(result != Unicode::conversionOK) {
       debug("String::prepare() - Unicode conversion error.");
-
+    }
 
     int newSize = target != targetBuffer ? target - targetBuffer - 1 : 0;
     d->data.resize(newSize);

@@ -62,6 +62,7 @@ namespace TagLib {
       TAGLIB_IGNORE_MISSING_DESTRUCTOR
     public:
       // BIC: Add virtual destructor.
+      StringHandler();
 
       /*!
        * Decode a string from \a data.  The default implementation assumes that
@@ -153,6 +154,11 @@ namespace TagLib {
       /*!
        * Sets the string handler that decides how the ID3v1 data will be
        * converted to and from binary data.
+       * If the parameter \a handler is null, the previous handler is
+       * released and default ISO-8859-1 handler is restored.
+       *
+       * \note The caller is responsible for deleting the previous handler
+       * as needed after it is released.
        *
        * \see StringHandler
        */

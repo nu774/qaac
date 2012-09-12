@@ -31,7 +31,7 @@
 #include "tbytevector.h"
 
 #include <string>
-#include <ostream>
+#include <iostream>
 
 /*!
  * \relates TagLib::String
@@ -55,6 +55,8 @@
 #define TStringToQString(s) QString::fromUtf8(s.toCString(true))
 
 namespace TagLib {
+
+  class StringList;
 
   //! A \e wide string class suitable for unicode.
 
@@ -240,6 +242,11 @@ namespace TagLib {
     int rfind(const String &s, int offset = -1) const;
 
     /*!
+     * Splits the string on each occurrence of \a separator.
+     */
+    StringList split(const String &separator = " ") const;
+
+    /*!
      * Returns true if the strings starts with the substring \a s.
      */
     bool startsWith(const String &s) const;
@@ -349,6 +356,12 @@ namespace TagLib {
      * returns true if the strings match.
      */
     bool operator==(const String &s) const;
+
+    /*!
+     * Compares each character of the String with each character of \a s and
+     * returns false if the strings match.
+     */
+    bool operator!=(const String &s) const;
 
     /*!
      * Appends \a s to the end of the String.

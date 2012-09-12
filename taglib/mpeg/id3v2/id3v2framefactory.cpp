@@ -23,7 +23,7 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#ifndef HAVE_ZLIB
+#ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
@@ -44,6 +44,7 @@
 #include "frames/unsynchronizedlyricsframe.h"
 #include "frames/popularimeterframe.h"
 #include "frames/privateframe.h"
+#include "frames/ownershipframe.h"
 
 using namespace TagLib;
 using namespace ID3v2;
@@ -65,7 +66,7 @@ public:
   }
 };
 
-FrameFactory *FrameFactory::factory = 0;
+FrameFactory FrameFactory::factory;
 
 ////////////////////////////////////////////////////////////////////////////////
 // public members
@@ -73,9 +74,7 @@ FrameFactory *FrameFactory::factory = 0;
 
 FrameFactory *FrameFactory::instance()
 {
-  if(!factory)
-    factory = new FrameFactory;
-  return factory;
+  return &factory;
 }
 
 Frame *FrameFactory::createFrame(const ByteVector &data, bool synchSafeInts) const
@@ -109,7 +108,7 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
   }
 
   for(ByteVector::ConstIterator it = frameID.begin(); it != frameID.end(); it++) {
-    if( (*it < 'A' || *it > 'Z') && (*it < '1' || *it > '9') ) {
+    if( (*it < 'A' || *it > 'Z') && (*it < '0' || *it > '9') ) {
       delete header;
       return 0;
     }
@@ -185,13 +184,13 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
 
   // ID3v2.2 Attached Picture
 
-	if(frameID == "PIC") {
+  if(frameID == "PIC") {
     AttachedPictureFrame *f = new AttachedPictureFrameV22(data, header);
     d->setTextEncoding(f);
     return f;
   }
 
-	// Relative Volume Adjustment (frames 4.11)
+  // Relative Volume Adjustment (frames 4.11)
 
   if(frameID == "RVA2")
     return new RelativeVolumeFrame(data, header);
@@ -240,6 +239,14 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
 
   if(frameID == "PRIV")
     return new PrivateFrame(data, header);
+  
+  // Ownership (frames 4.22)
+  
+  if(frameID == "OWNE") {
+    OwnershipFrame *f = new OwnershipFrame(data, header);
+    d->setTextEncoding(f);
+    return f;
+  }
 
   return new UnknownFrame(data, header);
 }
@@ -310,6 +317,7 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
     convertFrame("TBP", "TBPM", header);
     convertFrame("TCM", "TCOM", header);
     convertFrame("TCO", "TCON", header);
+    convertFrame("TCP", "TCMP", header);
     convertFrame("TCR", "TCOP", header);
     convertFrame("TDY", "TDLY", header);
     convertFrame("TEN", "TENC", header);
@@ -332,7 +340,12 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
     convertFrame("TRC", "TSRC", header);
     convertFrame("TRD", "TDRC", header);
     convertFrame("TRK", "TRCK", header);
+    convertFrame("TS2", "TSO2", header);
+    convertFrame("TSA", "TSOA", header);
+    convertFrame("TSC", "TSOC", header);
+    convertFrame("TSP", "TSOP", header);
     convertFrame("TSS", "TSSE", header);
+    convertFrame("TST", "TSOT", header);
     convertFrame("TT1", "TIT1", header);
     convertFrame("TT2", "TIT2", header);
     convertFrame("TT3", "TIT3", header);
@@ -368,6 +381,7 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
 
     convertFrame("TORY", "TDOR", header);
     convertFrame("TYER", "TDRC", header);
+    convertFrame("IPLS", "TIPL", header);
 
     break;
   }

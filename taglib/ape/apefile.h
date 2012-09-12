@@ -92,6 +92,17 @@ namespace TagLib {
            Properties::ReadStyle propertiesStyle = Properties::Average);
 
       /*!
+       * Contructs an WavPack file from \a file.  If \a readProperties is true the
+       * file's audio properties will also be read using \a propertiesStyle.  If
+       * false, \a propertiesStyle is ignored.
+       *
+       * \note TagLib will *not* take ownership of the stream, the caller is
+       * responsible for deleting it after the File object.
+       */
+      File(IOStream *stream, bool readProperties = true,
+           Properties::ReadStyle propertiesStyle = Properties::Average);
+
+      /*!
        * Destroys this instance of the File.
        */
       virtual ~File();
@@ -102,6 +113,25 @@ namespace TagLib {
        */
       virtual TagLib::Tag *tag() const;
 
+      /*!
+       * Implements the unified property interface -- export function.
+       * If the file contains both an APE and an ID3v1 tag, only APE
+       * will be converted to the PropertyMap.
+       */
+      PropertyMap properties() const;
+
+      /*!
+       * Removes unsupported properties. Forwards to the actual Tag's
+       * removeUnsupportedProperties() function.
+       */
+      void removeUnsupportedProperties(const StringList &properties);
+
+      /*!
+       * Implements the unified property interface -- import function.
+       * As for the export, only one tag is taken into account. If the file
+       * has no tag at all, APE will be created.
+       */
+      PropertyMap setProperties(const PropertyMap &);
       /*!
        * Returns the APE::Properties for this file.  If no audio properties
        * were read then this will return a null pointer.

@@ -10,7 +10,8 @@ svn-r485
 
 Files under taglib:
 These are part of TagLib (http://developer.kde.org/~wheeler/taglib.html),
-version 1.7.0
+(tfile.cpp is modified to remove unwanted dependencies)
+version 1.8.0
 
 utf8_codecvt_facet.[ch]pp:
 These are part of Boost (http://www.boost.org/),

@@ -30,6 +30,7 @@
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\attachedpictureframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\commentsframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\generalencapsulatedobjectframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\ownershipframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\popularimeterframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\privateframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\relativevolumeframe.cpp" />
@@ -54,6 +55,9 @@
     <ClCompile Include="..\..\taglib\toolkit\tbytevectorlist.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tdebug.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tfile.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tfilestream.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tiostream.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tpropertymap.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tstring.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tstringlist.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\unicode.cpp" />

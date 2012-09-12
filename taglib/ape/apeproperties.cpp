@@ -46,6 +46,7 @@ public:
     channels(0),
     version(0),
     bitsPerSample(0),
+    sampleFrames(0),
     file(file),
     streamLength(streamLength) {}
 
@@ -55,6 +56,7 @@ public:
   int channels;
   int version;
   int bitsPerSample;
+  uint sampleFrames;
   File *file;
   long streamLength;
 };
@@ -104,6 +106,11 @@ int APE::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+TagLib::uint APE::Properties::sampleFrames() const
+{
+  return d->sampleFrames;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // private members
 ////////////////////////////////////////////////////////////////////////////////
@@ -137,7 +144,7 @@ long APE::Properties::findDescriptor()
   long ID3v2OriginalSize = 0;
   bool hasID3v2 = false;
   if(ID3v2Location >= 0) {
-    ID3v2::Tag tag(d->file, ID3v2Location, 0);
+    ID3v2::Tag tag(d->file, ID3v2Location);
     ID3v2OriginalSize = tag.header()->completeTagSize();
     if(tag.header()->tagSize() > 0)
       hasID3v2 = true;
@@ -192,8 +199,8 @@ void APE::Properties::analyzeCurrent()
   uint totalFrames = header.mid(12, 4).toUInt(false);
   uint blocksPerFrame = header.mid(4, 4).toUInt(false);
   uint finalFrameBlocks = header.mid(8, 4).toUInt(false);
-  uint totalBlocks = totalFrames > 0 ? (totalFrames -  1) * blocksPerFrame + finalFrameBlocks : 0;
-  d->length = totalBlocks / d->sampleRate;
+  d->sampleFrames = totalFrames > 0 ? (totalFrames -  1) * blocksPerFrame + finalFrameBlocks : 0;
+  d->length = d->sampleRate > 0 ? d->sampleFrames / d->sampleRate : 0;
   d->bitrate = d->length > 0 ? ((d->streamLength * 8L) / d->length) / 1000 : 0;
 }
 
