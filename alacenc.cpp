@@ -55,10 +55,7 @@ void ALACEncoderX::getMagicCookie(std::vector<uint8_t> *cookie)
 {
     uint32_t size =
 	m_encoder->GetMagicCookieSize(m_output_desc.asbd.mChannelsPerFrame);
-    std::vector<uint8_t> vec(size + 24);
-    static const char *const hd = "\x00\x00\x00\x0c" "frmaalac"
-	"\x00\x00\x00\x24" "alac" "\x00\x00\x00\x00";
-    std::memcpy(&vec[0], hd, 24);
-    m_encoder->GetMagicCookie(&vec[24], &size);
+    std::vector<uint8_t> vec(size);
+    m_encoder->GetMagicCookie(&vec[0], &size);
     cookie->swap(vec);
 }

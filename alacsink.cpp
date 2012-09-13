@@ -9,7 +9,13 @@ void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
 	std::vector<uint8_t> *alac,
 	std::vector<uint8_t> *chan)
 {
-    MemoryReader reader(&cookie[0], cookie.size());
+    std::string s(cookie.begin(), cookie.end());
+    if (s.find("frmaalac") == std::string::npos) {
+	static const char *const hd = "\x00\x00\x00\x0c" "frmaalac"
+	    "\x00\x00\x00\x24" "alac" "\x00\x00\x00\x00";
+	s = std::string(hd, hd + 24) + s;
+    }
+    MemoryReader reader(s.c_str(), s.size());
     uint32_t chunk_size, chunk_name;
 
     while (reader.read32be(&chunk_size)) {
