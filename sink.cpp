@@ -110,7 +110,7 @@ using mp4v2::impl::MP4Atom;
 MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
 	: m_filename(path), m_closed(false)
 {
-    static const char * const compatibleBrands[] = { "M4A ", "mp42" };
+    static const char * const compatibleBrands[] = { "M4A ", "mp42", "isom" };
     void (MP4FileX::*create)(const char *, uint32_t, int, int,
 	    char*, uint32_t, char **, uint32_t);
     if (temp) m_filename = L"qaac.int";
