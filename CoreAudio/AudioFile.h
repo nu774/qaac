@@ -378,6 +378,14 @@ OSStatus AudioFileSetProperty (
     const void          *inPropertyData
 );
 
+OSStatus AudioFileSetUserData (
+   AudioFileID inAudioFile,
+   UInt32      inUserDataID,
+   UInt32      inIndex,
+   UInt32      inUserDataSize,
+   const void  *inUserData
+);
+
 OSStatus AudioFileWriteBytes (
    AudioFileID inAudioFile,
    Boolean     inUseCache,

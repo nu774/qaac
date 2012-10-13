@@ -9,6 +9,83 @@
 #include "utf8_codecvt_facet.hpp"
 #include "itunetags.h"
 
+typedef x::shared_ptr<const __CFDictionary> CFDictionaryPtr;
+
+namespace caf {
+    inline void *load_cf_constant(const char *name)
+    {
+	HMODULE cf = GetModuleHandleA("CoreFoundation.dll");
+	if (!cf)
+	    throw_win32_error("CoreFouncation.dll", GetLastError());
+	return GetProcAddress(cf, name);
+    }
+    uint64_t next_chunk(InputStream *stream, char *name)
+    {
+	uint64_t size;
+	if (stream->read(name, 4) != 4 || stream->read(&size, 8) != 8)
+	    return 0;
+	return b2host64(size);
+    }
+    bool get_info(InputStream *stream, std::vector<char> *info)
+    {
+	int64_t pos = stream->tell();
+	stream->seek(8, SEEK_SET);
+	uint64_t chunk_size;
+	char chunk_name[4];
+	bool found = false;
+	while ((chunk_size = next_chunk(stream, chunk_name)) > 0) {
+	    if (std::memcmp(chunk_name, "info", 4)) {
+		if (stream->seek(chunk_size, SEEK_CUR) < 0)
+		    break;
+	    } else {
+		std::vector<char> buf(chunk_size);
+		if (stream->read(&buf[0], buf.size()) != buf.size())
+		    break;
+		info->swap(buf);
+		found = true;
+		break;
+	    }
+	}
+	stream->seek(pos, SEEK_SET);
+	return found;
+    }
+    bool get_info_dictionary(InputStream *stream, CFDictionaryPtr *dict)
+    {
+	std::vector<char> info;
+	if (!get_info(stream, &info) || info.size() < 4)
+	    return false;
+	// inside of info tag is delimited with NUL char.
+	std::vector<std::string> tokens;
+	{
+	    const char *infop = &info[0] + 4;
+	    const char *endp = &info[0] + info.size();
+	    do {
+		tokens.push_back(std::string(infop));
+		infop += tokens.back().size() + 1;
+	    } while (infop < endp);
+	}
+	// get some constants manually
+	const CFDictionaryKeyCallBacks *kcb
+	    = static_cast<const CFDictionaryKeyCallBacks *>(
+		load_cf_constant("kCFTypeDictionaryKeyCallBacks"));
+	const CFDictionaryValueCallBacks *vcb
+	    = static_cast<const CFDictionaryValueCallBacks *>(
+		load_cf_constant("kCFTypeDictionaryValueCallBacks"));
+
+	CFMutableDictionaryRef dictref =
+	    CFDictionaryCreateMutable(0, tokens.size() >> 1, kcb, vcb);
+	utf8_codecvt_facet u8codec;
+	CFDictionaryPtr dictptr(dictref, CFRelease);
+	for (size_t i = 0; i < tokens.size() >> 1; ++i) {
+	    CFStringPtr key = W2CF(m2w(tokens[2 * i], u8codec));
+	    CFStringPtr value = W2CF(m2w(tokens[2 * i + 1], u8codec));
+	    CFDictionarySetValue(dictref, key.get(), value.get());
+	}
+	dict->swap(dictptr);
+	return true;
+    }
+}
+
 namespace audiofile {
     const int ioErr = -36;
 
@@ -84,12 +161,18 @@ namespace audiofile {
 	}
     }
 
-    void fetchTags(AudioFileX &af, tag_t *result)
+    void fetchTags(AudioFileX &af, InputStream *stream, tag_t *result)
     {
-	CFDictionaryRef dict = af.getInfoDictionary();
-	x::shared_ptr<const __CFDictionary> dictPtr(dict, CFRelease);
+	CFDictionaryPtr dict;
+	if (af.getFileFormat() == 'caff')
+	    caf::get_info_dictionary(stream, &dict);
+	else {
+	    CFDictionaryRef dictRef = af.getInfoDictionary();
+	    CFDictionaryPtr dictPtr(dictRef, CFRelease);
+	    dict.swap(dictPtr);
+	}
 	tag_t tags;
-	CFDictionaryApplyFunction(dict, fetchTagDictCallback, &tags);
+	CFDictionaryApplyFunction(dict.get(), fetchTagDictCallback, &tags);
 	result->swap(tags);
     }
 }
@@ -131,7 +214,7 @@ AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
 	if (fcc == 'AIFF')
 	    ID3::fetchAiffID3Tags(m_stream->name(), &m_tags);
 	else
-	    audiofile::fetchTags(m_af, &m_tags);
+	    audiofile::fetchTags(m_af, m_stream.get(), &m_tags);
     } catch (...) {}
 }
 
@@ -184,7 +267,7 @@ ExtAFSource::ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
 	mp4a::fetchTags(mp4file, &m_tags);
     } else {
 	try {
-	    audiofile::fetchTags(m_af, &m_tags);
+	    audiofile::fetchTags(m_af, m_stream.get(), &m_tags);
 	} catch (...) {}
     }
 }

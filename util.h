@@ -280,6 +280,11 @@ inline uint32_t b2host32(uint32_t n)
 {
     return (b2host16(n & 0xffff) << 16) | b2host16(n >> 16);
 }
+inline uint64_t b2host64(uint64_t n)
+{
+    return (static_cast<uint64_t>(b2host32(n & 0xffffffff)) << 32) |
+	    b2host32(n >> 32);
+}
 
 void bswap16buffer(uint8_t *buffer, size_t size);
 
