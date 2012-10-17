@@ -10,15 +10,46 @@
 #include "util.h"
 #include "chanmap.h"
 
+class CoreAudioException: public std::runtime_error
+{
+    long m_error_code;
+public:
+    CoreAudioException(const std::string &s, long code)
+	: std::runtime_error(s)
+    {
+	m_error_code = code;
+    }
+    long code() const { return m_error_code; }
+};
+
 #define CHECKCA(expr) \
     do { \
 	long err = expr; \
 	if (err) { \
+	    std::string msg = make_coreaudio_error(err, #expr); \
 	    std::stringstream ss; \
 	    ss << err << ": " << #expr; \
-	    throw std::runtime_error(ss.str()); \
+	    throw CoreAudioException(msg, err); \
 	} \
     } while (0)
+
+inline std::string make_coreaudio_error(long code, const char *s)
+{
+    std::stringstream ss;
+    int shift;
+    for (shift = 0; shift < 32; shift += 8)
+	if (!isprint((code >> shift) & 0xff))
+	    break;
+    if (shift == 32)
+	ss << s << ": "
+	   << static_cast<char>(code >> 24)
+	   << static_cast<char>((code >> 16) & 0xff)
+	   << static_cast<char>((code >> 8) & 0xff)
+	   << static_cast<char>(code & 0xff);
+    else
+	ss << s << ": " << code;
+    return ss.str();
+}
 
 inline std::wstring CF2W(CFStringRef str)
 {
