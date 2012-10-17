@@ -105,7 +105,7 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
 {
     m_format = SampleFormat("F32LE", format.m_nchannels, format.m_rate);
     double Fn = static_cast<double>(format.m_rate) / 2.0;
-    double Fc = Fp + format.m_rate * 0.005;
+    double Fc = Fp + format.m_rate * 0.025;
     if (Fp == 0 || Fc > Fn)
 	throw std::runtime_error("SoxLowpassFilter: invalid target rate");
     int num_taps = 0;
