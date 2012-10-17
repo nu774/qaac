@@ -172,8 +172,10 @@ namespace audiofile {
 	    dict.swap(dictPtr);
 	}
 	tag_t tags;
-	CFDictionaryApplyFunction(dict.get(), fetchTagDictCallback, &tags);
-	result->swap(tags);
+	if (dict.get()) {
+	    CFDictionaryApplyFunction(dict.get(), fetchTagDictCallback, &tags);
+	    result->swap(tags);
+	}
     }
 }
 
