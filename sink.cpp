@@ -144,7 +144,7 @@ void MP4SinkBase::close()
 }
 
 MP4Sink::MP4Sink(const std::wstring &path,
-	const std::vector<uint8_t> &cookie, bool temp)
+	const std::vector<uint8_t> &cookie, uint32_t fcc, bool temp)
 	: MP4SinkBase(path, temp)
 {
     std::vector<uint8_t> config;
@@ -162,7 +162,13 @@ MP4Sink::MP4Sink(const std::wstring &path,
 	m_mp4file.SetIntegerProperty(
 		"moov.trak.mdia.minf.stbl.stsd.mp4a.channels",
 		chconfig == 1 ? 1 : 2);
-
+	/* Looks like iTunes sets upsampled scale here */
+	if (fcc == 'aach') { 
+	    uint64_t scale = static_cast<uint64_t>(rate) << 17;
+	    m_mp4file.SetIntegerProperty(
+		"moov.trak.mdia.minf.stbl.stsd.mp4a.timeScale",
+		scale);
+	}
 	m_mp4file.SetTrackESConfiguration(
 		m_track_id, &config[0], config.size());
     } catch (mp4v2::impl::Exception *e) {

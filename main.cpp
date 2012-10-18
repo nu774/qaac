@@ -920,7 +920,8 @@ x::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     else if (opts.isALAC())
 	sink = new ALACSink(ofilename, cookie, !opts.no_optimize);
     else if (opts.isAAC())
-	sink = new MP4Sink(ofilename, cookie, !opts.no_optimize);
+	sink = new MP4Sink(ofilename, cookie, opts.output_format,
+			   !opts.no_optimize);
     return x::shared_ptr<ISink>(sink);
 }
 
