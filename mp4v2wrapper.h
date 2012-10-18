@@ -66,7 +66,7 @@ public:
     bool SetMetadataFreeForm(const char *name, const char *mean,
 	      const uint8_t* pValue, uint32_t valueSize,
 	      mp4v2::impl::itmf::BasicType typeCode
-	       =mp4v2::impl::itmf::BT_IMPLICIT);
+	       =mp4v2::impl::itmf::BT_UTF8);
 protected:
     mp4v2::impl::MP4DataAtom *CreateMetadataAtom(const char *name,
 	    mp4v2::impl::itmf::BasicType typeCode);
