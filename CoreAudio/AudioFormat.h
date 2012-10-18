@@ -51,6 +51,13 @@ enum {
 
 typedef UInt32 AudioFormatPropertyID;
 
+struct AudioFormatListItem
+{
+    AudioStreamBasicDescription		mASBD;
+    AudioChannelLayoutTag		mChannelLayoutTag;
+};
+typedef struct AudioFormatListItem AudioFormatListItem;
+
 OSStatus AudioFormatGetProperty (
    AudioFormatPropertyID inPropertyID,
    UInt32                inSpecifierSize,
