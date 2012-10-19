@@ -815,8 +815,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	}
     } else if (opts.output_format == 'alac') {
 	const SampleFormat &sf = srcx->getSampleFormat();
-	uint32_t bits = sf.m_bitsPerSample;
-	if (sf.m_type != SampleFormat::kIsSignedInteger) {
+	if (sf.m_type == SampleFormat::kIsFloat) {
 	    srcx.reset(new IntegerSource(srcx, 16));
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Convert to %hs\n", srcx->getSampleFormat().str().c_str());
@@ -830,6 +829,20 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	    LOG(L"Enable threading\n");
     }
     BuildASBDFromSampleFormat(srcx->getSampleFormat(), &iasbd);
+    if (opts.isALAC()) {
+	switch (iasbd.mBitsPerChannel) {
+	case 16:
+	    oasbd.mFormatFlags = 1; break;
+	case 20:
+	    oasbd.mFormatFlags = 2; break;
+	case 24:
+	    oasbd.mFormatFlags = 3; break;
+	case 32:
+	    oasbd.mFormatFlags = 4; break;
+	default:
+	    throw std::runtime_error("ALAC: Not supported bit depth");
+	}
+    }
     if (wChanmask) *wChanmask = wavChanmask;
     if (aLayout) *aLayout = aacLayout;
     if (inputDesc) *inputDesc = iasbd;

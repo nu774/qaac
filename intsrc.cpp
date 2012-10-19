@@ -14,8 +14,8 @@ size_t IntegerSource::readSamples(void *buffer, size_t nsamples)
 	return 0;
     float *fp = &m_fbuffer[0];
     size_t count = nsamples * m_format.m_nchannels;
-    switch (m_format.m_bitsPerSample) {
-    case 16:
+    switch (m_format.bytesPerChannel()) {
+    case 2:
 	{
 	    int16_t *dst = static_cast<int16_t*>(buffer);
 	    for (size_t i = 0; i < count; ++i) {
@@ -26,7 +26,7 @@ size_t IntegerSource::readSamples(void *buffer, size_t nsamples)
 	    }
 	}
 	break;
-    case 24:
+    case 3:
 	{
 	    uint8_t *dst = static_cast<uint8_t*>(buffer);
 	    for (size_t i = 0; i < count; ++i) {
@@ -38,7 +38,7 @@ size_t IntegerSource::readSamples(void *buffer, size_t nsamples)
 	    }
 	}
 	break;
-    case 32:
+    case 4:
 	{
 	    int32_t *dst = static_cast<int32_t*>(buffer);
 	    for (size_t i = 0; i < count; ++i) {

@@ -20,7 +20,6 @@ namespace flac {
     {
 	want(si.sample_rate > 0);
 	want(si.channels > 0 && si.channels < 9);
-	want((si.bits_per_sample & 7) == 0);
 	want(si.bits_per_sample >= 8 && si.bits_per_sample <= 32);
     }
 }
@@ -86,11 +85,16 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
     if (!nsamples) return 0;
     MemorySink sink(buffer);
     size_t processed = 0;
+    uint32_t shifts = (8 - m_format.m_bitsPerSample) % 8;
     while (processed < nsamples) {
 	while (m_buffer[0].size() && processed < nsamples) {
 	    for (size_t i = 0; i < m_buffer.size(); ++i) {
-		sink.put(m_buffer[i].front());
+		int value = m_buffer[i].front();
 		m_buffer[i].pop_front();
+		// FLAC samples are aligned to low.
+		if (shifts)
+		    value <<= shifts;
+		sink.put(value);
 	    }
 	    ++processed;
 	}
@@ -109,11 +113,12 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
 
 size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 {
-    if (m_format.m_bitsPerSample == 8)
+    uint32_t bytesPerChannel = m_format.bytesPerChannel();
+    if (bytesPerChannel == 1)
 	return readSamplesT<MemorySink8>(buffer, nsamples);
-    else if (m_format.m_bitsPerSample == 16)
+    else if (bytesPerChannel == 2)
 	return readSamplesT<MemorySink16LE>(buffer, nsamples);
-    else if (m_format.m_bitsPerSample == 24)
+    else if (bytesPerChannel == 3)
 	return readSamplesT<MemorySink24LE>(buffer, nsamples);
     else
 	return readSamplesT<MemorySink32LE>(buffer, nsamples);

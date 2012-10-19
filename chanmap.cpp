@@ -342,8 +342,8 @@ ChannelMapper::ChannelMapper(const x::shared_ptr<ISource> &source,
 size_t ChannelMapper::readSamples(void *buffer, size_t nsamples)
 {
     const SampleFormat &sfmt = source()->getSampleFormat();
-    size_t width = sfmt.m_bitsPerSample >> 3;
     size_t framelen = sfmt.bytesPerFrame();
+    size_t width = sfmt.bytesPerChannel();
     std::vector<char> tmp_buffer(framelen);
     size_t rc = source()->readSamples(buffer, nsamples);
     char *bp = reinterpret_cast<char*>(buffer);

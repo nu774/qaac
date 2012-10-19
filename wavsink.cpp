@@ -39,7 +39,7 @@ namespace wave {
 	// nBlockAlign
 	put(result, bpf);
 	// wBitsPerSample
-	put(result, static_cast<uint16_t>(format.m_bitsPerSample));
+	put(result, static_cast<uint16_t>(format.bytesPerChannel() << 3));
 
 	// cbSize
 	if (fmt != kFormatPCM) {
@@ -102,11 +102,11 @@ void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 	buf.resize(length);
 	bp = &buf[0];
 	std::memcpy(bp, data, length);
-	switch (m_format.m_bitsPerSample) {
-	case 16: bswap16buffer(bp, length); break;
-	case 24: bswap24buffer(bp, length); break;
-	case 32: bswap32buffer(bp, length); break;
-	case 64: bswap64buffer(bp, length); break;
+	switch (m_format.bytesPerChannel()) {
+	case 2: bswap16buffer(bp, length); break;
+	case 3: bswap24buffer(bp, length); break;
+	case 4: bswap32buffer(bp, length); break;
+	case 8: bswap64buffer(bp, length); break;
 	}
     }
     if (m_format.m_bitsPerSample == 8 &&

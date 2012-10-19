@@ -15,9 +15,13 @@ struct SampleFormat {
 	m_type(0), m_endian(0), m_bitsPerSample(16), m_nchannels(0), m_rate(0)
     {}
     SampleFormat(const char *spec, unsigned nchannels, unsigned rate);
+    uint32_t bytesPerChannel() const
+    {
+	return (m_bitsPerSample + 7) >> 3;
+    }
     uint32_t bytesPerFrame() const
     {
-	return m_nchannels * m_bitsPerSample >> 3;
+	return m_nchannels * bytesPerChannel();
     }
     bool operator==(const SampleFormat &rhs) const
     {

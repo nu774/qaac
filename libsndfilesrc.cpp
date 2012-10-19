@@ -130,13 +130,14 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
     if (!nsamples) return 0;
     nsamples *= m_format.m_nchannels;
     sf_count_t rc;
-    if (m_format.m_bitsPerSample == 8)
+    uint32_t bpc = m_format.bytesPerChannel();
+    if (bpc == 1)
 	rc = readSamples8(buffer, nsamples);
-    else if (m_format.m_bitsPerSample == 16)
+    else if (bpc == 2)
 	rc = SF_READ(short, m_handle.get(), buffer, nsamples);
-    else if (m_format.m_bitsPerSample == 24)
+    else if (bpc == 3)
 	rc = readSamples24(buffer, nsamples);
-    else if (m_format.m_bitsPerSample == 64)
+    else if (bpc == 8)
 	rc = SF_READ(double, m_handle.get(), buffer, nsamples);
     else if (m_format.m_type == SampleFormat::kIsSignedInteger)
 	rc = SF_READ(int, m_handle.get(), buffer, nsamples);

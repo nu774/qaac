@@ -181,7 +181,9 @@ void BuildASBDFromSampleFormat(const SampleFormat &format,
 {
     AudioStreamBasicDescription desc = { 0 };
     desc.mFormatID = 'lpcm';
-    desc.mFormatFlags = kAudioFormatFlagIsPacked;
+    desc.mFormatFlags =
+	(format.m_bitsPerSample & 7) ? kAudioFormatFlagIsAlignedHigh
+				     : kAudioFormatFlagIsPacked;
     if (format.m_type == SampleFormat::kIsSignedInteger)
 	desc.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
     else if (format.m_type == SampleFormat::kIsFloat)
@@ -192,9 +194,7 @@ void BuildASBDFromSampleFormat(const SampleFormat &format,
     desc.mChannelsPerFrame = format.m_nchannels;
     desc.mSampleRate = format.m_rate;
     desc.mBitsPerChannel = format.m_bitsPerSample;
-    desc.mBytesPerPacket
-	= desc.mBytesPerFrame
-	= format.m_nchannels * format.m_bitsPerSample >> 3;
+    desc.mBytesPerPacket = desc.mBytesPerFrame = format.bytesPerFrame();
     std::memcpy(result, &desc, sizeof desc);
 }
 

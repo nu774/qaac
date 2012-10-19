@@ -79,7 +79,11 @@ void WaveSource::fetchWaveFormat()
 	check_eof(read16le(&x));
 	// wValidBitsPerSample
 	check_eof(read16le(&x));
-	wave::want(x == m_format.m_bitsPerSample);
+	if (x) {
+	    wave::want(x <= m_format.m_bitsPerSample);
+	    if (x & 0x7)
+		m_format.m_bitsPerSample = x;
+	}
 	// dwChannelMask
 	check_eof(read32le(&y));
 	if (y > 0 && bitcount(y) >= m_format.m_nchannels)

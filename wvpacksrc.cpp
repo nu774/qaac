@@ -139,13 +139,16 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
     std::vector<int32_t> vbuf(nsamples * m_format.m_nchannels);
     MemorySink sink(buffer);
     size_t total = 0, rc;
+    const int32_t *bp = &vbuf[0];
     while (total < nsamples) {
 	rc = m_module.UnpackSamples(m_wpc.get(), &vbuf[0], nsamples - total);
 	if (rc <= 0)
 	    break;
 	size_t nblk = rc * m_format.m_nchannels;
-	for (size_t i = 0; i < nblk; ++i)
-	    sink.put(vbuf[i]);
+	for (size_t i = 0; i < nblk; ++i) {
+	    int32_t value = bp[i];
+	    sink.put(value);
+	}
 	total += rc;
     }
     addSamplesRead(total);
@@ -154,11 +157,12 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 
 size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
 {
-    if (m_format.m_bitsPerSample == 8)
+    uint32_t bpc = m_format.bytesPerChannel();
+    if (bpc == 1)
 	return readSamplesT<MemorySink8>(buffer, nsamples);
-    else if (m_format.m_bitsPerSample == 16)
+    else if (bpc == 2)
 	return readSamplesT<MemorySink16LE>(buffer, nsamples);
-    else if (m_format.m_bitsPerSample == 24)
+    else if (bpc == 3)
 	return readSamplesT<MemorySink24LE>(buffer, nsamples);
     else
 	return readSamplesT<MemorySink32LE>(buffer, nsamples);

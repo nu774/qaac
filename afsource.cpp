@@ -205,6 +205,16 @@ AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
     fourcc fcc(m_af.getFileFormat());
     AudioStreamBasicDescription asbd;
     m_af.getDataFormat(&asbd);
+    if ((asbd.mBitsPerChannel & 0x7) == 0) {
+	if ((asbd.mBitsPerChannel >> 3) * asbd.mChannelsPerFrame !=
+	    asbd.mBytesPerPacket)
+	{
+	    // XXX:
+	    // ridiculous case such as valid 16bit packed in
+	    // 24bit format
+	    throw std::runtime_error("Not supported format");
+	}
+    }
     audiofile::SampleFormat_FromASBD(asbd, &m_format);
     setRange(0, m_af.getAudioDataPacketCount());
     x::shared_ptr<AudioChannelLayout> acl;

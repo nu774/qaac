@@ -47,8 +47,6 @@ ALACSource::ALACSource(const std::wstring &path)
 	m_format.m_endian = SampleFormat::kIsLittleEndian;
 	m_format.m_nchannels = alac[9];
 	m_format.m_bitsPerSample = alac[5];
-	if (m_format.m_bitsPerSample == 20)
-	    m_format.m_bitsPerSample = 24;
 	uint32_t timeScale;
 	std::memcpy(&timeScale, &alac[20], 4);
 	timeScale = b2host32(timeScale);
