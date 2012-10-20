@@ -28,7 +28,22 @@ namespace Tag {
     const uint32_t kCopyright = 'cprt';
     const uint32_t kCompilation = 'cpil';
     const uint32_t kTool = fourcc("\xa9""too");
-    const uint32_t kArtwork = fourcc("covr");
+    const uint32_t kArtwork = 'covr';
+
+    const uint32_t kTvSeason = 'tvsn';
+    const uint32_t kTvEpisode = 'tves';
+    const uint32_t kPodcast = 'pcst';
+    const uint32_t kHDVideo = 'hdvd';
+    const uint32_t kMediaType = 'stik';
+    const uint32_t kContentRating = 'rtng';
+    const uint32_t kGapless = 'pgap';
+    const uint32_t kiTunesAccountType = 'akID';
+    const uint32_t kiTunesCountry = 'sfID';
+    const uint32_t kcontentID = 'cnID';
+    const uint32_t kartistID = 'atID';
+    const uint32_t kplaylistID = 'plID';
+    const uint32_t kgenreID = 'geID';
+    const uint32_t kcomposerID = 'cmID';
 
     struct NameIDMap {
 	const char *name;
@@ -104,6 +119,16 @@ public:
 	std::map<uint32_t, std::wstring>::const_iterator ii;
 	for (ii = tags.begin(); ii != tags.end(); ++ii)
 	    m_tags[ii->first] = ii->second;
+    }
+    void setLongTag(const std::string &key, const std::wstring &value)
+    {
+	m_long_tags[key] = value;
+    }
+    void setLongTag(const std::map<std::string, std::wstring> &tags)
+    {
+	std::map<std::string, std::wstring>::const_iterator ii;
+	for (ii = tags.begin(); ii != tags.end(); ++ii)
+	    m_long_tags[ii->first] = ii->second;
     }
     void setChapters(const std::vector<std::pair<std::wstring, int64_t> >
 	    &chapters)

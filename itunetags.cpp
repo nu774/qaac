@@ -11,10 +11,16 @@
 #include "mp4v2wrapper.h"
 #include "wicimage.h"
 #include "cuesheet.h"
+#include "src/itmf/type.h"
 
 using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Atom;
 using mp4v2::impl::Exception;
+using mp4v2::impl::itmf::enumGenreType;
+using mp4v2::impl::itmf::enumStikType;
+using mp4v2::impl::itmf::enumAccountType;
+using mp4v2::impl::itmf::enumCountryCode;
+using mp4v2::impl::itmf::enumContentRating;
 
 class ShortTagWriter {
     typedef std::codecvt<wchar_t, char, std::mbstate_t> codec_t;
@@ -30,36 +36,129 @@ public:
     void writeTag(uint32_t key, const std::wstring &value)
     {
 	std::string sv = w2m(value, m_codec);
-	const char *vp = sv.c_str();
-	int n, total = 0;
+	fourcc fcc(key);
 
-	if (key == Tag::kTrack) {
-	    if (std::sscanf(vp, "%d/%d", &n, &total) > 0)
-		m_file.SetMetadataTrack(n, total);
-	} else if (key == Tag::kDisk) {
-	    if (std::sscanf(vp, "%d/%d", &n, &total) > 0)
-		m_file.SetMetadataDisk(n, total);
-	} else if (key == Tag::kCompilation) {
-	    if (std::sscanf(vp, "%d", &n) == 1)
-		m_file.SetMetadataUint8(fourcc(key).svalue, n);
-	} else if (key == Tag::kTempo) {
-	    if (std::sscanf(vp, "%d", &n) == 1)
-		m_file.SetMetadataUint16(fourcc(key).svalue, n);
-	} else if (key == Tag::kGenreID3) {
-	    if (std::sscanf(vp, "%d", &n) == 1)
-		m_file.SetMetadataGenre(fourcc(key).svalue, n);
-	} else if (key == Tag::kGenre) {
-	    char *endp;
-	    long v = std::strtol(vp, &endp, 10);
-	    if (endp != vp && *endp == 0)
-		m_file.SetMetadataGenre("gnre", v + 1);
+	struct handler_t {
+	    uint32_t fcc;
+	    void (ShortTagWriter::*mf)(const char *, const char *);
+	} handlers[] = {
+	    { Tag::kTrack,		&ShortTagWriter::setTrack	},
+	    { Tag::kDisk,		&ShortTagWriter::setDisk	},
+	    { Tag::kGenre,		&ShortTagWriter::setGenre	},
+	    { Tag::kGenreID3,		&ShortTagWriter::setGenre	},
+	    { Tag::kCompilation, 	&ShortTagWriter::setInt8	},
+	    { Tag::kTempo,		&ShortTagWriter::setInt16	},
+	    { Tag::kArtwork,		&ShortTagWriter::ignore		},
+	    { Tag::kTvSeason,		&ShortTagWriter::setInt32	},
+	    { Tag::kTvEpisode,		&ShortTagWriter::setInt32	},
+	    { Tag::kPodcast,		&ShortTagWriter::setInt8	},
+	    { Tag::kHDVideo,		&ShortTagWriter::setInt8	},
+	    { Tag::kMediaType,		&ShortTagWriter::setMediaType	},
+	    { Tag::kContentRating,	&ShortTagWriter::setRating	},
+	    { Tag::kGapless,		&ShortTagWriter::setInt8	},
+	    { Tag::kiTunesAccountType,	&ShortTagWriter::setAccountType	},
+	    { Tag::kiTunesCountry,	&ShortTagWriter::setCountryCode	},
+	    { Tag::kcontentID,		&ShortTagWriter::setInt32	},
+	    { Tag::kartistID,		&ShortTagWriter::setInt32	},
+	    { Tag::kplaylistID,		&ShortTagWriter::setInt64	},
+	    { Tag::kgenreID,		&ShortTagWriter::setInt32	},
+	    { Tag::kcomposerID,		&ShortTagWriter::setInt32	},
+	    { 0,			0				}
+	};
+	for (handler_t *p = handlers; p->fcc; ++p) {
+	    if (fcc == p->fcc) {
+		(this->*p->mf)(fcc.svalue, sv.c_str());
+		return;
+	    }
+	}
+	setString(fcc.svalue, sv.c_str());
+    }
+private:
+    void setTrack(const char *fcc, const char *value)
+    {
+	int n, total = 0;
+	if (std::sscanf(value, "%d/%d", &n, &total) > 0)
+	    m_file.SetMetadataTrack(n, total);
+    }
+    void setDisk(const char *fcc, const char *value)
+    {
+	int n, total = 0;
+	if (std::sscanf(value, "%d/%d", &n, &total) > 0)
+	    m_file.SetMetadataDisk(n, total);
+    }
+    void setGenre(const char *fcc, const char *value)
+    {
+	char *endp;
+	long n = std::strtol(value, &endp, 10);
+	if (endp != value && *endp == 0)
+	    m_file.SetMetadataGenre("gnre", n);
+	else {
+	    n = static_cast<uint16_t>(enumGenreType.toType(value));
+	    if (n != mp4v2::impl::itmf::GENRE_UNDEFINED)
+		m_file.SetMetadataGenre("gnre", n);
 	    else
-		m_file.SetMetadataString(fourcc(key).svalue, vp);
-	} else if (key == Tag::kLyrics) {
-	    std::string s = normalize_crlf(vp, "\r\n");
-	    m_file.SetMetadataString(fourcc(key).svalue, s.c_str());
-	} else
-	    m_file.SetMetadataString(fourcc(key).svalue, vp);
+		m_file.SetMetadataString("\xa9""gen", value);
+	}
+    }
+    void setMediaType(const char *fcc, const char *value)
+    {
+	unsigned n;
+	if (std::scanf("%u", &n) != 1)
+	    n = static_cast<uint8_t>(enumStikType.toType(value));
+	m_file.SetMetadataUint8(fcc, n);
+    }
+    void setRating(const char *fcc, const char *value)
+    {
+	unsigned n;
+	if (std::scanf("%u", &n) != 1)
+	    n = static_cast<uint8_t>(enumContentRating.toType(value));
+	m_file.SetMetadataUint8(fcc, n);
+    }
+    void setAccountType(const char *fcc, const char *value)
+    {
+	unsigned n;
+	if (std::scanf("%u", &n) != 1)
+	    n = static_cast<uint8_t>(enumAccountType.toType(value));
+	m_file.SetMetadataUint8(fcc, n);
+    }
+    void setCountryCode(const char *fcc, const char *value)
+    {
+	unsigned n;
+	if (std::scanf("%u", &n) != 1)
+	    n = static_cast<uint8_t>(enumCountryCode.toType(value));
+	m_file.SetMetadataUint32(fcc, n);
+    }
+    void setInt8(const char *fcc, const char *value)
+    {
+	int n;
+	if (std::sscanf(value, "%d", &n) == 1)
+	    m_file.SetMetadataUint8(fcc, n);
+    }
+    void setInt16(const char *fcc, const char *value)
+    {
+	int n;
+	if (std::sscanf(value, "%d", &n) == 1)
+	    m_file.SetMetadataUint16(fcc, n);
+    }
+    void setInt32(const char *fcc, const char *value)
+    {
+	int n;
+	if (std::sscanf(value, "%d", &n) == 1)
+	    m_file.SetMetadataUint32(fcc, n);
+    }
+    void setInt64(const char *fcc, const char *value)
+    {
+	int64_t n;
+	if (std::sscanf(value, "%lld", &n) == 1)
+	    m_file.SetMetadataUint64(fcc, n);
+    }
+    void setString(const char *fcc, const char *value)
+    {
+	std::string s = normalize_crlf(value, "\r\n");
+	m_file.SetMetadataString(fcc, s.c_str());
+    }
+    void ignore(const char *fcc, const char *value)
+    {
     }
 };
 
@@ -336,6 +435,13 @@ namespace mp4a
 	    unsigned total = (value[4] << 8) | value[5];
 	    return widen(format("%u/%u", index, total));
 	} else if (data.typeCode == MP4_ITMF_BT_INTEGER) {
+	    if (data.valueSize == 8) {
+		uint32_t high, low;
+		high = (value[0]<<24)|(value[1]<<16)|(value[2]<<8)|value[3];
+		low  = (value[4]<<24)|(value[5]<<16)|(value[6]<<8)|value[7];
+		uint64_t value = (static_cast<uint64_t>(high) << 32) | low;
+		return widen(format("%lld", value));
+	    }
 	    int v;
 	    if (data.valueSize == 1)
 		v = value[0];

@@ -251,6 +251,38 @@ bool MP4FileX::SetMetadataUint16(const char *atom, uint16_t value)
     return pAtom != 0;
 }
 
+bool MP4FileX::SetMetadataUint32(const char *atom, uint32_t value)
+{
+    MP4DataAtom *pAtom = FindOrCreateMetadataAtom(atom, itmf::BT_INTEGER);
+    if (pAtom) {
+	uint8_t v[4];
+	v[0] = value >> 24;
+	v[1] = (value >> 16) & 0xff;
+	v[2] = (value >> 8) & 0xff;
+	v[3] = value & 0xff;
+	pAtom->metadata.SetValue(v, 4);
+    }
+    return pAtom != 0;
+}
+
+bool MP4FileX::SetMetadataUint64(const char *atom, uint64_t value)
+{
+    MP4DataAtom *pAtom = FindOrCreateMetadataAtom(atom, itmf::BT_INTEGER);
+    if (pAtom) {
+	uint8_t v[8];
+	v[0] = value >> 56;
+	v[1] = (value >> 48) & 0xff;
+	v[2] = (value >> 40) & 0xff;
+	v[3] = (value >> 32) & 0xff;
+	v[4] = (value >> 24) & 0xff;
+	v[5] = (value >> 16) & 0xff;
+	v[6] = (value >> 8) & 0xff;
+	v[7] = value & 0xff;
+	pAtom->metadata.SetValue(v, 8);
+    }
+    return pAtom != 0;
+}
+
 bool MP4FileX::SetMetadataGenre(const char *atom, uint16_t value)
 {
     MP4DataAtom *pAtom = FindOrCreateMetadataAtom(atom, itmf::BT_IMPLICIT);

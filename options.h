@@ -109,6 +109,7 @@ struct Options {
     int delay;
     double gain;
     std::map<uint32_t, std::wstring> tagopts;
+    std::map<std::string, std::wstring> longtags;
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;
     std::vector<uint32_t> chanmap;

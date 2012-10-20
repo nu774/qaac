@@ -66,6 +66,8 @@ static wide::option long_options[] = {
     { L"artwork", required_argument, 0, Tag::kArtwork },
     { L"artwork-size", required_argument, 0, 'atsz' },
     { L"chapter", required_argument, 0, 'chap' },
+    { L"tag", required_argument, 0, 'tag ' },
+    { L"long-tag", required_argument, 0, 'ltag' },
     { 0, 0, 0, 0 }
 };
 static const uint32_t tag_keys[] = {
@@ -240,6 +242,17 @@ void usage()
 "                      this, artwork is automatically resized.\n"
 "--chapter <filename>\n"
 "                      Set chapter from file.\n"
+"--tag <fcc>:<value>\n"
+"                      Set tag with four char code and value.\n"
+"                      This gives you a generic but error-prone way to\n"
+"                      set iTunes pre-defined tags such as soar(Sort Artist).\n"
+"                      If you just want to set tags already accesible with\n"
+"                      other pre-defined options, don't use this.\n"
+"                      This option takes care of type for known tags.\n"
+"                      Otherwise, value is just written as an UTF8 string.\n"
+"--long-tag <name>:<value>\n"
+"                      Set long tag (iTunes custom metadata) with \n"
+"                      arbitrary name/value pair.\n"
     );
 }
 
@@ -460,6 +473,29 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		}
 		this->tagopts[ch] = wide::optarg;
 	    }
+	}
+	else if (ch == 'tag ') {
+	    std::vector<wchar_t> buff(std::wcslen(wide::optarg)+1);
+	    wchar_t *value = &buff[0], *key;
+	    std::wcscpy(value, wide::optarg);
+	    key = wcssep(&value, L":");
+	    size_t keylen = std::wcslen(key);
+	    if (!value || (keylen != 3 && keylen != 4))
+		return usage(), false;
+	    uint32_t fcc = (keylen == 3) ? 0xa9 : 0;
+	    for (; *key; ++key) {
+		if (*key < 0x20 || *key > 0x7e)
+		    return usage(), false;
+		fcc = ((fcc << 8) | *key);
+	    }
+	    this->tagopts[fcc] = value;
+	}
+	else if (ch == 'ltag') {
+	    std::vector<wchar_t> buff(std::wcslen(wide::optarg)+1);
+	    wchar_t *value = &buff[0], *key;
+	    std::wcscpy(value, wide::optarg);
+	    key = wcssep(&value, L":");
+	    this->longtags[w2m(key, utf8_codecvt_facet())] = value;
 	}
 	else if (ch == 'chap')
 	    this->chapter_file = wide::optarg;

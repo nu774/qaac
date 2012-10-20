@@ -58,6 +58,8 @@ public:
     bool SetMetadataDisk(uint16_t disk, uint16_t totalDisks);
     bool SetMetadataUint8(const char *atom, uint8_t value);
     bool SetMetadataUint16(const char *atom, uint16_t value);
+    bool SetMetadataUint32(const char *atom, uint32_t value);
+    bool SetMetadataUint64(const char *atom, uint64_t value);
     bool SetMetadataGenre(const char *atom, uint16_t value);
     bool SetMetadataArtwork(const char *atom,
 	    const char *data, size_t size,

@@ -377,6 +377,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	}
     }
     editor.setTag(opts.tagopts);
+    editor.setLongTag(opts.longtags);
     editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
 #ifndef REFALAC
     if (opts.isAAC() && stat->samplesWritten()) {
