@@ -1014,19 +1014,26 @@ std::string GetCoreAudioVersion(HMODULE hDll)
     {
 	DWORD cbres = SizeofResource(hDll, hRes);
 	HGLOBAL hMem = LoadResource(hDll, hRes);
-	char *pc = static_cast<char*>(LockResource(hMem));
-	data.assign(pc, cbres);
+	if (hMem) {
+	    char *pc = static_cast<char*>(LockResource(hMem));
+	    if (cbres && pc)
+		data.assign(pc, cbres);
+	    FreeResource(hMem);
+	}
     }
     // find dwSignature of VS_FIXEDFILEINFO
     size_t pos = data.find("\xbd\x04\xef\xfe");
-    VS_FIXEDFILEINFO vfi;
-    std::memcpy(&vfi, data.c_str() + pos, sizeof vfi);
-    WORD v[4];
-    v[0] = HIWORD(vfi.dwFileVersionMS);
-    v[1] = LOWORD(vfi.dwFileVersionMS);
-    v[2] = HIWORD(vfi.dwFileVersionLS);
-    v[3] = LOWORD(vfi.dwFileVersionLS);
-    return format("%u.%u.%u.%u", v[0],v[1],v[2],v[3]);
+    if (pos != std::string::npos) {
+	VS_FIXEDFILEINFO vfi;
+	std::memcpy(&vfi, data.c_str() + pos, sizeof vfi);
+	WORD v[4];
+	v[0] = HIWORD(vfi.dwFileVersionMS);
+	v[1] = LOWORD(vfi.dwFileVersionMS);
+	v[2] = HIWORD(vfi.dwFileVersionLS);
+	v[3] = LOWORD(vfi.dwFileVersionLS);
+	return format("%u.%u.%u.%u", v[0],v[1],v[2],v[3]);
+    }
+    return "";
 }
 
 static
