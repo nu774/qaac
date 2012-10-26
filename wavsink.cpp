@@ -74,23 +74,31 @@ WaveSink::WaveSink(FILE *fp,
     std::string header = os.str();
 
     uint32_t hdrsize = header.size();
-    uint32_t riffsize = 0, datasize = 0;
+    uint32_t riffsize = ~0, datasize = ~0;
+    m_rf64 = m_seekable;
     if (duration != -1) {
 	uint64_t datasize64 = duration * format.bytesPerFrame();
 	uint64_t riffsize64 = hdrsize + datasize64 + 20;
 	if (riffsize64 >> 32 == 0) {
 	    datasize = static_cast<uint32_t>(datasize64);
 	    riffsize = static_cast<uint32_t>(riffsize64);
+	    m_rf64 = false;
 	}
     }
     write("RIFF", 4);
     write(&riffsize, 4);
-    write("WAVEfmt ", 8);
+    write("WAVE", 4);
+    if (m_rf64) {
+	write("JUNK", 4);
+	static const char filler[32] = { 0x1c, 0 };
+	write(filler, 32);
+    }
+    write("fmt ", 4);
     write(&hdrsize, 4);
     write(header.c_str(), hdrsize);
     write("data", 4);
     write(&datasize, 4);
-    m_data_pos = 28 + hdrsize;
+    m_data_pos = 28 + hdrsize + (m_rf64 ? 36 : 0);
     if (!m_seekable) std::fflush(fp);
 }
 
@@ -132,8 +140,7 @@ void WaveSink::finishWrite()
     if (!m_seekable) return;
     uint64_t datasize64 = m_bytes_written;
     uint64_t riffsize64 = datasize64 + m_data_pos - 8;
-    fpos_t pos = 0;
-    if (riffsize64 >> 32 == 0 && std::fgetpos(m_file, &pos) == 0) {
+    if (riffsize64 >> 32 == 0) {
 	if (std::fseek(m_file, m_data_pos - 4, SEEK_SET) == 0) {
 	    uint32_t size32 = static_cast<uint32_t>(datasize64);
 	    write(&size32, 4);
@@ -142,7 +149,15 @@ void WaveSink::finishWrite()
 		write(&size32, 4);
 	    }
 	}
+    } else if (m_rf64) {
+	std::rewind(m_file);
+	write("RF64", 4);
+	std::fseek(m_file, 8, SEEK_CUR);
+	write("ds64", 4);
+	std::fseek(m_file, 4, SEEK_CUR);
+	write(&riffsize64, 8);
+	write(&datasize64, 8);
+	uint64_t nsamples = m_bytes_written / m_format.bytesPerFrame();
+	write(&nsamples, 8);
     }
 }
-
-

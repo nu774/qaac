@@ -9,6 +9,7 @@ class WaveSink : public ISink {
     uint64_t m_bytes_written;
     bool m_closed;
     bool m_seekable;
+    bool m_rf64;
     SampleFormat m_format;
 public:
     WaveSink(FILE *fp, uint64_t duration, const SampleFormat &format,
