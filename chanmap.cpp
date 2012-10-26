@@ -40,6 +40,11 @@ std::string GetChannelNames(const std::vector<uint32_t> &channels)
 
 uint32_t GetChannelMask(const std::vector<uint32_t>& channels)
 {
+    if (channels.size() == 1) {
+	// kAudioChannelLabel_Mono(42) might be in use.
+	// As a channel mask, we always use 3(center) for mono.
+	return 1 << (3 - 1);
+    }
     uint32_t result = 0;
     for (size_t i = 0; i < channels.size(); ++i) {
 	if (channels[i] >= 33)
