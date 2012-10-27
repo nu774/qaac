@@ -1213,7 +1213,11 @@ void load_modules(Options &opts)
 {
     opts.libsndfile = LibSndfileModule(L"libsndfile-1.dll");
     opts.libflac = FLACModule(L"libFLAC.dll");
+    if (!opts.libflac.loaded())
+	opts.libflac = FLACModule(L"libFLAC-8.dll");
     opts.libwavpack = WavpackModule(L"wavpackdll.dll");
+    if (!opts.libwavpack.loaded())
+	opts.libwavpack = WavpackModule(L"libwavpack-1.dll");
     opts.libtak = TakModule(L"tak_deco_lib.dll");
 #ifdef _WIN64
     opts.libsoxrate = SoxModule(L"libsoxrate64.dll");
