@@ -32,19 +32,17 @@ std::string GetChannelNames(const std::vector<uint32_t> &channels)
     }
     size_t count = channels.size();
     count -= lfe_count;
-    return format("%u.%u (%s)",
-		  static_cast<uint32_t>(count),
-		  static_cast<uint32_t>(lfe_count),
-		  result.c_str());
+    if (count <= 2 && lfe_count == 0)
+	return count == 1 ? "Mono" : "Stereo";
+    else
+	return format("%u.%u (%s)",
+		      static_cast<uint32_t>(count),
+		      static_cast<uint32_t>(lfe_count),
+		      result.c_str());
 }
 
 uint32_t GetChannelMask(const std::vector<uint32_t>& channels)
 {
-    if (channels.size() == 1) {
-	// kAudioChannelLabel_Mono(42) might be in use.
-	// As a channel mask, we always use 3(center) for mono.
-	return 1 << (3 - 1);
-    }
     uint32_t result = 0;
     for (size_t i = 0; i < channels.size(); ++i) {
 	if (channels[i] >= 33)
@@ -81,22 +79,30 @@ void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 	    channels.push_back(desc[i].mChannelLabel);
 	break;
     }
+    /* 1ch */
     case kAudioChannelLayoutTag_Mono:
-	layout = "\x03"; break;
+	layout = "\x2a"; break; /* kAudioChannelLabel_Mono */
+    /* 1.1ch */
     case kAudioChannelLayoutTag_AC3_1_0_1:
 	layout = "\x03\x04"; break;
+    /* 2ch */
     case kAudioChannelLayoutTag_Stereo:
+    case kAudioChannelLayoutTag_MatrixStereo: /* XXX: Actually Lt+Rt */
+    case kAudioChannelLayoutTag_Binaural:
 	layout = "\x01\x02"; break;
+    /* 2.1ch */
     case kAudioChannelLayoutTag_DVD_4:
 	layout = "\x01\x02\x04"; break;
+    /* 3ch */
     case kAudioChannelLayoutTag_MPEG_3_0_A:
 	layout = "\x01\x02\x03"; break;
-    case kAudioChannelLayoutTag_MPEG_3_0_B:
-	layout = "\x03\x01\x02"; break;
     case kAudioChannelLayoutTag_AC3_3_0:
 	layout = "\x01\x03\x02"; break;
+    case kAudioChannelLayoutTag_MPEG_3_0_B:
+	layout = "\x03\x01\x02"; break;
     case kAudioChannelLayoutTag_ITU_2_1:
 	layout = "\x01\x02\x09"; break;
+    /* 3.1ch */
     case kAudioChannelLayoutTag_DVD_10:
 	layout = "\x01\x02\x03\x04"; break;
     case kAudioChannelLayoutTag_AC3_3_0_1:
@@ -105,6 +111,7 @@ void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 	layout = "\x01\x02\x04\x09"; break;
     case kAudioChannelLayoutTag_AC3_2_1_1:
 	layout = "\x01\x02\x09\x04"; break;
+    /* 4ch */
     case kAudioChannelLayoutTag_Quadraphonic:
     case kAudioChannelLayoutTag_ITU_2_2:
 	layout = "\x01\x02\x05\x06"; break;
@@ -114,6 +121,7 @@ void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 	layout = "\x03\x01\x02\x09"; break;
     case kAudioChannelLayoutTag_AC3_3_1:
 	layout = "\x01\x03\x02\x09"; break;
+    /* 4.1ch */
     case kAudioChannelLayoutTag_DVD_6:
 	layout = "\x01\x02\x04\x05\x06"; break;
     case kAudioChannelLayoutTag_DVD_18:
@@ -122,14 +130,17 @@ void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 	layout = "\x01\x02\x03\x04\x09"; break;
     case kAudioChannelLayoutTag_AC3_3_1_1:
 	layout = "\x01\x03\x02\x09\x04"; break;
+    /* 5ch */
     case kAudioChannelLayoutTag_MPEG_5_0_A:
 	layout = "\x01\x02\x03\x05\x06"; break;
+    case kAudioChannelLayoutTag_Pentagonal:
     case kAudioChannelLayoutTag_MPEG_5_0_B:
 	layout = "\x01\x02\x05\x06\x03"; break;
     case kAudioChannelLayoutTag_MPEG_5_0_C:
 	layout = "\x01\x03\x02\x05\x06"; break;
     case kAudioChannelLayoutTag_MPEG_5_0_D:
 	layout = "\x03\x01\x02\x05\x06"; break;
+    /* 5.1ch */
     case kAudioChannelLayoutTag_MPEG_5_1_A:
 	layout = "\x01\x02\x03\x04\x05\x06"; break;
     case kAudioChannelLayoutTag_MPEG_5_1_B:
@@ -138,21 +149,25 @@ void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 	layout = "\x01\x03\x02\x05\x06\x04"; break;
     case kAudioChannelLayoutTag_MPEG_5_1_D:
 	layout = "\x03\x01\x02\x05\x06\x04"; break;
+    /* 6ch */
     case kAudioChannelLayoutTag_Hexagonal:
     case kAudioChannelLayoutTag_AudioUnit_6_0:
 	layout = "\x01\x02\x05\x06\x03\x09"; break;
     case kAudioChannelLayoutTag_AAC_6_0:
 	layout = "\x03\x01\x02\x05\x06\x09"; break;
+    /* 6.1ch */
     case kAudioChannelLayoutTag_MPEG_6_1_A:
 	layout = "\x01\x02\x03\x04\x05\x06\x09"; break;
     case kAudioChannelLayoutTag_AAC_6_1:
 	layout = "\x03\x01\x02\x05\x06\x09\x04"; break;
+    /* 7ch */
     case kAudioChannelLayoutTag_AudioUnit_7_0:
 	layout = "\x01\x02\x05\x06\x03\x21\x22"; break;
     case kAudioChannelLayoutTag_AudioUnit_7_0_Front:
 	layout = "\x01\x02\x05\x06\x03\x07\x08"; break;
     case kAudioChannelLayoutTag_AAC_7_0:
 	layout = "\x03\x01\x02\x05\x06\x21\x22"; break;
+    /* 7.1ch */
     case kAudioChannelLayoutTag_MPEG_7_1_A:
 	layout = "\x01\x02\x03\x04\x05\x06\x07\x08"; break;
     case kAudioChannelLayoutTag_MPEG_7_1_B:
@@ -161,8 +176,10 @@ void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 	layout = "\x01\x02\x03\x04\x05\x06\x21\x22"; break;
     case kAudioChannelLayoutTag_Emagic_Default_7_1:
 	layout = "\x01\x02\x05\x06\x03\x04\x07\x08"; break;
+    /* 8ch */
     case kAudioChannelLayoutTag_Octagonal:
-	layout = "\x01\x02\x05\x06\x03\x09\x21\x22"; break;
+	/* XXX: actually the last two are Left Wide/Right Wide */
+	layout = "\x01\x02\x05\x06\x03\x09\x0A\x0B"; break;
     case kAudioChannelLayoutTag_AAC_Octagonal:
 	layout = "\x03\x01\x02\x05\x06\x21\x22\x09"; break;
     default:
@@ -180,26 +197,50 @@ void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 void ConvertChannelsFromAppleLayout(const std::vector<uint32_t> &from,
 				    std::vector<uint32_t> *to)
 {
-    struct F {
-	static bool test(uint32_t x) { return x == 33 || x == 34; }
+    struct Simple {
 	static uint32_t trans(uint32_t x) {
 	    switch (x) {
-	    case 5: return 10;
-	    case 6: return 11;
-	    case 33: return 5;
-	    case 34: return 6;
+	    case kAudioChannelLabel_Mono:
+		return kAudioChannelLabel_Center;
+	    /* XXX
+	     * In case of SMPTE_DTV, Lt/Rt are used with L/R and others
+	     * at the same time.
+	     * Therefore Lt/Rt cannot be simply mapped into L/R.
+	     */
+	    /*
+	    case kAudioChannelLabel_LeftTotal:
+		return kAudioChannelLabel_Left;
+	    case kAudioChannelLabel_RightTotal:
+		return kAudioChannelLabel_Right;
+	    */
+	    case kAudioChannelLabel_HeadphonesLeft:
+		return kAudioChannelLabel_Left;
+	    case kAudioChannelLabel_HeadphonesRight:
+		return kAudioChannelLabel_Right;
 	    }
 	    return x;
 	}
     };
-    bool has_rear =
-	std::find_if(from.begin(), from.end(), F::test) != from.end();
-    std::vector<uint32_t> result(from.size());
-    if (!has_rear)
-	std::copy(from.begin(), from.end(), result.begin());
-    else
-	std::transform(from.begin(), from.end(), result.begin(), F::trans);
-    to->swap(result);
+    struct RearSurround {
+	static bool exists(uint32_t x)
+	{
+	    return x == 33 || x == 34; /* Rls or Rrs */
+	}
+	static uint32_t trans(uint32_t x) {
+	    switch (x) {
+	    case 5  /* Ls  */: return 10 /* SL  */;
+	    case 6  /* Rs  */: return 11 /* SR */;
+	    case 33 /* Rls */: return 5  /* BL  */;
+	    case 34 /* Rrs */: return 6  /* BR  */;
+	    }
+	    return x;
+	}
+    };
+    std::vector<uint32_t> v(from.size());
+    std::transform(from.begin(), from.end(), v.begin(), Simple::trans);
+    if (std::find_if(v.begin(), v.end(), RearSurround::exists) != v.end())
+	std::transform(v.begin(), v.end(), v.begin(), RearSurround::trans);
+    to->swap(v);
 }
 
 template <typename T>
@@ -280,24 +321,22 @@ uint32_t GetAACLayoutTag(uint32_t bitmap)
 static
 void NormalizeChannelsForAAC(uint32_t bitmap, std::vector<uint32_t> &channels)
 {
-    bool side = (bitmap & 0x600) == 0x600;
     bool front = (bitmap & 0x3) == 0x3;
+    bool rear  = (bitmap & 0x30) == 0x30;
 
     for (std::vector<uint32_t>::iterator
 	 it = channels.begin(); it != channels.end(); ++it) {
-	if (bitmap == 0x63f) // FL FR FC LFE BL BR SL SR
+	if (bitmap == 0x63f) { // FL FR FC LFE BL BR SL SR
 	    switch (*it) {
 	    case 1: case 2:   *it += 6; break; /* FL, FR -> Lc, Rc */
 	    case 10: case 11: *it -= 9; break; /* SL, SR -> L, R   */
 	    }
-	else
-	    switch (*it) {
-	    case 5: case 6:
-		if (side)   *it += 28; break; /* BL, BR -> Rls, Rrs */
-	    case 7: case 8:
-		if (!front) *it -= 6;  break; /* FLC, FRC -> L, R */
-	    case 10: case 11: *it -= 5; break; /* SL, SR -> Ls, Rs */
-	    }
+	} else {
+	    if (!rear  && (*it == 10 || *it == 11))
+		*it -= 5; /* SL, SR   -> Ls, Rs */
+	    if (!front && (*it == 7 || *it == 8))
+		*it -= 6; /* FLC, FRC -> L, R   */
+	}
     }
 }
 
@@ -309,6 +348,7 @@ void GetAACChannelMap(uint32_t bitmap, std::vector<uint32_t> *result)
     std::vector<uint32_t> wcs, acs, mapping;
     GetChannels(bitmap, &wcs);
     GetChannels(&aacLayout, &acs);
+    ConvertChannelsFromAppleLayout(acs, &acs);
     NormalizeChannelsForAAC(bitmap, wcs);
 
     if (wcs == acs)

@@ -601,7 +601,6 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	    LOG(L"Using default channel layout.\n");
 	chanmask = chanmap::GetDefaultChannelMask(nchannels);
     }
-    AudioChannelLayoutX layout;
     *wav_chanmask = chanmask;
     if (chanmask) {
 	if (opts.isLPCM() && opts.verbose > 1) {
@@ -613,7 +612,6 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     }
     if (!opts.isLPCM()) {
 	// construct mapped channel layout to AAC/ALAC order
-	int nc = layout.numChannels();
 	AudioChannelLayoutX mapped;
 	mapped->mChannelLayoutTag = chanmap::GetAACLayoutTag(chanmask);
 	std::vector<uint32_t> aacmap;
