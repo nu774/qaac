@@ -280,7 +280,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->ofilename = wide::optarg;
 	else if (ch == 'd')
 	    this->outdir = wide::optarg;
-	else if ((pos = strindex("cavV", ch)) >= 0) {
+	else if (ch < 0xff && (pos = strindex("cavV", ch)) >= 0) {
 	    if ((this->output_format && !isAAC()) || this->method != -1) {
 		std::fputws(L"Encoding mode options are exclusive.\n", stderr);
 	    }
