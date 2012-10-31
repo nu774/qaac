@@ -15,7 +15,7 @@ class AFSource: public ITagParser, public PartialSource<AFSource>
     x::shared_ptr<InputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
 public:
     AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream);
     /*
@@ -24,7 +24,10 @@ public:
      */
     ~AFSource() { m_af.attach(0, false); }
     uint64_t length() const { return getDuration(); }
-    const SampleFormat &getSampleFormat() const { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     const std::vector<uint32_t> *getChannels() const
     {
 	return m_chanmap.size() ? &m_chanmap: 0;
@@ -44,7 +47,7 @@ class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
     x::shared_ptr<InputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
 public:
     ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
 		const std::wstring &path);
@@ -54,7 +57,10 @@ public:
 	m_eaf.attach(0, false);
     }
     uint64_t length() const { return getDuration(); }
-    const SampleFormat &getSampleFormat() const { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     const std::vector<uint32_t> *getChannels() const
     {
 	return m_chanmap.size() ? &m_chanmap: 0;

@@ -228,7 +228,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 	}
     }
     Progress progress(opts.verbose, src->length(),
-		      src->getSampleFormat().m_rate);
+		      src->getSampleFormat().mSampleRate);
     try {
 	FILE *statfp = statPtr.get();
 	while (encoder->encodeChunk(1)) {
@@ -258,9 +258,30 @@ x::shared_ptr<ISource> open_source(const wchar_t *ifilename,
     } while (0) 
 
     if (opts.is_raw) {
-	SampleFormat sf(nallow(opts.raw_format).c_str(),
-			opts.raw_channels, opts.raw_sample_rate);
-	return MAKE_SHARED(RawSource(stream, sf));
+	int bits;
+	char c_type, c_endian;
+	int itype, iendian;
+
+	if (std::swscanf(opts.raw_format, L"%hc%d%hc",
+			&c_type, &bits, &c_endian) != 3)
+	    throw std::runtime_error("Invalid --raw-format spec");
+	if ((itype = strindex("USF", toupper(c_type & 0xff))) == -1)
+	    throw std::runtime_error("Invalid --raw-format spec");
+	if ((iendian = strindex("LB", toupper(c_endian & 0xff))) == -1)
+	    throw std::runtime_error("Invalid --raw-format spec");
+	if (bits <= 0)
+	    throw std::runtime_error("Invalid --raw-format spec");
+
+	uint32_t type_tab[] = {
+	    0, kAudioFormatFlagIsSignedInteger, kAudioFormatFlagIsFloat
+	};
+	AudioStreamBasicDescription asbd =
+	    BuildASBDForLPCM(opts.raw_sample_rate, opts.raw_channels,
+			     bits, type_tab[itype]);
+	if (iendian)
+	    asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
+
+	return MAKE_SHARED(RawSource(stream, asbd));
     }
 
     try {
@@ -362,7 +383,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	editor.setTag(parser->getTags());
 	const std::vector<std::pair<std::wstring, int64_t> > *chapters
 	    = parser->getChapters();
-	double rate_ratio = oSampleRate / src->getSampleFormat().m_rate;
+	double rate_ratio = oSampleRate / src->getSampleFormat().mSampleRate;
 	if (chapters) {
 	    if (rate_ratio == 1.0)
 		editor.setChapters(*chapters);
@@ -462,7 +483,7 @@ x::shared_ptr<ISource> do_normalize(
     LOG(L"Scanning maximum peak...\n");
     uint64_t n = 0, rc;
     Progress progress(opts.verbose, src->length(),
-	    src->getSampleFormat().m_rate);
+	    src->getSampleFormat().mSampleRate);
     while ((rc = normalizer->process(4096)) > 0) {
 	n += rc;
 	progress.update(normalizer->samplesRead());
@@ -546,7 +567,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
     const Options &opts, uint32_t *wav_chanmask,
     AudioChannelLayoutX *aac_layout, bool threading)
 {
-    uint32_t nchannels = src->getSampleFormat().m_nchannels;
+    uint32_t nchannels = src->getSampleFormat().mChannelsPerFrame;
     x::shared_ptr<ISource> srcx(src);
 
     const std::vector<uint32_t> *channels = src->getChannels();
@@ -580,7 +601,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 				       matrix, threading,
 				       !opts.no_matrix_normalize));
 	    channels = 0;
-	    nchannels = srcx->getSampleFormat().m_nchannels;
+	    nchannels = srcx->getSampleFormat().mChannelsPerFrame;
 	}
     }
     // map with --chanmap option
@@ -633,7 +654,7 @@ static
 x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
 				      const Options & opts)
 {
-    double rate = src->getSampleFormat().m_rate;
+    double rate = src->getSampleFormat().mSampleRate;
     if (opts.delay > 0) {
 	CompositeSource *cp = new CompositeSource();
 	x::shared_ptr<ISource> cpPtr(cp);
@@ -729,9 +750,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	    srcx.reset(new SoxDSPProcessor(engine, srcx));
 	}
     }
-    AudioStreamBasicDescription iasbd;
-    BuildASBDFromSampleFormat(srcx->getSampleFormat(), &iasbd);
-
+    AudioStreamBasicDescription iasbd = srcx->getSampleFormat();
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mFormatID = opts.output_format;
     oasbd.mChannelsPerFrame = aacLayout.numChannels();
@@ -806,18 +825,17 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     if (opts.bits_per_sample) {
 	if (opts.isAAC())
 	    LOG(L"WARNING: --bits-per-sample has no effect for AAC\n");
-	else if (srcx->getSampleFormat().m_bitsPerSample
+	else if (srcx->getSampleFormat().mBitsPerChannel
 		 != opts.bits_per_sample) {
 	    srcx.reset(new IntegerSource(srcx, opts.bits_per_sample));
 	    if (opts.verbose > 1 || opts.logfilename)
-		LOG(L"Convert to %hs\n", srcx->getSampleFormat().str().c_str());
+		LOG(L"Convert to %d bit\n", opts.bits_per_sample);
 	}
     } else if (opts.output_format == 'alac') {
-	const SampleFormat &sf = srcx->getSampleFormat();
-	if (sf.m_type == SampleFormat::kIsFloat) {
+	if (srcx->getSampleFormat().mFormatFlags & kAudioFormatFlagIsFloat) {
 	    srcx.reset(new IntegerSource(srcx, 16));
 	    if (opts.verbose > 1 || opts.logfilename)
-		LOG(L"Convert to %hs\n", srcx->getSampleFormat().str().c_str());
+		LOG(L"Convert to 16 bit\n");
 	}
     }
     if (threading && !opts.isLPCM()) {
@@ -827,7 +845,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	if (opts.verbose > 1 || opts.logfilename)
 	    LOG(L"Enable threading\n");
     }
-    BuildASBDFromSampleFormat(srcx->getSampleFormat(), &iasbd);
+    iasbd = srcx->getSampleFormat();
     if (opts.isALAC()) {
 	switch (iasbd.mBitsPerChannel) {
 	case 16:
@@ -863,7 +881,7 @@ void decode_file(const x::shared_ptr<ISource> &src,
     else
 	fileptr.reset(wfopenx(spath, L"wb"), std::fclose);
 
-    const SampleFormat &sf = src->getSampleFormat();
+    const AudioStreamBasicDescription &sf = src->getSampleFormat();
     WaveSink sink(fileptr.get(), src->length(), sf, chanmask);
 
     ISource *srcp = src.get();
@@ -875,8 +893,8 @@ void decode_file(const x::shared_ptr<ISource> &src,
 	}
     }
     Progress progress(opts.verbose, srcp->length(),
-		      srcp->getSampleFormat().m_rate);
-    uint32_t bpf = sf.bytesPerFrame();
+		      srcp->getSampleFormat().mSampleRate);
+    uint32_t bpf = sf.mBytesPerFrame;
     std::vector<uint8_t> buffer(4096 * bpf);
     try {
 	size_t nread;
@@ -956,16 +974,9 @@ void show_available_codec_setttings(UInt32 fmt)
 	    chanmap::GetChannels(acl, &channels);
 	    std::string name = chanmap::GetChannelNames(channels);
 
-	    AudioStreamBasicDescription iasbd = { 0 };
-	    iasbd.mFormatID = 'lpcm';
-	    iasbd.mFormatFlags =
-		kAudioFormatFlagIsPacked | kAudioFormatFlagIsFloat;
-	    iasbd.mFramesPerPacket = 1;
-	    iasbd.mChannelsPerFrame = acl.numChannels();
-	    iasbd.mSampleRate = srates[i].mMinimum;
-	    iasbd.mBitsPerChannel = 32;
-	    iasbd.mBytesPerPacket = iasbd.mBytesPerFrame
-		= iasbd.mChannelsPerFrame * iasbd.mBitsPerChannel >> 3;
+	    AudioStreamBasicDescription iasbd =
+		BuildASBDForLPCM(srates[i].mMinimum, acl.numChannels(),
+				 32, kAudioFormatFlagIsFloat);
 	    AudioStreamBasicDescription oasbd = { 0 };
 	    oasbd.mFormatID = fmt;
 	    oasbd.mSampleRate = iasbd.mSampleRate;
@@ -1299,7 +1310,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 		std::wstring ifilename = PathCombineX(cuedir, seg.m_filename);
 		src = open_source(ifilename.c_str(), opts);
 	    }
-	    unsigned rate = src->getSampleFormat().m_rate;
+	    unsigned rate = src->getSampleFormat().mSampleRate;
 	    int64_t begin = cue_frame_to_sample(rate, seg.m_begin);
 	    int64_t end = seg.m_end == -1 ? -1:
 		cue_frame_to_sample(rate, seg.m_end) - begin;

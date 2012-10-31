@@ -17,40 +17,44 @@ namespace wave {
 	os->sputn(reinterpret_cast<char*>(&obj), sizeof obj);
     }
 
-    void buildHeader(const SampleFormat &format, uint32_t chanmask,
-		     std::streambuf *result)
+    void buildHeader(const AudioStreamBasicDescription &format,
+		     uint32_t chanmask, std::streambuf *result)
     {
 	uint16_t fmt;
 	// wFormatTag
 	{
-	    fmt = ((chanmask && format.m_nchannels > 2)
-		   || format.m_bitsPerSample > 16)
+	    uint32_t bits_per_frame = 
+		format.mChannelsPerFrame * format.mBitsPerChannel;
+	    fmt = (format.mChannelsPerFrame > 2
+		   || format.mBitsPerChannel > 16
+		   || (format.mBitsPerChannel & 7)
+		   || format.mBytesPerFrame * 8 != bits_per_frame)
 		    ? kFormatExtensible : kFormatPCM;
 	    put(result, fmt);
 	}
 	// nChannels
-	put(result, static_cast<uint16_t>(format.m_nchannels));
+	put(result, static_cast<uint16_t>(format.mChannelsPerFrame));
 	// nSamplesPerSec
-	put(result, static_cast<uint32_t>(format.m_rate));
+	put(result, static_cast<uint32_t>(format.mSampleRate));
 
-	uint16_t bpf = format.bytesPerFrame();
+	uint16_t bpf = format.mBytesPerFrame;
 	// nAvgBytesPerSec
-	put(result, static_cast<uint32_t>(format.m_rate * bpf));
+	put(result, static_cast<uint32_t>(format.mSampleRate * bpf));
 	// nBlockAlign
 	put(result, bpf);
 	// wBitsPerSample
-	put(result, static_cast<uint16_t>(format.bytesPerChannel() << 3));
+	put(result, static_cast<uint16_t>((bpf/format.mChannelsPerFrame)<<3));
 
 	// cbSize
 	if (fmt != kFormatPCM) {
 	    // WAVEFORMATEXTENSIBLE
 	    put(result, static_cast<uint16_t>(22));
 	    // Samples
-	    put(result, static_cast<uint16_t>(format.m_bitsPerSample));
+	    put(result, static_cast<uint16_t>(format.mBitsPerChannel));
 	    // dwChannelMask
 	    put(result, chanmask);
 	    // SubFormat
-	    if (format.m_type == SampleFormat::kIsFloat)
+	    if (format.mFormatFlags & kAudioFormatFlagIsFloat)
 		put(result, ksFormatSubTypeFloat);
 	    else
 		put(result, ksFormatSubTypePCM);
@@ -60,7 +64,7 @@ namespace wave {
 
 WaveSink::WaveSink(FILE *fp,
 		   uint64_t duration,
-		   const SampleFormat &format,
+		   const AudioStreamBasicDescription &format,
 		   uint32_t chanmask)
 	: m_file(fp), m_bytes_written(0), m_closed(false),
 	  m_seekable(false), m_format(format)
@@ -77,7 +81,7 @@ WaveSink::WaveSink(FILE *fp,
     uint32_t riffsize = ~0, datasize = ~0;
     m_rf64 = m_seekable;
     if (duration != -1) {
-	uint64_t datasize64 = duration * format.bytesPerFrame();
+	uint64_t datasize64 = duration * format.mBytesPerFrame;
 	uint64_t riffsize64 = hdrsize + datasize64 + 20;
 	if (riffsize64 >> 32 == 0) {
 	    datasize = static_cast<uint32_t>(datasize64);
@@ -106,24 +110,22 @@ void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 {
     uint8_t *bp = static_cast<uint8_t *>(const_cast<void*>(data));
     std::vector<uint8_t> buf;
-    if (m_format.m_endian == SampleFormat::kIsBigEndian) {
+    if (m_format.mFormatFlags & kAudioFormatFlagIsBigEndian) {
 	buf.resize(length);
 	bp = &buf[0];
 	std::memcpy(bp, data, length);
-	switch (m_format.bytesPerChannel()) {
+	switch (m_format.mBytesPerFrame / m_format.mChannelsPerFrame) {
 	case 2: bswap16buffer(bp, length); break;
 	case 3: bswap24buffer(bp, length); break;
 	case 4: bswap32buffer(bp, length); break;
 	case 8: bswap64buffer(bp, length); break;
 	}
     }
-    if (m_format.m_bitsPerSample == 8 &&
-	m_format.m_type == SampleFormat::kIsSignedInteger) {
-	if (!buf.size() != length) {
-	    buf.resize(length);
-	    bp = &buf[0];
-	    std::memcpy(bp, data, length);
-	}
+    if (m_format.mBitsPerChannel <= 8 &&
+	m_format.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
+	buf.resize(length);
+	bp = &buf[0];
+	std::memcpy(bp, data, length);
 	for (size_t i = 0; i < length; ++i)
 	    bp[i] ^= 0x80;
     }
@@ -157,7 +159,7 @@ void WaveSink::finishWrite()
 	std::fseek(m_file, 4, SEEK_CUR);
 	write(&riffsize64, 8);
 	write(&datasize64, 8);
-	uint64_t nsamples = m_bytes_written / m_format.bytesPerFrame();
+	uint64_t nsamples = m_bytes_written / m_format.mBytesPerFrame;
 	write(&nsamples, 8);
     }
 }

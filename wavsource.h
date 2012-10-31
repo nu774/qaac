@@ -29,13 +29,16 @@ namespace wave
 class WaveSource :
     private RIFFParser, public PartialSource<WaveSource>
 {
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
     std::vector<uint32_t> m_chanmap;
     bool m_ignore_length;
 public:
     explicit WaveSource(InputStream &stream, bool ignorelength=false);
     uint64_t length() const { return getDuration(); }
-    const SampleFormat &getSampleFormat() const { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     const std::vector<uint32_t> *getChannels() const
     {
 	return m_chanmap.size() ? &m_chanmap : 0;
@@ -44,7 +47,7 @@ public:
     {
 	nsamples = adjustSamplesToRead(nsamples);
 	if (nsamples) {
-	    size_t nblocks = m_format.bytesPerFrame();
+	    size_t nblocks = m_format.mBytesPerFrame;
 	    nsamples = readx(buffer, nsamples * nblocks) / nblocks;
 	    addSamplesRead(nsamples);
 	}
@@ -52,7 +55,7 @@ public:
     }
     void skipSamples(int64_t count)
     {
-	int64_t bytes = count * m_format.bytesPerFrame();
+	int64_t bytes = count * m_format.mBytesPerFrame;
 	if (seek_forwardx(bytes) != bytes)
 	    throw std::runtime_error("seek_forward failed");
     }

@@ -175,27 +175,26 @@ private:
     }
 };
 
-inline
-void BuildASBDFromSampleFormat(const SampleFormat &format,
-			       AudioStreamBasicDescription *result)
+inline AudioStreamBasicDescription
+    BuildASBDForLPCM(double sample_rate, unsigned channels_per_frame,
+		     unsigned bits_per_channel, unsigned type,
+		     unsigned alignment=0 /* aligned low */)
 {
-    AudioStreamBasicDescription desc = { 0 };
-    desc.mFormatID = 'lpcm';
-    desc.mFormatFlags =
-	(format.m_bitsPerSample & 7) ? kAudioFormatFlagIsAlignedHigh
-				     : kAudioFormatFlagIsPacked;
-    if (format.m_type == SampleFormat::kIsSignedInteger)
-	desc.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
-    else if (format.m_type == SampleFormat::kIsFloat)
-	desc.mFormatFlags |= kAudioFormatFlagIsFloat;
-    if (format.m_endian == SampleFormat::kIsBigEndian)
-	desc.mFormatFlags |= kAudioFormatFlagIsBigEndian;
-    desc.mFramesPerPacket = 1;
-    desc.mChannelsPerFrame = format.m_nchannels;
-    desc.mSampleRate = format.m_rate;
-    desc.mBitsPerChannel = format.m_bitsPerSample;
-    desc.mBytesPerPacket = desc.mBytesPerFrame = format.bytesPerFrame();
-    std::memcpy(result, &desc, sizeof desc);
+    AudioStreamBasicDescription asbd = { 0 };
+    asbd.mFormatID = 'lpcm';
+    asbd.mFormatFlags = type;
+    if (bits_per_channel & 0x7)
+	asbd.mFormatFlags |= alignment;
+    else
+	asbd.mFormatFlags |= kAudioFormatFlagIsPacked;
+    asbd.mSampleRate = sample_rate;
+    asbd.mChannelsPerFrame = channels_per_frame;
+    asbd.mBitsPerChannel = bits_per_channel;
+    asbd.mFramesPerPacket = 1;
+    asbd.mBytesPerFrame =
+	asbd.mChannelsPerFrame * ((asbd.mBitsPerChannel + 7) & ~7) / 8;
+    asbd.mBytesPerPacket = asbd.mFramesPerPacket * asbd.mBytesPerFrame;
+    return asbd;
 }
 
 #endif

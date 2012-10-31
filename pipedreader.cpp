@@ -24,7 +24,7 @@ PipedReader::~PipedReader()
 
 size_t PipedReader::readSamples(void *buffer, size_t nsamples)
 {
-    uint32_t bpf = source()->getSampleFormat().bytesPerFrame();
+    uint32_t bpf = source()->getSampleFormat().mBytesPerFrame;
     uint8_t *bp = static_cast<uint8_t*>(buffer);
     size_t count = nsamples * bpf;
     while (count > 0) {
@@ -46,7 +46,7 @@ void PipedReader::inputThreadProc()
 {
     try {
 	ISource *src = source();
-	uint32_t bpf = src->getSampleFormat().bytesPerFrame();
+	uint32_t bpf = src->getSampleFormat().mBytesPerFrame;
 	std::vector<uint8_t> buffer(4096 * bpf);
 	uint8_t *bp = &buffer[0];
 	HANDLE ph = m_writePipe.get();

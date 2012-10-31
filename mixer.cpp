@@ -1,6 +1,7 @@
 #include "mixer.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include "CoreAudioHelper.h"
 
 static bool validateMatrix(const std::vector<std::vector<complex_t> > &mat,
 			   uint32_t *nshifts)
@@ -81,17 +82,18 @@ MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
     : DelegatingSource(source), m_module(module), m_matrix(spec),
       m_input_frames(0), m_end_of_input(false), m_samples_read(0)
 {
-    const SampleFormat &fmt = source->getSampleFormat();
+    const AudioStreamBasicDescription &fmt = source->getSampleFormat();
     if (!validateMatrix(m_matrix, &m_shiftMask))
 	throw std::runtime_error("invalid/unsupported matrix spec");
-    if (m_matrix[0].size() != fmt.m_nchannels)
+    if (m_matrix[0].size() != fmt.mChannelsPerFrame)
 	throw std::runtime_error("unmatch number of channels with matrix");
     if (normalize)
 	normalizeMatrix(m_matrix);
-    m_format = SampleFormat("F32LE", spec.size(), fmt.m_rate);
+    m_format = BuildASBDForLPCM(fmt.mSampleRate, spec.size(),
+				32, kAudioFormatFlagIsFloat);
 
     if (m_shiftMask) {
-	size_t numtaps = fmt.m_rate / 12;
+	size_t numtaps = fmt.mSampleRate / 12;
 	if (!(numtaps & 1)) ++numtaps;
 	std::vector<double> coefs(numtaps);
 	hilbert(&coefs[0], numtaps);
@@ -106,7 +108,7 @@ MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
 	if (m_module.fir_start(m_filter.get()) < 0)
 	    throw std::runtime_error("failed to init hilbert transformer");
 
-	for (size_t i = 0; i < fmt.m_nchannels; ++i)
+	for (size_t i = 0; i < fmt.mChannelsPerFrame; ++i)
 	    if (m_shiftMask & (1 << i))
 		m_shift_channels.push_back(i);
 	    else
@@ -116,7 +118,7 @@ MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
 
 size_t MatrixMixer::readSamples(void *buffer, size_t nsamples)
 {
-    uint32_t ichannels = source()->getSampleFormat().m_nchannels;
+    uint32_t ichannels = source()->getSampleFormat().mChannelsPerFrame;
     if (m_fbuffer[0].size() < nsamples * ichannels)
 	m_fbuffer[0].resize(nsamples * ichannels);
     if (!m_shiftMask)
@@ -147,7 +149,7 @@ size_t MatrixMixer::phaseShift(void *buffer, size_t nsamples)
     float *src = m_fbuffer[1].size() ? &m_fbuffer[1][0] : 0;
     float *dst = static_cast<float*>(buffer);
 
-    uint32_t ichannels = source()->getSampleFormat().m_nchannels;
+    uint32_t ichannels = source()->getSampleFormat().mChannelsPerFrame;
     uint32_t nshifts = bitcount(m_shiftMask);
     std::vector<float*> ivec(nshifts), ovec(nshifts);
 

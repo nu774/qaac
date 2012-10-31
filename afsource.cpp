@@ -104,24 +104,6 @@ namespace audiofile {
 	return pT->size();
     }
 
-    void SampleFormat_FromASBD(const AudioStreamBasicDescription &asbd,
-			       SampleFormat *format)
-    {
-	format->m_nchannels = asbd.mChannelsPerFrame;
-	format->m_bitsPerSample = asbd.mBitsPerChannel;
-	format->m_rate = asbd.mSampleRate;
-	if (asbd.mFormatFlags & kAudioFormatFlagIsFloat)
-	    format->m_type = SampleFormat::kIsFloat;
-	else if (asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger)
-	    format->m_type = SampleFormat::kIsSignedInteger;
-	else
-	    format->m_type = SampleFormat::kIsUnsignedInteger;
-	if (asbd.mFormatFlags & kAudioFormatFlagIsBigEndian)
-	    format->m_endian = SampleFormat::kIsBigEndian;
-	else
-	    format->m_endian = SampleFormat::kIsLittleEndian;
-    }
-
     const Tag::NameIDMap tagNameMap[] = {
 	{ "title", Tag::kTitle },
 	{ "artist", Tag::kArtist },
@@ -203,19 +185,7 @@ AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
     : m_af(af), m_offset(0), m_stream(stream)
 {
     fourcc fcc(m_af.getFileFormat());
-    AudioStreamBasicDescription asbd;
-    m_af.getDataFormat(&asbd);
-    if ((asbd.mBitsPerChannel & 0x7) == 0) {
-	if ((asbd.mBitsPerChannel >> 3) * asbd.mChannelsPerFrame !=
-	    asbd.mBytesPerPacket)
-	{
-	    // XXX:
-	    // ridiculous case such as valid 16bit packed in
-	    // 24bit format
-	    throw std::runtime_error("Not supported format");
-	}
-    }
-    audiofile::SampleFormat_FromASBD(asbd, &m_format);
+    m_af.getDataFormat(&m_format);
     setRange(0, m_af.getAudioDataPacketCount());
     x::shared_ptr<AudioChannelLayout> acl;
     try {
@@ -235,7 +205,7 @@ size_t AFSource::readSamples(void *buffer, size_t nsamples)
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
     UInt32 ns = nsamples;
-    UInt32 nb = ns * m_format.bytesPerFrame();
+    UInt32 nb = ns * m_format.mBytesPerFrame;
     CHECKCA(AudioFileReadPackets(m_af, false, &nb, 0,
 		m_offset + getSamplesRead(), &ns, buffer));
     addSamplesRead(ns);
@@ -251,22 +221,22 @@ ExtAFSource::ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
     ExtAudioFileRef eaf;
     CHECKCA(ExtAudioFileWrapAudioFileID(m_af, false, &eaf));
     m_eaf.attach(eaf, true);
-    AudioStreamBasicDescription asbd, oasbd;
+    AudioStreamBasicDescription asbd;
     m_af.getDataFormat(&asbd);
     if (asbd.mFormatID != 'alac')
 	throw std::runtime_error("Not supported format");
-    unsigned bytesPerSample =
-	asbd.mFormatFlags == 1 ? 2 : asbd.mFormatFlags == 4 ? 4 : 3;
-    oasbd = asbd;
-    oasbd.mFormatID = 'lpcm';
-    oasbd.mFormatFlags =
-	kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-    oasbd.mBitsPerChannel = bytesPerSample << 3;
-    oasbd.mFramesPerPacket = 1;
-    oasbd.mBytesPerPacket = oasbd.mBytesPerFrame =
-	oasbd.mChannelsPerFrame * bytesPerSample; 
-    m_eaf.setClientDataFormat(oasbd);
-    audiofile::SampleFormat_FromASBD(oasbd, &m_format);
+
+    unsigned bits_per_channel;
+    {
+	unsigned tab[] = { 16, 20, 24, 32 };
+	unsigned index = (asbd.mFormatFlags - 1) & 0x3;
+	bits_per_channel = tab[index];
+    }
+    m_format = BuildASBDForLPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
+				bits_per_channel,
+				kAudioFormatFlagIsSignedInteger,
+				kAudioFormatFlagIsAlignedHigh);
+    m_eaf.setClientDataFormat(m_format);
     setRange(0, m_eaf.getFileLengthFrames());
     x::shared_ptr<AudioChannelLayout> acl;
     try {
@@ -292,7 +262,7 @@ size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
     uint8_t *bp = static_cast<uint8_t*>(buffer);
     while (processed < nsamples) {
 	UInt32 ns = nsamples - processed;
-	UInt32 nb = ns * m_format.bytesPerFrame();
+	UInt32 nb = ns * m_format.mBytesPerFrame;
 	AudioBufferList abl = { 0 };
 	abl.mNumberBuffers = 1;
 	abl.mBuffers[0].mData = bp;
@@ -300,7 +270,7 @@ size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
 	CHECKCA(ExtAudioFileRead(m_eaf, &ns, &abl));
 	if (ns == 0) break;
 	processed += ns;
-	bp += ns * m_format.bytesPerFrame();
+	bp += ns * m_format.mBytesPerFrame;
 	addSamplesRead(ns);
     }
     return processed;

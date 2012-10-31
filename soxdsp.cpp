@@ -2,6 +2,7 @@
 #include <cstring>
 #include <vector>
 #include "soxdsp.h"
+#include "CoreAudioHelper.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -34,14 +35,14 @@ SoxDSPProcessor::SoxDSPProcessor(const x::shared_ptr<ISoxDSPEngine> &engine,
     : DelegatingSource(src), m_engine(engine),
       m_end_of_input(false), m_input_frames(0), m_samples_read(0)
 {
-    const SampleFormat &srcFormat = source()->getSampleFormat();
-    if (srcFormat.m_bitsPerSample == 64)
+    const AudioStreamBasicDescription &srcFormat = source()->getSampleFormat();
+    if (srcFormat.mBitsPerChannel == 64)
 	throw std::runtime_error("Can't handle 64bit sample");
 
     m_format = m_engine->getSampleFormat();
 
-    m_fbuffer.resize(4096 * m_format.m_nchannels);
-    m_ibuffer.resize(m_fbuffer.size() * m_format.bytesPerFrame());
+    m_fbuffer.resize(4096 * m_format.mChannelsPerFrame);
+    m_ibuffer.resize(m_fbuffer.size() * m_format.mBytesPerFrame);
 }
 
 size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
@@ -49,7 +50,7 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
     float *src = &m_fbuffer[0];
     float *dst = static_cast<float*>(buffer);
 
-    unsigned nchannels = m_format.m_nchannels;
+    unsigned nchannels = m_format.mChannelsPerFrame;
     std::vector<float*> ivec(nchannels), ovec(nchannels);
 
     while (nsamples > 0) {
@@ -84,13 +85,15 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
     return nsamples;
 }
 
-SoxResampler::SoxResampler(const SoxModule &module, const SampleFormat &format,
+SoxResampler::SoxResampler(const SoxModule &module,
+			   const AudioStreamBasicDescription &format,
 			   uint32_t rate, bool mt)
     : m_module(module)
 {
-    m_format = SampleFormat("F32LE", format.m_nchannels, rate);
+    m_format = BuildASBDForLPCM(rate, format.mChannelsPerFrame, 32,
+				kAudioFormatFlagIsFloat);
     lsx_rate_t *converter = m_module.rate_create(
-	    format.m_nchannels, format.m_rate, rate);
+	    format.mChannelsPerFrame, format.mSampleRate, rate);
     if (!converter)
 	throw std::runtime_error("lsx_rate_create()");
     m_processor = x::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
@@ -100,12 +103,14 @@ SoxResampler::SoxResampler(const SoxModule &module, const SampleFormat &format,
 }
 
 SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
-			   const SampleFormat &format, uint32_t Fp, bool mt)
+				   const AudioStreamBasicDescription &format,
+				   uint32_t Fp, bool mt)
     : m_module(module)
 {
-    m_format = SampleFormat("F32LE", format.m_nchannels, format.m_rate);
-    double Fn = static_cast<double>(format.m_rate) / 2.0;
-    double Fc = Fp + format.m_rate * 0.025;
+    m_format = BuildASBDForLPCM(format.mSampleRate, format.mChannelsPerFrame,
+				32, kAudioFormatFlagIsFloat);
+    double Fn = format.mSampleRate / 2.0;
+    double Fc = Fp + format.mSampleRate * 0.025;
     if (Fp == 0 || Fc > Fn)
 	throw std::runtime_error("SoxLowpassFilter: invalid target rate");
     int num_taps = 0;
@@ -114,7 +119,7 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
 	throw std::runtime_error("lsx_design_lpf()");
     x::shared_ptr<double> __delete_lator__(coefs, m_module.free);
     lsx_fir_t *converter =
-	m_module.fir_create(format.m_nchannels, coefs, num_taps,
+	m_module.fir_create(format.mChannelsPerFrame, coefs, num_taps,
 			    num_taps >> 1, mt);
     if (!converter)
 	throw std::runtime_error("lsx_fir_create()");

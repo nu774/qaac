@@ -3,6 +3,7 @@
 #include "strcnv.h"
 #include "itunetags.h"
 #include "cuesheet.h"
+#include "CoreAudioHelper.h"
 
 namespace flac {
     template <typename T> void try__(T expr, const char *msg)
@@ -57,13 +58,13 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
 	     this) == FLAC__STREAM_DECODER_INIT_STATUS_OK);
     TRYFL(m_module.stream_decoder_process_until_end_of_metadata(
 		m_decoder.get()));
-    if (m_giveup || m_format.m_bitsPerSample == 0)
+    if (m_giveup || m_format.mBitsPerChannel == 0)
 	flac::want(false);
-    m_buffer.resize(m_format.m_nchannels);
+    m_buffer.resize(m_format.mChannelsPerFrame);
     if (m_cuesheet.size()) {
 	try {
 	    std::map<uint32_t, std::wstring> tags;
-	    Cue::CueSheetToChapters(m_cuesheet, m_format.m_rate,
+	    Cue::CueSheetToChapters(m_cuesheet, m_format.mSampleRate,
 		    getDuration(), &m_chapters, &tags);
 	    std::map<uint32_t, std::wstring>::const_iterator it;
 	    for (it = tags.begin(); it != tags.end(); ++it)
@@ -85,7 +86,7 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
     if (!nsamples) return 0;
     MemorySink sink(buffer);
     size_t processed = 0;
-    uint32_t shifts = (8 - m_format.m_bitsPerSample) % 8;
+    uint32_t shifts = (8 - m_format.mBitsPerChannel) % 8;
     while (processed < nsamples) {
 	while (m_buffer[0].size() && processed < nsamples) {
 	    for (size_t i = 0; i < m_buffer.size(); ++i) {
@@ -113,7 +114,8 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
 
 size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 {
-    uint32_t bytesPerChannel = m_format.bytesPerChannel();
+    uint32_t bytesPerChannel =
+	m_format.mBytesPerFrame / m_format.mChannelsPerFrame;
     if (bytesPerChannel == 1)
 	return readSamplesT<MemorySink8>(buffer, nsamples);
     else if (bytesPerChannel == 2)
@@ -177,9 +179,9 @@ FLACSource::writeCallback(
 	const FLAC__Frame *frame, const FLAC__int32 *const * buffer)
 {
     const FLAC__FrameHeader &h = frame->header;
-    if (h.channels != m_format.m_nchannels
-     || h.sample_rate != m_format.m_rate
-     || h.bits_per_sample != m_format.m_bitsPerSample)
+    if (h.channels != m_format.mChannelsPerFrame
+     || h.sample_rate != m_format.mSampleRate
+     || h.bits_per_sample != m_format.mBitsPerChannel)
 	return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
     for (size_t i = 0; i < h.channels; ++i)
@@ -211,11 +213,10 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 	return;
     }
     setRange(0, si.total_samples);
-    m_format.m_type = SampleFormat::kIsSignedInteger;
-    m_format.m_bitsPerSample = si.bits_per_sample;
-    m_format.m_endian = SampleFormat::kIsLittleEndian;
-    m_format.m_nchannels = si.channels;
-    m_format.m_rate = si.sample_rate;
+    m_format = BuildASBDForLPCM(si.sample_rate, si.channels,
+				si.bits_per_sample,
+				kAudioFormatFlagIsSignedInteger,
+				kAudioFormatFlagIsAlignedHigh);
 }
 
 void FLACSource::handleVorbisComment(

@@ -386,9 +386,9 @@ ChannelMapper::ChannelMapper(const x::shared_ptr<ISource> &source,
 
 size_t ChannelMapper::readSamples(void *buffer, size_t nsamples)
 {
-    const SampleFormat &sfmt = source()->getSampleFormat();
-    size_t framelen = sfmt.bytesPerFrame();
-    size_t width = sfmt.bytesPerChannel();
+    const AudioStreamBasicDescription &asbd = source()->getSampleFormat();
+    size_t framelen = asbd.mBytesPerFrame;
+    size_t width = framelen / asbd.mChannelsPerFrame;
     std::vector<char> tmp_buffer(framelen);
     size_t rc = source()->readSamples(buffer, nsamples);
     char *bp = reinterpret_cast<char*>(buffer);

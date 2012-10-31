@@ -39,14 +39,17 @@ class TakSource:
     TakModule m_module;
     x::shared_ptr<void> m_decoder;
     InputStream m_stream;
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
 public:
     TakSource(const TakModule &module, InputStream &stream);
     uint64_t length() const { return getDuration(); }
-    const SampleFormat &getSampleFormat() const { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     const std::vector<uint32_t> *getChannels() const { return 0; }
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);

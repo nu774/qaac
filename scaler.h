@@ -12,22 +12,26 @@ inline double dB_to_scale(double dB)
 class Scaler: public DelegatingSource {
     double m_scale;
     std::vector<uint8_t> m_ibuffer;
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
 public:
     Scaler(const x::shared_ptr<ISource> &source, double scale)
 	: DelegatingSource(source), m_scale(scale)
     {
-	const SampleFormat &fmt = source->getSampleFormat();
-	if (fmt.m_bitsPerSample == 64)
+	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
+	if (asbd.mBitsPerChannel == 64)
 	    throw std::runtime_error("Can't handle 64bit sample");
-	m_format = SampleFormat("F32LE", fmt.m_nchannels, fmt.m_rate);
+	m_format = BuildASBDForLPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
+				    32, kAudioFormatFlagIsFloat);
     }
-    const SampleFormat &getSampleFormat() const { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     size_t readSamples(void *buffer, size_t nsamples)
     {
 	float *fp = static_cast<float*>(buffer);
 	size_t nc = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
-	size_t len = nc * source()->getSampleFormat().m_nchannels;
+	size_t len = nc * source()->getSampleFormat().mChannelsPerFrame;
 	for (size_t i = 0; i < len; ++i)
 	    fp[i] *= m_scale;
 	return nc;

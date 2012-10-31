@@ -7,14 +7,11 @@ CoreAudioResampler::CoreAudioResampler(const x::shared_ptr<ISource> src,
     : DelegatingSource(src),
       m_samples_read(0)
 {
-    const SampleFormat &sfmt = src->getSampleFormat();
-    m_format = SampleFormat("F32L", sfmt.m_nchannels, rate);
+    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
+    m_format = BuildASBDForLPCM(rate, asbd.mChannelsPerFrame,
+				32, kAudioFormatFlagIsFloat);
 
-    AudioStreamBasicDescription iasbd, oasbd;
-    BuildASBDFromSampleFormat(sfmt, &iasbd);
-    BuildASBDFromSampleFormat(m_format, &oasbd);
-
-    m_converter = AudioConverterX(iasbd, oasbd);
+    m_converter = AudioConverterX(asbd, m_format);
     m_converter.setSampleRateConverterQuality(quality);
     m_converter.setSampleRateConverterComplexity(complexity);
     m_encoder.reset(new CoreAudioEncoder(m_converter));
@@ -30,8 +27,8 @@ size_t CoreAudioResampler::readSamples(void *buffer, size_t nsamples)
     float *dst = static_cast<float*>(buffer);
     size_t processed = 0;
     while (processed < nsamples) {
-	if (m_fbuffer.size() >= m_format.m_nchannels) {
-	    for (size_t i = 0; i < m_format.m_nchannels; ++i) {
+	if (m_fbuffer.size() >= m_format.mChannelsPerFrame) {
+	    for (size_t i = 0; i < m_format.mChannelsPerFrame; ++i) {
 		*dst++ = m_fbuffer.front();
 		m_fbuffer.pop_front();
 	    }

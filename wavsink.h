@@ -10,10 +10,11 @@ class WaveSink : public ISink {
     bool m_closed;
     bool m_seekable;
     bool m_rf64;
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
 public:
-    WaveSink(FILE *fp, uint64_t duration, const SampleFormat &format,
-	    uint32_t chanmask=0);
+    WaveSink(FILE *fp, uint64_t duration,
+	     const AudioStreamBasicDescription &format,
+	     uint32_t chanmask=0);
     ~WaveSink() { try { finishWrite(); } catch (...) {} }
     void writeSamples(const void *data, size_t length, size_t nsamples);
     void finishWrite();

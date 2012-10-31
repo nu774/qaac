@@ -1,6 +1,7 @@
 #include "libsndfilesrc.h"
 #include "win32util.h"
 #include "itunetags.h"
+#include "CoreAudioHelper.h"
 
 static
 uint32_t convert_chanmap(uint32_t value)
@@ -78,16 +79,6 @@ LibSndfileSource::LibSndfileSource(
     m_handle = handle_t(fp, m_module.close);
     setRange(0, info.frames);
 
-    const char *fmtstr;
-    static const char *fmtmap[] = {
-	"", "S8LE", "S16LE", "S24LE", "S32LE", "S8LE", "F32LE", "F64LE"
-    };
-    uint32_t subformat = info.format & SF_FORMAT_SUBMASK;
-    if (subformat < array_size(fmtmap))
-	fmtstr = fmtmap[subformat];
-    else
-	throw std::runtime_error("Can't handle this kind of subformat");
-
     SF_FORMAT_INFO finfo = { 0 };
     int count;
     m_module.command(fp, SFC_GET_FORMAT_MAJOR_COUNT, &count, sizeof count);
@@ -99,9 +90,27 @@ LibSndfileSource::LibSndfileSource(
 	    break;
 	}
     }
+    uint32_t subformat = info.format & SF_FORMAT_SUBMASK;
+    struct format_table_t {
+	int bits;
+	int type;
+    } mapping[] = {
+	 { 0,  0                               },
+	 { 8,  kAudioFormatFlagIsSignedInteger },
+	 { 16, kAudioFormatFlagIsSignedInteger },
+	 { 24, kAudioFormatFlagIsSignedInteger },
+	 { 32, kAudioFormatFlagIsSignedInteger },
+	 { 8,  0 /* unsigned integer */        },
+	 { 32, kAudioFormatFlagIsFloat         },
+	 { 64, kAudioFormatFlagIsFloat         }
+    };
+    if (subformat < 1 || subformat > 7)
+	throw std::runtime_error("Unsupported input subformat");
+    m_format = BuildASBDForLPCM(info.samplerate, info.channels,
+				mapping[subformat].bits,
+				mapping[subformat].type);
 
-    m_format = SampleFormat(fmtstr, info.channels, info.samplerate);
-    m_chanmap.resize(m_format.m_nchannels);
+    m_chanmap.resize(info.channels);
     if (m_module.command(fp, SFC_GET_CHANNEL_MAP_INFO, &m_chanmap[0],
 	    m_chanmap.size() * sizeof(uint32_t)) == SF_FALSE)
 	m_chanmap.clear();
@@ -128,9 +137,9 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
 {
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
-    nsamples *= m_format.m_nchannels;
+    nsamples *= m_format.mChannelsPerFrame;
     sf_count_t rc;
-    uint32_t bpc = m_format.bytesPerChannel();
+    uint32_t bpc = m_format.mBytesPerFrame / m_format.mChannelsPerFrame;
     if (bpc == 1)
 	rc = readSamples8(buffer, nsamples);
     else if (bpc == 2)
@@ -139,18 +148,18 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
 	rc = readSamples24(buffer, nsamples);
     else if (bpc == 8)
 	rc = SF_READ(double, m_handle.get(), buffer, nsamples);
-    else if (m_format.m_type == SampleFormat::kIsSignedInteger)
-	rc = SF_READ(int, m_handle.get(), buffer, nsamples);
-    else
+    else if (m_format.mFormatFlags & kAudioFormatFlagIsFloat)
 	rc = SF_READ(float, m_handle.get(), buffer, nsamples);
-    nsamples = static_cast<size_t>(rc / m_format.m_nchannels);
+    else
+	rc = SF_READ(int, m_handle.get(), buffer, nsamples);
+    nsamples = static_cast<size_t>(rc / m_format.mChannelsPerFrame);
     addSamplesRead(nsamples);
     return nsamples;
 }
 
 size_t LibSndfileSource::readSamples8(void *buffer, size_t nsamples)
 {
-    std::vector<short> v(m_format.m_nchannels * nsamples);
+    std::vector<short> v(m_format.mChannelsPerFrame * nsamples);
     sf_count_t rc = SF_READ(short, m_handle.get(), &v[0], nsamples);
     char *bp = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < rc; ++i)
@@ -160,7 +169,7 @@ size_t LibSndfileSource::readSamples8(void *buffer, size_t nsamples)
 
 size_t LibSndfileSource::readSamples24(void *buffer, size_t nsamples)
 {
-    std::vector<int32_t> v(m_format.m_nchannels * nsamples);
+    std::vector<int32_t> v(m_format.mChannelsPerFrame * nsamples);
     sf_count_t rc = SF_READ(int, m_handle.get(), &v[0], nsamples);
     MemorySink24LE sink(buffer);
     for (size_t i = 0; i < rc; ++i)

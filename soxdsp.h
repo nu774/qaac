@@ -31,13 +31,14 @@ public:
 
 struct ISoxDSPEngine {
     virtual ~ISoxDSPEngine() {}
-    virtual const SampleFormat &getSampleFormat() = 0;
-    virtual ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
-			    size_t *olen, size_t istride, size_t ostride) = 0;
+    virtual const AudioStreamBasicDescription &getSampleFormat() const = 0;
+    virtual ssize_t process(const float * const *ibuf, float **obuf,
+			    size_t *ilen, size_t *olen,
+			    size_t istride, size_t ostride) = 0;
 };
 
 class SoxDSPProcessor: public DelegatingSource {
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
     x::shared_ptr<ISoxDSPEngine> m_engine;
     bool m_end_of_input;
     size_t m_input_frames;
@@ -48,7 +49,10 @@ public:
     SoxDSPProcessor(const x::shared_ptr<ISoxDSPEngine> &engine,
 		    const x::shared_ptr<ISource> &src);
     uint64_t length() const { return -1; }
-    const SampleFormat &getSampleFormat() const { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     size_t readSamples(void *buffer, size_t nsamples);
     uint64_t getSamplesRead() const { return m_samples_read; }
 };
@@ -56,11 +60,15 @@ public:
 class SoxResampler: public ISoxDSPEngine {
     SoxModule m_module;
     x::shared_ptr<lsx_rate_t> m_processor;
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
 public:
-    SoxResampler(const SoxModule &module, const SampleFormat &format,
+    SoxResampler(const SoxModule &module,
+		 const AudioStreamBasicDescription &format,
 		 uint32_t Fp, bool mt);
-    const SampleFormat &getSampleFormat() { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
 		    size_t *olen, size_t istride, size_t ostride)
     {
@@ -72,11 +80,15 @@ public:
 class SoxLowpassFilter: public ISoxDSPEngine {
     SoxModule m_module;
     x::shared_ptr<lsx_fir_t> m_processor;
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
 public:
-    SoxLowpassFilter(const SoxModule &module, const SampleFormat &format,
+    SoxLowpassFilter(const SoxModule &module,
+		     const AudioStreamBasicDescription &format,
 		     uint32_t rate, bool mt);
-    const SampleFormat &getSampleFormat() { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
 		    size_t *olen, size_t istride, size_t ostride)
     {

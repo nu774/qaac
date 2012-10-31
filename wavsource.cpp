@@ -25,15 +25,15 @@ WaveSource::WaveSource(InputStream &stream, bool ignorelength)
 	if (chunk_id() == 'fmt ')
 	    fetchWaveFormat();
     }
-    if (!m_format.m_bitsPerSample)
+    if (!m_format.mBitsPerChannel)
 	wave::want(false);
 
     if (ignorelength || !chunk_size() ||
-	chunk_size() % m_format.bytesPerFrame()) {
+	chunk_size() % m_format.mBytesPerFrame) {
 	setRange(0, -1);
 	m_ignore_length = true;
     } else
-	setRange(0, chunk_size() / m_format.bytesPerFrame());
+	setRange(0, chunk_size() / m_format.mBytesPerFrame);
 }
 
 void WaveSource::fetchWaveFormat()
@@ -41,36 +41,35 @@ void WaveSource::fetchWaveFormat()
     if (chunk_size() < 16)
 	throw std::runtime_error("Invalid fmt chunk");
 
-    m_format.m_endian = SampleFormat::kIsLittleEndian;
-
-    uint16_t wformat, x, nchannels;
+    uint16_t wformat, x;
+    uint16_t nChannels, nBlockAlign, wBitsPerSample, wValidBitsPerSample;
+    uint32_t nSamplesPerSec, dwChannelMask = 0;
     uint32_t y;
+    uint32_t type;
     // wFormatTag
     check_eof(read16le(&wformat));
     wave::want(wformat == wave::kFormatPCM
 	      || wformat == wave::kFormatFloat
 	      || wformat == wave::kFormatExtensible);
     if (wformat == wave::kFormatFloat)
-	m_format.m_type = SampleFormat::kIsFloat;
+	type = kAudioFormatFlagIsFloat;
     // nChannels
-    check_eof(read16le(&nchannels));
-    wave::want(nchannels > 0 && nchannels < 9);
-    m_format.m_nchannels = nchannels;
+    check_eof(read16le(&nChannels));
+    wave::want(nChannels > 0 && nChannels < 9);
     // nSamplesPerSec
-    check_eof(read32le(&y));
-    wave::want(y > 0);
-    m_format.m_rate = y;
+    check_eof(read32le(&nSamplesPerSec));
+    wave::want(nSamplesPerSec > 0);
     // nAvgBytesPerSec
     check_eof(read32le(&y));
     // nBlockAlign
-    check_eof(read16le(&x));
+    check_eof(read16le(&nBlockAlign));
     // wBitsPerSample
-    check_eof(read16le(&x));
-    wave::want(x > 0 && (x & 0x7) == 0);
-    m_format.m_bitsPerSample = x;
+    check_eof(read16le(&wBitsPerSample));
+    wave::want(wBitsPerSample > 0 && (wBitsPerSample & 0x7) == 0);
+    wValidBitsPerSample = wBitsPerSample;
     if (wformat == wave::kFormatPCM)
-	m_format.m_type = x > 8 ? SampleFormat::kIsSignedInteger
-	    			: SampleFormat::kIsUnsignedInteger;
+	type = wBitsPerSample > 8
+	       ? kAudioFormatFlagIsSignedInteger : 0;
 
     if (wformat == wave::kFormatExtensible) {
 	if (chunk_size() < 40)
@@ -78,16 +77,13 @@ void WaveSource::fetchWaveFormat()
 	// cbSize
 	check_eof(read16le(&x));
 	// wValidBitsPerSample
-	check_eof(read16le(&x));
-	if (x) {
-	    wave::want(x <= m_format.m_bitsPerSample);
-	    if (x & 0x7)
-		m_format.m_bitsPerSample = x;
-	}
+	check_eof(read16le(&wValidBitsPerSample));
+	wave::want(wValidBitsPerSample > 0 &&
+		   wValidBitsPerSample <= wBitsPerSample);
 	// dwChannelMask
-	check_eof(read32le(&y));
-	if (y > 0 && bitcount(y) >= m_format.m_nchannels)
-	    chanmap::GetChannels(y, &m_chanmap, m_format.m_nchannels);
+	check_eof(read32le(&dwChannelMask));
+	if (dwChannelMask > 0 && bitcount(dwChannelMask) >= nChannels)
+	    chanmap::GetChannels(dwChannelMask, &m_chanmap, nChannels);
 	// SubFormat
 	wave::myGUID subFormat;
 	check_eof(read32le(&subFormat.Data1));
@@ -95,11 +91,23 @@ void WaveSource::fetchWaveFormat()
 	check_eof(read16le(&subFormat.Data3));
 	check_eof(read(&subFormat.Data4, 8) == 8);
 	if (subFormat == wave::ksFormatSubTypePCM)
-	    m_format.m_type = x > 8 ? SampleFormat::kIsSignedInteger
-				    : SampleFormat::kIsUnsignedInteger;
+	    type = x > 8 ? kAudioFormatFlagIsSignedInteger : 0;
 	else if (subFormat == wave::ksFormatSubTypeFloat)
-	    m_format.m_type = SampleFormat::kIsFloat;
+	    type = kAudioFormatFlagIsFloat;
 	else
 	    wave::want(false);
     }
+    std::memset(&m_format, 0, sizeof m_format);
+    m_format.mFormatID = 'lpcm';
+    m_format.mFormatFlags = type;
+    m_format.mFormatFlags |=
+	(wValidBitsPerSample & 7) ? kAudioFormatFlagIsAlignedHigh
+				  : kAudioFormatFlagIsPacked;
+    m_format.mSampleRate = nSamplesPerSec;
+    m_format.mChannelsPerFrame = nChannels;
+    m_format.mBitsPerChannel = wValidBitsPerSample;
+    m_format.mFramesPerPacket = 1;
+    m_format.mBytesPerFrame = nBlockAlign;
+    m_format.mBytesPerPacket =
+	m_format.mFramesPerPacket * m_format.mBytesPerFrame;
 }

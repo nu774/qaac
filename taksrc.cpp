@@ -6,6 +6,7 @@
 #include "cuesheet.h"
 #include <apefile.h>
 #include <apetag.h>
+#include "CoreAudioHelper.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -100,14 +101,14 @@ TakSource::TakSource(const TakModule &module, InputStream &stream)
     m_decoder = x::shared_ptr<void>(ssd, m_module.SSD_Destroy);
     Ttak_str_StreamInfo info;
     TRYTAK(m_module.SSD_GetStreamInfo(ssd, &info));
-    if (info.Audio.SampleBits == 8)
-	m_format.m_type = SampleFormat::kIsUnsignedInteger;
-    else if (info.Audio.DataType != tak_AudioFormat_DataType_PCM)
-	m_format.m_type = SampleFormat::kIsFloat;
-    m_format.m_bitsPerSample = info.Audio.SampleBits;
-    m_format.m_nchannels = info.Audio.ChannelNum;
-    m_format.m_rate = info.Audio.SampleRate;
-    if (m_format.bytesPerFrame() != info.Audio.BlockSize)
+    uint32_t type =
+	info.Audio.SampleBits == 8 ? 0 : kAudioFormatFlagIsSignedInteger;
+    m_format = BuildASBDForLPCM(info.Audio.SampleRate,
+				info.Audio.ChannelNum,
+				info.Audio.SampleBits,
+				type,
+				kAudioFormatFlagIsAlignedHigh);
+    if (m_format.mBytesPerFrame != info.Audio.BlockSize)
 	throw std::runtime_error(
 		format("blocksize: %d is different from expected",
 		    info.Audio.BlockSize));
@@ -135,7 +136,7 @@ size_t TakSource::readSamples(void *buffer, size_t nsamples)
 	if (nread == 0)
 	    break;
 	total += nread;
-	bufp += nread * m_format.bytesPerFrame();
+	bufp += nread * m_format.mBytesPerFrame;
     }
     addSamplesRead(total);
     return total;
@@ -164,8 +165,8 @@ void TakSource::fetchTags()
 	    m_tags[id] = value;
 	else if (!strcasecmp(skey.c_str(), "cuesheet")) {
 	    std::map<uint32_t, std::wstring> meta;
-	    Cue::CueSheetToChapters(value, m_format.m_rate, getDuration(),
-				    &m_chapters, &meta);
+	    Cue::CueSheetToChapters(value, m_format.mSampleRate,
+				    getDuration(), &m_chapters, &meta);
 	    std::map<uint32_t, std::wstring>::iterator it;
 	    for (it = meta.begin(); it != meta.end(); ++it)
 		m_tags[it->first] = it->second;

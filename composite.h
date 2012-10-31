@@ -8,7 +8,7 @@
 class CompositeSource: public ISource, public ITagParser {
     typedef x::shared_ptr<ISource> source_t;
     std::vector<source_t> m_sources;
-    SampleFormat m_format;
+    AudioStreamBasicDescription m_format;
     size_t m_curpos;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
@@ -21,7 +21,10 @@ public:
     {
 	return first()->getChannels();
     }
-    const SampleFormat &getSampleFormat() const { return m_format; }
+    const AudioStreamBasicDescription &getSampleFormat() const
+    {
+	return m_format;
+    }
     const std::map<uint32_t, std::wstring> &getTags() const
     {
 	if (m_tags.size()) return m_tags;
@@ -52,7 +55,7 @@ public:
     {
 	if (!count())
 	    m_format = src->getSampleFormat();
-	else if (m_format != src->getSampleFormat())
+	else if (std::memcmp(&m_format, &src->getSampleFormat(), sizeof m_format))
 	    throw std::runtime_error(
 		    "CompositeSource: can't compose different sample format");
 	m_sources.push_back(src);
@@ -116,7 +119,7 @@ public:
 	    return readSamples(buffer, nsamples);
 	}
 	return rc + readSamples(
-	    reinterpret_cast<char*>(buffer) + rc * m_format.bytesPerFrame(),
+	    reinterpret_cast<char*>(buffer) + rc * m_format.mBytesPerFrame,
 	    nsamples - rc);
     }
     void setRange(int64_t start=0, int64_t length=-1)

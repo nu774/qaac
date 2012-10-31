@@ -42,15 +42,12 @@ ALACSource::ALACSource(const std::wstring &path)
 	if (alac.size() != 24 || (chan.size() && chan.size() < 12))
 	    throw std::runtime_error("ALACSource: invalid magic cookie");
 
-	std::memset(&m_format, 0, sizeof m_format);
-	m_format.m_type = SampleFormat::kIsSignedInteger;
-	m_format.m_endian = SampleFormat::kIsLittleEndian;
-	m_format.m_nchannels = alac[9];
-	m_format.m_bitsPerSample = alac[5];
 	uint32_t timeScale;
 	std::memcpy(&timeScale, &alac[20], 4);
 	timeScale = b2host32(timeScale);
-	m_format.m_rate = timeScale;
+	m_format = BuildASBDForLPCM(timeScale, alac[9], alac[5],
+				    kAudioFormatFlagIsSignedInteger,
+				    kAudioFormatFlagIsAlignedHigh);
 
 	AudioChannelLayout acl = { 0 };
 	if (chan.size()) {
@@ -75,7 +72,7 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
     try {
-	uint32_t bpf = m_format.bytesPerFrame();
+	uint32_t bpf = m_format.mBytesPerFrame;
 	uint8_t *bufp = static_cast<uint8_t*>(buffer);
 	uint32_t nread = 0;
 
@@ -116,7 +113,7 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
 	    m_buffer.v.resize(bpf * duration);
 	    uint32_t ncount;
 	    CHECKCA(m_decoder->Decode(&bits, &m_buffer.v[0], duration,
-			m_format.m_nchannels, &ncount));
+			m_format.mChannelsPerFrame, &ncount));
 	    m_buffer.nsamples = ncount;
 
 	    duration = std::min(ncount - m_buffer.done,

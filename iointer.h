@@ -3,44 +3,9 @@
 
 #include <vector>
 #include <map>
+#include "CoreAudio/CoreAudioTypes.h"
 #include "shared_ptr.h"
 #include "util.h"
-
-struct SampleFormat {
-    enum { kIsSignedInteger, kIsUnsignedInteger, kIsFloat };
-    enum { kIsLittleEndian, kIsBigEndian };
-    unsigned m_type, m_endian, m_bitsPerSample, m_nchannels, m_rate;
-
-    SampleFormat() :
-	m_type(0), m_endian(0), m_bitsPerSample(16), m_nchannels(0), m_rate(0)
-    {}
-    SampleFormat(const char *spec, unsigned nchannels, unsigned rate);
-    uint32_t bytesPerChannel() const
-    {
-	return (m_bitsPerSample + 7) >> 3;
-    }
-    uint32_t bytesPerFrame() const
-    {
-	return m_nchannels * bytesPerChannel();
-    }
-    bool operator==(const SampleFormat &rhs) const
-    {
-	return m_type == rhs.m_type
-	    && m_endian == rhs.m_endian
-	    && m_bitsPerSample == rhs.m_bitsPerSample
-	    && m_nchannels == rhs.m_nchannels
-	    && m_rate == rhs.m_rate;
-    }
-    bool operator!=(const SampleFormat &rhs) const
-    {
-	return !operator==(rhs);
-    }
-    std::string str() const
-    {
-	static const char *tab[] = { "LE", "BE" };
-	return format("%c%d%s", "SUF"[m_type], m_bitsPerSample, tab[m_endian]);
-    }
-};
 
 struct GaplessInfo {
     uint32_t delay;
@@ -52,7 +17,7 @@ class ISource {
 public:
     virtual ~ISource() {}
     virtual uint64_t length() const = 0;
-    virtual const SampleFormat &getSampleFormat() const = 0;
+    virtual const AudioStreamBasicDescription &getSampleFormat() const = 0;
     virtual const std::vector<uint32_t> *getChannels() const = 0;
     virtual size_t readSamples(void *buffer, size_t nsamples) = 0;
     virtual uint64_t getSamplesRead() const = 0;
@@ -116,7 +81,7 @@ public:
     ISource *source() { return m_src.get(); }
     uint64_t length() const { return m_src->length(); }
     uint64_t getSamplesRead() const { return m_src->getSamplesRead(); }
-    const SampleFormat &getSampleFormat() const
+    const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_src->getSampleFormat();
     }

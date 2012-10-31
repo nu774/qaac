@@ -5,6 +5,7 @@
 #include "itunetags.h"
 #include "cuesheet.h"
 #include "chanmap.h"
+#include "CoreAudioHelper.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -104,22 +105,20 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
 	throw std::runtime_error(format("WavpackOpenFileInputEx(): %s", error));
     m_wpc = x::shared_ptr<WavpackContext>(wpc, m_module.CloseFile);
 
-    int mode = m_module.GetMode(wpc);
-    if (mode & MODE_FLOAT)
-	m_format.m_type = SampleFormat::kIsFloat;
-    else
-	m_format.m_type = SampleFormat::kIsSignedInteger;
+    m_format = BuildASBDForLPCM(m_module.GetSampleRate(wpc),
+				m_module.GetNumChannels(wpc),
+				m_module.GetBitsPerSample(wpc),
+				(m_module.GetMode(wpc) & MODE_FLOAT)
+				 ? kAudioFormatFlagIsFloat 
+				 : kAudioFormatFlagIsSignedInteger,
+				kAudioFormatFlagIsAlignedHigh);
 
-    m_format.m_endian = SampleFormat::kIsLittleEndian;
-    m_format.m_nchannels = m_module.GetNumChannels(wpc);
-    m_format.m_rate = m_module.GetSampleRate(wpc);
-    m_format.m_bitsPerSample = m_module.GetBitsPerSample(wpc);
     uint64_t duration = m_module.GetNumSamples(wpc);
     if (duration == 0xffffffff) duration = -1LL;
     setRange(0, duration);
 
     unsigned mask = m_module.GetChannelMask(wpc);
-    chanmap::GetChannels(mask, &m_chanmap, m_format.m_nchannels);
+    chanmap::GetChannels(mask, &m_chanmap, m_format.mChannelsPerFrame);
 
     fetchTags();
 }
@@ -136,7 +135,7 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 {
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
-    std::vector<int32_t> vbuf(nsamples * m_format.m_nchannels);
+    std::vector<int32_t> vbuf(nsamples * m_format.mChannelsPerFrame);
     MemorySink sink(buffer);
     size_t total = 0, rc;
     const int32_t *bp = &vbuf[0];
@@ -144,7 +143,7 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 	rc = m_module.UnpackSamples(m_wpc.get(), &vbuf[0], nsamples - total);
 	if (rc <= 0)
 	    break;
-	size_t nblk = rc * m_format.m_nchannels;
+	size_t nblk = rc * m_format.mChannelsPerFrame;
 	for (size_t i = 0; i < nblk; ++i) {
 	    int32_t value = bp[i];
 	    sink.put(value);
@@ -157,7 +156,7 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 
 size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
 {
-    uint32_t bpc = m_format.bytesPerChannel();
+    uint32_t bpc = m_format.mBytesPerFrame / m_format.mChannelsPerFrame;
     if (bpc == 1)
 	return readSamplesT<MemorySink8>(buffer, nsamples);
     else if (bpc == 2)
@@ -186,7 +185,7 @@ void WavpackSource::fetchTags()
 	if (!strcasecmp(&name[0], "cuesheet")) {
 	    try {
 		std::wstring wvalue = m2w(&value[0], u8codec);
-		Cue::CueSheetToChapters(wvalue, m_format.m_rate,
+		Cue::CueSheetToChapters(wvalue, m_format.mSampleRate,
 			getDuration(), &m_chapters, &tags);
 	    } catch (...) {}
 	} else {
