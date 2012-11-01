@@ -1,6 +1,6 @@
 #include "CoreAudioResampler.h"
 
-CoreAudioResampler::CoreAudioResampler(const x::shared_ptr<ISource> src,
+CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> src,
 				       int rate,
 				       uint32_t quality,
 				       uint32_t complexity)
@@ -17,7 +17,7 @@ CoreAudioResampler::CoreAudioResampler(const x::shared_ptr<ISource> src,
     m_encoder.reset(new CoreAudioEncoder(m_converter));
 
     struct F { static void dispose(ISink *x) {} };
-    x::shared_ptr<ISink> sinkPtr(this, F::dispose);
+    std::shared_ptr<ISink> sinkPtr(this, F::dispose);
     m_encoder->setSource(src);
     m_encoder->setSink(sinkPtr);
 }

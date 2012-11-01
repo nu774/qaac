@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "shared_ptr.h"
 #include "util.h"
 #include "expand.h"
 #ifdef _WIN32
@@ -34,12 +33,12 @@ struct IRegAction {
 class RegParser {
     int m_lineno;
     std::wstring m_token;
-    x::shared_ptr<FILE> m_fp;
+    std::shared_ptr<FILE> m_fp;
     IRegAction *m_action;
 public:
     RegParser(): m_lineno(1) {}
 
-    void parse(const x::shared_ptr<FILE> &fp, IRegAction *action);
+    void parse(const std::shared_ptr<FILE> &fp, IRegAction *action);
 private:
     int get()
     {

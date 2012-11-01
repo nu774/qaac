@@ -1,5 +1,4 @@
 #include <ALACDecoder.h>
-#include "shared_ptr.h"
 #include "iointer.h"
 #include "mp4v2wrapper.h"
 
@@ -20,7 +19,7 @@ class ALACSource: public ITagParser, public PartialSource<ALACSource>
     };
     uint32_t m_track_id;
     uint64_t m_position;
-    x::shared_ptr<ALACDecoder> m_decoder;
+    std::shared_ptr<ALACDecoder> m_decoder;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<uint32_t> m_chanmap;
     AudioStreamBasicDescription m_format;

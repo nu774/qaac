@@ -212,7 +212,7 @@ static
 void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 	const Options &opts)
 {
-    typedef x::shared_ptr<std::FILE> file_t;
+    typedef std::shared_ptr<std::FILE> file_t;
     file_t statPtr;
     if (opts.save_stat) {
 	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
@@ -244,13 +244,13 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 }
 
 static
-x::shared_ptr<ISource> open_source(const wchar_t *ifilename,
+std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 				   const Options &opts)
 {
     StdioChannel channel(ifilename);
     InputStream stream(channel);
 
-#define MAKE_SHARED(Foo) x::shared_ptr<ISource>(new Foo)
+#define MAKE_SHARED(Foo) std::shared_ptr<ISource>(new Foo)
 #define TRY_MAKE_SHARED(Foo) \
     do { \
 	try { return MAKE_SHARED(Foo); } \
@@ -312,7 +312,7 @@ x::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, ifilename));
 
 #ifdef REFALAC
-	return x::shared_ptr<ISource>(new ALACSource(ifilename));
+	return std::shared_ptr<ISource>(new ALACSource(ifilename));
 #endif
     } catch (const std::runtime_error&) {}
     throw std::runtime_error("Not available input file format");
@@ -474,11 +474,11 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
 }
 
 static
-x::shared_ptr<ISource> do_normalize(
-    const x::shared_ptr<ISource> &src, const Options &opts)
+std::shared_ptr<ISource> do_normalize(
+    const std::shared_ptr<ISource> &src, const Options &opts)
 {
     Normalizer *normalizer = new Normalizer(src);
-    x::shared_ptr<ISource> new_src(normalizer);
+    std::shared_ptr<ISource> new_src(normalizer);
 
     LOG(L"Scanning maximum peak...\n");
     uint64_t n = 0, rc;
@@ -526,7 +526,7 @@ void matrix_from_preset(const Options &opts,
 	fp = open_config_file(path.c_str());
     } else
 	fp = wfopenx(opts.remix_file, L"r");
-    x::shared_ptr<FILE> fpPtr(fp, std::fclose);
+    std::shared_ptr<FILE> fpPtr(fp, std::fclose);
     int c;
     std::vector<std::vector<complex_t> > matrix;
     std::vector<complex_t> row;
@@ -563,12 +563,12 @@ void matrix_from_preset(const Options &opts,
 }
 
 static
-x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
+std::shared_ptr<ISource> mapped_source(const std::shared_ptr<ISource> &src,
     const Options &opts, uint32_t *wav_chanmask,
     AudioChannelLayoutX *aac_layout, bool threading)
 {
     uint32_t nchannels = src->getSampleFormat().mChannelsPerFrame;
-    x::shared_ptr<ISource> srcx(src);
+    std::shared_ptr<ISource> srcx(src);
 
     const std::vector<uint32_t> *channels = src->getChannels();
     if (channels) {
@@ -638,7 +638,7 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 	std::vector<uint32_t> aacmap;
 	chanmap::GetAACChannelMap(chanmask, &aacmap);
 	if (aacmap.size())
-	    srcx = x::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
+	    srcx = std::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
 	*aac_layout = mapped;
 	if (opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
@@ -651,17 +651,17 @@ x::shared_ptr<ISource> mapped_source(const x::shared_ptr<ISource> &src,
 }
 
 static
-x::shared_ptr<ISource> delayed_source(const x::shared_ptr<ISource> &src,
+std::shared_ptr<ISource> delayed_source(const std::shared_ptr<ISource> &src,
 				      const Options & opts)
 {
     double rate = src->getSampleFormat().mSampleRate;
     if (opts.delay > 0) {
 	CompositeSource *cp = new CompositeSource();
-	x::shared_ptr<ISource> cpPtr(cp);
+	std::shared_ptr<ISource> cpPtr(cp);
 	NullSource *ns = new NullSource(src->getSampleFormat());
 	int nsamples = lrint(0.001 * opts.delay * rate);
 	ns->setRange(0, nsamples);
-	cp->addSource(x::shared_ptr<ISource>(ns));
+	cp->addSource(std::shared_ptr<ISource>(ns));
 	cp->addSource(src);
 	if (opts.verbose > 1 || opts.logfilename)
 	    LOG(L"Delay of %dms: pad %d samples\n", opts.delay,
@@ -695,8 +695,8 @@ inline uint32_t bound_quality(uint32_t n)
 
 #endif
 
-static x::shared_ptr<ISource> 
-preprocess_input(const x::shared_ptr<ISource> &src,
+static std::shared_ptr<ISource> 
+preprocess_input(const std::shared_ptr<ISource> &src,
 		 const Options &opts, uint32_t *wChanmask,
 		 AudioChannelLayoutX *aLayout,
 		 AudioStreamBasicDescription *inputDesc,
@@ -706,11 +706,11 @@ preprocess_input(const x::shared_ptr<ISource> &src,
     GetSystemInfo(&si);
     bool threading = opts.threading && si.dwNumberOfProcessors > 1;
 #ifndef REFALAC
-    x::shared_ptr<AudioCodecX> codec;
+    std::shared_ptr<AudioCodecX> codec;
     if (!opts.isLPCM())
 	codec.reset(new AudioCodecX(opts.output_format));
 #endif
-    x::shared_ptr<ISource> srcx = delayed_source(src, opts);
+    std::shared_ptr<ISource> srcx = delayed_source(src, opts);
 
     uint32_t wavChanmask;
     AudioChannelLayoutX aacLayout;
@@ -742,7 +742,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
         else {
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Applying LPF: %dHz\n", opts.lowpass);
-	    x::shared_ptr<ISoxDSPEngine>
+	    std::shared_ptr<ISoxDSPEngine>
 		engine(new SoxLowpassFilter(opts.libsoxrate,
 					    srcx->getSampleFormat(),
 					    opts.lowpass,
@@ -780,7 +780,7 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 	if (!opts.native_resampler && opts.libsoxrate.loaded()) {
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Using libsoxrate SRC\n");
-	    x::shared_ptr<ISoxDSPEngine>
+	    std::shared_ptr<ISoxDSPEngine>
 		engine(new SoxResampler(opts.libsoxrate,
 					srcx->getSampleFormat(),
 					oasbd.mSampleRate,
@@ -868,13 +868,13 @@ preprocess_input(const x::shared_ptr<ISource> &src,
 }
 
 static
-void decode_file(const x::shared_ptr<ISource> &src,
+void decode_file(const std::shared_ptr<ISource> &src,
 		 const std::wstring &ofilename, const Options &opts,
 		 uint32_t chanmask)
 {
     struct F { static void close(FILE *) {} };
 
-    x::shared_ptr<FILE> fileptr;
+    std::shared_ptr<FILE> fileptr;
     const wchar_t *spath = ofilename.c_str();
     if (ofilename == L"-")
 	fileptr.reset(stdout, F::close);
@@ -941,7 +941,7 @@ std::wstring get_encoder_config(AudioConverterX &converter)
 }
 
 static
-x::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
+std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
 	const Options &opts, const std::vector<uint8_t> &cookie)
 {
     ISink *sink;
@@ -952,7 +952,7 @@ x::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     else if (opts.isAAC())
 	sink = new MP4Sink(ofilename, cookie, opts.output_format,
 			   !opts.no_optimize);
-    return x::shared_ptr<ISink>(sink);
+    return std::shared_ptr<ISink>(sink);
 }
 
 static
@@ -1078,7 +1078,7 @@ void override_registry(int verbose)
     }
     if (verbose > 1)
 	LOG(L"Found qaac.reg, overriding registry\n");
-    x::shared_ptr<FILE> fptr(fp, std::fclose);
+    std::shared_ptr<FILE> fptr(fp, std::fclose);
     RegAction action;
     RegParser parser;
     try {
@@ -1115,7 +1115,7 @@ void set_dll_directories(int verbose)
 	const wchar_t *subkey =
 	    L"SOFTWARE\\Apple Inc.\\Apple Application Support";
 	HR(RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, 0, KEY_READ, &hKey));
-	x::shared_ptr<HKEY__> hKeyPtr(hKey, RegCloseKey);
+	std::shared_ptr<HKEY__> hKeyPtr(hKey, RegCloseKey);
 	DWORD size;
 	HR(RegQueryValueExW(hKey, L"InstallDir", 0, 0, 0, &size));
 	std::vector<wchar_t> vec(size/sizeof(wchar_t));
@@ -1143,14 +1143,14 @@ void config_aac_codec(AudioConverterX &converter, const Options &opts)
 }
 
 static
-void encode_file(const x::shared_ptr<ISource> &src,
+void encode_file(const std::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
     uint32_t wavChanmask;
     AudioChannelLayoutX aacLayout;
     AudioStreamBasicDescription iasbd, oasbd;
 
-    x::shared_ptr<ISource> srcx =
+    std::shared_ptr<ISource> srcx =
 	preprocess_input(src, opts, &wavChanmask, &aacLayout, &iasbd, &oasbd);
 
     if (opts.isLPCM()) {
@@ -1168,7 +1168,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
     converter.getCompressionMagicCookie(&cookie);
     CoreAudioEncoder encoder(converter);
     encoder.setSource(srcx);
-    x::shared_ptr<ISink> sink = open_sink(ofilename, opts, cookie);
+    std::shared_ptr<ISink> sink = open_sink(ofilename, opts, cookie);
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
@@ -1184,13 +1184,13 @@ void encode_file(const x::shared_ptr<ISource> &src,
 #else // REFALAC
 
 static
-void encode_file(const x::shared_ptr<ISource> &src,
+void encode_file(const std::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
     uint32_t wavChanmask;
     AudioChannelLayoutX aacLayout;
     AudioStreamBasicDescription iasbd;
-    x::shared_ptr<ISource> srcx =
+    std::shared_ptr<ISource> srcx =
 	preprocess_input(src, opts, &wavChanmask, &aacLayout, &iasbd, 0);
     if (opts.isLPCM()) {
 	decode_file(srcx, ofilename, opts, wavChanmask);
@@ -1201,7 +1201,7 @@ void encode_file(const x::shared_ptr<ISource> &src,
     std::vector<uint8_t> cookie;
     encoder.getMagicCookie(&cookie);
 
-    x::shared_ptr<ISink> sink(new ALACSink(ofilename, cookie,
+    std::shared_ptr<ISink> sink(new ALACSink(ofilename, cookie,
 					   !opts.no_optimize));
     encoder.setSource(srcx);
     encoder.setSink(sink);
@@ -1263,7 +1263,7 @@ uint64_t cue_frame_to_sample(uint32_t sampling_rate, uint32_t nframe)
 
 static
 void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
-		      x::shared_ptr<ISource> *result=0)
+		      std::shared_ptr<ISource> *result=0)
 {
     std::wstring cuepath = ifilename;
     std::wstring cuedir = L".";
@@ -1282,7 +1282,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
     Cue::ConvertToItunesTags(cue.m_meta, &album_tags, true);
 
     CompositeSource *concat_sp = new CompositeSource();
-    x::shared_ptr<ISource> concat_spPtr(concat_sp);
+    std::shared_ptr<ISource> concat_spPtr(concat_sp);
     std::vector<std::pair<std::wstring, int64_t> > chapters;
 
     for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
@@ -1298,9 +1298,9 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 			     cue.m_tracks.back().m_number));
 	}
 	CompositeSource *csp = new CompositeSource();
-	x::shared_ptr<ISource> csPtr(csp);
+	std::shared_ptr<ISource> csPtr(csp);
 	csp->setTags(track_tags);
-	x::shared_ptr<ISource> src;
+	std::shared_ptr<ISource> src;
 	for (size_t j = 0; j < track.m_segments.size(); ++j) {
 	    CueSegment &seg = track.m_segments[j];
 	    if (seg.m_filename == L"__GAP__") {
@@ -1489,11 +1489,11 @@ int wmain1(int argc, wchar_t **argv)
 	    }
 	}
 	CompositeSource *csp = new CompositeSource();
-	x::shared_ptr<ISource> csPtr(csp);
+	std::shared_ptr<ISource> csPtr(csp);
 	const wchar_t *ifilename = 0;
 	for (int i = 0; i < argc; ++i) {
 	    ifilename = argv[i];
-	    x::shared_ptr<ISource> src;
+	    std::shared_ptr<ISource> src;
 	    const wchar_t *name = L"<stdin>";
 	    if (std::wcscmp(ifilename, L"-"))
 		name = PathFindFileNameW(ifilename);

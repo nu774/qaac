@@ -8,7 +8,7 @@
 #endif
 #include "CoreAudioHelper.h"
 
-Normalizer::Normalizer(const x::shared_ptr<ISource> &src)
+Normalizer::Normalizer(const std::shared_ptr<ISource> &src)
     : DelegatingSource(src), m_peak(0.0), m_processed(0), m_samples_read(0)
 {
     const AudioStreamBasicDescription &srcFormat = source()->getSampleFormat();
@@ -24,7 +24,7 @@ Normalizer::Normalizer(const x::shared_ptr<ISource> &src)
 #else
     FILE *tmpfile = std::tmpfile();
 #endif
-    m_tmpfile = x::shared_ptr<FILE>(tmpfile, std::fclose);
+    m_tmpfile = std::shared_ptr<FILE>(tmpfile, std::fclose);
 }
 
 size_t Normalizer::process(size_t nsamples)

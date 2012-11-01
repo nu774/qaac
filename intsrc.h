@@ -13,7 +13,7 @@ class IntegerSource: public DelegatingSource {
     std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
 public:
-    IntegerSource(const x::shared_ptr<ISource> &source, uint32_t bitdepth)
+    IntegerSource(const std::shared_ptr<ISource> &source, uint32_t bitdepth)
 	: DelegatingSource(source), m_dist(-0.5, 0.5)
     {
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();

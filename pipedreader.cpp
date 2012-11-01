@@ -1,6 +1,6 @@
 #include "pipedreader.h"
 
-PipedReader::PipedReader(x::shared_ptr<ISource> &src):
+PipedReader::PipedReader(std::shared_ptr<ISource> &src):
     DelegatingSource(src), m_thread(0), m_samples_read(0)
 {
     HANDLE hr, hw;

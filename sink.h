@@ -1,7 +1,6 @@
 #ifndef _SINK_H
 #define _SINK_H
 
-#include "shared_ptr.h"
 #include "CoreAudioToolbox.h"
 #include "mp4v2wrapper.h"
 #include "itunetags.h"
@@ -36,7 +35,7 @@ public:
 };
 
 class ADTSSink: public ISink {
-    typedef x::shared_ptr<FILE> file_ptr_t;
+    typedef std::shared_ptr<FILE> file_ptr_t;
     file_ptr_t m_fp;
     uint32_t m_sample_rate_index;
     uint32_t m_channel_config;

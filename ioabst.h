@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
-#include "shared_ptr.h"
 #include "util.h"
 #include "strcnv.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -60,7 +59,7 @@ typedef void *HANDLE;
  * is not portable, and therefore is VC++ specific.
  */
 class StdioChannel : public ISeekable {
-    typedef x::shared_ptr<FILE> fileptr_t;
+    typedef std::shared_ptr<FILE> fileptr_t;
     fileptr_t m_fp;
     std::wstring m_name;
     bool m_is_seekable;
@@ -171,7 +170,7 @@ namespace __InputStreamImpl {
     };
 
     class Seekable: public Impl {
-	typedef x::shared_ptr<ISeekable> channel_t;
+	typedef std::shared_ptr<ISeekable> channel_t;
 	channel_t m_channel;
     public:
 	Seekable(ISeekable &channel):
@@ -204,7 +203,7 @@ namespace __InputStreamImpl {
     };
 
     class NonSeekable: public Impl {
-	typedef x::shared_ptr<IChannel> channel_t;
+	typedef std::shared_ptr<IChannel> channel_t;
 	channel_t m_channel;
 	std::vector<char> m_pushback_buffer;
 	uint64_t m_pos;
@@ -231,7 +230,7 @@ namespace __InputStreamImpl {
 }
 
 class InputStream: public BinaryRead<InputStream> {
-    typedef x::shared_ptr<__InputStreamImpl::Impl> impl_t;
+    typedef std::shared_ptr<__InputStreamImpl::Impl> impl_t;
     impl_t m_impl;
     bool m_seekable;
 public:

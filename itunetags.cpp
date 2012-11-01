@@ -230,7 +230,7 @@ void TagEditor::saveArtworks(MP4FileX &file)
 	for (size_t i = 0; i < m_artworks.size(); ++i) {
 	    uint64_t size;
 	    char *data = load_with_mmap(m_artworks[i].c_str(), &size);
-	    x::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
+	    std::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
 	    mp4v2::impl::itmf::BasicType tc =
 		mp4v2::impl::itmf::computeBasicType(data, size);
 	    if (tc == mp4v2::impl::itmf::BT_IMPLICIT)
@@ -471,7 +471,7 @@ namespace mp4a
 		mp4v2::impl::itmf::genericGetItems(file);
 	    if (!itemlist)
 		return;
-	    x::shared_ptr<MP4ItmfItemList> __delete_later__(
+	    std::shared_ptr<MP4ItmfItemList> __delete_later__(
 		    itemlist, mp4v2::impl::itmf::genericItemListFree);
 	    for (size_t i = 0; i < itemlist->size; ++i) {
 		MP4ItmfItem &item = itemlist->elements[i];

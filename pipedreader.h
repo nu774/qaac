@@ -6,10 +6,10 @@
 #include <process.h>
 
 class PipedReader: public DelegatingSource {
-    x::shared_ptr<void> m_readPipe, m_writePipe, m_thread;
+    std::shared_ptr<void> m_readPipe, m_writePipe, m_thread;
     uint64_t m_samples_read;
 public:
-    PipedReader(x::shared_ptr<ISource> &src);
+    PipedReader(std::shared_ptr<ISource> &src);
     ~PipedReader();
     size_t readSamples(void *buffer, size_t nsamples);
     void start()

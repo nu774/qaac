@@ -37,7 +37,7 @@ class TakSource:
     public ITagParser, public PartialSource<TakSource>
 {
     TakModule m_module;
-    x::shared_ptr<void> m_decoder;
+    std::shared_ptr<void> m_decoder;
     InputStream m_stream;
     AudioStreamBasicDescription m_format;
     std::vector<uint32_t> m_chanmap;

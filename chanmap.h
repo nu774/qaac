@@ -26,7 +26,7 @@ class ChannelMapper: public DelegatingSource {
     std::vector<uint32_t> m_chanmap;
     std::vector<uint32_t> m_layout;
 public:
-    ChannelMapper(const x::shared_ptr<ISource> &source,
+    ChannelMapper(const std::shared_ptr<ISource> &source,
 		  const std::vector<uint32_t> &chanmap, uint32_t bitmap=0);
     const std::vector<uint32_t> *getChannels() const
     {

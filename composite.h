@@ -1,12 +1,11 @@
 #ifndef _COMPOSITE_H
 #define _COMPOSITE_H
 
-#include "shared_ptr.h"
 #include "iointer.h"
 #include "itunetags.h"
 
 class CompositeSource: public ISource, public ITagParser {
-    typedef x::shared_ptr<ISource> source_t;
+    typedef std::shared_ptr<ISource> source_t;
     std::vector<source_t> m_sources;
     AudioStreamBasicDescription m_format;
     size_t m_curpos;
@@ -16,7 +15,7 @@ class CompositeSource: public ISource, public ITagParser {
 public:
     CompositeSource() : m_curpos(0), m_samples_read(0) {}
     size_t count() const { return m_sources.size(); }
-    x::shared_ptr<ISource> first() const { return m_sources[0]; }
+    std::shared_ptr<ISource> first() const { return m_sources[0]; }
     const std::vector<uint32_t> *getChannels() const
     {
 	return first()->getChannels();
@@ -28,7 +27,7 @@ public:
     const std::map<uint32_t, std::wstring> &getTags() const
     {
 	if (m_tags.size()) return m_tags;
-	x::shared_ptr<ISource> src = first();
+	std::shared_ptr<ISource> src = first();
 	ITagParser *tp = dynamic_cast<ITagParser*>(src.get());
 	return tp ? tp->getTags() : m_tags;
     }
@@ -51,7 +50,7 @@ public:
     {
 	m_chapters.push_back(std::make_pair(title, length));
     }
-    void addSource(const x::shared_ptr<ISource> &src)
+    void addSource(const std::shared_ptr<ISource> &src)
     {
 	if (!count())
 	    m_format = src->getSampleFormat();
@@ -60,7 +59,7 @@ public:
 		    "CompositeSource: can't compose different sample format");
 	m_sources.push_back(src);
     }
-    void addSourceWithChapter(const x::shared_ptr<ISource> &src)
+    void addSourceWithChapter(const std::shared_ptr<ISource> &src)
     {
 	addSource(src);
 	ITagParser *parser = dynamic_cast<ITagParser*>(src.get());

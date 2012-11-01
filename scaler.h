@@ -14,7 +14,7 @@ class Scaler: public DelegatingSource {
     std::vector<uint8_t> m_ibuffer;
     AudioStreamBasicDescription m_format;
 public:
-    Scaler(const x::shared_ptr<ISource> &source, double scale)
+    Scaler(const std::shared_ptr<ISource> &source, double scale)
 	: DelegatingSource(source), m_scale(scale)
     {
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();

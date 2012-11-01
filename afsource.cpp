@@ -9,7 +9,7 @@
 #include "utf8_codecvt_facet.hpp"
 #include "itunetags.h"
 
-typedef x::shared_ptr<const __CFDictionary> CFDictionaryPtr;
+typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;
 
 namespace caf {
     inline void *load_cf_constant(const char *name)
@@ -161,11 +161,11 @@ namespace audiofile {
     }
 }
 
-x::shared_ptr<ISource>
+std::shared_ptr<ISource>
 AudioFileOpenFactory(InputStream &stream, const std::wstring &path)
 {
     AudioFileID afid;
-    x::shared_ptr<InputStream> streamPtr(new InputStream(stream));
+    std::shared_ptr<InputStream> streamPtr(new InputStream(stream));
 
     CHECKCA(AudioFileOpenWithCallbacks(streamPtr.get(), audiofile::read, 0,
 				       audiofile::size, 0, 0, &afid));
@@ -174,20 +174,20 @@ AudioFileOpenFactory(InputStream &stream, const std::wstring &path)
     af.getDataFormat(&asbd);
 
     if (asbd.mFormatID == 'lpcm')
-	return x::shared_ptr<ISource>(new AFSource(af, streamPtr));
+	return std::shared_ptr<ISource>(new AFSource(af, streamPtr));
     else if (asbd.mFormatID == 'alac')
-	return x::shared_ptr<ISource>(new ExtAFSource(af, streamPtr, path));
+	return std::shared_ptr<ISource>(new ExtAFSource(af, streamPtr, path));
     else
 	throw std::runtime_error("Not supported format");
 }
 
-AFSource::AFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream)
+AFSource::AFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream)
     : m_af(af), m_offset(0), m_stream(stream)
 {
     fourcc fcc(m_af.getFileFormat());
     m_af.getDataFormat(&m_format);
     setRange(0, m_af.getAudioDataPacketCount());
-    x::shared_ptr<AudioChannelLayout> acl;
+    std::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
 	chanmap::GetChannels(acl.get(), &m_chanmap);
@@ -213,7 +213,7 @@ size_t AFSource::readSamples(void *buffer, size_t nsamples)
 }
 
 
-ExtAFSource::ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
+ExtAFSource::ExtAFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream,
 			 const std::wstring &path)
     : m_af(af), m_stream(stream)
 {
@@ -238,7 +238,7 @@ ExtAFSource::ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
 				kAudioFormatFlagIsAlignedHigh);
     m_eaf.setClientDataFormat(m_format);
     setRange(0, m_eaf.getFileLengthFrames());
-    x::shared_ptr<AudioChannelLayout> acl;
+    std::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
 	chanmap::GetChannels(acl.get(), &m_chanmap);

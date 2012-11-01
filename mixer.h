@@ -12,7 +12,7 @@ class MatrixMixer: public DelegatingSource {
     AudioStreamBasicDescription m_format;
     SoxModule m_module;
     std::vector<std::vector<complex_t> > m_matrix;
-    x::shared_ptr<lsx_fir_t> m_filter;
+    std::shared_ptr<lsx_fir_t> m_filter;
     std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer[2];
     std::vector<uint32_t> m_shift_channels, m_pass_channels;
@@ -23,7 +23,7 @@ class MatrixMixer: public DelegatingSource {
     double m_filter_gain;
     uint64_t m_samples_read;
 public:
-    MatrixMixer(const x::shared_ptr<ISource> &source, const SoxModule &module,
+    MatrixMixer(const std::shared_ptr<ISource> &source, const SoxModule &module,
 		const std::vector<std::vector<complex_t> > &spec, bool mt,
 		bool normalize=true);
     uint64_t length() const { return -1; }

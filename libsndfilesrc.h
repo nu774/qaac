@@ -2,7 +2,6 @@
 #define _LIBSNDFILESRC_H
 
 #include <vector>
-#include "shared_ptr.h"
 #include <sndfile.h>
 #include "iointer.h"
 #include "dl.h"
@@ -32,7 +31,7 @@ public:
 class LibSndfileSource:
     public ITagParser, public PartialSource<LibSndfileSource>
 {
-    typedef x::shared_ptr<SNDFILE_tag> handle_t;
+    typedef std::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
     LibSndfileModule m_module;
     AudioStreamBasicDescription m_format;

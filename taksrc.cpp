@@ -98,7 +98,7 @@ TakSource::TakSource(const TakModule &module, InputStream &stream)
 	    &io, &m_stream, &options, staticDamageCallback, this);
     if (!ssd)
 	throw std::runtime_error("tak_SSD_Create_FromStream");
-    m_decoder = x::shared_ptr<void>(ssd, m_module.SSD_Destroy);
+    m_decoder = std::shared_ptr<void>(ssd, m_module.SSD_Destroy);
     Ttak_str_StreamInfo info;
     TRYTAK(m_module.SSD_GetStreamInfo(ssd, &info));
     uint32_t type =

@@ -9,7 +9,6 @@
 #include <dlfcn.h>
 #endif
 #include "strcnv.h"
-#include "shared_ptr.h"
 
 template <typename T>
 class AutoCast {
@@ -22,7 +21,7 @@ public:
 
 #ifdef _WIN32
 class DL {
-    x::shared_ptr<HINSTANCE__> m_module;
+    std::shared_ptr<HINSTANCE__> m_module;
 public:
     DL() {}
     DL(const std::wstring &path)
@@ -39,7 +38,7 @@ public:
 };
 #else
 class DL {
-    x::shared_ptr<void> m_module;
+    std::shared_ptr<void> m_module;
 public:
     DL() {}
     DL(const std::string &path)

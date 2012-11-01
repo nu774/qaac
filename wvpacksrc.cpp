@@ -103,7 +103,7 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
 				 error, flags, 0);
     if (!wpc)
 	throw std::runtime_error(format("WavpackOpenFileInputEx(): %s", error));
-    m_wpc = x::shared_ptr<WavpackContext>(wpc, m_module.CloseFile);
+    m_wpc = std::shared_ptr<WavpackContext>(wpc, m_module.CloseFile);
 
     m_format = BuildASBDForLPCM(m_module.GetSampleRate(wpc),
 				m_module.GetNumChannels(wpc),

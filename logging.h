@@ -2,11 +2,10 @@
 #include <cstdarg>
 #include <vector>
 #include "ioabst.h"
-#include "shared_ptr.h"
 
 /* non-thread safe */
 class Log {
-    std::vector<x::shared_ptr<FILE> > m_streams;
+    std::vector<std::shared_ptr<FILE> > m_streams;
     static Log *m_instance;
     Log() {}
 public:
@@ -18,7 +17,7 @@ public:
     bool is_enabled() { return m_streams.size() != 0; }
     void enable_stderr()
     {
-	m_streams.push_back(x::shared_ptr<FILE>(stderr, std::fclose));
+	m_streams.push_back(std::shared_ptr<FILE>(stderr, std::fclose));
     }
     void enable_file(const wchar_t *filename)
     {
@@ -28,7 +27,7 @@ public:
 	    _setmode(_fileno(fp), _O_U8TEXT);
 #endif
 	    std::setbuf(fp, 0);
-	    m_streams.push_back(x::shared_ptr<FILE>(fp, std::fclose));
+	    m_streams.push_back(std::shared_ptr<FILE>(fp, std::fclose));
 	} catch (...) {}
     }
     void vwprintf(const wchar_t *fmt, va_list args)

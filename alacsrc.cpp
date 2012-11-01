@@ -57,7 +57,7 @@ ALACSource::ALACSource(const std::wstring &path)
 	    acl.mChannelBitmap = bitmap;
 	    chanmap::GetChannels(&acl, &m_chanmap);
 	}
-	m_decoder = x::shared_ptr<ALACDecoder>(new ALACDecoder());
+	m_decoder = std::shared_ptr<ALACDecoder>(new ALACDecoder());
 	CHECKCA(m_decoder->Init(&alac[0], alac.size()));
 	setRange(0, m_file.GetTrackDuration(m_track_id));
 

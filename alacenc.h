@@ -11,9 +11,9 @@ class ALACEncoderX: public IEncoder, public IEncoderStat {
 	AudioStreamBasicDescription asbd;
 	AudioFormatDescription afd;
     };
-    x::shared_ptr<ISource> m_src;
-    x::shared_ptr<ISink> m_sink;
-    x::shared_ptr<ALACEncoder> m_encoder;
+    std::shared_ptr<ISource> m_src;
+    std::shared_ptr<ISink> m_sink;
+    std::shared_ptr<ALACEncoder> m_encoder;
     std::vector<uint8_t> m_input_buffer;
     std::vector<uint8_t> m_output_buffer;
     ASBD m_input_desc, m_output_desc;
@@ -23,8 +23,8 @@ public:
     void setFastMode(bool fast) { m_encoder->SetFastMode(fast); }
     bool encodeChunk(UInt32 npackets);
     void getMagicCookie(std::vector<uint8_t> *cookie);
-    void setSource(const x::shared_ptr<ISource> &source) { m_src = source; }
-    void setSink(const x::shared_ptr<ISink> &sink) { m_sink = sink; }
+    void setSource(const std::shared_ptr<ISource> &source) { m_src = source; }
+    void setSink(const std::shared_ptr<ISink> &sink) { m_sink = sink; }
     ISource *src() { return m_src.get(); }
     const AudioStreamBasicDescription &getInputDescription() const
     {

@@ -2,7 +2,6 @@
 #include "win32util.h"
 #include <shlwapi.h>
 #include <mlang.h>
-#include "shared_ptr.h"
 
 #ifdef __MINGW32__
 const GUID IID_IMultiLanguage2 = { 0xdccfc164, 0x2b38, 0x11d2,
@@ -28,7 +27,7 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 				       STGM_READ | STGM_SHARE_DENY_WRITE,
 				       &stream);
     if (FAILED(hr)) throw_win32_error(path, hr);
-    x::shared_ptr<IStream> streamPtr(stream, F::release);
+    std::shared_ptr<IStream> streamPtr(stream, F::release);
 
     LARGE_INTEGER li = { 0 };
     ULARGE_INTEGER ui;
@@ -43,7 +42,7 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     IMultiLanguage2 *mlang;
     HR(CoCreateInstance(CLSID_CMultiLanguage, 0, CLSCTX_INPROC_SERVER,
 		IID_IMultiLanguage2, (void**)(&mlang)));
-    x::shared_ptr<IMultiLanguage2> mlangPtr(mlang, F::release);
+    std::shared_ptr<IMultiLanguage2> mlangPtr(mlang, F::release);
 
     if (!codepage) {
 	DetectEncodingInfo encoding[5];

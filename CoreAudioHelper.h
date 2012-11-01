@@ -5,7 +5,6 @@
 #include <vector>
 #include <sstream>
 #include <stdexcept>
-#include "shared_ptr.h"
 #include "CoreAudioToolbox.h"
 #include "util.h"
 #include "chanmap.h"
@@ -61,7 +60,7 @@ inline std::wstring CF2W(CFStringRef str)
     return std::wstring(buffer.begin(), buffer.end());
 }
 
-typedef x::shared_ptr<const __CFString> CFStringPtr;
+typedef std::shared_ptr<const __CFString> CFStringPtr;
 
 inline CFStringPtr W2CF(std::wstring s)
 {
@@ -71,7 +70,7 @@ inline CFStringPtr W2CF(std::wstring s)
 }
 
 class AudioChannelLayoutX {
-    typedef x::shared_ptr<AudioChannelLayout> owner_t;
+    typedef std::shared_ptr<AudioChannelLayout> owner_t;
     owner_t m_instance;
 public:
     AudioChannelLayoutX() { create(0); }

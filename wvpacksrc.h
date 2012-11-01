@@ -41,9 +41,9 @@ class WavpackSource:
 {
     WavpackModule m_module;
     InputStream m_stream;
-    x::shared_ptr<InputStream> m_cstream;
+    std::shared_ptr<InputStream> m_cstream;
     AudioStreamBasicDescription m_format;
-    x::shared_ptr<void> m_wpc;
+    std::shared_ptr<void> m_wpc;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;

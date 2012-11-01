@@ -7,8 +7,8 @@
 
 struct IEncoder {
     virtual ~IEncoder() {}
-    virtual void setSource(const x::shared_ptr<ISource> &source) = 0;
-    virtual void setSink(const x::shared_ptr<ISink> &sink) = 0;
+    virtual void setSource(const std::shared_ptr<ISource> &source) = 0;
+    virtual void setSink(const std::shared_ptr<ISink> &sink) = 0;
     virtual bool encodeChunk(UInt32 npackets) = 0;
     virtual ISource *src() = 0;
     virtual const AudioStreamBasicDescription &getInputDescription() const = 0;

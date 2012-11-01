@@ -21,7 +21,7 @@ CoreAudioEncoder::CoreAudioEncoder(AudioConverterX &converter)
 	abl = static_cast<AudioBufferList*>(std::calloc(1, size));
 	abl->mBuffers[0].mNumberChannels = m_output_desc.mChannelsPerFrame;
 	abl->mNumberBuffers = 1;
-	m_output_abl = x::shared_ptr<AudioBufferList>(abl, std::free);
+	m_output_abl = std::shared_ptr<AudioBufferList>(abl, std::free);
     }
 }
 

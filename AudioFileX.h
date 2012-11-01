@@ -5,7 +5,7 @@
 #include "CoreAudioHelper.h"
 
 class AudioFileX {
-    x::shared_ptr<OpaqueAudioFileID> m_file;
+    std::shared_ptr<OpaqueAudioFileID> m_file;
 public:
     AudioFileX() {}
     AudioFileX(AudioFileID file, bool takeOwn)
@@ -59,13 +59,13 @@ public:
 				     sizeof(AudioFilePacketTableInfo),
 				     info));
     }
-    void getChannelLayout(x::shared_ptr<AudioChannelLayout> *layout)
+    void getChannelLayout(std::shared_ptr<AudioChannelLayout> *layout)
     {
 	UInt32 size;
 	UInt32 writable;
 	CHECKCA(AudioFileGetPropertyInfo(m_file.get(),
 		    kAudioFilePropertyChannelLayout, &size, &writable));
-	x::shared_ptr<AudioChannelLayout> acl(
+	std::shared_ptr<AudioChannelLayout> acl(
 	    reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
 	    std::free);
 	CHECKCA(AudioFileGetProperty(m_file.get(),

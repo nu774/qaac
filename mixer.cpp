@@ -74,7 +74,7 @@ static double calcGain(double *coefs, size_t numcoefs)
     return gain;
 }
 
-MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
+MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
 			 const SoxModule &module,
 			 const std::vector<std::vector<complex_t> > &spec,
 			 bool mt,
@@ -104,7 +104,7 @@ MatrixMixer::MatrixMixer(const x::shared_ptr<ISource> &source,
 				numtaps >> 1, mt);
 	if (!filter)
 	    throw std::runtime_error("failed to init hilbert transformer");
-	m_filter = x::shared_ptr<lsx_fir_t>(filter, m_module.fir_close);
+	m_filter = std::shared_ptr<lsx_fir_t>(filter, m_module.fir_close);
 	if (m_module.fir_start(m_filter.get()) < 0)
 	    throw std::runtime_error("failed to init hilbert transformer");
 

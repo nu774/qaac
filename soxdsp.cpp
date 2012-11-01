@@ -30,8 +30,8 @@ SoxModule::SoxModule(const std::wstring &path)
     }
 }
 
-SoxDSPProcessor::SoxDSPProcessor(const x::shared_ptr<ISoxDSPEngine> &engine,
-				 const x::shared_ptr<ISource> &src)
+SoxDSPProcessor::SoxDSPProcessor(const std::shared_ptr<ISoxDSPEngine> &engine,
+				 const std::shared_ptr<ISource> &src)
     : DelegatingSource(src), m_engine(engine),
       m_end_of_input(false), m_input_frames(0), m_samples_read(0)
 {
@@ -96,7 +96,7 @@ SoxResampler::SoxResampler(const SoxModule &module,
 	    format.mChannelsPerFrame, format.mSampleRate, rate);
     if (!converter)
 	throw std::runtime_error("lsx_rate_create()");
-    m_processor = x::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
+    m_processor = std::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
     m_module.rate_config(converter, SOX_RATE_USE_THREADS, static_cast<int>(mt));
     if (m_module.rate_start(converter) < 0)
 	throw std::runtime_error("lsx_rate_config()");
@@ -117,13 +117,13 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
     double *coefs = m_module.design_lpf(Fp, Fc, Fn, 120.0, &num_taps, 0, -1);
     if (!coefs)
 	throw std::runtime_error("lsx_design_lpf()");
-    x::shared_ptr<double> __delete_lator__(coefs, m_module.free);
+    std::shared_ptr<double> __delete_lator__(coefs, m_module.free);
     lsx_fir_t *converter =
 	m_module.fir_create(format.mChannelsPerFrame, coefs, num_taps,
 			    num_taps >> 1, mt);
     if (!converter)
 	throw std::runtime_error("lsx_fir_create()");
-    m_processor = x::shared_ptr<lsx_fir_t>(converter, m_module.fir_close);
+    m_processor = std::shared_ptr<lsx_fir_t>(converter, m_module.fir_close);
     if (m_module.fir_start(converter) < 0)
 	throw std::runtime_error("lsx_fir_start()");
 }

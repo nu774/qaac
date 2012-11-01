@@ -5,7 +5,7 @@
 #include "CoreAudioHelper.h"
 
 class ExtAudioFileX {
-    x::shared_ptr<OpaqueExtAudioFileID> m_file;
+    std::shared_ptr<OpaqueExtAudioFileID> m_file;
 public:
     ExtAudioFileX() {}
     ExtAudioFileX(ExtAudioFileRef file, bool takeOwn)
@@ -51,26 +51,26 @@ public:
 					kExtAudioFileProperty_FileDataFormat,
 					&size, result));
     }
-    void getClientChannelLayout(x::shared_ptr<AudioChannelLayout> *layout)
+    void getClientChannelLayout(std::shared_ptr<AudioChannelLayout> *layout)
     {
 	UInt32 size;
 	Boolean writable;
 	CHECKCA(ExtAudioFileGetPropertyInfo(m_file.get(),
 		kExtAudioFileProperty_ClientChannelLayout, &size, &writable));
-	x::shared_ptr<AudioChannelLayout> acl(
+	std::shared_ptr<AudioChannelLayout> acl(
 	    reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
 	    std::free);
 	CHECKCA(ExtAudioFileGetProperty(m_file.get(),
 		kExtAudioFileProperty_ClientChannelLayout, &size, acl.get()));
 	layout->swap(acl);
     }
-    void getFileChannelLayout(x::shared_ptr<AudioChannelLayout> *layout)
+    void getFileChannelLayout(std::shared_ptr<AudioChannelLayout> *layout)
     {
 	UInt32 size;
 	Boolean writable;
 	CHECKCA(ExtAudioFileGetPropertyInfo(m_file.get(),
 		kExtAudioFileProperty_FileChannelLayout, &size, &writable));
-	x::shared_ptr<AudioChannelLayout> acl(
+	std::shared_ptr<AudioChannelLayout> acl(
 	    reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
 	    std::free);
 	CHECKCA(ExtAudioFileGetProperty(m_file.get(),

@@ -10,7 +10,7 @@
 class FLACSource :
     public ITagParser, public PartialSource<FLACSource>
 {
-    typedef x::shared_ptr<FLAC__StreamDecoder> decoder_t;
+    typedef std::shared_ptr<FLAC__StreamDecoder> decoder_t;
     FLACModule m_module;
     InputStream m_stream;
     decoder_t m_decoder;

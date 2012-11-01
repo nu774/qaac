@@ -6,12 +6,12 @@
 
 class CoreAudioResampler: public DelegatingSource, public ISink {
     AudioConverterX m_converter;
-    x::shared_ptr<CoreAudioEncoder> m_encoder;
+    std::shared_ptr<CoreAudioEncoder> m_encoder;
     std::deque<float> m_fbuffer;
     uint64_t m_samples_read;
     AudioStreamBasicDescription m_format;
 public:
-    CoreAudioResampler(const x::shared_ptr<ISource> src, int rate,
+    CoreAudioResampler(const std::shared_ptr<ISource> src, int rate,
 		       uint32_t quality, uint32_t complexity);
     uint64_t length() const { return -1; }
     const AudioStreamBasicDescription &getSampleFormat() const

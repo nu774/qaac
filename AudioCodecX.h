@@ -4,7 +4,7 @@
 #include "CoreAudioToolbox.h"
 
 class AudioCodecX {
-    x::shared_ptr<ComponentInstanceRecord> m_codec;
+    std::shared_ptr<ComponentInstanceRecord> m_codec;
 public:
     AudioCodecX() {}
     AudioCodecX(OSType codec)

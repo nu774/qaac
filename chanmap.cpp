@@ -365,7 +365,7 @@ void GetAACChannelMap(uint32_t bitmap, std::vector<uint32_t> *result)
 
 } // namespace
 
-ChannelMapper::ChannelMapper(const x::shared_ptr<ISource> &source,
+ChannelMapper::ChannelMapper(const std::shared_ptr<ISource> &source,
 			     const std::vector<uint32_t> &chanmap,
 			     uint32_t bitmap)
     : DelegatingSource(source)

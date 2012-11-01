@@ -7,7 +7,7 @@
 #include <cmath>
 
 class AudioConverterX {
-    x::shared_ptr<OpaqueAudioConverter> m_converter;
+    std::shared_ptr<OpaqueAudioConverter> m_converter;
 public:
     AudioConverterX() {}
     AudioConverterX(AudioConverterRef converter, bool takeOwn)
@@ -103,13 +103,13 @@ public:
 	CHECKCA(AudioConverterSetProperty(m_converter.get(),
 	    kAudioConverterEncodeBitRate, sizeof value, &value));
     }
-    void getInputChannelLayout(x::shared_ptr<AudioChannelLayout> *result)
+    void getInputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
     {
 	UInt32 size;
 	Boolean writable;
 	CHECKCA(AudioConverterGetPropertyInfo(m_converter.get(),
 		    kAudioConverterInputChannelLayout, &size, &writable));
-	x::shared_ptr<AudioChannelLayout> acl(
+	std::shared_ptr<AudioChannelLayout> acl(
 	    reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
 	    std::free);
 	CHECKCA(AudioConverterGetProperty(m_converter.get(),
@@ -123,13 +123,13 @@ public:
 	CHECKCA(AudioConverterSetProperty(m_converter.get(),
 		kAudioConverterInputChannelLayout, size, value));
     }
-    void getOutputChannelLayout(x::shared_ptr<AudioChannelLayout> *result)
+    void getOutputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
     {
 	UInt32 size;
 	Boolean writable;
 	CHECKCA(AudioConverterGetPropertyInfo(m_converter.get(),
 		    kAudioConverterOutputChannelLayout, &size, &writable));
-	x::shared_ptr<AudioChannelLayout> acl(
+	std::shared_ptr<AudioChannelLayout> acl(
 	    reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
 	    std::free);
 	CHECKCA(AudioConverterGetProperty(m_converter.get(),
