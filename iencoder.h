@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "CoreAudioToolbox.h"
-#include "CoreAudioHelper.h"
 
 struct IEncoder {
     virtual ~IEncoder() {}
@@ -24,12 +23,14 @@ struct IEncoderStat {
     virtual double overallBitrate() const = 0;
 };
 
+/*
 struct IEncoderOutputInfo {
     virtual ~IEncoderOutputInfo() {}
     virtual void getBasicDescription(AudioStreamBasicDescription *asbd) = 0;
-    virtual void getChannelLayout(AudioChannelLayoutX *result) = 0;
+    virtual void getChannelLayout(std::shared_ptr<AudioChannelLayout> *acl) = 0;
     virtual void getMagicCookie(std::vector<uint8_t> *result) = 0;
 };
+*/
 
 class EncoderStat: public IEncoderStat {
     uint64_t m_samples_read;

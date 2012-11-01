@@ -8,14 +8,14 @@ class Normalizer: public DelegatingSource {
     std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
     std::shared_ptr<FILE> m_tmpfile;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     uint64_t m_processed;
     uint64_t m_samples_read;
 public:
     Normalizer(const std::shared_ptr<ISource> &src);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     size_t readSamples(void *buffer, size_t nsamples);
     double getPeak() const { return m_peak; }

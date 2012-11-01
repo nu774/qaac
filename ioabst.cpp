@@ -2,7 +2,7 @@
 #include <cstring>
 #include "ioabst.h"
 #include "util.h"
-#include "strcnv.h"
+#include "strutil.h"
 #ifdef _WIN32
 #include "win32util.h"
 #else

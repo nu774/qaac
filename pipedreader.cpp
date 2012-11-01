@@ -5,7 +5,7 @@ PipedReader::PipedReader(std::shared_ptr<ISource> &src):
 {
     HANDLE hr, hw;
     if (!CreatePipe(&hr, &hw, 0, 0x8000))
-	throw_win32_error("CreatePipe", GetLastError());
+	win32::throw_error("CreatePipe", GetLastError());
     m_readPipe.reset(hr, CloseHandle);
     m_writePipe.reset(hw, CloseHandle);
 }

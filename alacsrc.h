@@ -22,7 +22,7 @@ class ALACSource: public ITagParser, public PartialSource<ALACSource>
     std::shared_ptr<ALACDecoder> m_decoder;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<uint32_t> m_chanmap;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     MP4FileX m_file;
     DecodeBuffer m_buffer;
 public:
@@ -30,7 +30,7 @@ public:
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const
     {

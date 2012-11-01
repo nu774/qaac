@@ -1,10 +1,11 @@
 #ifndef AudioConverterX_H
 #define AudioConverterX_H
 
-#include "CoreAudioToolbox.h"
-#include "CoreAudioHelper.h"
 #include <limits>
 #include <cmath>
+#include "CoreAudio/AudioConverter.h"
+#include "CoreAudio/AudioCodec.h"
+#include "cautil.h"
 
 class AudioConverterX {
     std::shared_ptr<OpaqueAudioConverter> m_converter;
@@ -74,10 +75,10 @@ public:
 	CHECKCA(AudioConverterGetProperty(m_converter.get(),
 	    kAudioConverterPrimeInfo, &size, result));
     }
-    void setPrimeInfo(const AudioConverterPrimeInfo *info)
+    void setPrimeInfo(const AudioConverterPrimeInfo &info)
     {
 	CHECKCA(AudioConverterSetProperty(m_converter.get(),
-	    kAudioConverterPrimeInfo, sizeof(*info), info));
+	    kAudioConverterPrimeInfo, sizeof(info), &info));
     }
     void getCompressionMagicCookie(std::vector<uint8_t> *result)
     {
@@ -116,12 +117,11 @@ public:
 		kAudioConverterInputChannelLayout, &size, acl.get()));
 	result->swap(acl);
     }
-    void setInputChannelLayout(const AudioChannelLayout *value)
+    void setInputChannelLayout(const AudioChannelLayout &value)
     {
-	size_t size =
-	    AudioChannelLayoutX::calcSize(value->mNumberChannelDescriptions);
+	UInt32 size = cautil::sizeofAudioChannelLayout(value);
 	CHECKCA(AudioConverterSetProperty(m_converter.get(),
-		kAudioConverterInputChannelLayout, size, value));
+		kAudioConverterInputChannelLayout, size, &value));
     }
     void getOutputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
     {
@@ -136,12 +136,11 @@ public:
 		kAudioConverterOutputChannelLayout, &size, acl.get()));
 	result->swap(acl);
     }
-    void setOutputChannelLayout(const AudioChannelLayout *value)
+    void setOutputChannelLayout(const AudioChannelLayout &value)
     {
-	size_t size =
-	    AudioChannelLayoutX::calcSize(value->mNumberChannelDescriptions);
+	UInt32 size = cautil::sizeofAudioChannelLayout(value);
 	CHECKCA(AudioConverterSetProperty(m_converter.get(),
-		kAudioConverterOutputChannelLayout, size, value));
+		kAudioConverterOutputChannelLayout, size, &value));
     }
     void getApplicableEncodeBitRates(std::vector<AudioValueRange> *result)
     {

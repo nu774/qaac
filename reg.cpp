@@ -45,7 +45,7 @@ void RegParser::parse(const std::shared_ptr<FILE> &fp, IRegAction *action)
 	else if (c == '@' || c == '"')
 	    c = value(c);
 	else if (c != WEOF)
-	    error(format("Illegal entry found: 0x%02x", c & 0xff));
+	    error(strutil::format("Illegal entry found: 0x%02x", c & 0xff));
     }
 }
 
@@ -220,7 +220,7 @@ static DWORD g_pid__;
 static void cleanup()
 {
     RegOverridePredefKey(HKEY_LOCAL_MACHINE, 0);
-    std::wstring keyName = format(L"SOFTWARE\\qaac\\%d", g_pid__);
+    std::wstring keyName = strutil::format(L"SOFTWARE\\qaac\\%d", g_pid__);
     SHDeleteKeyW(HKEY_CURRENT_USER, keyName.c_str());
 }
 
@@ -228,18 +228,17 @@ void RegAction::realize()
 {
     HKEY rootKey;
     g_pid__ = GetCurrentProcessId();
-    std::wstring keyName = format(L"SOFTWARE\\qaac\\%d", g_pid__);
+    std::wstring keyName = strutil::format(L"SOFTWARE\\qaac\\%d", g_pid__);
     RegCreateKeyExW(HKEY_CURRENT_USER, keyName.c_str(), 0, 0,
 	    REG_OPTION_VOLATILE, KEY_ALL_ACCESS, 0, &rootKey, 0);
     std::shared_ptr<HKEY__> __rootKey__(rootKey, RegCloseKey);
     hive_t::const_iterator ii;
     section_t::const_iterator jj;
     for (ii = m_entries.begin(); ii != m_entries.end(); ++ii) {
-	std::vector<wchar_t> keybuf(ii->first.size() + 1);
-	std::wcscpy(&keybuf[0], ii->first.c_str());
-	wchar_t *root, *rest = &keybuf[0];
-	root = wcssep(&rest, L"\\");
-	if (!root || !rest) continue;
+	strutil::Tokenizer<wchar_t> tokens(ii->first, L"\\");
+	wchar_t *root = tokens.next();
+	wchar_t *rest = tokens.rest();
+	if (!rest) continue;
 	HKEY hKey;
 	RegCreateKeyExW(rootKey, rest, 0, 0, REG_OPTION_VOLATILE,
 		KEY_ALL_ACCESS, 0, &hKey, 0);

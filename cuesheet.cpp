@@ -21,7 +21,7 @@ bool CueTokenizer<CharT>::nextline()
 	    // eat until closing quote
 	    while (traits_type::not_eof(c = m_sb->sbumpc())) {
 		if (c == '\n')
-		    throw std::runtime_error(format(
+		    throw std::runtime_error(strutil::format(
 			"cuesheet: runaway string at line %u",
 			static_cast<uint32_t>(m_lineno) + 1));
 		else if (c != '"')
@@ -89,7 +89,7 @@ void CueSheet::parse(std::wstreambuf *src)
 	    if (tokenizer.m_fields.size() == p->nargs)
 		(this->*p->mf)(&tokenizer.m_fields[0]);
 	    else if (cmd != L"REM")
-		die(format("wrong num args for %ls command", p->cmd));
+		die(strutil::format("wrong num args for %ls command", p->cmd));
 	    break;
 	}
 	// if (!p->cmd) die("Unknown command");
@@ -105,14 +105,14 @@ void CueSheet::arrange()
 	CueTrack &track = m_tracks[i];
 	for (size_t j = 0; j < track.m_segments.size(); ++j) {
 	    if (last_index >= track.m_segments[j].m_index)
-		throw std::runtime_error(format("cuesheet: INDEX must be in "
+		throw std::runtime_error(strutil::format("cuesheet: INDEX must be in "
 						"strictly ascending order: "
 						"track %u", track.m_number));
 	    last_index = track.m_segments[j].m_index;
 	    if (last_index == 1) index1_found = true;
 	}
 	if (!index1_found)
-	    throw std::runtime_error(format("cuesheet: INDEX01 not found on "
+	    throw std::runtime_error(strutil::format("cuesheet: INDEX01 not found on "
 					    "track %u", track.m_number));
     }
     /* move INDEX00 segment to previous track's end */
@@ -220,7 +220,7 @@ namespace Cue {
 	std::map<uint32_t, std::wstring> result;
 	int discnumber = 0, totaldiscs = 0;
 	for (it = from.begin(); it != from.end(); ++it) {
-	    std::wstring key = wslower(it->first);
+	    std::wstring key = strutil::wslower(it->first);
 	    uint32_t ikey = 0;
 	    if (key == L"title")
 		ikey = album ? Tag::kAlbum : Tag::kTitle;
@@ -242,8 +242,8 @@ namespace Cue {
 	}
 	if (discnumber) {
 	    result[Tag::kDisk] =
-		totaldiscs ? widen(format("%d/%d", discnumber, totaldiscs))
-			   : widen(format("%d", discnumber));
+		totaldiscs ? strutil::format(L"%d/%d", discnumber, totaldiscs)
+			   : strutil::format(L"%d", discnumber);
 	}
 	to->swap(result);
     }

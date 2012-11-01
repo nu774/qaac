@@ -1,16 +1,16 @@
 #include <stdint.h>
 #include <ALACBitUtilities.h>
-#include "strcnv.h"
-#include "utf8_codecvt_facet.hpp"
+#include "strutil.h"
 #include "alacsrc.h"
 #include "itunetags.h"
-#include "CoreAudioHelper.h"
+#include "cautil.h"
+#include "chanmap.h"
 
 ALACSource::ALACSource(const std::wstring &path)
     : m_position(0)
 {
     try {
-	m_file.Read(w2m(path, utf8_codecvt_facet()).c_str(), 0);
+	m_file.Read(strutil::w2us(path).c_str(), 0);
 	m_track_id = m_file.FindTrackId(0, MP4_AUDIO_TRACK_TYPE);
 	const char *type = m_file.GetTrackMediaDataName(m_track_id);
 	if (std::strcmp(type, "alac"))
@@ -44,18 +44,18 @@ ALACSource::ALACSource(const std::wstring &path)
 
 	uint32_t timeScale;
 	std::memcpy(&timeScale, &alac[20], 4);
-	timeScale = b2host32(timeScale);
-	m_format = BuildASBDForLPCM(timeScale, alac[9], alac[5],
+	timeScale = util::b2host32(timeScale);
+	m_asbd = cautil::buildASBDForPCM(timeScale, alac[9], alac[5],
 				    kAudioFormatFlagIsSignedInteger,
 				    kAudioFormatFlagIsAlignedHigh);
 
 	AudioChannelLayout acl = { 0 };
 	if (chan.size()) {
-	    fourcc tag(reinterpret_cast<const char*>(&chan[0]));
-	    fourcc bitmap(reinterpret_cast<const char*>(&chan[4]));
+	    util::fourcc tag(reinterpret_cast<const char*>(&chan[0]));
+	    util::fourcc bitmap(reinterpret_cast<const char*>(&chan[4]));
 	    acl.mChannelLayoutTag = tag;
 	    acl.mChannelBitmap = bitmap;
-	    chanmap::GetChannels(&acl, &m_chanmap);
+	    chanmap::getChannels(&acl, &m_chanmap);
 	}
 	m_decoder = std::shared_ptr<ALACDecoder>(new ALACDecoder());
 	CHECKCA(m_decoder->Init(&alac[0], alac.size()));
@@ -72,7 +72,7 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
     try {
-	uint32_t bpf = m_format.mBytesPerFrame;
+	uint32_t bpf = m_asbd.mBytesPerFrame;
 	uint8_t *bufp = static_cast<uint8_t*>(buffer);
 	uint32_t nread = 0;
 
@@ -113,7 +113,7 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
 	    m_buffer.v.resize(bpf * duration);
 	    uint32_t ncount;
 	    CHECKCA(m_decoder->Decode(&bits, &m_buffer.v[0], duration,
-			m_format.mChannelsPerFrame, &ncount));
+			m_asbd.mChannelsPerFrame, &ncount));
 	    m_buffer.nsamples = ncount;
 
 	    duration = std::min(ncount - m_buffer.done,

@@ -1,12 +1,11 @@
 #include "taksrc.h"
-#include "strcnv.h"
-#include "utf8_codecvt_facet.hpp"
+#include "strutil.h"
 #include "win32util.h"
 #include "itunetags.h"
 #include "cuesheet.h"
 #include <apefile.h>
 #include <apetag.h>
-#include "CoreAudioHelper.h"
+#include "cautil.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -103,14 +102,14 @@ TakSource::TakSource(const TakModule &module, InputStream &stream)
     TRYTAK(m_module.SSD_GetStreamInfo(ssd, &info));
     uint32_t type =
 	info.Audio.SampleBits == 8 ? 0 : kAudioFormatFlagIsSignedInteger;
-    m_format = BuildASBDForLPCM(info.Audio.SampleRate,
+    m_asbd = cautil::buildASBDForPCM(info.Audio.SampleRate,
 				info.Audio.ChannelNum,
 				info.Audio.SampleBits,
 				type,
 				kAudioFormatFlagIsAlignedHigh);
-    if (m_format.mBytesPerFrame != info.Audio.BlockSize)
+    if (m_asbd.mBytesPerFrame != info.Audio.BlockSize)
 	throw std::runtime_error(
-		format("blocksize: %d is different from expected",
+		strutil::format("blocksize: %d is different from expected",
 		    info.Audio.BlockSize));
     setRange(0, info.Sizes.SampleNum);
     if (stream.seekable())
@@ -136,7 +135,7 @@ size_t TakSource::readSamples(void *buffer, size_t nsamples)
 	if (nread == 0)
 	    break;
 	total += nread;
-	bufp += nread * m_format.mBytesPerFrame;
+	bufp += nread * m_asbd.mBytesPerFrame;
     }
     addSamplesRead(total);
     return total;
@@ -146,9 +145,9 @@ void TakSource::fetchTags()
 {
     std::wstring filename = m_stream.name();
 #ifdef _WIN32
-    std::wstring fullname = get_prefixed_fullpath(filename.c_str());
+    std::wstring fullname = win32::prefixed_path(filename.c_str());
 #else
-    std::string fullname = w2m(filename);
+    std::string fullname = strutil::w2m(filename);
 #endif
     TagLib::APE::File file(fullname.c_str(), false);
     if (!file.isOpen())
@@ -158,14 +157,14 @@ void TakSource::fetchTags()
     TagLib::APE::ItemListMap::ConstIterator it;
     for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
 	std::wstring key = it->first.toWString();
-	std::string skey = nallow(key);
+	std::string skey = strutil::w2us(key);
 	std::wstring value = it->second.toString().toWString();
 	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
 	if (id)
 	    m_tags[id] = value;
 	else if (!strcasecmp(skey.c_str(), "cuesheet")) {
 	    std::map<uint32_t, std::wstring> meta;
-	    Cue::CueSheetToChapters(value, m_format.mSampleRate,
+	    Cue::CueSheetToChapters(value, m_asbd.mSampleRate,
 				    getDuration(), &m_chapters, &meta);
 	    std::map<uint32_t, std::wstring>::iterator it;
 	    for (it = meta.begin(); it != meta.end(); ++it)
@@ -173,51 +172,3 @@ void TakSource::fetchTags()
 	}
     }
 }
-
-#if 0
-void TakSource::fetchTags()
-{
-    TtakAPEv2Tag tag = m_module.SSD_GetAPEv2Tag(m_decoder.get());
-    if (!tag) return;
-    std::map<std::string, std::string> items;
-    std::map<uint32_t, std::wstring> tags;
-
-    TtakResult rc;
-    int count = m_module.APE_GetItemNum(tag);
-    for (int i = 0; i < count; ++i) {
-	TtakInt32 size;
-	std::vector<char> key(16);
-	rc = m_module.APE_GetItemKey(tag, i, &key[0], key.size(), &size);
-	if (rc == tak_res_ape_BufferTooSmall) {
-	    key.resize(size + 1);
-	    TRYTAK(m_module.APE_GetItemKey(tag, i, &key[0], key.size(), &size));
-	} else if (rc != tak_res_Ok)
-	    continue;
-	std::vector<char> value(32);
-	rc = m_module.APE_GetItemValue(tag, i, &value[0], value.size(), &size);
-	if (rc == tak_res_ape_BufferTooSmall) {
-	    value.resize(size + 1);
-	    TRYTAK(m_module.APE_GetItemValue(tag, i,
-			&value[0], value.size(), &size));
-	} else if (rc != tak_res_Ok)
-	    continue;
-	if (size < value.size())
-	    value[size] = 0;
-	else
-	    value.push_back(0);
-	if (!strcasecmp(&key[0], "cuesheet")) {
-	    try {
-		std::wstring wvalue = m2w(&value[0], utf8_codecvt_facet());
-		Cue::CueSheetToChapters(wvalue, m_format.m_rate,
-			getDuration(), &m_chapters, &tags);
-	    } catch (...) {}
-	} else {
-	    items[&key[0]] = &value[0];
-	}
-    }
-    Vorbis::ConvertToItunesTags(items, &m_tags);
-    std::map<uint32_t, std::wstring>::const_iterator it;
-    for (it = tags.begin(); it != tags.end(); ++it)
-	m_tags[it->first] = it->second;
-}
-#endif

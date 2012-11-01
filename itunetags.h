@@ -2,32 +2,32 @@
 #define ITUNES_TAGS_H
 
 #include <iterator>
-#include "utf8_codecvt_facet.hpp"
 #include "iointer.h"
 #include "iff.h"
 #include "mp4v2wrapper.h"
+#include "cautil.h"
 
 namespace Tag {
-    const uint32_t kTitle = fourcc("\xa9""nam");
-    const uint32_t kSubTitle = fourcc("\xa9""st3");
-    const uint32_t kArtist = fourcc("\xa9""ART");
+    const uint32_t kTitle = FOURCC('\xa9','n','a','m');
+    const uint32_t kSubTitle = FOURCC('\xa9','s','t','3');
+    const uint32_t kArtist = FOURCC('\xa9','A','R','T');
     const uint32_t kAlbumArtist = 'aART';
-    const uint32_t kAlbum = fourcc("\xa9""alb");
-    const uint32_t kGrouping = fourcc("\xa9""grp");
-    const uint32_t kComposer = fourcc("\xa9""wrt");
-    const uint32_t kComment = fourcc("\xa9""cmt");
-    const uint32_t kGenre = fourcc("\xa9""gen");
-    const uint32_t kGenreID3 = fourcc("gnre");
-    const uint32_t kDate = fourcc("\xa9""day");
+    const uint32_t kAlbum = FOURCC('\xa9','a','l','b');
+    const uint32_t kGrouping = FOURCC('\xa9','g','r','p');
+    const uint32_t kComposer = FOURCC('\xa9','w','r','t');
+    const uint32_t kComment = FOURCC('\xa9','c','m','t');
+    const uint32_t kGenre = FOURCC('\xa9','g','e','n');
+    const uint32_t kGenreID3 = 'gnre';
+    const uint32_t kDate = FOURCC('\xa9','d','a','y');
     const uint32_t kTrack = 'trkn';
     const uint32_t kDisk = 'disk';
     const uint32_t kTempo = 'tmpo';
     const uint32_t kDescription = 'desc';
     const uint32_t kLongDescription = 'ldes';
-    const uint32_t kLyrics = fourcc("\xa9""lyr");
+    const uint32_t kLyrics = FOURCC('\xa9','l','y','r');
     const uint32_t kCopyright = 'cprt';
     const uint32_t kCompilation = 'cpil';
-    const uint32_t kTool = fourcc("\xa9""too");
+    const uint32_t kTool = FOURCC('\xa9','t','o','o');
     const uint32_t kArtwork = 'covr';
 
     const uint32_t kTvSeason = 'tvsn';
@@ -85,8 +85,8 @@ namespace mp4a {
 		   std::map<std::string, std::wstring> *longTags=0);
 }
 
-const char * const iTunSMPB_template = " 00000000 %08X %08X %08X%08X "
-"00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000";
+const wchar_t * const iTunSMPB_template = L" 00000000 %08X %08X %08X%08X "
+L"00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000";
 
 class TagEditor {
     std::map<uint32_t, std::wstring> m_tags;

@@ -13,7 +13,7 @@ std::string IFFParser::chunk_path()
 {
     std::string result = "";;
     for (size_t i = 0; i < m_container_stack.size(); ++i)
-	result += format("/%s", fourcc(m_container_stack[i].first).svalue);
+	result += strutil::format("/%s", util::fourcc(m_container_stack[i].first).svalue);
     result += "/" + chunk_name();
     return result;
 }
@@ -26,7 +26,7 @@ bool IFFParser::next()
 	    /* Virtual(dummy) chunk to tell the end of container chunk,
 	     * for ease of parsing */
 	    m_container_stack.pop_back();
-	    m_chunk_id = fourcc(kContainerEnd);
+	    m_chunk_id = util::fourcc(kContainerEnd);
 	    return true;
 	}
     }
@@ -43,9 +43,9 @@ bool IFFParser::get_chunkinfo(uint32_t *fcc, uint64_t *size)
     char buff[4];
     if (m_stream.read(buff, 4) < 4)
 	return false;
-    *fcc = fourcc(buff);
+    *fcc = util::fourcc(buff);
     uint32_t x;
-    check_eof(m_stream.read32be(&x));
+    util::check_eof(m_stream.read32be(&x));
     *size = x;
     return true;
 }
@@ -73,7 +73,7 @@ void IFFParser::skip()
 {
     if (m_chunk_off < m_chunk_size) {
 	uint64_t nskip = m_chunk_size - m_chunk_off;
-	check_eof(m_stream.seek_forward(nskip) == nskip);
+	util::check_eof(m_stream.seek_forward(nskip) == nskip);
     }
     m_chunk_off = m_chunk_size = 0;
 }
@@ -82,8 +82,8 @@ uint32_t IFFParser::down()
 {
     assert(is_container(chunk_id()) && m_chunk_off == 0);
     char buff[4];
-    check_eof(m_stream.read(buff, 4) == 4);
-    uint32_t fcc = fourcc(buff);
+    util::check_eof(m_stream.read(buff, 4) == 4);
+    uint32_t fcc = util::fourcc(buff);
     uint64_t endpos = m_stream.tell() + m_chunk_size - 4;
     if (!m_container_stack.size())
 	endpos = -1;

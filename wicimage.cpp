@@ -36,7 +36,7 @@ inline
 void throwIfError(HRESULT expr, const char *msg)
 {
     if (FAILED(expr))
-	throw_win32_error(msg, expr);
+	win32::throw_error(msg, expr);
 }
 #define HR(expr) (void)(throwIfError((expr), #expr))
 

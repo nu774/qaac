@@ -4,6 +4,7 @@
 #include "AudioFileX.h"
 #include "ExtAudioFileX.h"
 #include "ioabst.h"
+#include "iointer.h"
 
 std::shared_ptr<ISource>
 AudioFileOpenFactory(InputStream &stream, const std::wstring &path);
@@ -15,7 +16,7 @@ class AFSource: public ITagParser, public PartialSource<AFSource>
     std::shared_ptr<InputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
 public:
     AFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream);
     /*
@@ -26,7 +27,7 @@ public:
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const
     {
@@ -47,7 +48,7 @@ class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
     std::shared_ptr<InputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
 public:
     ExtAFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream,
 		const std::wstring &path);
@@ -59,7 +60,7 @@ public:
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const
     {

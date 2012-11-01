@@ -87,7 +87,7 @@ static const uint32_t tag_keys[] = {
     Tag::kArtwork,
     Tag::kLyrics
 };
-const uint32_t * const tag_keys_end = tag_keys + array_size(tag_keys);
+const uint32_t * const tag_keys_end = tag_keys + util::sizeof_array(tag_keys);
 
 const char *get_qaac_version();
 
@@ -280,7 +280,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->ofilename = wide::optarg;
 	else if (ch == 'd')
 	    this->outdir = wide::optarg;
-	else if (ch < 0xff && (pos = strindex("cavV", ch)) >= 0) {
+	else if (ch < 0xff && (pos = strutil::strindex("cavV", ch)) >= 0) {
 	    if ((this->output_format && !isAAC()) || this->method != -1) {
 		std::fputws(L"Encoding mode options are exclusive.\n", stderr);
 	    }
@@ -323,16 +323,15 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	else if (ch == 'nsrc') {
 	    this->native_resampler = true;
 	    if (wide::optarg) {
-		std::vector<wchar_t> buffer(std::wcslen(wide::optarg) + 1);
-		wchar_t *p = &buffer[0], *tok;
-		std::wcscpy(p, wide::optarg);
-		while (tok = wcssep(&p, L",")) {
+		strutil::Tokenizer<wchar_t> tokens(wide::optarg, L",");
+		wchar_t *tok;
+		while (tok = tokens.next()) {
 		    int n;
 		    if (std::swscanf(tok, L"%u", &n) == 1)
 			this->native_resampler_quality = n;
 		    else if (std::wcslen(tok) == 4)
 			this->native_resampler_complexity =
-			    fourcc(nallow(tok).c_str());
+			    util::fourcc(strutil::w2us(tok).c_str());
 		    else {
 			std::fputws(L"Invalid arg for --native-resampler.\n",
 				    stderr);
@@ -372,10 +371,9 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	else if (ch == 'nmxn')
 	    this->no_matrix_normalize = true;
 	else if (ch == 'cmap') {
-	    std::vector<wchar_t> buff(std::wcslen(wide::optarg)+1);
-	    wchar_t *bp = &buff[0], *tok;
-	    std::wcscpy(bp, wide::optarg);
-	    while ((tok = wcssep(&bp, L",")) != 0) {
+	    strutil::Tokenizer<wchar_t> tokens(wide::optarg, L",");
+	    wchar_t *tok;
+	    while ((tok = tokens.next()) != 0) {
 		unsigned n;
 		if (std::swscanf(tok, L"%u", &n) == 1)
 		    this->chanmap.push_back(n);
@@ -488,10 +486,9 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    }
 	}
 	else if (ch == 'tag ') {
-	    std::vector<wchar_t> buff(std::wcslen(wide::optarg)+1);
-	    wchar_t *value = &buff[0], *key;
-	    std::wcscpy(value, wide::optarg);
-	    key = wcssep(&value, L":");
+	    strutil::Tokenizer<wchar_t> tokens(wide::optarg, L":");
+	    wchar_t *key = tokens.next();
+	    wchar_t *value = tokens.rest();
 	    size_t keylen = std::wcslen(key);
 	    if (!value || (keylen != 3 && keylen != 4)) {
 		std::fputws(L"Invalid --tag option arg.\n", stderr);
@@ -501,7 +498,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    wchar_t wc;
 	    while ((wc = *key++) != 0) {
 		if (wc != 0xa9 && (wc < 0x20 || wc > 0x7e)) {
-		    std::fputws(L"Bogus fourcc for --tag.\n", stderr);
+		    std::fputws(L"Bogus util::fourcc for --tag.\n", stderr);
 		    return false;
 		}
 		fcc = ((fcc << 8) | wc);
@@ -509,15 +506,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    this->tagopts[fcc] = value;
 	}
 	else if (ch == 'ltag') {
-	    std::vector<wchar_t> buff(std::wcslen(wide::optarg)+1);
-	    wchar_t *value = &buff[0], *key;
-	    std::wcscpy(value, wide::optarg);
-	    key = wcssep(&value, L":");
+	    strutil::Tokenizer<wchar_t> tokens(wide::optarg, L":");
+	    wchar_t *key = tokens.next();
+	    wchar_t *value = tokens.rest();
 	    if (!value) {
 		std::fputws(L"Invalid arg for --long-tag.\n", stderr);
 		return false;
 	    }
-	    this->longtags[w2m(key, utf8_codecvt_facet())] = value;
+	    this->longtags[strutil::w2us(key)] = value;
 	}
 	else if (ch == 'chap')
 	    this->chapter_file = wide::optarg;

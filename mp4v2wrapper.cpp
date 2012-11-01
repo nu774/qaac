@@ -1,7 +1,8 @@
 #include "util.h"
 #include "mp4v2wrapper.h"
-#include "strcnv.h"
-#include "utf8_codecvt_facet.hpp"
+#include "strutil.h"
+#include "win32util.h"
+#undef FindAtom // XXX: conflicts with kernel32 function macro
 
 using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Track;
@@ -20,7 +21,7 @@ namespace itmf = mp4v2::impl::itmf;
 
 std::string format_mp4error(const mp4v2::impl::Exception &e)
 {
-    return format("libmp4v2: %s", e.msg().c_str());
+    return strutil::format("libmp4v2: %s", e.msg().c_str());
 }
 
 class MP4AlacAtom: public MP4Atom {
@@ -41,14 +42,12 @@ public:
     }
 };
 
-extern FILE *win32_tmpfile(const wchar_t *prefix);
-
 namespace myprovider {
 
 static
 void *open(const char *name, MP4FileMode mode)
 {
-    return win32_tmpfile(m2w(name, utf8_codecvt_facet()).c_str());
+    return win32::tmpfile(strutil::us2w(name).c_str());
 }
 
 static
@@ -121,7 +120,7 @@ MP4FileX::AddAlacAudioTrack(const uint8_t *alac, const uint8_t *chan)
     uint32_t nchannels = alac[9];
     uint32_t timeScale;
     std::memcpy(&timeScale, alac + 20, 4);
-    timeScale = b2host32(timeScale);
+    timeScale = util::b2host32(timeScale);
 
     SetTimeScale(timeScale);
     MP4TrackId track = AddTrack(MP4_AUDIO_TRACK_TYPE, timeScale);
@@ -170,7 +169,7 @@ MP4DataAtom *
 MP4FileX::CreateMetadataAtom(const char *name, itmf::BasicType typeCode)
 {
     MP4Atom *pAtom = AddDescendantAtoms("moov",
-	    format("udta.meta.ilst.%s", name).c_str());
+	    strutil::format("udta.meta.ilst.%s", name).c_str());
     if (!pAtom) return 0;
     MP4DataAtom *pDataAtom = AddChildAtomT(pAtom, "data");
     pDataAtom->typeCode.SetValue(typeCode);
@@ -187,7 +186,8 @@ MP4FileX::CreateMetadataAtom(const char *name, itmf::BasicType typeCode)
 MP4DataAtom *MP4FileX::FindOrCreateMetadataAtom(
 	const char *atom, itmf::BasicType typeCode)
 {
-    std::string atomstring = format("moov.udta.meta.ilst.%s.data", atom);
+    std::string atomstring =
+	strutil::format("moov.udta.meta.ilst.%s.data", atom);
     MP4DataAtom *pAtom = FindAtomT(atomstring.c_str());
     if (!pAtom)
 	pAtom = CreateMetadataAtom(atom, typeCode);
@@ -319,7 +319,7 @@ bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
     MP4DataAtom *pDataAtom = 0;
     std::string tagname;
     for (int i = 0;; ++i) {
-	tagname = format("moov.udta.meta.ilst.----[%d]", i);
+	tagname = strutil::format("moov.udta.meta.ilst.----[%d]", i);
 	MP4Atom *pTagAtom = FindAtom(tagname.c_str());
 	if (!pTagAtom)	
 	    break;

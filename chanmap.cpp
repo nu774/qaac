@@ -20,7 +20,7 @@ const char *GetChannelName(uint32_t n)
     return "?";
 }
 
-std::string GetChannelNames(const std::vector<uint32_t> &channels)
+std::string getChannelNames(const std::vector<uint32_t> &channels)
 {
     std::string result;
     const char *delim = "";
@@ -35,13 +35,13 @@ std::string GetChannelNames(const std::vector<uint32_t> &channels)
     if (count <= 2 && lfe_count == 0)
 	return count == 1 ? "Mono" : "Stereo";
     else
-	return format("%u.%u (%s)",
+	return strutil::format("%u.%u (%s)",
 		      static_cast<uint32_t>(count),
 		      static_cast<uint32_t>(lfe_count),
 		      result.c_str());
 }
 
-uint32_t GetChannelMask(const std::vector<uint32_t>& channels)
+uint32_t getChannelMask(const std::vector<uint32_t>& channels)
 {
     uint32_t result = 0;
     for (size_t i = 0; i < channels.size(); ++i) {
@@ -52,7 +52,7 @@ uint32_t GetChannelMask(const std::vector<uint32_t>& channels)
     return result;
 }
 
-void GetChannels(uint32_t bitmap, std::vector<uint32_t> *result,
+void getChannels(uint32_t bitmap, std::vector<uint32_t> *result,
 		 uint32_t limit)
 {
     std::vector<uint32_t> channels;
@@ -63,7 +63,7 @@ void GetChannels(uint32_t bitmap, std::vector<uint32_t> *result,
     result->swap(channels);
 }
 
-void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
+void getChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 {
     std::vector<uint32_t> channels;
     uint32_t bitmap = 0;
@@ -187,14 +187,14 @@ void GetChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
     }
 
     if (bitmap)
-	GetChannels(bitmap, &channels);
+	getChannels(bitmap, &channels);
     else if (layout)
 	while (*layout) channels.push_back(*layout++);
 
     result->swap(channels);
 }
 
-void ConvertChannelsFromAppleLayout(const std::vector<uint32_t> &from,
+void convertFromAppleLayout(const std::vector<uint32_t> &from,
 				    std::vector<uint32_t> *to)
 {
     struct Simple {
@@ -251,7 +251,7 @@ public:
     bool operator()(size_t l, size_t r) { return m_data[l-1] < m_data[r-1]; }
 };
 
-void GetChannelMappingToUSBOrder(const std::vector<uint32_t> &channels,
+void getMappingToUSBOrder(const std::vector<uint32_t> &channels,
 				 std::vector<uint32_t> *result)
 {
     std::vector<uint32_t> index(channels.size());
@@ -262,7 +262,7 @@ void GetChannelMappingToUSBOrder(const std::vector<uint32_t> &channels,
     result->swap(index);
 }
 
-uint32_t GetDefaultChannelMask(const uint32_t nchannels)
+uint32_t defaultChannelMask(const uint32_t nchannels)
 {
     static const uint32_t tab[] = {
 	0x4, // FC
@@ -277,23 +277,7 @@ uint32_t GetDefaultChannelMask(const uint32_t nchannels)
     return tab[nchannels - 1];
 }
 
-uint32_t GetLayoutTag(uint32_t bitmap)
-{
-    switch (bitmap) {
-    case 0x4:   return kAudioChannelLayoutTag_Mono;
-    case 0x3:   return kAudioChannelLayoutTag_Stereo;
-    case 0x7:   return kAudioChannelLayoutTag_MPEG_3_0_A;
-    case 0x33:  return kAudioChannelLayoutTag_Quadraphonic;
-    case 0x107: return kAudioChannelLayoutTag_MPEG_4_0_A;
-    case 0x37:  return kAudioChannelLayoutTag_MPEG_5_0_A;
-    case 0x3f:  return kAudioChannelLayoutTag_MPEG_5_1_A;
-    case 0x13f: return kAudioChannelLayoutTag_MPEG_6_1_A;
-    case 0xff:  return kAudioChannelLayoutTag_MPEG_7_1_A;
-    }
-    return kAudioChannelLayoutTag_UseChannelBitmap;
-}
-
-uint32_t GetAACLayoutTag(uint32_t bitmap)
+uint32_t AACLayoutFromBitmap(uint32_t bitmap)
 {
     if ((bitmap & 0x600) == 0x600 && (bitmap & 0x30) == 0) {
 	bitmap &= ~0x600;
@@ -340,15 +324,15 @@ void NormalizeChannelsForAAC(uint32_t bitmap, std::vector<uint32_t> &channels)
     }
 }
 
-void GetAACChannelMap(uint32_t bitmap, std::vector<uint32_t> *result)
+void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result)
 {
     AudioChannelLayout aacLayout = { 0 };
-    aacLayout.mChannelLayoutTag = GetAACLayoutTag(bitmap);
+    aacLayout.mChannelLayoutTag = AACLayoutFromBitmap(bitmap);
 
     std::vector<uint32_t> wcs, acs, mapping;
-    GetChannels(bitmap, &wcs);
-    GetChannels(&aacLayout, &acs);
-    ConvertChannelsFromAppleLayout(acs, &acs);
+    getChannels(bitmap, &wcs);
+    getChannels(&aacLayout, &acs);
+    convertFromAppleLayout(acs, &acs);
     NormalizeChannelsForAAC(bitmap, wcs);
 
     if (wcs == acs)

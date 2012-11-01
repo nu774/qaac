@@ -37,17 +37,17 @@ public:
 	    m_pTracks[i]->FinishWrite(0);
     }
 
-    AutoDynaCast<mp4v2::impl::MP4Atom>
+    util::AutoDynaCast<mp4v2::impl::MP4Atom>
     FindAtomT(const char *name)
     {
 	return FindAtom(name);
     }
-    AutoDynaCast<mp4v2::impl::MP4Atom>
+    util::AutoDynaCast<mp4v2::impl::MP4Atom>
     FindChildAtomT(mp4v2::impl::MP4Atom *parent, const char *name)
     {
 	return parent->FindChildAtom(name);
     }
-    AutoDynaCast<mp4v2::impl::MP4Atom>
+    util::AutoDynaCast<mp4v2::impl::MP4Atom>
     AddChildAtomT(mp4v2::impl::MP4Atom *parent, const char *name)
     {
 	return AddChildAtom(parent, name);

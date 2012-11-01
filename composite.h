@@ -7,7 +7,7 @@
 class CompositeSource: public ISource, public ITagParser {
     typedef std::shared_ptr<ISource> source_t;
     std::vector<source_t> m_sources;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     size_t m_curpos;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
@@ -22,7 +22,7 @@ public:
     }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     const std::map<uint32_t, std::wstring> &getTags() const
     {
@@ -53,8 +53,8 @@ public:
     void addSource(const std::shared_ptr<ISource> &src)
     {
 	if (!count())
-	    m_format = src->getSampleFormat();
-	else if (std::memcmp(&m_format, &src->getSampleFormat(), sizeof m_format))
+	    m_asbd = src->getSampleFormat();
+	else if (std::memcmp(&m_asbd, &src->getSampleFormat(), sizeof m_asbd))
 	    throw std::runtime_error(
 		    "CompositeSource: can't compose different sample format");
 	m_sources.push_back(src);
@@ -64,8 +64,7 @@ public:
 	addSource(src);
 	ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
 	if (parser) {
-	    const std::map<uint32_t, std::wstring> &tags
-		= parser->getTags();
+	    const std::map<uint32_t, std::wstring> &tags = parser->getTags();
 	    std::map<uint32_t, std::wstring>::const_iterator tagit;
 	    if (count() == 1) {
 		for (tagit = tags.begin(); tagit != tags.end(); ++tagit) {
@@ -94,8 +93,8 @@ public:
 		return;
 	    }
 	}
-	std::wstring title = format(L"",
-				    static_cast<int>(m_chapters.size() + 1));
+	std::wstring title =
+	    strutil::format(L"", static_cast<int>(m_chapters.size() + 1));
 	addChapter(title, src->length());
     }
     uint64_t length() const
@@ -118,7 +117,7 @@ public:
 	    return readSamples(buffer, nsamples);
 	}
 	return rc + readSamples(
-	    reinterpret_cast<char*>(buffer) + rc * m_format.mBytesPerFrame,
+	    reinterpret_cast<char*>(buffer) + rc * m_asbd.mBytesPerFrame,
 	    nsamples - rc);
     }
     void setRange(int64_t start=0, int64_t length=-1)

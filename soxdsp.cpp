@@ -2,7 +2,7 @@
 #include <cstring>
 #include <vector>
 #include "soxdsp.h"
-#include "CoreAudioHelper.h"
+#include "cautil.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -39,10 +39,10 @@ SoxDSPProcessor::SoxDSPProcessor(const std::shared_ptr<ISoxDSPEngine> &engine,
     if (srcFormat.mBitsPerChannel == 64)
 	throw std::runtime_error("Can't handle 64bit sample");
 
-    m_format = m_engine->getSampleFormat();
+    m_asbd = m_engine->getSampleFormat();
 
-    m_fbuffer.resize(4096 * m_format.mChannelsPerFrame);
-    m_ibuffer.resize(m_fbuffer.size() * m_format.mBytesPerFrame);
+    m_fbuffer.resize(4096 * m_asbd.mChannelsPerFrame);
+    m_ibuffer.resize(m_fbuffer.size() * m_asbd.mBytesPerFrame);
 }
 
 size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
@@ -50,7 +50,7 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
     float *src = &m_fbuffer[0];
     float *dst = static_cast<float*>(buffer);
 
-    unsigned nchannels = m_format.mChannelsPerFrame;
+    unsigned nchannels = m_asbd.mChannelsPerFrame;
     std::vector<float*> ivec(nchannels), ovec(nchannels);
 
     while (nsamples > 0) {
@@ -86,14 +86,14 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
 }
 
 SoxResampler::SoxResampler(const SoxModule &module,
-			   const AudioStreamBasicDescription &format,
+			   const AudioStreamBasicDescription &asbd,
 			   uint32_t rate, bool mt)
     : m_module(module)
 {
-    m_format = BuildASBDForLPCM(rate, format.mChannelsPerFrame, 32,
+    m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame, 32,
 				kAudioFormatFlagIsFloat);
     lsx_rate_t *converter = m_module.rate_create(
-	    format.mChannelsPerFrame, format.mSampleRate, rate);
+	    asbd.mChannelsPerFrame, asbd.mSampleRate, rate);
     if (!converter)
 	throw std::runtime_error("lsx_rate_create()");
     m_processor = std::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
@@ -103,14 +103,14 @@ SoxResampler::SoxResampler(const SoxModule &module,
 }
 
 SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
-				   const AudioStreamBasicDescription &format,
+				   const AudioStreamBasicDescription &asbd,
 				   uint32_t Fp, bool mt)
     : m_module(module)
 {
-    m_format = BuildASBDForLPCM(format.mSampleRate, format.mChannelsPerFrame,
+    m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
 				32, kAudioFormatFlagIsFloat);
-    double Fn = format.mSampleRate / 2.0;
-    double Fc = Fp + format.mSampleRate * 0.025;
+    double Fn = asbd.mSampleRate / 2.0;
+    double Fc = Fp + asbd.mSampleRate * 0.025;
     if (Fp == 0 || Fc > Fn)
 	throw std::runtime_error("SoxLowpassFilter: invalid target rate");
     int num_taps = 0;
@@ -119,7 +119,7 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
 	throw std::runtime_error("lsx_design_lpf()");
     std::shared_ptr<double> __delete_lator__(coefs, m_module.free);
     lsx_fir_t *converter =
-	m_module.fir_create(format.mChannelsPerFrame, coefs, num_taps,
+	m_module.fir_create(asbd.mChannelsPerFrame, coefs, num_taps,
 			    num_taps >> 1, mt);
     if (!converter)
 	throw std::runtime_error("lsx_fir_create()");

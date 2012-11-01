@@ -12,7 +12,7 @@ inline double dB_to_scale(double dB)
 class Scaler: public DelegatingSource {
     double m_scale;
     std::vector<uint8_t> m_ibuffer;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
 public:
     Scaler(const std::shared_ptr<ISource> &source, double scale)
 	: DelegatingSource(source), m_scale(scale)
@@ -20,12 +20,13 @@ public:
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
 	if (asbd.mBitsPerChannel == 64)
 	    throw std::runtime_error("Can't handle 64bit sample");
-	m_format = BuildASBDForLPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
-				    32, kAudioFormatFlagIsFloat);
+	m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
+					 asbd.mChannelsPerFrame,
+					 32, kAudioFormatFlagIsFloat);
     }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     size_t readSamples(void *buffer, size_t nsamples)
     {

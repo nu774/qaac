@@ -4,10 +4,10 @@
 #include <assert.h>
 #include <random>
 #include "iointer.h"
-#include "CoreAudioHelper.h"
+#include "cautil.h"
 
 class IntegerSource: public DelegatingSource {
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     std::mt19937 m_mt;
     std::uniform_real_distribution<double> m_dist;
     std::vector<uint8_t> m_ibuffer;
@@ -17,14 +17,14 @@ public:
 	: DelegatingSource(source), m_dist(-0.5, 0.5)
     {
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
-	m_format = BuildASBDForLPCM(asbd.mSampleRate,
+	m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
 				    asbd.mChannelsPerFrame,
 				    bitdepth,
 				    kAudioFormatFlagIsSignedInteger);
     }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     size_t readSamples(void *buffer, size_t nsamples);
 private:

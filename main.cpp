@@ -4,7 +4,7 @@
 #include <clocale>
 #include <algorithm>
 #include <functional>
-#include "strcnv.h"
+#include "strutil.h"
 #include "win32util.h"
 #include <shellapi.h>
 #include "itunetags.h"
@@ -28,6 +28,7 @@
 #include "scaler.h"
 #include "pipedreader.h"
 #include "wavsink.h"
+#include "chanmap.h"
 #ifdef REFALAC
 #include "alacenc.h"
 #else
@@ -50,12 +51,12 @@
 inline
 std::wstring errormsg(const std::exception &ex)
 {
-    return m2w(ex.what(), utf8_codecvt_facet());
+    return strutil::us2w(ex.what());
 }
 
 std::wstring get_module_directory()
 {
-    std::wstring selfpath = GetModuleFileNameX(0);
+    std::wstring selfpath = win32::GetModuleFileNameX(0);
     const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
     return selfpath.substr(0, fpos - selfpath.c_str());
 }
@@ -80,7 +81,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 	if (!std::wcscmp(opts.ofilename, L"-"))
 	    return opts.ofilename;
 	else
-	    return GetFullPathNameX(opts.ofilename);
+	    return win32::GetFullPathNameX(opts.ofilename);
     }
     const wchar_t *ext = opts.extension();
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
@@ -88,15 +89,17 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 	return std::wstring(L"stdin.") + ext;
     else {
 	std::wstring obasename =
-	    PathReplaceExtension(PathFindFileNameW(ifilename), ext);
+	    win32::PathReplaceExtension(PathFindFileNameW(ifilename), ext);
 	std::wstring ofilename = 
-	    GetFullPathNameX(format(L"%s/%s", outdir, obasename.c_str()));
-	if (GetFullPathNameX(ifilename) == ofilename) {
-	    std::string codec_name(fourcc(opts.output_format));
+	    win32::GetFullPathNameX(strutil::format(L"%s/%s", outdir,
+						    obasename.c_str()));
+	if (win32::GetFullPathNameX(ifilename) == ofilename) {
+	    std::string codec_name(util::fourcc(opts.output_format));
 	    while (codec_name.size() && codec_name.back() == ' ')
 		codec_name.pop_back();
-	    std::wstring tl = format(L"%hs.%s", codec_name.c_str(), ext);
-	    ofilename = PathReplaceExtension(ofilename, tl.c_str());
+	    std::wstring tl =
+		strutil::format(L"%hs.%s", codec_name.c_str(), ext);
+	    ofilename = win32::PathReplaceExtension(ofilename, tl.c_str());
 	}
 	return ofilename;
     }
@@ -118,8 +121,8 @@ std::wstring formatSeconds(double seconds)
 {
     int h, m, s, millis;
     secondsToHMS(seconds, &h, &m, &s, &millis);
-    return h ? format(L"%d:%02d:%02d.%03d", h, m, s, millis)
-	     : format(L"%d:%02d.%03d", m, s, millis);
+    return h ? strutil::format(L"%d:%02d:%02d.%03d", h, m, s, millis)
+	     : strutil::format(L"%d:%02d.%03d", m, s, millis);
 }
 
 class Timer {
@@ -158,8 +161,8 @@ public:
 	if (m_console_visible) {
 	    std::vector<wchar_t> s(m_message.size() + 1);
 	    std::wcscpy(&s[0], m_message.c_str());
-	    squeeze(&s[0], L"\r");
-	    SetConsoleTitleW(format(L"%hs %s", PROGNAME, &s[0]).c_str());
+	    strutil::squeeze(&s[0], L"\r");
+	    SetConsoleTitleW(strutil::format(L"%hs %s", PROGNAME, &s[0]).c_str());
 	}
     }
 };
@@ -191,10 +194,10 @@ public:
 	double eta = ellapsed * (m_total / fcurrent - 1);
 	double speed = ellapsed ? seconds/ellapsed : 0.0;
 	if (m_total == -1)
-	    m_disp.put(format(L"\r%s (%.1fx)   ",
+	    m_disp.put(strutil::format(L"\r%s (%.1fx)   ",
 		formatSeconds(seconds).c_str(), speed));
 	else
-	    m_disp.put(format(L"\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
+	    m_disp.put(strutil::format(L"\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
 		percent, formatSeconds(seconds).c_str(), m_tstamp.c_str(),
 		speed, formatSeconds(eta).c_str()));
     }
@@ -215,7 +218,8 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
     typedef std::shared_ptr<std::FILE> file_t;
     file_t statPtr;
     if (opts.save_stat) {
-	std::wstring statname = PathReplaceExtension(ofilename, L".stat.txt");
+	std::wstring statname =
+	    win32::PathReplaceExtension(ofilename, L".stat.txt");
 	statPtr = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
@@ -245,7 +249,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 
 static
 std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
-				   const Options &opts)
+				     const Options &opts)
 {
     StdioChannel channel(ifilename);
     InputStream stream(channel);
@@ -259,15 +263,15 @@ std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 
     if (opts.is_raw) {
 	int bits;
-	char c_type, c_endian;
+	unsigned char c_type, c_endian;
 	int itype, iendian;
 
 	if (std::swscanf(opts.raw_format, L"%hc%d%hc",
 			&c_type, &bits, &c_endian) != 3)
 	    throw std::runtime_error("Invalid --raw-format spec");
-	if ((itype = strindex("USF", toupper(c_type & 0xff))) == -1)
+	if ((itype = strutil::strindex("USF", toupper(c_type))) == -1)
 	    throw std::runtime_error("Invalid --raw-format spec");
-	if ((iendian = strindex("LB", toupper(c_endian & 0xff))) == -1)
+	if ((iendian = strutil::strindex("LB", toupper(c_endian))) == -1)
 	    throw std::runtime_error("Invalid --raw-format spec");
 	if (bits <= 0)
 	    throw std::runtime_error("Invalid --raw-format spec");
@@ -276,7 +280,7 @@ std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 	    0, kAudioFormatFlagIsSignedInteger, kAudioFormatFlagIsFloat
 	};
 	AudioStreamBasicDescription asbd =
-	    BuildASBDForLPCM(opts.raw_sample_rate, opts.raw_channels,
+	    cautil::buildASBDForPCM(opts.raw_sample_rate, opts.raw_channels,
 			     bits, type_tab[itype]);
 	if (iendian)
 	    asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
@@ -329,25 +333,24 @@ void load_chapter_file(const Options &opts,
 	std::vector<std::pair<std::wstring, int64_t> > chaps;
 
 	std::wstring str = load_text_file(chapter_file, opts.textcp);
-	std::vector<wchar_t> buf(str.begin(), str.end());
-	buf.push_back(0);
-	wchar_t *p = &buf[0], *tok;
 	const wchar_t *tfmt = L"%02d:%02d:%02d.%03d";
 	int h, m, s, ms;
 	int64_t stamp = 0;
-	while ((tok = wcssep(&p, L"\n"))) {
-	    if (swscanf(tok, tfmt, &h, &m, &s, &ms) == 4) {
-		wcssep(&tok, L"\t ");
+	strutil::Tokenizer<wchar_t> tokens(str.c_str(), L"\n");
+	wchar_t *tok;
+	while (tok = tokens.next()) {
+	    if (std::swscanf(tok, tfmt, &h, &m, &s, &ms) == 4) {
+		strutil::strsep(&tok, L"\t ");
 		std::wstring name = tok ? tok : L"";
 		int64_t hh = h;
 		stamp = (((hh * 60) + m) * 60 + s) * 1000 + ms;
 		chaps.push_back(std::make_pair(name, stamp));
 	    } else if (wcsncmp(tok, L"Chapter", 7) == 0) {
-		wchar_t *key = wcssep(&tok, L"=");
-		if (wcsstr(key, L"NAME")) {
+		wchar_t *key = strutil::strsep(&tok, L"=");
+		if (std::wcsstr(key, L"NAME")) {
 		    std::wstring name = tok ? tok : L"";
 		    chaps.push_back(std::make_pair(name, stamp));
-		} else if (swscanf(tok, tfmt, &h, &m, &s, &ms) == 4) {
+		} else if (std::swscanf(tok, tfmt, &h, &m, &s, &ms) == 4) {
 		    int64_t hh = h;
 		    stamp = (((hh * 60) + m) * 60 + s) * 1000 + ms;
 		}
@@ -459,11 +462,11 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
     try {
 	file->FinishWriteX();
 	MP4FileCopy optimizer(file);
-	optimizer.start(w2m(dst, utf8_codecvt_facet()).c_str());
+	optimizer.start(strutil::w2us(dst).c_str());
 	uint64_t total = optimizer.getTotalChunks();
 	PeriodicDisplay disp(100, verbose);
 	for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
-	    disp.put(format(L"\r%llu/%llu chunks written (optimizing)",
+	    disp.put(strutil::format(L"\r%llu/%llu chunks written (optimizing)",
 			    i, total).c_str());
 	}
 	disp.flush();
@@ -499,15 +502,15 @@ FILE *open_config_file(const wchar_t *file)
     std::vector<std::wstring> search_paths;
     const wchar_t *home = _wgetenv(L"HOME");
     if (home)
-	search_paths.push_back(format(L"%s\\%s", home, L".qaac"));
+	search_paths.push_back(strutil::format(L"%s\\%s", home, L".qaac"));
     wchar_t path[MAX_PATH];
     if (SUCCEEDED(SHGetFolderPathW(0, CSIDL_APPDATA, 0, 0, path)))
-	search_paths.push_back(format(L"%s\\%s", path, L"qaac"));
+	search_paths.push_back(strutil::format(L"%s\\%s", path, L"qaac"));
     search_paths.push_back(get_module_directory());
     for (size_t i = 0; i < search_paths.size(); ++i) {
 	try {
 	    std::wstring pathtry =
-		format(L"%s\\%s", search_paths[i].c_str(), file);
+		strutil::format(L"%s\\%s", search_paths[i].c_str(), file);
 	    return wfopenx(pathtry.c_str(), L"r");
 	} catch (...) {
 	    if (i == search_paths.size() - 1) throw;
@@ -522,7 +525,7 @@ void matrix_from_preset(const Options &opts,
 {
     FILE *fp;
     if (opts.remix_preset) {
-	std::wstring path = format(L"matrix\\%s.txt", opts.remix_preset);
+	std::wstring path = strutil::format(L"matrix\\%s.txt", opts.remix_preset);
 	fp = open_config_file(path.c_str());
     } else
 	fp = wfopenx(opts.remix_file, L"r");
@@ -562,10 +565,9 @@ void matrix_from_preset(const Options &opts,
     result->swap(matrix);
 }
 
-static
-std::shared_ptr<ISource> mapped_source(const std::shared_ptr<ISource> &src,
-    const Options &opts, uint32_t *wav_chanmask,
-    AudioChannelLayoutX *aac_layout, bool threading)
+static std::shared_ptr<ISource>
+    mapped_source(const std::shared_ptr<ISource> &src, const Options &opts,
+		  uint32_t *wav_chanmask, uint32_t *aac_layout, bool threading)
 {
     uint32_t nchannels = src->getSampleFormat().mChannelsPerFrame;
     std::shared_ptr<ISource> srcx(src);
@@ -574,15 +576,15 @@ std::shared_ptr<ISource> mapped_source(const std::shared_ptr<ISource> &src,
     if (channels) {
 	if (opts.verbose > 1) {
 	    LOG(L"Input layout: %hs\n",
-		chanmap::GetChannelNames(*channels).c_str());
+		chanmap::getChannelNames(*channels).c_str());
 	}
 	// reorder to Microsoft (USB) order
 	std::vector<uint32_t> work;
-	chanmap::ConvertChannelsFromAppleLayout(*channels, &work);
+	chanmap::convertFromAppleLayout(*channels, &work);
 	std::vector<uint32_t> mapping;
-	chanmap::GetChannelMappingToUSBOrder(work, &mapping);
+	chanmap::getMappingToUSBOrder(work, &mapping);
 	srcx.reset(new ChannelMapper(srcx, mapping,
-				     chanmap::GetChannelMask(work)));
+				     chanmap::getChannelMask(work)));
 	channels = srcx->getChannels();
     }
     // remix
@@ -612,39 +614,38 @@ std::shared_ptr<ISource> mapped_source(const std::shared_ptr<ISource> &src,
 	srcx.reset(new ChannelMapper(srcx, opts.chanmap));
     }
     // retrieve original channel layout, taking --chanmask into account
-    if (opts.chanmask > 0 && bitcount(opts.chanmask) != nchannels)
+    if (opts.chanmask > 0 && util::bitcount(opts.chanmask) != nchannels)
 	throw std::runtime_error("unmatch number of channels with --chanmask");
     int chanmask = opts.chanmask;
     if (chanmask < 0)
-	chanmask = channels ? chanmap::GetChannelMask(*channels) : 0;
+	chanmask = channels ? chanmap::getChannelMask(*channels) : 0;
     if (!chanmask && !opts.isLPCM()) {
 	if (opts.verbose >1 || opts.logfilename)
 	    LOG(L"Using default channel layout.\n");
-	chanmask = chanmap::GetDefaultChannelMask(nchannels);
+	chanmask = chanmap::defaultChannelMask(nchannels);
     }
     *wav_chanmask = chanmask;
     if (chanmask) {
 	if (opts.isLPCM() && opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
-	    chanmap::GetChannels(chanmask, &vec);
+	    chanmap::getChannels(chanmask, &vec);
 	    LOG(L"Output layout: %hs\n",
-		chanmap::GetChannelNames(vec).c_str());
+		chanmap::getChannelNames(vec).c_str());
 	}
     }
     if (!opts.isLPCM()) {
 	// construct mapped channel layout to AAC/ALAC order
-	AudioChannelLayoutX mapped;
-	mapped->mChannelLayoutTag = chanmap::GetAACLayoutTag(chanmask);
+	*aac_layout = chanmap::AACLayoutFromBitmap(chanmask);
 	std::vector<uint32_t> aacmap;
-	chanmap::GetAACChannelMap(chanmask, &aacmap);
+	chanmap::getMappingToAAC(chanmask, &aacmap);
 	if (aacmap.size())
 	    srcx = std::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
-	*aac_layout = mapped;
 	if (opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
-	    chanmap::GetChannels(mapped, &vec);
-	    LOG(L"Output layout: %hs\n",
-		chanmap::GetChannelNames(vec).c_str());
+	    AudioChannelLayout acl = { 0 };
+	    acl.mChannelLayoutTag = *aac_layout;
+	    chanmap::getChannels(&acl, &vec);
+	    LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
 	}
     }
     return srcx;
@@ -652,7 +653,7 @@ std::shared_ptr<ISource> mapped_source(const std::shared_ptr<ISource> &src,
 
 static
 std::shared_ptr<ISource> delayed_source(const std::shared_ptr<ISource> &src,
-				      const Options & opts)
+				        const Options & opts)
 {
     double rate = src->getSampleFormat().mSampleRate;
     if (opts.delay > 0) {
@@ -698,7 +699,7 @@ inline uint32_t bound_quality(uint32_t n)
 static std::shared_ptr<ISource> 
 preprocess_input(const std::shared_ptr<ISource> &src,
 		 const Options &opts, uint32_t *wChanmask,
-		 AudioChannelLayoutX *aLayout,
+		 uint32_t *aacLayout,
 		 AudioStreamBasicDescription *inputDesc,
 		 AudioStreamBasicDescription *outputDesc)
 {
@@ -712,16 +713,13 @@ preprocess_input(const std::shared_ptr<ISource> &src,
 #endif
     std::shared_ptr<ISource> srcx = delayed_source(src, opts);
 
-    uint32_t wavChanmask;
-    AudioChannelLayoutX aacLayout;
-    srcx = mapped_source(srcx, opts, &wavChanmask, &aacLayout, threading);
+    srcx = mapped_source(srcx, opts, wChanmask, aacLayout, threading);
     if (!opts.isLPCM()) {
 #ifndef REFALAC
-	if (!codec->isAvailableOutputChannelLayout(
-					   aacLayout->mChannelLayoutTag))
+	if (!codec->isAvailableOutputChannelLayout(*aacLayout))
 	    throw std::runtime_error("Channel layout not supported");
 #else
-	switch (aacLayout->mChannelLayoutTag) {
+	switch (*aacLayout) {
 	case kAudioChannelLayoutTag_Mono:
 	case kAudioChannelLayoutTag_Stereo:
 	case kAudioChannelLayoutTag_AAC_3_0:
@@ -753,7 +751,7 @@ preprocess_input(const std::shared_ptr<ISource> &src,
     AudioStreamBasicDescription iasbd = srcx->getSampleFormat();
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mFormatID = opts.output_format;
-    oasbd.mChannelsPerFrame = aacLayout.numChannels();
+    oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
 
     double rate = opts.rate > 0 ? opts.rate
 			        : opts.rate == -1 ? iasbd.mSampleRate
@@ -767,9 +765,11 @@ preprocess_input(const std::shared_ptr<ISource> &src,
 	    oasbd.mSampleRate =
 		codec->getClosestAvailableOutputSampleRate(rate);
 	else {
+	    AudioChannelLayout acl = { 0 };
+	    acl.mChannelLayoutTag = *aacLayout;
 	    AudioConverterX converter(iasbd, oasbd);
-	    converter.setInputChannelLayout(aacLayout);
-	    converter.setOutputChannelLayout(aacLayout);
+	    converter.setInputChannelLayout(acl);
+	    converter.setOutputChannelLayout(acl);
 	    config_aac_codec(converter, opts);
 	    converter.getOutputStreamDescription(&oasbd);
 	}
@@ -805,7 +805,7 @@ preprocess_input(const std::shared_ptr<ISource> &src,
 		srcx.reset(resampler);
 		if (opts.verbose > 1 || opts.logfilename)
 		    LOG(L"Using CoreAudio SRC: complexity %hs quality %u\n",
-			fourcc(resampler->getComplexity()).svalue,
+			util::fourcc(resampler->getComplexity()).svalue,
 			resampler->getQuality());
 	    }
 	    else if (opts.verbose > 1 || opts.logfilename)
@@ -860,8 +860,6 @@ preprocess_input(const std::shared_ptr<ISource> &src,
 	    throw std::runtime_error("ALAC: Not supported bit depth");
 	}
     }
-    if (wChanmask) *wChanmask = wavChanmask;
-    if (aLayout) *aLayout = aacLayout;
     if (inputDesc) *inputDesc = iasbd;
     if (outputDesc) *outputDesc = oasbd;
     return srcx;
@@ -927,16 +925,16 @@ std::wstring get_encoder_config(AudioConverterX &converter)
 	return s;
     UInt32 value = converter.getBitRateControlMode();
     const wchar_t * strategies[] = { L"CBR", L"ABR", L"CVBR", L"TVBR" };
-    s += format(L", %s", strategies[value]);
+    s += strutil::format(L", %s", strategies[value]);
     if (value == kAudioCodecBitRateControlMode_Variable) {
 	value = converter.getSoundQualityForVBR();
-	s += format(L" q%d", value);
+	s += strutil::format(L" q%d", value);
     } else {
 	value = converter.getEncodeBitRate();
-	s += format(L" %gkbps", value / 1000.0);
+	s += strutil::format(L" %gkbps", value / 1000.0);
     }
     value = converter.getCodecQuality();
-    s += format(L", Quality %d", value);
+    s += strutil::format(L", Quality %d", value);
     return s;
 }
 
@@ -968,15 +966,16 @@ void show_available_codec_setttings(UInt32 fmt)
 	if (srates[i].mMinimum == 0) continue;
 	for (size_t j = 0; j < tags.size(); ++j) {
 	    if (tags[j] == 0) continue;
-	    AudioChannelLayoutX acl;
-	    acl->mChannelLayoutTag = tags[j];
+	    AudioChannelLayout acl = { 0 };
+	    acl.mChannelLayoutTag = tags[j];
 	    std::vector<uint32_t> channels;
-	    chanmap::GetChannels(acl, &channels);
-	    std::string name = chanmap::GetChannelNames(channels);
+	    chanmap::getChannels(&acl, &channels);
+	    std::string name = chanmap::getChannelNames(channels);
 
 	    AudioStreamBasicDescription iasbd =
-		BuildASBDForLPCM(srates[i].mMinimum, acl.numChannels(),
-				 32, kAudioFormatFlagIsFloat);
+		cautil::buildASBDForPCM(srates[i].mMinimum,
+					channels.size(),
+					32, kAudioFormatFlagIsFloat);
 	    AudioStreamBasicDescription oasbd = { 0 };
 	    oasbd.mFormatID = fmt;
 	    oasbd.mSampleRate = iasbd.mSampleRate;
@@ -1018,7 +1017,7 @@ std::string GetCoreAudioVersion(HMODULE hDll)
 			         MAKEINTRESOURCEW(VS_VERSION_INFO),
 				 MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
     if (!hRes)
-	throw_win32_error("FindResourceExW", GetLastError());
+	win32::throw_error("FindResourceExW", GetLastError());
     std::string data;
     {
 	DWORD cbres = SizeofResource(hDll, hRes);
@@ -1040,7 +1039,7 @@ std::string GetCoreAudioVersion(HMODULE hDll)
 	v[1] = LOWORD(vfi.dwFileVersionMS);
 	v[2] = HIWORD(vfi.dwFileVersionLS);
 	v[3] = LOWORD(vfi.dwFileVersionLS);
-	return format("%u.%u.%u.%u", v[0],v[1],v[2],v[3]);
+	return strutil::format("%u.%u.%u.%u", v[0],v[1],v[2],v[3]);
     }
     return "";
 }
@@ -1062,7 +1061,7 @@ void setup_aach_codec(HMODULE hDll)
 static
 FARPROC WINAPI DllImportHook(unsigned notify, PDelayLoadInfo pdli)
 {
-    throw_win32_error(pdli->szDll, pdli->dwLastError);
+    win32::throw_error(pdli->szDll, pdli->dwLastError);
     return 0;
 }
 
@@ -1096,7 +1095,7 @@ inline
 void throwIfError(HRESULT expr, const char *msg)
 {
     if (FAILED(expr))
-	throw_win32_error(msg, expr);
+	win32::throw_error(msg, expr);
 }
 #define HR(expr) (void)(throwIfError((expr), #expr))
 
@@ -1121,10 +1120,10 @@ void set_dll_directories(int verbose)
 	std::vector<wchar_t> vec(size/sizeof(wchar_t));
 	HR(RegQueryValueExW(hKey, L"InstallDir", 0, 0,
 		    reinterpret_cast<LPBYTE>(&vec[0]), &size));
-	searchPaths = format(L"%s;%s", &vec[0], searchPaths.c_str());
+	searchPaths = strutil::format(L"%s;%s", &vec[0], searchPaths.c_str());
     } catch (const std::exception &) {}
     std::wstring dir = get_module_directory() + L"QTfiles";
-    searchPaths = format(L"%s;%s", dir.c_str(), searchPaths.c_str());
+    searchPaths = strutil::format(L"%s;%s", dir.c_str(), searchPaths.c_str());
     SetEnvironmentVariableW(L"PATH", searchPaths.c_str());
 }
 
@@ -1147,7 +1146,7 @@ void encode_file(const std::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
     uint32_t wavChanmask;
-    AudioChannelLayoutX aacLayout;
+    uint32_t aacLayout;
     AudioStreamBasicDescription iasbd, oasbd;
 
     std::shared_ptr<ISource> srcx =
@@ -1158,8 +1157,10 @@ void encode_file(const std::shared_ptr<ISource> &src,
 	return;
     }
     AudioConverterX converter(iasbd, oasbd);
-    converter.setInputChannelLayout(aacLayout);
-    converter.setOutputChannelLayout(aacLayout);
+    AudioChannelLayout acl = { 0 };
+    acl.mChannelLayoutTag = aacLayout;
+    converter.setInputChannelLayout(acl);
+    converter.setOutputChannelLayout(acl);
     if (opts.isAAC()) config_aac_codec(converter, opts);
 
     std::wstring encoder_config = get_encoder_config(converter);
@@ -1188,7 +1189,7 @@ void encode_file(const std::shared_ptr<ISource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
     uint32_t wavChanmask;
-    AudioChannelLayoutX aacLayout;
+    uint32_t aacLayout;
     AudioStreamBasicDescription iasbd;
     std::shared_ptr<ISource> srcx =
 	preprocess_input(src, opts, &wavChanmask, &aacLayout, &iasbd, 0);
@@ -1244,10 +1245,10 @@ struct TagLookup {
 	: track(track_), tracktags(tags) {}
 
     std::wstring operator()(const std::wstring &name) {
-	std::wstring namex = wslower(name);
+	std::wstring namex = strutil::wslower(name);
 	if (namex == L"tracknumber")
-	    return widen(format("%02d", track.m_number));
-	std::string skey = nallow(namex);
+	    return strutil::format(L"%02d", track.m_number);
+	std::string skey = strutil::w2us(namex);
 	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
 	if (id == 0) return L"";
 	meta_t::const_iterator iter = tracktags.find(id);
@@ -1271,7 +1272,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 	if (cuepath[i] == L'/') cuepath[i] = L'\\';
     const wchar_t *p = std::wcsrchr(cuepath.c_str(), L'\\');
     if (p) cuedir = cuepath.substr(0, p - cuepath.c_str());
-    cuedir = GetFullPathNameX(cuedir);
+    cuedir = win32::GetFullPathNameX(cuedir);
 
     std::wstring cuetext = load_text_file(ifilename, opts.textcp);
     std::wstringbuf istream(cuetext);
@@ -1294,8 +1295,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 	    for (meta_t::iterator it = tmp.begin(); it != tmp.end(); ++it)
 		track_tags[it->first] = it->second;
 	    track_tags[Tag::kTrack] =
-		widen(format("%d/%d", track.m_number,
-			     cue.m_tracks.back().m_number));
+		strutil::format(L"%d/%d", track.m_number, cue.m_tracks.back().m_number);
 	}
 	CompositeSource *csp = new CompositeSource();
 	std::shared_ptr<ISource> csPtr(csp);
@@ -1307,7 +1307,8 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 		if (!src.get()) continue;
 		src.reset(new NullSource(src->getSampleFormat()));
 	    } else {
-		std::wstring ifilename = PathCombineX(cuedir, seg.m_filename);
+		std::wstring ifilename =
+		    win32::PathCombineX(cuedir, seg.m_filename);
 		src = open_source(ifilename.c_str(), opts);
 	    }
 	    unsigned rate = src->getSampleFormat().mSampleRate;
@@ -1335,7 +1336,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 		    return std::wcschr(L":/\\?|<>*\"", ch) ? L'_' : ch;
 		}
 	    };
-	    ofilename = strtransform(ofilename, F::trans) + L".stub";
+	    ofilename = strutil::strtransform(ofilename, F::trans) + L".stub";
 	    ofilename = get_output_filename(ofilename.c_str(), opts);
 	    LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
 	    encode_file(csPtr, ofilename, opts);
@@ -1417,22 +1418,22 @@ int wmain1(int argc, wchar_t **argv)
 	    SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
 
 	std::string encoder_name;
-	encoder_name = format(PROGNAME " %s", get_qaac_version());
+	encoder_name = strutil::format(PROGNAME " %s", get_qaac_version());
 #ifndef REFALAC
 	__pfnDliFailureHook2 = DllImportHook;
 	set_dll_directories(opts.verbose);
 	HMODULE hDll = LoadLibraryW(L"CoreAudioToolbox.dll");
 	if (!hDll)
-	    throw_win32_error("CoreAudioToolbox.dll", GetLastError());
+	    win32::throw_error("CoreAudioToolbox.dll", GetLastError());
 	else {
 	    std::string ver = GetCoreAudioVersion(hDll);
-	    encoder_name = format("%s, CoreAudioToolbox %s",
+	    encoder_name = strutil::format("%s, CoreAudioToolbox %s",
 		    encoder_name.c_str(), ver.c_str());
 	    setup_aach_codec(hDll);
 	    FreeLibrary(hDll);
 	}
 #endif
-	opts.encoder_name = widen(encoder_name);
+	opts.encoder_name = strutil::us2w(encoder_name);
 	if (!opts.print_available_formats)
 	    LOG(L"%s\n", opts.encoder_name.c_str());
 
@@ -1471,12 +1472,12 @@ int wmain1(int argc, wchar_t **argv)
 	load_lyrics_file(&opts);
 	if (opts.tmpdir) {
 	    std::wstring env(L"TMP=");
-	    env += GetFullPathNameX(opts.tmpdir);
+	    env += win32::GetFullPathNameX(opts.tmpdir);
 	    _wputenv(env.c_str());
 	}
 
 	if (opts.ofilename) {
-	    std::wstring fullpath = GetFullPathNameX(opts.ofilename);
+	    std::wstring fullpath = win32::GetFullPathNameX(opts.ofilename);
 	    const wchar_t *ws = fullpath.c_str();
 	    if (!std::wcscmp(opts.ofilename, L"-"))
 		_setmode(1, _O_BINARY);
@@ -1484,7 +1485,7 @@ int wmain1(int argc, wchar_t **argv)
 		if (opts.isMP4())
 		    throw std::runtime_error("MP4 piping is not supported");
 		opts.ofilename = L"-";
-		_dup2(win32_create_named_pipe(ws), 1);
+		_dup2(win32::create_named_pipe(ws), 1);
 		_setmode(1, _O_BINARY);
 	    }
 	}
@@ -1498,7 +1499,7 @@ int wmain1(int argc, wchar_t **argv)
 	    if (std::wcscmp(ifilename, L"-"))
 		name = PathFindFileNameW(ifilename);
 	    if (!opts.concat) LOG(L"\n%s\n", name);
-	    if (wslower(PathFindExtension(ifilename)) == L".cue")
+	    if (strutil::wslower(PathFindExtension(ifilename)) == L".cue")
 		handle_cue_sheet(ifilename, opts, &src);
 	    else {
 		std::wstring ofilename

@@ -42,7 +42,7 @@ class WavpackSource:
     WavpackModule m_module;
     InputStream m_stream;
     std::shared_ptr<InputStream> m_cstream;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     std::shared_ptr<void> m_wpc;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
@@ -53,7 +53,7 @@ public:
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return &m_chanmap; }
     size_t readSamples(void *buffer, size_t nsamples);

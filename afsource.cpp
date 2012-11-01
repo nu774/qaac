@@ -2,29 +2,22 @@
 #ifdef _WIN32
 #include "win32util.h"
 #endif
-#include "CoreAudioHelper.h"
+#include "cautil.h"
 #include "AudioConverterX.h"
+#include "chanmap.h"
 #include "mp4v2wrapper.h"
-#include "strcnv.h"
-#include "utf8_codecvt_facet.hpp"
+#include "strutil.h"
 #include "itunetags.h"
 
 typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;
 
 namespace caf {
-    inline void *load_cf_constant(const char *name)
-    {
-	HMODULE cf = GetModuleHandleA("CoreFoundation.dll");
-	if (!cf)
-	    throw_win32_error("CoreFouncation.dll", GetLastError());
-	return GetProcAddress(cf, name);
-    }
     uint64_t next_chunk(InputStream *stream, char *name)
     {
 	uint64_t size;
 	if (stream->read(name, 4) != 4 || stream->read(&size, 8) != 8)
 	    return 0;
-	return b2host64(size);
+	return util::b2host64(size);
     }
     bool get_info(InputStream *stream, std::vector<char> *info)
     {
@@ -64,21 +57,12 @@ namespace caf {
 		infop += tokens.back().size() + 1;
 	    } while (infop < endp);
 	}
-	// get some constants manually
-	const CFDictionaryKeyCallBacks *kcb
-	    = static_cast<const CFDictionaryKeyCallBacks *>(
-		load_cf_constant("kCFTypeDictionaryKeyCallBacks"));
-	const CFDictionaryValueCallBacks *vcb
-	    = static_cast<const CFDictionaryValueCallBacks *>(
-		load_cf_constant("kCFTypeDictionaryValueCallBacks"));
-
 	CFMutableDictionaryRef dictref =
-	    CFDictionaryCreateMutable(0, tokens.size() >> 1, kcb, vcb);
-	utf8_codecvt_facet u8codec;
+	    cautil::CreateDictionary(tokens.size() >> 1);
 	CFDictionaryPtr dictptr(dictref, CFRelease);
 	for (size_t i = 0; i < tokens.size() >> 1; ++i) {
-	    CFStringPtr key = W2CF(m2w(tokens[2 * i], u8codec));
-	    CFStringPtr value = W2CF(m2w(tokens[2 * i + 1], u8codec));
+	    CFStringPtr key = cautil::W2CF(strutil::us2w(tokens[2 * i]));
+	    CFStringPtr value = cautil::W2CF(strutil::us2w(tokens[2 * i + 1]));
 	    CFDictionarySetValue(dictref, key.get(), value.get());
 	}
 	dict->swap(dictptr);
@@ -134,13 +118,11 @@ namespace audiofile {
 	    CFGetTypeID(value) != CFStringGetTypeID())
 	    return;
 	tag_t *tagp = static_cast<tag_t*>(ctx);
-	std::wstring wskey = CF2W(static_cast<CFStringRef>(key));
-	std::string utf8key = w2m(wskey, utf8_codecvt_facet());
+	std::wstring wskey = cautil::CF2W(static_cast<CFStringRef>(key));
+	std::string utf8key = strutil::w2us(wskey);
 	uint32_t id = getIDFromTagName(utf8key.c_str());
-	if (id) {
-	    std::wstring wsvalue = CF2W(static_cast<CFStringRef>(value));
-	    (*tagp)[id] = wsvalue;
-	}
+	if (id)
+	    (*tagp)[id] = cautil::CF2W(static_cast<CFStringRef>(value));
     }
 
     void fetchTags(AudioFileX &af, InputStream *stream, tag_t *result)
@@ -148,11 +130,8 @@ namespace audiofile {
 	CFDictionaryPtr dict;
 	if (af.getFileFormat() == 'caff')
 	    caf::get_info_dictionary(stream, &dict);
-	else {
-	    CFDictionaryRef dictRef = af.getInfoDictionary();
-	    CFDictionaryPtr dictPtr(dictRef, CFRelease);
-	    dict.swap(dictPtr);
-	}
+	else
+	    af.getInfoDictionary(&dict);
 	tag_t tags;
 	if (dict.get()) {
 	    CFDictionaryApplyFunction(dict.get(), fetchTagDictCallback, &tags);
@@ -184,13 +163,13 @@ AudioFileOpenFactory(InputStream &stream, const std::wstring &path)
 AFSource::AFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream)
     : m_af(af), m_offset(0), m_stream(stream)
 {
-    fourcc fcc(m_af.getFileFormat());
-    m_af.getDataFormat(&m_format);
+    util::fourcc fcc(m_af.getFileFormat());
+    m_af.getDataFormat(&m_asbd);
     setRange(0, m_af.getAudioDataPacketCount());
     std::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
-	chanmap::GetChannels(acl.get(), &m_chanmap);
+	chanmap::getChannels(acl.get(), &m_chanmap);
     } catch (...) {}
     try {
 	if (fcc == 'AIFF')
@@ -205,7 +184,7 @@ size_t AFSource::readSamples(void *buffer, size_t nsamples)
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
     UInt32 ns = nsamples;
-    UInt32 nb = ns * m_format.mBytesPerFrame;
+    UInt32 nb = ns * m_asbd.mBytesPerFrame;
     CHECKCA(AudioFileReadPackets(m_af, false, &nb, 0,
 		m_offset + getSamplesRead(), &ns, buffer));
     addSamplesRead(ns);
@@ -232,20 +211,20 @@ ExtAFSource::ExtAFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream,
 	unsigned index = (asbd.mFormatFlags - 1) & 0x3;
 	bits_per_channel = tab[index];
     }
-    m_format = BuildASBDForLPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
+    m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
 				bits_per_channel,
 				kAudioFormatFlagIsSignedInteger,
 				kAudioFormatFlagIsAlignedHigh);
-    m_eaf.setClientDataFormat(m_format);
+    m_eaf.setClientDataFormat(m_asbd);
     setRange(0, m_eaf.getFileLengthFrames());
     std::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
-	chanmap::GetChannels(acl.get(), &m_chanmap);
+	chanmap::getChannels(acl.get(), &m_chanmap);
     } catch (...) {}
     if (m_af.getFileFormat() == 'm4af') {
 	MP4FileX mp4file;
-	mp4file.Read(w2m(path, utf8_codecvt_facet()).c_str(), 0);
+	mp4file.Read(strutil::w2us(path).c_str(), 0);
 	mp4a::fetchTags(mp4file, &m_tags);
     } else {
 	try {
@@ -262,7 +241,7 @@ size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
     uint8_t *bp = static_cast<uint8_t*>(buffer);
     while (processed < nsamples) {
 	UInt32 ns = nsamples - processed;
-	UInt32 nb = ns * m_format.mBytesPerFrame;
+	UInt32 nb = ns * m_asbd.mBytesPerFrame;
 	AudioBufferList abl = { 0 };
 	abl.mNumberBuffers = 1;
 	abl.mBuffers[0].mData = bp;
@@ -270,7 +249,7 @@ size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
 	CHECKCA(ExtAudioFileRead(m_eaf, &ns, &abl));
 	if (ns == 0) break;
 	processed += ns;
-	bp += ns * m_format.mBytesPerFrame;
+	bp += ns * m_asbd.mBytesPerFrame;
 	addSamplesRead(ns);
     }
     return processed;

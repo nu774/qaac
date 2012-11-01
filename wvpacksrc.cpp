@@ -1,11 +1,10 @@
 #include "wvpacksrc.h"
 #include <wavpack.h>
-#include "utf8_codecvt_facet.hpp"
-#include "strcnv.h"
+#include "strutil.h"
 #include "itunetags.h"
 #include "cuesheet.h"
 #include "chanmap.h"
-#include "CoreAudioHelper.h"
+#include "cautil.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -102,10 +101,10 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
 	m_module.OpenFileInputEx(&reader, &m_stream, m_cstream.get(),
 				 error, flags, 0);
     if (!wpc)
-	throw std::runtime_error(format("WavpackOpenFileInputEx(): %s", error));
+	throw std::runtime_error(strutil::format("WavpackOpenFileInputEx(): %s", error));
     m_wpc = std::shared_ptr<WavpackContext>(wpc, m_module.CloseFile);
 
-    m_format = BuildASBDForLPCM(m_module.GetSampleRate(wpc),
+    m_asbd = cautil::buildASBDForPCM(m_module.GetSampleRate(wpc),
 				m_module.GetNumChannels(wpc),
 				m_module.GetBitsPerSample(wpc),
 				(m_module.GetMode(wpc) & MODE_FLOAT)
@@ -118,7 +117,7 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
     setRange(0, duration);
 
     unsigned mask = m_module.GetChannelMask(wpc);
-    chanmap::GetChannels(mask, &m_chanmap, m_format.mChannelsPerFrame);
+    chanmap::getChannels(mask, &m_chanmap, m_asbd.mChannelsPerFrame);
 
     fetchTags();
 }
@@ -135,7 +134,7 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 {
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
-    std::vector<int32_t> vbuf(nsamples * m_format.mChannelsPerFrame);
+    std::vector<int32_t> vbuf(nsamples * m_asbd.mChannelsPerFrame);
     MemorySink sink(buffer);
     size_t total = 0, rc;
     const int32_t *bp = &vbuf[0];
@@ -143,7 +142,7 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 	rc = m_module.UnpackSamples(m_wpc.get(), &vbuf[0], nsamples - total);
 	if (rc <= 0)
 	    break;
-	size_t nblk = rc * m_format.mChannelsPerFrame;
+	size_t nblk = rc * m_asbd.mChannelsPerFrame;
 	for (size_t i = 0; i < nblk; ++i) {
 	    int32_t value = bp[i];
 	    sink.put(value);
@@ -156,21 +155,20 @@ size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
 
 size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
 {
-    uint32_t bpc = m_format.mBytesPerFrame / m_format.mChannelsPerFrame;
+    uint32_t bpc = m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
     if (bpc == 1)
-	return readSamplesT<MemorySink8>(buffer, nsamples);
+	return readSamplesT<util::MemorySink8>(buffer, nsamples);
     else if (bpc == 2)
-	return readSamplesT<MemorySink16LE>(buffer, nsamples);
+	return readSamplesT<util::MemorySink16LE>(buffer, nsamples);
     else if (bpc == 3)
-	return readSamplesT<MemorySink24LE>(buffer, nsamples);
+	return readSamplesT<util::MemorySink24LE>(buffer, nsamples);
     else
-	return readSamplesT<MemorySink32LE>(buffer, nsamples);
+	return readSamplesT<util::MemorySink32LE>(buffer, nsamples);
 }
 
 void WavpackSource::fetchTags()
 {
     WavpackContext *wpc = m_wpc.get();
-    utf8_codecvt_facet u8codec;
 
     int count = m_module.GetNumTagItems(wpc);
     std::map<std::string, std::string> vorbisComments;
@@ -184,8 +182,8 @@ void WavpackSource::fetchTags()
 	m_module.GetTagItem(wpc, &name[0], &value[0], value.size());
 	if (!strcasecmp(&name[0], "cuesheet")) {
 	    try {
-		std::wstring wvalue = m2w(&value[0], u8codec);
-		Cue::CueSheetToChapters(wvalue, m_format.mSampleRate,
+		std::wstring wvalue = strutil::us2w(&value[0]);
+		Cue::CueSheetToChapters(wvalue, m_asbd.mSampleRate,
 			getDuration(), &m_chapters, &tags);
 	    } catch (...) {}
 	} else {

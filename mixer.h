@@ -9,7 +9,7 @@
 typedef std::complex<double> complex_t;
 
 class MatrixMixer: public DelegatingSource {
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     SoxModule m_module;
     std::vector<std::vector<complex_t> > m_matrix;
     std::shared_ptr<lsx_fir_t> m_filter;
@@ -29,7 +29,7 @@ public:
     uint64_t length() const { return -1; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
     size_t readSamples(void *buffer, size_t nsamples);

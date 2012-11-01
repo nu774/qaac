@@ -1,4 +1,5 @@
 #include "alacenc.h"
+#include "cautil.h"
 
 ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
     : m_encoder(new ALACEncoder())

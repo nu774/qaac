@@ -38,7 +38,7 @@ struct ISoxDSPEngine {
 };
 
 class SoxDSPProcessor: public DelegatingSource {
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     std::shared_ptr<ISoxDSPEngine> m_engine;
     bool m_end_of_input;
     size_t m_input_frames;
@@ -51,7 +51,7 @@ public:
     uint64_t length() const { return -1; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     size_t readSamples(void *buffer, size_t nsamples);
     uint64_t getSamplesRead() const { return m_samples_read; }
@@ -60,14 +60,14 @@ public:
 class SoxResampler: public ISoxDSPEngine {
     SoxModule m_module;
     std::shared_ptr<lsx_rate_t> m_processor;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
 public:
     SoxResampler(const SoxModule &module,
-		 const AudioStreamBasicDescription &format,
+		 const AudioStreamBasicDescription &asbd,
 		 uint32_t Fp, bool mt);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
 		    size_t *olen, size_t istride, size_t ostride)
@@ -80,14 +80,14 @@ public:
 class SoxLowpassFilter: public ISoxDSPEngine {
     SoxModule m_module;
     std::shared_ptr<lsx_fir_t> m_processor;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
 public:
     SoxLowpassFilter(const SoxModule &module,
-		     const AudioStreamBasicDescription &format,
+		     const AudioStreamBasicDescription &asbd,
 		     uint32_t rate, bool mt);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
 		    size_t *olen, size_t istride, size_t ostride)

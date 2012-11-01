@@ -52,7 +52,7 @@ private:
     }
     void error(const std::string &msg)
     {
-	std::string s = format("RegParser: %s at line %d",
+	std::string s = strutil::format("RegParser: %s at line %d",
 		msg.c_str(), m_lineno);
 	throw std::runtime_error(s);
     }
@@ -60,7 +60,7 @@ private:
     {
 	int cc;
 	if ((cc = get()) != c)
-	    error(format("%c is expected", c));
+	    error(strutil::format("%c is expected", c));
 	return cc;
     }
     int skipws();
@@ -157,7 +157,7 @@ class RegAction: public IRegAction {
 public:
     RegAction()
     {
-	std::wstring selfpath = GetModuleFileNameX(0);
+	std::wstring selfpath = win32::GetModuleFileNameX(0);
 	const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
 	m_selfdir = selfpath.substr(0, fpos - selfpath.c_str());
     }

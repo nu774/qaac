@@ -36,14 +36,14 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 	case 4:
 	    {
 		if (sf.mFormatFlags & kAudioFormatFlagIsBigEndian)
-		    bswap32buffer(bp, blen);
+		    util::bswap32buffer(bp, blen);
 		std::memcpy(fp, bp, blen);
 	    }
 	    break;
 	case 8:
 	    {
 		if (sf.mFormatFlags & kAudioFormatFlagIsBigEndian)
-		    bswap64buffer(bp, blen);
+		    util::bswap64buffer(bp, blen);
 		double *src = reinterpret_cast<double *>(bp);
 		std::transform(src, src + (blen >> 3), fp, quantize);
 	    }
@@ -64,7 +64,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 	case 2:
 	    {
 		if (sf.mFormatFlags & kAudioFormatFlagIsBigEndian)
-		    bswap16buffer(bp, blen);
+		    util::bswap16buffer(bp, blen);
 		short *src = reinterpret_cast<short *>(bp);
 		for (size_t i = 0; i < blen >> 1; ++i)
 		    *fp++ = static_cast<float>(src[i]) / 0x8000;
@@ -73,7 +73,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 	case 3:
 	    {
 		if (sf.mFormatFlags & kAudioFormatFlagIsBigEndian)
-		    bswap24buffer(bp, blen);
+		    util::bswap24buffer(bp, blen);
 		for (size_t i = 0; i < blen / 3; ++i) {
 		    int32_t v = bp[i*3]<<8 | bp[i*3+1]<<16 | bp[i*3+2]<<24;
 		    *fp++ = static_cast<float>(v) / 0x80000000U;
@@ -83,7 +83,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
 	case 4:
 	    {
 		if (sf.mFormatFlags & kAudioFormatFlagIsBigEndian)
-		    bswap32buffer(bp, blen);
+		    util::bswap32buffer(bp, blen);
 		int *src = reinterpret_cast<int *>(bp);
 		for (size_t i = 0; i < blen >> 2; ++i)
 		    *fp++ = static_cast<float>(src[i]) / 0x80000000U;

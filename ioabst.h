@@ -7,7 +7,7 @@
 #include <vector>
 #include <stdint.h>
 #include "util.h"
-#include "strcnv.h"
+#include "strutil.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #include <io.h>
 #include "win32util.h"
@@ -17,21 +17,21 @@
 inline
 FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
 {
-    std::wstring fullpath = get_prefixed_fullpath(path);
+    std::wstring fullpath = win32::prefixed_path(path);
     FILE *fp = _wfopen(fullpath.c_str(), mode);
     if (!fp)
-	throw_crt_error(fullpath.c_str());
+	util::throw_crt_error(fullpath.c_str());
     return fp;
 }
 #else
 inline
 FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
 {
-    std::string spath = w2m(path);
-    std::string smode = nallow(mode);
+    std::string spath = strutil::w2m(path);
+    std::string smode = strutil::w2m(mode);
     FILE *fp = std::fopen(spath.c_str(), smode.c_str());
     if (!fp)
-	throw_crt_error(path);
+	util::throw_crt_error(path);
     return fp;
 }
 #endif
@@ -97,28 +97,28 @@ public:
     {
 	if (((T*)(this))->read(result, 2) != 2)
 	    return false;
-	*result = l2host16(*result);
+	*result = util::l2host16(*result);
 	return true;
     }
     bool read16be(uint16_t *result)
     {
 	if (((T*)(this))->read(result, 2) != 2)
 	    return false;
-	*result = b2host16(*result);
+	*result = util::b2host16(*result);
 	return true;
     }
     bool read32le(uint32_t *result)
     {
 	if (((T*)(this))->read(result, 4) != 4)
 	    return false;
-	*result = l2host32(*result);
+	*result = util::l2host32(*result);
 	return true;
     }
     bool read32be(uint32_t *result)
     {
 	if (((T*)(this))->read(result, 4) != 4)
 	    return false;
-	*result = b2host32(*result);
+	*result = util::b2host32(*result);
 	return true;
     }
 };

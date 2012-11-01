@@ -22,12 +22,6 @@
     <ClCompile Include="..\..\mp4v2wrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\strcnv.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\utf8_codecvt_facet.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -98,6 +92,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ioabst.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\strutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -67,7 +67,7 @@ private:
     void die(const std::string &msg)
     {
 	throw std::runtime_error(
-		format("cuesheet: %s at line %d", msg.c_str(), m_lineno));
+		strutil::format("cuesheet: %s at line %d", msg.c_str(), m_lineno));
     }
     CueSegment *lastSegment()
     {

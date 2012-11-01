@@ -21,9 +21,9 @@ public:
     virtual ~IFFParser() {}
     virtual void parse();
     uint32_t format_id() { return m_format_id; }
-    std::string format_name() { return fourcc(m_format_id).svalue; }
+    std::string format_name() { return util::fourcc(m_format_id).svalue; }
     uint32_t chunk_id() { return m_chunk_id; }
-    std::string chunk_name() { return fourcc(m_chunk_id).svalue; }
+    std::string chunk_name() { return util::fourcc(m_chunk_id).svalue; }
     std::string chunk_path();
     uint64_t chunk_size() { return m_chunk_size - m_is_odd_chunk; }
     // go to next chunk.

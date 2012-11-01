@@ -1,6 +1,5 @@
 #include <algorithm>
-#include "utf8_codecvt_facet.hpp"
-#include "strcnv.h"
+#include "strutil.h"
 #include "sink.h"
 #include "util.h"
 #include "bitstream.h"
@@ -117,14 +116,14 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
     try {
 	create = temp ? &MP4FileX::CreateTemp : &MP4FileX::Create;
 	(m_mp4file.*create)(
-		    w2m(m_filename, utf8_codecvt_facet()).c_str(),
+		    strutil::w2us(m_filename).c_str(),
 		    0, // flags
 		    1, // add_ftypes
 		    0, // add_iods
 		    "M4A ", // majorBrand
 		    0, // minorVersion
 		    const_cast<char**>(compatibleBrands), 
-		    array_size(compatibleBrands));
+		    util::sizeof_array(compatibleBrands));
     } catch (mp4v2::impl::Exception *e) {
 	m_mp4file.ResetFile();
 	handle_mp4error(e);
@@ -187,7 +186,7 @@ ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
     }
     struct stat stb = { 0 };
     if (fstat(fileno(m_fp.get()), &stb))
-	throw_crt_error("fstat()");
+	util::throw_crt_error("fstat()");
     m_seekable = ((stb.st_mode & S_IFMT) == S_IFREG);
     std::vector<uint8_t> config;
     parseMagicCookieAAC(cookie, &config);
@@ -221,6 +220,6 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
     std::fwrite(bs.data(), 1, 7, m_fp.get());
     std::fwrite(data, 1, length, m_fp.get());
     if (ferror(m_fp.get()))
-	throw_crt_error("fwrite()");
+	util::throw_crt_error("fwrite()");
     if (!m_seekable) std::fflush(m_fp.get());
 }

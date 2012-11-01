@@ -8,10 +8,10 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> src,
       m_samples_read(0)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
-    m_format = BuildASBDForLPCM(rate, asbd.mChannelsPerFrame,
+    m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
 				32, kAudioFormatFlagIsFloat);
 
-    m_converter = AudioConverterX(asbd, m_format);
+    m_converter = AudioConverterX(asbd, m_asbd);
     m_converter.setSampleRateConverterQuality(quality);
     m_converter.setSampleRateConverterComplexity(complexity);
     m_encoder.reset(new CoreAudioEncoder(m_converter));
@@ -27,8 +27,8 @@ size_t CoreAudioResampler::readSamples(void *buffer, size_t nsamples)
     float *dst = static_cast<float*>(buffer);
     size_t processed = 0;
     while (processed < nsamples) {
-	if (m_fbuffer.size() >= m_format.mChannelsPerFrame) {
-	    for (size_t i = 0; i < m_format.mChannelsPerFrame; ++i) {
+	if (m_fbuffer.size() >= m_asbd.mChannelsPerFrame) {
+	    for (size_t i = 0; i < m_asbd.mChannelsPerFrame; ++i) {
 		*dst++ = m_fbuffer.front();
 		m_fbuffer.pop_front();
 	    }

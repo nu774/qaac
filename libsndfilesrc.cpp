@@ -1,7 +1,7 @@
 #include "libsndfilesrc.h"
 #include "win32util.h"
 #include "itunetags.h"
-#include "CoreAudioHelper.h"
+#include "cautil.h"
 
 static
 uint32_t convert_chanmap(uint32_t value)
@@ -31,7 +31,7 @@ uint32_t convert_chanmap(uint32_t value)
 	case SF_CHANNEL_MAP_TOP_REAR_CENTER: return 17;
 	case SF_CHANNEL_MAP_TOP_REAR_RIGHT: return 18;
 	default:
-	    throw std::runtime_error(format("Unknown channel: %u", value));
+	    throw std::runtime_error(strutil::format("Unknown channel: %u", value));
     }
 }
 
@@ -71,7 +71,7 @@ LibSndfileSource::LibSndfileSource(
     if (!std::wcscmp(path, L"-"))
 	fp = m_module.open_fd(0, SFM_READ, &info, 0);
     else {
-	std::wstring fullpath = get_prefixed_fullpath(path);
+	std::wstring fullpath = win32::prefixed_path(path);
 	fp = m_module.wchar_open(fullpath.c_str(), SFM_READ, &info);
     }
     if (!fp)
@@ -106,7 +106,7 @@ LibSndfileSource::LibSndfileSource(
     };
     if (subformat < 1 || subformat > 7)
 	throw std::runtime_error("Unsupported input subformat");
-    m_format = BuildASBDForLPCM(info.samplerate, info.channels,
+    m_asbd = cautil::buildASBDForPCM(info.samplerate, info.channels,
 				mapping[subformat].bits,
 				mapping[subformat].type);
 
@@ -137,9 +137,9 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
 {
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
-    nsamples *= m_format.mChannelsPerFrame;
+    nsamples *= m_asbd.mChannelsPerFrame;
     sf_count_t rc;
-    uint32_t bpc = m_format.mBytesPerFrame / m_format.mChannelsPerFrame;
+    uint32_t bpc = m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
     if (bpc == 1)
 	rc = readSamples8(buffer, nsamples);
     else if (bpc == 2)
@@ -148,18 +148,18 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
 	rc = readSamples24(buffer, nsamples);
     else if (bpc == 8)
 	rc = SF_READ(double, m_handle.get(), buffer, nsamples);
-    else if (m_format.mFormatFlags & kAudioFormatFlagIsFloat)
+    else if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat)
 	rc = SF_READ(float, m_handle.get(), buffer, nsamples);
     else
 	rc = SF_READ(int, m_handle.get(), buffer, nsamples);
-    nsamples = static_cast<size_t>(rc / m_format.mChannelsPerFrame);
+    nsamples = static_cast<size_t>(rc / m_asbd.mChannelsPerFrame);
     addSamplesRead(nsamples);
     return nsamples;
 }
 
 size_t LibSndfileSource::readSamples8(void *buffer, size_t nsamples)
 {
-    std::vector<short> v(m_format.mChannelsPerFrame * nsamples);
+    std::vector<short> v(m_asbd.mChannelsPerFrame * nsamples);
     sf_count_t rc = SF_READ(short, m_handle.get(), &v[0], nsamples);
     char *bp = reinterpret_cast<char*>(buffer);
     for (size_t i = 0; i < rc; ++i)
@@ -169,9 +169,9 @@ size_t LibSndfileSource::readSamples8(void *buffer, size_t nsamples)
 
 size_t LibSndfileSource::readSamples24(void *buffer, size_t nsamples)
 {
-    std::vector<int32_t> v(m_format.mChannelsPerFrame * nsamples);
+    std::vector<int32_t> v(m_asbd.mChannelsPerFrame * nsamples);
     sf_count_t rc = SF_READ(int, m_handle.get(), &v[0], nsamples);
-    MemorySink24LE sink(buffer);
+    util::MemorySink24LE sink(buffer);
     for (size_t i = 0; i < rc; ++i)
 	sink.put(v[i] / 256);
     return static_cast<size_t>(rc);

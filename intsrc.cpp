@@ -13,8 +13,8 @@ size_t IntegerSource::readSamples(void *buffer, size_t nsamples)
     if (!nsamples)
 	return 0;
     float *fp = &m_fbuffer[0];
-    size_t count = nsamples * m_format.mChannelsPerFrame;
-    switch (m_format.mBytesPerFrame / m_format.mChannelsPerFrame) {
+    size_t count = nsamples * m_asbd.mChannelsPerFrame;
+    switch (m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame) {
     case 2:
 	{
 	    int16_t *dst = static_cast<int16_t*>(buffer);

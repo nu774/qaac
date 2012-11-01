@@ -2,7 +2,8 @@
 #define ExtAudioFileX_H
 
 #include "CoreAudio/ExtAudioFile.h"
-#include "CoreAudioHelper.h"
+#include "CoreAudio/AudioConverter.h"
+#include "cautil.h"
 
 class ExtAudioFileX {
     std::shared_ptr<OpaqueExtAudioFileID> m_file;

@@ -14,7 +14,7 @@ class FLACSource :
     FLACModule m_module;
     InputStream m_stream;
     decoder_t m_decoder;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     std::vector<std::deque<int32_t> > m_buffer;
     std::map<uint32_t, std::wstring> m_tags;
     std::wstring m_cuesheet;
@@ -25,7 +25,7 @@ public:
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }

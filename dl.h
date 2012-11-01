@@ -8,7 +8,7 @@
 #else
 #include <dlfcn.h>
 #endif
-#include "strcnv.h"
+#include "strutil.h"
 
 template <typename T>
 class AutoCast {
@@ -24,6 +24,14 @@ class DL {
     std::shared_ptr<HINSTANCE__> m_module;
 public:
     DL() {}
+    DL(HMODULE handle, bool takeOwn=true)
+    {
+	struct noop { static void call(HMODULE x) {} };
+	if (takeOwn)
+	    m_module.reset(handle, FreeLibrary);
+	else
+	    m_module.reset(handle, noop::call);
+    }
     DL(const std::wstring &path)
     {
 	HMODULE handle = LoadLibraryW(path.c_str());
@@ -48,7 +56,7 @@ public:
     }
     DL(const std::wstring &path)
     {
-	void *handle = dlopen(w2m(path).c_str(), RTLD_NOW);
+	void *handle = dlopen(strutil::w2m(path).c_str(), RTLD_NOW);
 	if (handle) m_module.reset(handle, dlclose);
     }
     bool loaded() const { return m_module.get() != 0; }

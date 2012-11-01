@@ -13,12 +13,6 @@ These are part of TagLib (http://developer.kde.org/~wheeler/taglib.html),
 (tfile.cpp is modified to remove unwanted dependencies)
 version 1.8.0
 
-utf8_codecvt_facet.[ch]pp:
-These are part of Boost (http://www.boost.org/),
-version 1.45.0
-(utf8_codecvt_facet.[ch]pp is slightly modified with
- BOOST_UTF8_{BEGIN,END}_NAMESPACE, BOOST_UTF8_DECL)
-
 getopt.[ch]:
 These are from FreeBSD CVS repositry
 (http://www.freebsd.org/cgi/cvsweb.cgi/),

@@ -1,7 +1,7 @@
 #include "mixer.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include "CoreAudioHelper.h"
+#include "cautil.h"
 
 static bool validateMatrix(const std::vector<std::vector<complex_t> > &mat,
 			   uint32_t *nshifts)
@@ -89,7 +89,7 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
 	throw std::runtime_error("unmatch number of channels with matrix");
     if (normalize)
 	normalizeMatrix(m_matrix);
-    m_format = BuildASBDForLPCM(fmt.mSampleRate, spec.size(),
+    m_asbd = cautil::buildASBDForPCM(fmt.mSampleRate, spec.size(),
 				32, kAudioFormatFlagIsFloat);
 
     if (m_shiftMask) {
@@ -100,7 +100,7 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
 	applyHamming(&coefs[0], numtaps);
 	m_filter_gain = calcGain(&coefs[0], numtaps);
 	lsx_fir_t *filter =
-	    m_module.fir_create(bitcount(m_shiftMask), &coefs[0], numtaps,
+	    m_module.fir_create(util::bitcount(m_shiftMask), &coefs[0], numtaps,
 				numtaps >> 1, mt);
 	if (!filter)
 	    throw std::runtime_error("failed to init hilbert transformer");
@@ -150,7 +150,7 @@ size_t MatrixMixer::phaseShift(void *buffer, size_t nsamples)
     float *dst = static_cast<float*>(buffer);
 
     uint32_t ichannels = source()->getSampleFormat().mChannelsPerFrame;
-    uint32_t nshifts = bitcount(m_shiftMask);
+    uint32_t nshifts = util::bitcount(m_shiftMask);
     std::vector<float*> ivec(nshifts), ovec(nshifts);
 
     while (nsamples > 0) {

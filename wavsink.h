@@ -10,7 +10,7 @@ class WaveSink : public ISink {
     bool m_closed;
     bool m_seekable;
     bool m_rf64;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
 public:
     WaveSink(FILE *fp, uint64_t duration,
 	     const AudioStreamBasicDescription &format,
@@ -23,7 +23,7 @@ private:
     {
 	std::fwrite(data, 1, length, m_file);
 	if (ferror(m_file))
-	    throw_crt_error("fwrite()");
+	    util::throw_crt_error("fwrite()");
     }
 };
 

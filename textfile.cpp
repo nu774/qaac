@@ -12,7 +12,7 @@ static inline
 void throwIfError(HRESULT expr, const char *msg)
 {
     if (FAILED(expr))
-	throw_win32_error(msg, expr);
+	win32::throw_error(msg, expr);
 }
 #define HR(expr) (void)(throwIfError((expr), #expr))
 
@@ -26,15 +26,14 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     HRESULT hr = SHCreateStreamOnFileW(path.c_str(),
 				       STGM_READ | STGM_SHARE_DENY_WRITE,
 				       &stream);
-    if (FAILED(hr)) throw_win32_error(path, hr);
+    if (FAILED(hr)) win32::throw_error(path, hr);
     std::shared_ptr<IStream> streamPtr(stream, F::release);
 
     LARGE_INTEGER li = { 0 };
     ULARGE_INTEGER ui;
     HR(stream->Seek(li, STREAM_SEEK_END, &ui));
     if (ui.QuadPart > 0x100000) {
-	throw std::runtime_error(w2m(path + L": file too big",
-				     utf8_codecvt_facet()));
+	throw std::runtime_error(strutil::w2us(path + L": file too big"));
     }
     size_t fileSize = ui.LowPart;
     HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
@@ -78,5 +77,5 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     obuf.push_back(0);
     // chop off BOM
     size_t bom = obuf.size() && obuf[0] == 0xfeff;
-    return normalize_crlf(&obuf[bom], L"\n");
+    return strutil::normalize_crlf(&obuf[bom], L"\n");
 }

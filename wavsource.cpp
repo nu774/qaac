@@ -25,15 +25,15 @@ WaveSource::WaveSource(InputStream &stream, bool ignorelength)
 	if (chunk_id() == 'fmt ')
 	    fetchWaveFormat();
     }
-    if (!m_format.mBitsPerChannel)
+    if (!m_asbd.mBitsPerChannel)
 	wave::want(false);
 
     if (ignorelength || !chunk_size() ||
-	chunk_size() % m_format.mBytesPerFrame) {
+	chunk_size() % m_asbd.mBytesPerFrame) {
 	setRange(0, -1);
 	m_ignore_length = true;
     } else
-	setRange(0, chunk_size() / m_format.mBytesPerFrame);
+	setRange(0, chunk_size() / m_asbd.mBytesPerFrame);
 }
 
 void WaveSource::fetchWaveFormat()
@@ -47,24 +47,24 @@ void WaveSource::fetchWaveFormat()
     uint32_t y;
     uint32_t type;
     // wFormatTag
-    check_eof(read16le(&wformat));
+    util::check_eof(read16le(&wformat));
     wave::want(wformat == wave::kFormatPCM
 	      || wformat == wave::kFormatFloat
 	      || wformat == wave::kFormatExtensible);
     if (wformat == wave::kFormatFloat)
 	type = kAudioFormatFlagIsFloat;
     // nChannels
-    check_eof(read16le(&nChannels));
+    util::check_eof(read16le(&nChannels));
     wave::want(nChannels > 0 && nChannels < 9);
     // nSamplesPerSec
-    check_eof(read32le(&nSamplesPerSec));
+    util::check_eof(read32le(&nSamplesPerSec));
     wave::want(nSamplesPerSec > 0);
     // nAvgBytesPerSec
-    check_eof(read32le(&y));
+    util::check_eof(read32le(&y));
     // nBlockAlign
-    check_eof(read16le(&nBlockAlign));
+    util::check_eof(read16le(&nBlockAlign));
     // wBitsPerSample
-    check_eof(read16le(&wBitsPerSample));
+    util::check_eof(read16le(&wBitsPerSample));
     wave::want(wBitsPerSample > 0 && (wBitsPerSample & 0x7) == 0);
     wValidBitsPerSample = wBitsPerSample;
     if (wformat == wave::kFormatPCM)
@@ -75,21 +75,21 @@ void WaveSource::fetchWaveFormat()
 	if (chunk_size() < 40)
 	    throw std::runtime_error("Invalid fmt chunk");
 	// cbSize
-	check_eof(read16le(&x));
+	util::check_eof(read16le(&x));
 	// wValidBitsPerSample
-	check_eof(read16le(&wValidBitsPerSample));
+	util::check_eof(read16le(&wValidBitsPerSample));
 	wave::want(wValidBitsPerSample > 0 &&
 		   wValidBitsPerSample <= wBitsPerSample);
 	// dwChannelMask
-	check_eof(read32le(&dwChannelMask));
-	if (dwChannelMask > 0 && bitcount(dwChannelMask) >= nChannels)
-	    chanmap::GetChannels(dwChannelMask, &m_chanmap, nChannels);
+	util::check_eof(read32le(&dwChannelMask));
+	if (dwChannelMask > 0 && util::bitcount(dwChannelMask) >= nChannels)
+	    chanmap::getChannels(dwChannelMask, &m_chanmap, nChannels);
 	// SubFormat
 	wave::myGUID subFormat;
-	check_eof(read32le(&subFormat.Data1));
-	check_eof(read16le(&subFormat.Data2));
-	check_eof(read16le(&subFormat.Data3));
-	check_eof(read(&subFormat.Data4, 8) == 8);
+	util::check_eof(read32le(&subFormat.Data1));
+	util::check_eof(read16le(&subFormat.Data2));
+	util::check_eof(read16le(&subFormat.Data3));
+	util::check_eof(read(&subFormat.Data4, 8) == 8);
 	if (subFormat == wave::ksFormatSubTypePCM)
 	    type = x > 8 ? kAudioFormatFlagIsSignedInteger : 0;
 	else if (subFormat == wave::ksFormatSubTypeFloat)
@@ -97,17 +97,17 @@ void WaveSource::fetchWaveFormat()
 	else
 	    wave::want(false);
     }
-    std::memset(&m_format, 0, sizeof m_format);
-    m_format.mFormatID = 'lpcm';
-    m_format.mFormatFlags = type;
-    m_format.mFormatFlags |=
+    std::memset(&m_asbd, 0, sizeof m_asbd);
+    m_asbd.mFormatID = 'lpcm';
+    m_asbd.mFormatFlags = type;
+    m_asbd.mFormatFlags |=
 	(wValidBitsPerSample & 7) ? kAudioFormatFlagIsAlignedHigh
 				  : kAudioFormatFlagIsPacked;
-    m_format.mSampleRate = nSamplesPerSec;
-    m_format.mChannelsPerFrame = nChannels;
-    m_format.mBitsPerChannel = wValidBitsPerSample;
-    m_format.mFramesPerPacket = 1;
-    m_format.mBytesPerFrame = nBlockAlign;
-    m_format.mBytesPerPacket =
-	m_format.mFramesPerPacket * m_format.mBytesPerFrame;
+    m_asbd.mSampleRate = nSamplesPerSec;
+    m_asbd.mChannelsPerFrame = nChannels;
+    m_asbd.mBitsPerChannel = wValidBitsPerSample;
+    m_asbd.mFramesPerPacket = 1;
+    m_asbd.mBytesPerFrame = nBlockAlign;
+    m_asbd.mBytesPerPacket =
+	m_asbd.mFramesPerPacket * m_asbd.mBytesPerFrame;
 }

@@ -1,9 +1,8 @@
 #include "flacsrc.h"
-#include "utf8_codecvt_facet.hpp"
-#include "strcnv.h"
+#include "strutil.h"
 #include "itunetags.h"
 #include "cuesheet.h"
-#include "CoreAudioHelper.h"
+#include "cautil.h"
 
 namespace flac {
     template <typename T> void try__(T expr, const char *msg)
@@ -32,8 +31,8 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
     m_giveup(false)
 {
     char buffer[33];
-    check_eof(m_stream.read(buffer, 33) == 33);
-    uint32_t fcc = fourcc(buffer);
+    util::check_eof(m_stream.read(buffer, 33) == 33);
+    uint32_t fcc = util::fourcc(buffer);
     m_stream.pushback(buffer, 33);
     if ((fcc != 'fLaC' && fcc != 'OggS')
      || (fcc == 'OggS' && std::memcmp(&buffer[28], "\177FLAC", 5)))
@@ -58,13 +57,13 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
 	     this) == FLAC__STREAM_DECODER_INIT_STATUS_OK);
     TRYFL(m_module.stream_decoder_process_until_end_of_metadata(
 		m_decoder.get()));
-    if (m_giveup || m_format.mBitsPerChannel == 0)
+    if (m_giveup || m_asbd.mBitsPerChannel == 0)
 	flac::want(false);
-    m_buffer.resize(m_format.mChannelsPerFrame);
+    m_buffer.resize(m_asbd.mChannelsPerFrame);
     if (m_cuesheet.size()) {
 	try {
 	    std::map<uint32_t, std::wstring> tags;
-	    Cue::CueSheetToChapters(m_cuesheet, m_format.mSampleRate,
+	    Cue::CueSheetToChapters(m_cuesheet, m_asbd.mSampleRate,
 		    getDuration(), &m_chapters, &tags);
 	    std::map<uint32_t, std::wstring>::const_iterator it;
 	    for (it = tags.begin(); it != tags.end(); ++it)
@@ -86,7 +85,7 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
     if (!nsamples) return 0;
     MemorySink sink(buffer);
     size_t processed = 0;
-    uint32_t shifts = (8 - m_format.mBitsPerChannel) % 8;
+    uint32_t shifts = (8 - m_asbd.mBitsPerChannel) % 8;
     while (processed < nsamples) {
 	while (m_buffer[0].size() && processed < nsamples) {
 	    for (size_t i = 0; i < m_buffer.size(); ++i) {
@@ -115,15 +114,15 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
 size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 {
     uint32_t bytesPerChannel =
-	m_format.mBytesPerFrame / m_format.mChannelsPerFrame;
+	m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
     if (bytesPerChannel == 1)
-	return readSamplesT<MemorySink8>(buffer, nsamples);
+	return readSamplesT<util::MemorySink8>(buffer, nsamples);
     else if (bytesPerChannel == 2)
-	return readSamplesT<MemorySink16LE>(buffer, nsamples);
+	return readSamplesT<util::MemorySink16LE>(buffer, nsamples);
     else if (bytesPerChannel == 3)
-	return readSamplesT<MemorySink24LE>(buffer, nsamples);
+	return readSamplesT<util::MemorySink24LE>(buffer, nsamples);
     else
-	return readSamplesT<MemorySink32LE>(buffer, nsamples);
+	return readSamplesT<util::MemorySink32LE>(buffer, nsamples);
 }
 
 FLAC__StreamDecoderReadStatus
@@ -179,9 +178,9 @@ FLACSource::writeCallback(
 	const FLAC__Frame *frame, const FLAC__int32 *const * buffer)
 {
     const FLAC__FrameHeader &h = frame->header;
-    if (h.channels != m_format.mChannelsPerFrame
-     || h.sample_rate != m_format.mSampleRate
-     || h.bits_per_sample != m_format.mBitsPerChannel)
+    if (h.channels != m_asbd.mChannelsPerFrame
+     || h.sample_rate != m_asbd.mSampleRate
+     || h.bits_per_sample != m_asbd.mBitsPerChannel)
 	return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
     for (size_t i = 0; i < h.channels; ++i)
@@ -213,7 +212,7 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 	return;
     }
     setRange(0, si.total_samples);
-    m_format = BuildASBDForLPCM(si.sample_rate, si.channels,
+    m_asbd = cautil::buildASBDForPCM(si.sample_rate, si.channels,
 				si.bits_per_sample,
 				kAudioFormatFlagIsSignedInteger,
 				kAudioFormatFlagIsAlignedHigh);
@@ -225,15 +224,16 @@ void FLACSource::handleVorbisComment(
     std::map<std::string, std::string> vorbisComments;
     for (size_t i = 0; i < vc.num_comments; ++i) {
 	const char *cs = reinterpret_cast<const char *>(vc.comments[i].entry);
-	std::vector<char> kv(std::strlen(cs) + 1);
-	std::strcpy(&kv[0], cs);
-	char *key, *value = &kv[0]; 
-	key = strsep(&value, "=");
-	vorbisComments[key] = value;
-	if (!strcasecmp(key, "cuesheet"))
-	    m_cuesheet = m2w(value, utf8_codecvt_facet());
-	else
+	strutil::Tokenizer<char> tokens(cs, "=");
+	char *key = tokens.next();
+	char *value = tokens.rest();
+	if (value) {
 	    vorbisComments[key] = value;
+	    if (!strcasecmp(key, "cuesheet"))
+		m_cuesheet = strutil::us2w(value);
+	    else
+		vorbisComments[key] = value;
+	}
     }
     Vorbis::ConvertToItunesTags(vorbisComments, &m_tags);
 }

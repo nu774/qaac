@@ -34,7 +34,7 @@ class LibSndfileSource:
     typedef std::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
     LibSndfileModule m_module;
-    AudioStreamBasicDescription m_format;
+    AudioStreamBasicDescription m_asbd;
     std::vector<uint32_t> m_chanmap;
     std::string m_format_name;
     std::map<uint32_t, std::wstring> m_tags;
@@ -43,7 +43,7 @@ public:
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_format;
+	return m_asbd;
     }
     const std::string &getFormatName() const { return m_format_name; }
     const std::vector<uint32_t> *getChannels() const

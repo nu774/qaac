@@ -1,7 +1,8 @@
 #ifndef AudioCodecX_H
 #define AudioCodecX_H
 
-#include "CoreAudioToolbox.h"
+#include "CoreAudio/AudioCodec.h"
+#include "cautil.h"
 
 class AudioCodecX {
     std::shared_ptr<ComponentInstanceRecord> m_codec;
@@ -11,11 +12,9 @@ public:
     {
 	AudioComponentDescription desc = { 'aenc', codec, 0 };
 	AudioComponent component = AudioComponentFindNext(0, &desc);
-	if (!component) {
-	    throw std::runtime_error(format(
-		    "AudioComponentFindNext: component %s not found",
-		    fourcc(codec).svalue));
-	}
+	if (!component)
+	    throw std::runtime_error("AudioComponentFindNext(): "
+				     "codec not found");
 	AudioComponentInstance aci;
 	CHECKCA(AudioComponentInstanceNew(component, &aci));
 	attach(reinterpret_cast<AudioCodec>(aci), true);
