@@ -1,113 +1,207 @@
+#include <cstring>
+#include <limits>
+#include <assert.h>
+#include <io.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include "wavsource.h"
+#include "util.h"
+#include "win32util.h"
 #include "chanmap.h"
 
+#define FOURCCR(a,b,c,d) ((a)|((b)<<8)|((c)<<16)|((d)<<24))
+
 namespace wave {
-    inline void want(bool expr)
-    {
-	if (!expr)
-	    throw std::runtime_error("Sorry, unacceptable WAVE format");
-    }
-    myGUID ksFormatSubTypePCM = {
+    const GUID ksFormatSubTypePCM = {
 	0x1, 0x0, 0x10, { 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 }
     };
-    myGUID ksFormatSubTypeFloat = {
+    const GUID ksFormatSubTypeFloat = {
 	0x3, 0x0, 0x10, { 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 }
     };
 }
 
-WaveSource::WaveSource(InputStream &stream, bool ignorelength)
-    : RIFFParser(stream), m_ignore_length(ignorelength)
+WaveSource::WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength)
+    : m_fp(fp)
 {
-    parse();
-    if (format_id() != 'WAVE')
-	throw std::runtime_error("Not a WAV file");
-    while (next() && chunk_id() != 'data') {
-	if (chunk_id() == 'fmt ')
-	    fetchWaveFormat();
-    }
-    if (!m_asbd.mBitsPerChannel)
-	wave::want(false);
-
-    if (ignorelength || !chunk_size() ||
-	chunk_size() % m_asbd.mBytesPerFrame) {
-	setRange(0, -1);
-	m_ignore_length = true;
-    } else
-	setRange(0, chunk_size() / m_asbd.mBytesPerFrame);
+    std::memset(&m_asbd, 0, sizeof m_asbd);
+    m_seekable = util::is_seekable(fileno(m_fp.get()));
+    int64_t data_length = parse();
+    if (ignorelength || !data_length ||
+	data_length % m_asbd.mBytesPerPacket)
+	setRange(0, -1LL);
+    else
+	setRange(0, data_length / m_asbd.mBytesPerPacket);
 }
 
-void WaveSource::fetchWaveFormat()
+size_t WaveSource::readSamples(void *buffer, size_t nsamples)
 {
-    if (chunk_size() < 16)
-	throw std::runtime_error("Invalid fmt chunk");
+    nsamples = adjustSamplesToRead(nsamples);
+    if (nsamples) {
+	ssize_t nbytes = nsamples * m_asbd.mBytesPerFrame;
+	nbytes = read(fd(), buffer, nbytes);
+	nsamples = nbytes > 0 ? nbytes / m_asbd.mBytesPerFrame: 0;
+	addSamplesRead(nsamples);
+    }
+    return nsamples;
+}
+void WaveSource::skipSamples(int64_t count)
+{
+    skip(count * m_asbd.mBytesPerFrame);
+}
 
-    uint16_t wformat, x;
-    uint16_t nChannels, nBlockAlign, wBitsPerSample, wValidBitsPerSample;
-    uint32_t nSamplesPerSec, dwChannelMask = 0;
-    uint32_t y;
-    uint32_t type;
-    // wFormatTag
-    util::check_eof(read16le(&wformat));
-    wave::want(wformat == wave::kFormatPCM
-	      || wformat == wave::kFormatFloat
-	      || wformat == wave::kFormatExtensible);
-    if (wformat == wave::kFormatFloat)
-	type = kAudioFormatFlagIsFloat;
-    // nChannels
-    util::check_eof(read16le(&nChannels));
-    wave::want(nChannels > 0 && nChannels < 9);
-    // nSamplesPerSec
-    util::check_eof(read32le(&nSamplesPerSec));
-    wave::want(nSamplesPerSec > 0);
-    // nAvgBytesPerSec
-    util::check_eof(read32le(&y));
-    // nBlockAlign
-    util::check_eof(read16le(&nBlockAlign));
-    // wBitsPerSample
-    util::check_eof(read16le(&wBitsPerSample));
-    wave::want(wBitsPerSample > 0 && (wBitsPerSample & 0x7) == 0);
+int64_t WaveSource::parse()
+{
+    int64_t data_length = 0;
+
+    uint32_t fcc = nextChunk(0);
+    if (fcc != FOURCCR('R','I','F','F') && fcc != FOURCCR('R','F','6','4'))
+	throw std::runtime_error("WaveSource: not a wav file");
+
+    uint32_t wave;
+    read32le(&wave);
+    if (wave != FOURCCR('W','A','V','E'))
+	throw std::runtime_error("WaveSource: not a wav file");
+
+    if (fcc == FOURCCR('R','F','6','4'))
+	data_length = ds64();
+
+    uint32_t size;
+    while (nextChunk(&size) != FOURCCR('f','m','t',' '))
+	skip(size);
+    fmt(size);
+
+    while (nextChunk(&size) != FOURCCR('d','a','t','a'))
+	skip(size);
+    if (fcc != FOURCCR('R','F','6','4'))
+	data_length = size;
+
+    return data_length;
+}
+
+inline void WaveSource::read16le(void *n)
+{
+    util::check_eof(read(fd(), n, 2) == 2);
+}
+
+inline void WaveSource::read32le(void *n)
+{
+    util::check_eof(read(fd(), n, 4) == 4);
+}
+
+inline void WaveSource::read64le(void *n)
+{
+    util::check_eof(read(fd(), n, 8) == 8);
+}
+
+void WaveSource::skip(int64_t n)
+{
+    if (m_seekable)
+	_lseeki64(fd(), n, SEEK_CUR);
+    else {
+	char buf[8192];
+	while (n > 0) {
+	    int nn = static_cast<int>(std::min(n, 8192LL));
+	    util::check_eof(read(fd(), buf, nn) == nn);
+	    n -= nn;
+	}
+    }
+}
+
+uint32_t WaveSource::nextChunk(uint32_t *size)
+{
+    uint32_t fcc, n;
+    read32le(&fcc);
+    read32le(&n);
+    if (size) *size = n;
+    return fcc;
+}
+
+int64_t WaveSource::ds64()
+{
+    uint32_t size;
+    int64_t data_length;
+
+    if (nextChunk(&size)!= FOURCCR('d','s','6','4'))
+	throw std::runtime_error("WaveSource: ds64 is expected in RF64 file");
+    if (size != 28)
+	throw std::runtime_error("WaveSource: RF64 with non empty chunk table "
+				 "is not supported");
+    skip(8); // RIFF size
+    read64le(&data_length);
+    skip(12); // sample count + chunk table size
+    return data_length;
+}
+
+void WaveSource::fmt(size_t size)
+{
+    uint16_t wFormatTag, nChannels, nBlockAlign, wBitsPerSample, cbSize;
+    uint32_t nSamplesPerSec, nAvgBytesPerSec, dwChannelMask = 0;
+    uint16_t wValidBitsPerSample;
+    wave::GUID guid;
+    bool isfloat = false;
+
+    if (size < 16)
+	throw std::runtime_error("WaveSource: fmt chunk too small");
+
+    read16le(&wFormatTag);
+    if (wFormatTag != 1 && wFormatTag != 3 && wFormatTag != 0xfffe)
+	throw std::runtime_error("WaveSource: not supported wave file");
+    if (wFormatTag == 3)
+	isfloat = true;
+
+    read16le(&nChannels);
+    read32le(&nSamplesPerSec);
+    read32le(&nAvgBytesPerSec);
+    read16le(&nBlockAlign);
+    read16le(&wBitsPerSample);
     wValidBitsPerSample = wBitsPerSample;
-    if (wformat == wave::kFormatPCM)
-	type = wBitsPerSample > 8
-	       ? kAudioFormatFlagIsSignedInteger : 0;
+    if (wFormatTag != 0xfffe)
+	skip(size - 16);
 
-    if (wformat == wave::kFormatExtensible) {
-	if (chunk_size() < 40)
-	    throw std::runtime_error("Invalid fmt chunk");
-	// cbSize
-	util::check_eof(read16le(&x));
-	// wValidBitsPerSample
-	util::check_eof(read16le(&wValidBitsPerSample));
-	wave::want(wValidBitsPerSample > 0 &&
-		   wValidBitsPerSample <= wBitsPerSample);
-	// dwChannelMask
-	util::check_eof(read32le(&dwChannelMask));
+    if (!nChannels || !nSamplesPerSec || !nAvgBytesPerSec || !nBlockAlign)
+	throw std::runtime_error("WaveSource: invalid wave fmt");
+    if (!wBitsPerSample || wBitsPerSample & 0x7)
+	throw std::runtime_error("WaveSource: invalid wave fmt");
+    if (nBlockAlign != nChannels * wBitsPerSample / 8)
+	throw std::runtime_error("WaveSource: invalid wave fmt");
+    if (nAvgBytesPerSec != nSamplesPerSec * nBlockAlign)
+	throw std::runtime_error("WaveSource: invalid wave fmt");
+    if (nChannels > 8)
+	throw std::runtime_error("WaveSource: too many number of channels");
+
+    if (wFormatTag == 0xfffe) {
+	if (size < 40)
+	    throw std::runtime_error("WaveSource: fmt chunk too small");
+	read16le(&cbSize);
+	read16le(&wValidBitsPerSample);
+	read32le(&dwChannelMask);
 	if (dwChannelMask > 0 && util::bitcount(dwChannelMask) >= nChannels)
 	    chanmap::getChannels(dwChannelMask, &m_chanmap, nChannels);
-	// SubFormat
-	wave::myGUID subFormat;
-	util::check_eof(read32le(&subFormat.Data1));
-	util::check_eof(read16le(&subFormat.Data2));
-	util::check_eof(read16le(&subFormat.Data3));
-	util::check_eof(read(&subFormat.Data4, 8) == 8);
-	if (subFormat == wave::ksFormatSubTypePCM)
-	    type = x > 8 ? kAudioFormatFlagIsSignedInteger : 0;
-	else if (subFormat == wave::ksFormatSubTypeFloat)
-	    type = kAudioFormatFlagIsFloat;
-	else
-	    wave::want(false);
+
+	util::check_eof(read(fd(), &guid, sizeof guid) == sizeof guid);
+	skip(size - 40);
+
+	if (!std::memcmp(&guid, &wave::ksFormatSubTypeFloat, sizeof guid))
+	    isfloat = true;
+	else if (std::memcmp(&guid, &wave::ksFormatSubTypePCM, sizeof guid))
+	    throw std::runtime_error("WaveSource: not supported wave file");
+
+	if (!wValidBitsPerSample || wValidBitsPerSample > wBitsPerSample)
+	    throw std::runtime_error("WaveSource: invalid wave fmt");
     }
-    std::memset(&m_asbd, 0, sizeof m_asbd);
-    m_asbd.mFormatID = 'lpcm';
-    m_asbd.mFormatFlags = type;
-    m_asbd.mFormatFlags |=
-	(wValidBitsPerSample & 7) ? kAudioFormatFlagIsAlignedHigh
-				  : kAudioFormatFlagIsPacked;
+    m_asbd.mFormatID = FOURCC('l','p','c','m');
     m_asbd.mSampleRate = nSamplesPerSec;
-    m_asbd.mChannelsPerFrame = nChannels;
-    m_asbd.mBitsPerChannel = wValidBitsPerSample;
+    m_asbd.mBytesPerPacket = nBlockAlign;
     m_asbd.mFramesPerPacket = 1;
     m_asbd.mBytesPerFrame = nBlockAlign;
-    m_asbd.mBytesPerPacket =
-	m_asbd.mFramesPerPacket * m_asbd.mBytesPerFrame;
+    m_asbd.mChannelsPerFrame = nChannels;
+    m_asbd.mBitsPerChannel = wValidBitsPerSample;
+    if (isfloat)
+	m_asbd.mFormatFlags |= kAudioFormatFlagIsFloat;
+    else if (wBitsPerSample > 8)
+	m_asbd.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+    if (wBitsPerSample == wValidBitsPerSample)
+	m_asbd.mFormatFlags |= kAudioFormatFlagIsPacked;
+    else
+	m_asbd.mFormatFlags |= kAudioFormatFlagIsAlignedHigh;
 }

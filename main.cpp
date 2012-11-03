@@ -36,7 +36,6 @@
 #include "AudioCodecX.h"
 #include "CoreAudioEncoder.h"
 #include "afsource.h"
-#include "reg.h"
 #include "CoreAudioResampler.h"
 #endif
 #include <ShlObj.h>
@@ -220,7 +219,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
     if (opts.save_stat) {
 	std::wstring statname =
 	    win32::PathReplaceExtension(ofilename, L".stat.txt");
-	statPtr = file_t(wfopenx(statname.c_str(), L"w"), std::fclose);
+	statPtr = win32::fopen(statname, L"w");
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
     ISource *src = encoder->src();
@@ -248,77 +247,86 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 }
 
 static
+std::shared_ptr<ISource> open_raw(const wchar_t *ifilename,
+				  const Options &opts)
+{
+    int bits;
+    unsigned char c_type, c_endian;
+    int itype, iendian;
+
+    if (std::swscanf(opts.raw_format, L"%hc%d%hc",
+		    &c_type, &bits, &c_endian) != 3)
+	throw std::runtime_error("Invalid --raw-format spec");
+    if ((itype = strutil::strindex("USF", toupper(c_type))) == -1)
+	throw std::runtime_error("Invalid --raw-format spec");
+    if ((iendian = strutil::strindex("LB", toupper(c_endian))) == -1)
+	throw std::runtime_error("Invalid --raw-format spec");
+    if (bits <= 0)
+	throw std::runtime_error("Invalid --raw-format spec");
+
+    uint32_t type_tab[] = {
+	0, kAudioFormatFlagIsSignedInteger, kAudioFormatFlagIsFloat
+    };
+    AudioStreamBasicDescription asbd =
+	cautil::buildASBDForPCM(opts.raw_sample_rate, opts.raw_channels,
+				bits, type_tab[itype]);
+    if (iendian)
+	asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
+
+    return std::shared_ptr<ISource>(new RawSource(ifilename, asbd));
+}
+
+static
 std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 				     const Options &opts)
 {
-    StdioChannel channel(ifilename);
-    InputStream stream(channel);
-
 #define MAKE_SHARED(Foo) std::shared_ptr<ISource>(new Foo)
 #define TRY_MAKE_SHARED(Foo) \
     do { \
 	try { return MAKE_SHARED(Foo); } \
-	catch (std::exception) { stream.rewind(); } \
+	catch (std::exception) { \
+	    lseek(fileno(fp.get()), 0, SEEK_SET); \
+	} \
     } while (0) 
 
-    if (opts.is_raw) {
-	int bits;
-	unsigned char c_type, c_endian;
-	int itype, iendian;
+    if (opts.is_raw)
+	return open_raw(ifilename, opts);
 
-	if (std::swscanf(opts.raw_format, L"%hc%d%hc",
-			&c_type, &bits, &c_endian) != 3)
-	    throw std::runtime_error("Invalid --raw-format spec");
-	if ((itype = strutil::strindex("USF", toupper(c_type))) == -1)
-	    throw std::runtime_error("Invalid --raw-format spec");
-	if ((iendian = strutil::strindex("LB", toupper(c_endian))) == -1)
-	    throw std::runtime_error("Invalid --raw-format spec");
-	if (bits <= 0)
-	    throw std::runtime_error("Invalid --raw-format spec");
-
-	uint32_t type_tab[] = {
-	    0, kAudioFormatFlagIsSignedInteger, kAudioFormatFlagIsFloat
-	};
-	AudioStreamBasicDescription asbd =
-	    cautil::buildASBDForPCM(opts.raw_sample_rate, opts.raw_channels,
-			     bits, type_tab[itype]);
-	if (iendian)
-	    asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
-
-	return MAKE_SHARED(RawSource(stream, asbd));
-    }
-
+    std::shared_ptr<FILE> fp(win32::fopen(ifilename, L"rb"));
     try {
 	try {
-	    return MAKE_SHARED(WaveSource(stream, opts.ignore_length));
+	    return MAKE_SHARED(WaveSource(fp, opts.ignore_length));
 	} catch (const std::runtime_error&) {
-	    if (!stream.seekable())
+	    if (!util::is_seekable(fileno(fp.get())))
 		throw;
-	    stream.rewind();
+	    lseek(fileno(fp.get()), 0, SEEK_SET);
 	}
 	if (opts.libflac.loaded())
-	    TRY_MAKE_SHARED(FLACSource(opts.libflac, stream));
+	    TRY_MAKE_SHARED(FLACSource(opts.libflac, fp));
 
 	if (opts.libwavpack.loaded())
-	    TRY_MAKE_SHARED(WavpackSource(opts.libwavpack, stream,
-					  ifilename));
+	    TRY_MAKE_SHARED(WavpackSource(opts.libwavpack, ifilename));
 
 	if (opts.libtak.loaded() && opts.libtak.compatible())
-	    TRY_MAKE_SHARED(TakSource(opts.libtak, stream));
+	    TRY_MAKE_SHARED(TakSource(opts.libtak, fp));
 #ifndef REFALAC
 	try {
-	    return AudioFileOpenFactory(stream, ifilename);
+	    return AudioFileOpenFactory(fp, ifilename);
 	} catch (...) {
-	    stream.rewind();
+	    lseek(fileno(fp.get()), 0, SEEK_SET);
 	}
 #endif
 	if (opts.libsndfile.loaded())
-	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, ifilename));
+	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, fp));
 
 #ifdef REFALAC
 	return std::shared_ptr<ISource>(new ALACSource(ifilename));
 #endif
-    } catch (const std::runtime_error&) {}
+    } catch (const std::runtime_error&) {
+#ifdef _DEBUG
+	throw;
+#endif
+    }
     throw std::runtime_error("Not available input file format");
 #undef TRY_MAKE_SHARED
 #undef MAKE_SHARED
@@ -497,7 +505,7 @@ std::shared_ptr<ISource> do_normalize(
 }
 
 static
-FILE *open_config_file(const wchar_t *file)
+std::shared_ptr<FILE> open_config_file(const wchar_t *file)
 {
     std::vector<std::wstring> search_paths;
     const wchar_t *home = _wgetenv(L"HOME");
@@ -511,7 +519,7 @@ FILE *open_config_file(const wchar_t *file)
 	try {
 	    std::wstring pathtry =
 		strutil::format(L"%s\\%s", search_paths[i].c_str(), file);
-	    return wfopenx(pathtry.c_str(), L"r");
+	    return win32::fopen(pathtry, L"r");
 	} catch (...) {
 	    if (i == search_paths.size() - 1) throw;
 	}
@@ -523,13 +531,14 @@ static
 void matrix_from_preset(const Options &opts,
 			std::vector<std::vector<complex_t> > *result)
 {
-    FILE *fp;
+    std::shared_ptr<FILE> fpPtr;
     if (opts.remix_preset) {
-	std::wstring path = strutil::format(L"matrix\\%s.txt", opts.remix_preset);
-	fp = open_config_file(path.c_str());
+	std::wstring path =
+	    strutil::format(L"matrix\\%s.txt", opts.remix_preset);
+	fpPtr = open_config_file(path.c_str());
     } else
-	fp = wfopenx(opts.remix_file, L"r");
-    std::shared_ptr<FILE> fpPtr(fp, std::fclose);
+	fpPtr = win32::fopen(opts.remix_file, L"r");
+    FILE *fp = fpPtr.get();
     int c;
     std::vector<std::vector<complex_t> > matrix;
     std::vector<complex_t> row;
@@ -870,14 +879,7 @@ void decode_file(const std::shared_ptr<ISource> &src,
 		 const std::wstring &ofilename, const Options &opts,
 		 uint32_t chanmask)
 {
-    struct F { static void close(FILE *) {} };
-
-    std::shared_ptr<FILE> fileptr;
-    const wchar_t *spath = ofilename.c_str();
-    if (ofilename == L"-")
-	fileptr.reset(stdout, F::close);
-    else
-	fileptr.reset(wfopenx(spath, L"wb"), std::fclose);
+    std::shared_ptr<FILE> fileptr = win32::fopen(ofilename, L"wb");
 
     const AudioStreamBasicDescription &sf = src->getSampleFormat();
     WaveSink sink(fileptr.get(), src->length(), sf, chanmask);
@@ -1065,32 +1067,6 @@ FARPROC WINAPI DllImportHook(unsigned notify, PDelayLoadInfo pdli)
     return 0;
 }
 
-static
-void override_registry(int verbose)
-{
-    std::wstring fname = get_module_directory() + L"qaac.reg";
-    FILE *fp;
-    try {
-	fp = wfopenx(fname.c_str(), L"r, ccs=UNICODE");
-    } catch (...) {
-	return;
-    }
-    if (verbose > 1)
-	LOG(L"Found qaac.reg, overriding registry\n");
-    std::shared_ptr<FILE> fptr(fp, std::fclose);
-    RegAction action;
-    RegParser parser;
-    try {
-	parser.parse(fptr, &action);
-    } catch (const std::exception &e) {
-	LOG(L"WARNING: %s\n", errormsg(e).c_str());
-	return;
-    }
-    if (verbose > 1)
-	action.show();
-    action.realize();
-}
-
 inline
 void throwIfError(HRESULT expr, const char *msg)
 {
@@ -1108,7 +1084,6 @@ void set_dll_directories(int verbose)
     sz = GetEnvironmentVariableW(L"PATH", &vec[0], sz);
     std::wstring searchPaths(&vec[0], &vec[sz]);
 
-    override_registry(verbose);
     try {
 	HKEY hKey;
 	const wchar_t *subkey =
@@ -1392,11 +1367,10 @@ int wmain1(int argc, wchar_t **argv)
     SetDllDirectoryW(L"");
     std::setlocale(LC_CTYPE, "");
     std::setbuf(stderr, 0);
-#ifdef _MSC_VER
+    _setmode(0, _O_BINARY);
     _setmode(2, _O_U8TEXT);
-#endif
 
-#ifdef DEBUG_ATTACH
+#if 0
     FILE *fp = std::fopen("CON", "r");
     std::getc(fp);
 #endif

@@ -2,15 +2,17 @@
 #define _RAWSOURCE_H
 
 #include "iointer.h"
+#include "win32util.h"
 
 class RawSource: public PartialSource<RawSource> {
-    InputStream m_stream;
+    std::shared_ptr<FILE> m_fp;
     AudioStreamBasicDescription m_asbd;
 public:
-    RawSource(InputStream &stream, const AudioStreamBasicDescription &asbd)
-	: m_stream(stream), m_asbd(asbd)
+    RawSource(const std::wstring &path, const AudioStreamBasicDescription &asbd)
+	: m_asbd(asbd)
     {
-	int64_t len = m_stream.size();
+	m_fp = win32::fopen(path, L"rb");
+	int64_t len = _filelengthi64(fileno(m_fp.get()));
 	setRange(0, len == -1 ? -1 : len / asbd.mBytesPerFrame);
     }
     uint64_t length() const { return getDuration(); }
@@ -24,7 +26,8 @@ public:
 	nsamples = adjustSamplesToRead(nsamples);
 	if (nsamples) {
 	    size_t nblocks = m_asbd.mBytesPerFrame;
-	    nsamples = m_stream.read(buffer, nsamples * nblocks) / nblocks;
+	    nsamples =
+		read(fileno(m_fp.get()), buffer, nsamples * nblocks) / nblocks;
 	    addSamplesRead(nsamples);
 	}
 	return nsamples;
@@ -32,8 +35,18 @@ public:
     void skipSamples(int64_t count)
     {
 	int64_t bytes = count * m_asbd.mBytesPerFrame;
-	if (m_stream.seek_forward(bytes) != bytes)
-	    throw std::runtime_error("RawSource: seek failed");
+	int fd = fileno(m_fp.get());
+	if (util::is_seekable(fd))
+	    _lseeki64(fd, bytes, SEEK_CUR);
+	else {
+	    char buf[0x1000];
+	    while (bytes > 0) {
+		int n = std::min(bytes, 0x1000LL);
+		int nn = read(fd, buf, n);
+		if (nn <= 0) break;
+		bytes -= nn;
+	    }
+	}
     }
 };
 

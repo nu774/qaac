@@ -2,7 +2,6 @@
 #define _TAKSRC_H
 
 #include <tak_deco_lib.h>
-#include "ioabst.h"
 #include "iointer.h"
 #include "dl.h"
 
@@ -38,13 +37,13 @@ class TakSource:
 {
     TakModule m_module;
     std::shared_ptr<void> m_decoder;
-    InputStream m_stream;
-    AudioStreamBasicDescription m_asbd;
+    std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
+    AudioStreamBasicDescription m_asbd;
 public:
-    TakSource(const TakModule &module, InputStream &stream);
+    TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp);
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {

@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <io.h>
+#include <fcntl.h>
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -82,6 +84,27 @@ namespace win32 {
 	else
 	    fullpath.insert(0, L"\\\\?\\");
 	return fullpath;
+    }
+
+    inline FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
+    {
+	std::wstring fullpath = win32::prefixed_path(path);
+	FILE *fp = _wfopen(fullpath.c_str(), mode);
+	if (!fp)
+	    util::throw_crt_error(fullpath.c_str());
+	return fp;
+    }
+    inline std::shared_ptr<FILE> fopen(const std::wstring &path,
+				       const wchar_t *mode)
+    {
+	struct noop { static void call(FILE*) {} };
+	if (path != L"-")
+	    return std::shared_ptr<FILE>(wfopenx(path.c_str(), mode),
+					 std::fclose);
+	else if (std::wcschr(mode, L'r'))
+	    return std::shared_ptr<FILE>(stdin, noop::call);
+	else
+	    return std::shared_ptr<FILE>(stdout, noop::call);
     }
 
     FILE *tmpfile(const wchar_t *prefix);

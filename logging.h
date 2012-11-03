@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <vector>
-#include "ioabst.h"
+#include "win32util.h"
 
 /* non-thread safe */
 class Log {
@@ -22,10 +22,8 @@ public:
     void enable_file(const wchar_t *filename)
     {
 	try {
-	    FILE *fp = wfopenx(filename, L"w");
-#ifdef _MSC_VER
+	    FILE *fp = win32::wfopenx(filename, L"w");
 	    _setmode(_fileno(fp), _O_U8TEXT);
-#endif
 	    std::setbuf(fp, 0);
 	    m_streams.push_back(std::shared_ptr<FILE>(fp, std::fclose));
 	} catch (...) {}

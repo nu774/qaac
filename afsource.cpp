@@ -1,3 +1,4 @@
+#include <io.h>
 #include "afsource.h"
 #ifdef _WIN32
 #include "win32util.h"
@@ -12,40 +13,38 @@
 typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;
 
 namespace caf {
-    uint64_t next_chunk(InputStream *stream, char *name)
+    uint64_t next_chunk(int fd, char *name)
     {
 	uint64_t size;
-	if (stream->read(name, 4) != 4 || stream->read(&size, 8) != 8)
+	if (read(fd, name, 4) != 4 || read(fd, &size, 8) != 8)
 	    return 0;
 	return util::b2host64(size);
     }
-    bool get_info(InputStream *stream, std::vector<char> *info)
+    bool get_info(int fd, std::vector<char> *info)
     {
-	int64_t pos = stream->tell();
-	stream->seek(8, SEEK_SET);
+	util::FilePositionSaver _(fd);
+	if (_lseeki64(fd, 8, SEEK_SET) != 8)
+	    return false;
 	uint64_t chunk_size;
 	char chunk_name[4];
-	bool found = false;
-	while ((chunk_size = next_chunk(stream, chunk_name)) > 0) {
+	while ((chunk_size = next_chunk(fd, chunk_name)) > 0) {
 	    if (std::memcmp(chunk_name, "info", 4)) {
-		if (stream->seek(chunk_size, SEEK_CUR) < 0)
+		if (_lseeki64(fd, chunk_size, SEEK_CUR) < 0)
 		    break;
 	    } else {
 		std::vector<char> buf(chunk_size);
-		if (stream->read(&buf[0], buf.size()) != buf.size())
+		if (read(fd, &buf[0], buf.size()) != buf.size())
 		    break;
 		info->swap(buf);
-		found = true;
-		break;
+		return true;
 	    }
 	}
-	stream->seek(pos, SEEK_SET);
-	return found;
+	return false;
     }
-    bool get_info_dictionary(InputStream *stream, CFDictionaryPtr *dict)
+    bool get_info_dictionary(int fd, CFDictionaryPtr *dict)
     {
 	std::vector<char> info;
-	if (!get_info(stream, &info) || info.size() < 4)
+	if (!get_info(fd, &info) || info.size() < 4)
 	    return false;
 	// inside of info tag is delimited with NUL char.
 	std::vector<std::string> tokens;
@@ -76,16 +75,18 @@ namespace audiofile {
     OSStatus read(void *cookie, SInt64 pos, UInt32 count, void *data,
 	    UInt32 *nread)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	if (pT->seek(pos, ISeekable::kBegin) != pos)
+	int fd = reinterpret_cast<int>(cookie);
+	if (_lseeki64(fd, pos, SEEK_SET) != pos)
 	    return ioErr;
-	*nread = pT->read(data, count);
+	ssize_t n = ::read(fd, data, count);
+	if (n < 0)
+	    return ioErr;
+	*nread = n;
 	return 0;
     }
     SInt64 size(void *cookie)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->size();
+	return _filelengthi64(reinterpret_cast<int>(cookie));
     }
 
     const Tag::NameIDMap tagNameMap[] = {
@@ -125,11 +126,11 @@ namespace audiofile {
 	    (*tagp)[id] = cautil::CF2W(static_cast<CFStringRef>(value));
     }
 
-    void fetchTags(AudioFileX &af, InputStream *stream, tag_t *result)
+    void fetchTags(AudioFileX &af, FILE *fp, tag_t *result)
     {
 	CFDictionaryPtr dict;
 	if (af.getFileFormat() == 'caff')
-	    caf::get_info_dictionary(stream, &dict);
+	    caf::get_info_dictionary(fileno(fp), &dict);
 	else
 	    af.getInfoDictionary(&dict);
 	tag_t tags;
@@ -141,27 +142,27 @@ namespace audiofile {
 }
 
 std::shared_ptr<ISource>
-AudioFileOpenFactory(InputStream &stream, const std::wstring &path)
+AudioFileOpenFactory(const std::shared_ptr<FILE> &fp, const std::wstring &path)
 {
     AudioFileID afid;
-    std::shared_ptr<InputStream> streamPtr(new InputStream(stream));
 
-    CHECKCA(AudioFileOpenWithCallbacks(streamPtr.get(), audiofile::read, 0,
+    void *ctx = reinterpret_cast<void*>(fileno(fp.get()));
+    CHECKCA(AudioFileOpenWithCallbacks(ctx, audiofile::read, 0,
 				       audiofile::size, 0, 0, &afid));
     AudioFileX af(afid, true);
     AudioStreamBasicDescription asbd;
     af.getDataFormat(&asbd);
 
     if (asbd.mFormatID == 'lpcm')
-	return std::shared_ptr<ISource>(new AFSource(af, streamPtr));
+	return std::shared_ptr<ISource>(new AFSource(af, fp));
     else if (asbd.mFormatID == 'alac')
-	return std::shared_ptr<ISource>(new ExtAFSource(af, streamPtr, path));
+	return std::shared_ptr<ISource>(new ExtAFSource(af, fp, path));
     else
 	throw std::runtime_error("Not supported format");
 }
 
-AFSource::AFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream)
-    : m_af(af), m_offset(0), m_stream(stream)
+AFSource::AFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp)
+    : m_af(af), m_offset(0), m_fp(fp)
 {
     util::fourcc fcc(m_af.getFileFormat());
     m_af.getDataFormat(&m_asbd);
@@ -172,10 +173,10 @@ AFSource::AFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream)
 	chanmap::getChannels(acl.get(), &m_chanmap);
     } catch (...) {}
     try {
-	if (fcc == 'AIFF')
-	    ID3::fetchAiffID3Tags(m_stream->name(), &m_tags);
+	if (fcc == 'AIFF' || fcc == 'AIFC')
+	    ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
 	else
-	    audiofile::fetchTags(m_af, m_stream.get(), &m_tags);
+	    audiofile::fetchTags(m_af, m_fp.get(), &m_tags);
     } catch (...) {}
 }
 
@@ -186,15 +187,14 @@ size_t AFSource::readSamples(void *buffer, size_t nsamples)
     UInt32 ns = nsamples;
     UInt32 nb = ns * m_asbd.mBytesPerFrame;
     CHECKCA(AudioFileReadPackets(m_af, false, &nb, 0,
-		m_offset + getSamplesRead(), &ns, buffer));
+				 m_offset + getSamplesRead(), &ns, buffer));
     addSamplesRead(ns);
     return ns;
 }
 
-
-ExtAFSource::ExtAFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream,
+ExtAFSource::ExtAFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp,
 			 const std::wstring &path)
-    : m_af(af), m_stream(stream)
+    : m_af(af), m_fp(fp)
 {
     std::vector<uint8_t> cookie;
     ExtAudioFileRef eaf;
@@ -202,8 +202,6 @@ ExtAFSource::ExtAFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream,
     m_eaf.attach(eaf, true);
     AudioStreamBasicDescription asbd;
     m_af.getDataFormat(&asbd);
-    if (asbd.mFormatID != 'alac')
-	throw std::runtime_error("Not supported format");
 
     unsigned bits_per_channel;
     {
@@ -212,9 +210,9 @@ ExtAFSource::ExtAFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream,
 	bits_per_channel = tab[index];
     }
     m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
-				bits_per_channel,
-				kAudioFormatFlagIsSignedInteger,
-				kAudioFormatFlagIsAlignedHigh);
+				     bits_per_channel,
+				     kAudioFormatFlagIsSignedInteger,
+				     kAudioFormatFlagIsAlignedHigh);
     m_eaf.setClientDataFormat(m_asbd);
     setRange(0, m_eaf.getFileLengthFrames());
     std::shared_ptr<AudioChannelLayout> acl;
@@ -223,12 +221,14 @@ ExtAFSource::ExtAFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream,
 	chanmap::getChannels(acl.get(), &m_chanmap);
     } catch (...) {}
     if (m_af.getFileFormat() == 'm4af') {
-	MP4FileX mp4file;
-	mp4file.Read(strutil::w2us(path).c_str(), 0);
-	mp4a::fetchTags(mp4file, &m_tags);
+	try {
+	    MP4FileX file;
+	    file.Read(strutil::w2us(path).c_str(), 0);
+	    mp4a::fetchTags(file, &m_tags);
+	} catch (...) {}
     } else {
 	try {
-	    audiofile::fetchTags(m_af, m_stream.get(), &m_tags);
+	    audiofile::fetchTags(m_af, m_fp.get(), &m_tags);
 	} catch (...) {}
     }
 }
@@ -257,8 +257,6 @@ size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
 
 void ExtAFSource::skipSamples(int64_t count)
 {
-    SInt64 pos;
-    CHECKCA(ExtAudioFileTell(m_eaf, &pos));
-    CHECKCA(ExtAudioFileSeek(m_eaf, pos + count));
+    CHECKCA(ExtAudioFileSeek(m_eaf, count));
 }
 

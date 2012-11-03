@@ -4,7 +4,6 @@
 #include <deque>
 #include <FLAC/all.h>
 #include "iointer.h"
-#include "ioabst.h"
 #include "flacmodule.h"
 
 class FLACSource :
@@ -12,16 +11,17 @@ class FLACSource :
 {
     typedef std::shared_ptr<FLAC__StreamDecoder> decoder_t;
     FLACModule m_module;
-    InputStream m_stream;
+    std::shared_ptr<FILE> m_fp;
+    bool m_eof;
     decoder_t m_decoder;
-    AudioStreamBasicDescription m_asbd;
     std::vector<std::deque<int32_t> > m_buffer;
     std::map<uint32_t, std::wstring> m_tags;
     std::wstring m_cuesheet;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
     bool m_giveup;
+    AudioStreamBasicDescription m_asbd;
 public:
-    FLACSource(const FLACModule &module, InputStream &stream);
+    FLACSource(const FLACModule &module, const std::shared_ptr<FILE> &fp);
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
@@ -42,7 +42,7 @@ public:
 private:
     template <class MemorySink>
     size_t readSamplesT(void *buffer, size_t nsamples);
-    void close_decoder(FLAC__StreamDecoder *decoder)
+    void close(FLAC__StreamDecoder *decoder)
     {
 	m_module.stream_decoder_finish(decoder);
 	m_module.stream_decoder_delete(decoder);

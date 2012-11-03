@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <cerrno>
 #include <stdint.h>
+#include <sys/stat.h>
+#include <io.h>
 #include "strutil.h"
 
 #ifdef _MSC_VER
@@ -37,6 +39,11 @@ inline int lrint(double x)
 inline int _wtoi(const wchar_t *s) { return std::wcstol(s, 0, 10); }
 #endif
 
+#ifdef _MSC_VER
+#define fseeko _fseeki64
+#define ftello _ftelli64
+#endif
+
 namespace util {
     template <typename T, size_t size>
     inline size_t sizeof_array(const T (&)[size]) { return size; }
@@ -61,12 +68,17 @@ namespace util {
 	operator uint32_t() const { return nvalue; }
     };
 
-    inline
-    void *xcalloc(size_t count, size_t size)
+    inline void *xcalloc(size_t count, size_t size)
     {
 	void *memory = std::calloc(count, size);
 	if (!memory) throw std::bad_alloc();
 	return memory;
+    }
+
+    inline bool is_seekable(int fd)
+    {
+	struct stat stb = { 0 };
+	return fstat(fd, &stb) == 0 && (stb.st_mode & S_IFMT) == S_IFREG;
     }
 
     /*
@@ -194,6 +206,22 @@ namespace util {
 	ss << strutil::w2us(message) << ": " << std::strerror(errno);
 	throw std::runtime_error(ss.str());
     }
+
+    class FilePositionSaver
+    {
+    private:
+	int m_fd;
+	int64_t m_saved_position;
+    public:
+	explicit FilePositionSaver(int fd): m_fd(fd)
+	{
+	    m_saved_position = _lseeki64(m_fd, 0, SEEK_CUR);
+	}
+	~FilePositionSaver()
+	{
+	    _lseeki64(m_fd, m_saved_position, SEEK_SET);
+	}
+    };
 }
 
 #define CHECKCRT(expr) \

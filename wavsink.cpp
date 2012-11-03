@@ -29,7 +29,7 @@ namespace wave {
 		   || asbd.mBitsPerChannel > 16
 		   || (asbd.mBitsPerChannel & 7)
 		   || asbd.mBytesPerFrame * 8 != bits_per_frame)
-		    ? kFormatExtensible : kFormatPCM;
+		    ? 0xfffe : 1;
 	    put(result, fmt);
 	}
 	// nChannels
@@ -46,7 +46,7 @@ namespace wave {
 	put(result, static_cast<uint16_t>((bpf/asbd.mChannelsPerFrame)<<3));
 
 	// cbSize
-	if (fmt != kFormatPCM) {
+	if (fmt == 0xfffe) {
 	    // WAVEFORMATEXTENSIBLE
 	    put(result, static_cast<uint16_t>(22));
 	    // Samples

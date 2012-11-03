@@ -177,17 +177,8 @@ MP4Sink::MP4Sink(const std::wstring &path,
 
 ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
 {
-    struct F { static void close(FILE *) {} };
-    const wchar_t *spath = path.c_str();
-    if (path == L"-") {
-	m_fp.reset(stdout, F::close);
-    } else {
-	m_fp.reset(wfopenx(spath, L"wb"), std::fclose);
-    }
-    struct stat stb = { 0 };
-    if (fstat(fileno(m_fp.get()), &stb))
-	util::throw_crt_error("fstat()");
-    m_seekable = ((stb.st_mode & S_IFMT) == S_IFREG);
+    m_fp = win32::fopen(path, L"wb");
+    m_seekable = util::is_seekable(fileno(m_fp.get()));
     std::vector<uint8_t> config;
     parseMagicCookieAAC(cookie, &config);
     unsigned rate;

@@ -3,22 +3,21 @@
 
 #include "AudioFileX.h"
 #include "ExtAudioFileX.h"
-#include "ioabst.h"
 #include "iointer.h"
 
 std::shared_ptr<ISource>
-AudioFileOpenFactory(InputStream &stream, const std::wstring &path);
+AudioFileOpenFactory(const std::shared_ptr<FILE> &fp, const std::wstring &path);
 
 class AFSource: public ITagParser, public PartialSource<AFSource>
 {
     AudioFileX m_af;
     uint64_t m_offset;
-    std::shared_ptr<InputStream> m_stream;
+    std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     AudioStreamBasicDescription m_asbd;
 public:
-    AFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream);
+    AFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp);
     /*
      * XXX: AudioFile_GetSizeProc is called inside of AudioFileClose().
      * Therefore, we must first call AudioFileClose() before destruction.
@@ -45,12 +44,12 @@ class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
     AudioFileX m_af;
     ExtAudioFileX m_eaf;
     uint64_t m_offset;
-    std::shared_ptr<InputStream> m_stream;
+    std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     AudioStreamBasicDescription m_asbd;
 public:
-    ExtAFSource(AudioFileX &af, std::shared_ptr<InputStream> &stream,
+    ExtAFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp,
 		const std::wstring &path);
     ~ExtAFSource()
     {

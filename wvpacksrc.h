@@ -1,7 +1,6 @@
 #ifndef _WVPACKSRC_H
 #define _WVPACKSRC_H
 
-#include "ioabst.h"
 #include "iointer.h"
 #include "dl.h"
 
@@ -40,16 +39,14 @@ class WavpackSource:
     public ITagParser, public PartialSource<WavpackSource>
 {
     WavpackModule m_module;
-    InputStream m_stream;
-    std::shared_ptr<InputStream> m_cstream;
-    AudioStreamBasicDescription m_asbd;
     std::shared_ptr<void> m_wpc;
+    std::shared_ptr<FILE> m_fp, m_cfp;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
+    AudioStreamBasicDescription m_asbd;
 public:
-    WavpackSource(const WavpackModule &module, InputStream &stream,
-		  const std::wstring &path);
+    WavpackSource(const WavpackModule &module, const std::wstring &path);
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {

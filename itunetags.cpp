@@ -12,6 +12,7 @@
 #include "wicimage.h"
 #include "cuesheet.h"
 #include "src/itmf/type.h"
+#include "taglibhelper.h"
 
 using mp4v2::impl::MP4File;
 using mp4v2::impl::MP4Atom;
@@ -271,18 +272,10 @@ namespace ID3 {
 		return map->id;
 	return 0;
     }
-    void fetchAiffID3Tags(const wchar_t *filename,
+    void fetchAiffID3Tags(TagLib::RIFF::AIFF::File &file,
 			  std::map<uint32_t, std::wstring> *result)
     {
 	std::map<uint32_t, std::wstring> tags;
-#ifdef _WIN32
-	std::wstring fullname = win32::prefixed_path(filename);
-#else
-	std::string fullname = strutil::w2m(filename);
-#endif
-	TagLib::RIFF::AIFF::File file(fullname.c_str());
-	if (!file.isOpen())
-	    throw std::runtime_error("taglib: can't open file");
 	TagLib::ID3v2::Tag *tag = file.tag();
 	const TagLib::ID3v2::FrameList &frameList = tag->frameList();
 	TagLib::ID3v2::FrameList::ConstIterator it;
@@ -304,6 +297,27 @@ namespace ID3 {
 	    }
 	}
 	result->swap(tags);
+    }
+    void fetchAiffID3Tags(const wchar_t *filename,
+			  std::map<uint32_t, std::wstring> *result)
+    {
+#ifdef _WIN32
+	std::wstring fullname = win32::prefixed_path(filename);
+#else
+	std::string fullname = strutil::w2m(filename);
+#endif
+	TagLib::RIFF::AIFF::File file(fullname.c_str(), false);
+	if (!file.isOpen())
+	    throw std::runtime_error("taglib: can't open file");
+	fetchAiffID3Tags(file, result);
+    }
+    void fetchAiffID3Tags(int fd, std::map<uint32_t, std::wstring> *result)
+    {
+	util::FilePositionSaver _(fd);
+	lseek(fd, 0, SEEK_SET);
+	TagLibX::FDIOStreamReader stream(fd);
+	TagLib::RIFF::AIFF::File file(&stream, false);
+	fetchAiffID3Tags(file, result);
     }
 }
 

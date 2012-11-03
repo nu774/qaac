@@ -45,8 +45,7 @@ LibSndfileModule::LibSndfileModule(const std::wstring &path)
 	return;
     try {
 	CHECK(version_string = m_dl.fetch("sf_version_string"));
-	CHECK(wchar_open = m_dl.fetch("sf_wchar_open"));
-	CHECK(open_fd = m_dl.fetch("sf_open_fd"));
+	CHECK(open_virtual = m_dl.fetch("sf_open_virtual"));
 	CHECK(close = m_dl.fetch("sf_close"));
 	CHECK(strerror = m_dl.fetch("sf_strerror"));
 	CHECK(command = m_dl.fetch("sf_command"));
@@ -62,29 +61,55 @@ LibSndfileModule::LibSndfileModule(const std::wstring &path)
 }
 
 
-LibSndfileSource::LibSndfileSource(
-	const LibSndfileModule &module, const wchar_t *path)
-    : m_module(module)
+struct SFVirtualIOImpl: public SF_VIRTUAL_IO
 {
-    SF_INFO info = { 0 };
-    SNDFILE *fp;
-    if (!std::wcscmp(path, L"-"))
-	fp = m_module.open_fd(0, SFM_READ, &info, 0);
-    else {
-	std::wstring fullpath = win32::prefixed_path(path);
-	fp = m_module.wchar_open(fullpath.c_str(), SFM_READ, &info);
+    SFVirtualIOImpl()
+    {
+	static SF_VIRTUAL_IO t = { size, seek, read, 0/*write*/, tell };
+	std::memcpy(this, &t, sizeof t);
     }
-    if (!fp)
+    static sf_count_t size(void *cookie)
+    {
+	int fd = reinterpret_cast<int>(cookie);
+	return _filelengthi64(fd);
+    }
+    static sf_count_t seek(sf_count_t off, int whence, void *cookie)
+    {
+	int fd = reinterpret_cast<int>(cookie);
+	return _lseeki64(fd, off, whence);
+    }
+    static sf_count_t read(void *data, sf_count_t count, void *cookie)
+    {
+	int fd = reinterpret_cast<int>(cookie);
+	return ::read(fd, data, count);
+    }
+    static sf_count_t tell(void *cookie)
+    {
+	int fd = reinterpret_cast<int>(cookie);
+	return _lseeki64(fd, 0, SEEK_CUR);
+    }
+};
+
+LibSndfileSource::LibSndfileSource(
+	const LibSndfileModule &module, const std::shared_ptr<FILE> &fp)
+    : m_module(module), m_fp(fp)
+{
+    static SFVirtualIOImpl vio;
+    SF_INFO info = { 0 };
+    SNDFILE *sf =
+	m_module.open_virtual(&vio, SFM_READ, &info,
+			      reinterpret_cast<void*>(fileno(m_fp.get())));
+    if (!sf)
 	throw std::runtime_error(m_module.strerror(0));
-    m_handle = handle_t(fp, m_module.close);
+    m_handle.reset(sf, m_module.close);
     setRange(0, info.frames);
 
     SF_FORMAT_INFO finfo = { 0 };
     int count;
-    m_module.command(fp, SFC_GET_FORMAT_MAJOR_COUNT, &count, sizeof count);
+    m_module.command(sf, SFC_GET_FORMAT_MAJOR_COUNT, &count, sizeof count);
     for (int i = 0; i < count; ++i) {
 	finfo.format = i;
-	m_module.command(fp, SFC_GET_FORMAT_MAJOR, &finfo, sizeof finfo);
+	m_module.command(sf, SFC_GET_FORMAT_MAJOR, &finfo, sizeof finfo);
 	if (finfo.format == (info.format & SF_FORMAT_TYPEMASK)) {
 	    m_format_name = finfo.extension;
 	    break;
@@ -111,7 +136,7 @@ LibSndfileSource::LibSndfileSource(
 				mapping[subformat].type);
 
     m_chanmap.resize(info.channels);
-    if (m_module.command(fp, SFC_GET_CHANNEL_MAP_INFO, &m_chanmap[0],
+    if (m_module.command(sf, SFC_GET_CHANNEL_MAP_INFO, &m_chanmap[0],
 	    m_chanmap.size() * sizeof(uint32_t)) == SF_FALSE)
 	m_chanmap.clear();
     else
@@ -119,7 +144,7 @@ LibSndfileSource::LibSndfileSource(
 		m_chanmap.begin(), convert_chanmap);
     if (m_format_name == "aiff") {
 	try {
-	    ID3::fetchAiffID3Tags(path, &m_tags);
+	    ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
 	} catch (...) {}
     }
 }

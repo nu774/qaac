@@ -1,3 +1,5 @@
+#include <io.h>
+#include <sys/stat.h>
 #include "taksrc.h"
 #include "strutil.h"
 #include "win32util.h"
@@ -5,6 +7,7 @@
 #include "cuesheet.h"
 #include <apefile.h>
 #include <apetag.h>
+#include "taglibhelper.h"
 #include "cautil.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
@@ -52,49 +55,46 @@ struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
 	};
 	std::memcpy(this, &t, sizeof(TtakStreamIoInterface));
     }
-    static TtakBool readable(void *ctx)
+    static TtakBool readable(void *cookie)
     {
 	return tak_True;
     }
-    static TtakBool writable(void *ctx)
+    static TtakBool writable(void *cookie)
     {
 	return tak_False;
     }
-    static TtakBool seekable(void *ctx)
+    static TtakBool seekable(void *cookie)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
-	return pT->seekable();
+	return util::is_seekable(reinterpret_cast<int>(cookie));
     }
-    static TtakBool read(void *ctx, void *buf, TtakInt32 n, TtakInt32 *nr)
+    static TtakBool read(void *cookie, void *buf, TtakInt32 n, TtakInt32 *nr)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
-	ssize_t rc = pT->read(buf, n);
-	if (nr) *nr = rc;
-	return tak_True;
+	int fd = reinterpret_cast<int>(cookie);
+	*nr = ::read(fd, buf, n);
+	return *nr >= 0;
     }
-    static TtakBool seek(void *ctx, TtakInt64 pos)
+    static TtakBool seek(void *cookie, TtakInt64 pos)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
-	return pT->seek(pos, ISeekable::kBegin) >= 0;
+	int fd = reinterpret_cast<int>(cookie);
+	return _lseeki64(fd, pos, SEEK_SET) == pos;
     }
-    static TtakBool size(void *ctx, TtakInt64 *len)
+    static TtakBool size(void *cookie, TtakInt64 *len)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(ctx);
-	int64_t rc = pT->size();
-	if (len && rc >= 0) *len = rc;
-	return rc >= 0;
+	int fd = reinterpret_cast<int>(cookie);
+	*len = _filelengthi64(fd);
+	return *len >= 0LL;
     }
 };
 
-TakSource::TakSource(const TakModule &module, InputStream &stream)
-    : m_module(module), m_stream(stream)
+TakSource::TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp)
+    : m_module(module), m_fp(fp)
 {
     static TakStreamIoInterfaceImpl io;
     TtakSSDOptions options = { tak_Cpu_Any, 0 };
-    if (!stream.seekable())
-	options.Flags |= tak_ssd_opt_SequentialRead;
-    TtakSeekableStreamDecoder ssd = m_module.SSD_Create_FromStream(
-	    &io, &m_stream, &options, staticDamageCallback, this);
+    void *ctx = reinterpret_cast<void*>(fileno(m_fp.get()));
+    TtakSeekableStreamDecoder ssd =
+	m_module.SSD_Create_FromStream(&io, ctx, &options,
+				       staticDamageCallback, this);
     if (!ssd)
 	throw std::runtime_error("tak_SSD_Create_FromStream");
     m_decoder = std::shared_ptr<void>(ssd, m_module.SSD_Destroy);
@@ -112,14 +112,14 @@ TakSource::TakSource(const TakModule &module, InputStream &stream)
 		strutil::format("blocksize: %d is different from expected",
 		    info.Audio.BlockSize));
     setRange(0, info.Sizes.SampleNum);
-    if (stream.seekable())
+    try {
 	fetchTags();
+    } catch (...) {}
 }
 
 void TakSource::skipSamples(int64_t count)
 {
-    TRYTAK(m_module.SSD_Seek(m_decoder.get(),
-	PartialSource::getSamplesRead() + count));
+    TRYTAK(m_module.SSD_Seek(m_decoder.get(), count));
 }
 
 size_t TakSource::readSamples(void *buffer, size_t nsamples)
@@ -143,21 +143,17 @@ size_t TakSource::readSamples(void *buffer, size_t nsamples)
 
 void TakSource::fetchTags()
 {
-    std::wstring filename = m_stream.name();
-#ifdef _WIN32
-    std::wstring fullname = win32::prefixed_path(filename.c_str());
-#else
-    std::string fullname = strutil::w2m(filename);
-#endif
-    TagLib::APE::File file(fullname.c_str(), false);
-    if (!file.isOpen())
-	throw std::runtime_error("taglib: can't open file");
+    int fd = fileno(m_fp.get());
+    util::FilePositionSaver _(fd);
+    lseek(fd, 0, SEEK_SET);
+    TagLibX::FDIOStreamReader stream(fd);
+    TagLib::APE::File file(&stream, false);
+
     TagLib::APE::Tag *tag = file.APETag(false);
     const TagLib::APE::ItemListMap &itemListMap = tag->itemListMap();
     TagLib::APE::ItemListMap::ConstIterator it;
     for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
-	std::wstring key = it->first.toWString();
-	std::string skey = strutil::w2us(key);
+	std::string skey = strutil::w2us(it->first.toWString());
 	std::wstring value = it->second.toString().toWString();
 	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
 	if (id)

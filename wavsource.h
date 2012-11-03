@@ -1,39 +1,27 @@
-#ifndef _WAVSOURCE_H
-#define _WAVSOURCE_H
+#ifndef WaveSource_H
+#define WaveSource_H
 
-#include <algorithm>
 #include "iointer.h"
-#include "riff.h"
+#include "cautil.h"
 
-namespace wave
-{
-    struct myGUID {
+namespace wave {
+    struct GUID {
 	uint32_t Data1;
 	uint16_t Data2;
 	uint16_t Data3;
 	uint8_t  Data4[8];
-
-	bool operator==(const myGUID &rhs)
-	{
-	    return !std::memcmp(this, &rhs, sizeof(myGUID));
-	}
     };
-    enum {
-	kFormatPCM = 1,
-	kFormatFloat = 3,
-	kFormatExtensible = 0xfffe
-    };
-    extern myGUID ksFormatSubTypePCM, ksFormatSubTypeFloat;
+    extern const GUID ksFormatSubTypePCM;
+    extern const GUID ksFormatSubTypeFloat;
 }
 
-class WaveSource :
-    private RIFFParser, public PartialSource<WaveSource>
-{
-    AudioStreamBasicDescription m_asbd;
+class WaveSource: public PartialSource<WaveSource> {
+    std::shared_ptr<FILE> m_fp;
+    bool m_seekable;
     std::vector<uint32_t> m_chanmap;
-    bool m_ignore_length;
+    AudioStreamBasicDescription m_asbd;
 public:
-    explicit WaveSource(InputStream &stream, bool ignorelength=false);
+    WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength = false);
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
@@ -43,39 +31,18 @@ public:
     {
 	return m_chanmap.size() ? &m_chanmap : 0;
     }
-    size_t readSamples(void *buffer, size_t nsamples)
-    {
-	nsamples = adjustSamplesToRead(nsamples);
-	if (nsamples) {
-	    size_t nblocks = m_asbd.mBytesPerFrame;
-	    nsamples = readx(buffer, nsamples * nblocks) / nblocks;
-	    addSamplesRead(nsamples);
-	}
-	return nsamples;
-    }
-    void skipSamples(int64_t count)
-    {
-	int64_t bytes = count * m_asbd.mBytesPerFrame;
-	if (seek_forwardx(bytes) != bytes)
-	    throw std::runtime_error("seek_forward failed");
-    }
+    size_t readSamples(void *buffer, size_t nsamples);
+    void skipSamples(int64_t count);
 private:
-    size_t readx(void *buffer, size_t count)
-    {
-	if (m_ignore_length)
-	    return stream().read(buffer, count);
-	else
-	    return read(buffer, count);
-    }
-    int64_t seek_forwardx(int64_t count)
-    {
-	if (m_ignore_length)
-	    return stream().seek_forward(count);
-	else
-	    return seek_forward(count);
-    }
-    void fetchWaveFormat();
-    void parseInfo();
+    int fd() { return fileno(m_fp.get()); }
+    int64_t parse();
+    void read16le(void *n);
+    void read32le(void *n);
+    void read64le(void *n);
+    void skip(int64_t n);
+    uint32_t nextChunk(uint32_t *size);
+    int64_t ds64();
+    void fmt(size_t size);
 };
 
 #endif

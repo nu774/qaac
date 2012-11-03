@@ -19,9 +19,6 @@
     <ClCompile Include="..\..\CoreAudioEncoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\reg.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\afsource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

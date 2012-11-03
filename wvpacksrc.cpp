@@ -1,3 +1,5 @@
+#include <io.h>
+#include <sys/stat.h>
 #include "wvpacksrc.h"
 #include <wavpack.h>
 #include "strutil.h"
@@ -5,6 +7,7 @@
 #include "cuesheet.h"
 #include "chanmap.h"
 #include "cautil.h"
+#include "win32util.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -45,64 +48,64 @@ struct WavpackStreamReaderImpl: public WavpackStreamReader
     }
     static int32_t read(void *cookie, void *data, int32_t count)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->read(data, count);
+	int fd = reinterpret_cast<int>(cookie);
+	return ::read(fd, data, count);
     }
     static uint32_t tell(void *cookie)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return static_cast<uint32_t>(pT->tell());
+	int fd = reinterpret_cast<int>(cookie);
+	int64_t off = _lseeki64(fd, 0, SEEK_CUR);
+	return std::min(off, 0xffffffffLL); // XXX
     }
     static int seek_abs(void *cookie, uint32_t pos)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seek(pos, ISeekable::kBegin) >= 0 ? 0 : -1;
+	int fd = reinterpret_cast<int>(cookie);
+	return _lseeki64(fd, pos, SEEK_SET) >= 0 ? 0 : -1;
     }
     static int seek(void *cookie, int32_t off, int whence)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seek(off, whence) >= 0 ? 0 : -1;
+	int fd = reinterpret_cast<int>(cookie);
+	return _lseeki64(fd, off, whence) >= 0 ? 0 : -1;
     }
     static int pushback(void *cookie, int c)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	pT->pushback(c);
+	int fd = reinterpret_cast<int>(cookie);
+	_lseeki64(fd, -1, SEEK_CUR); // XXX
 	return c;
     }
     static uint32_t size(void *cookie)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->size();
+	int fd = reinterpret_cast<int>(cookie);
+	int64_t size = _filelengthi64(fd);
+	return std::min(size, 0xffffffffLL); // XXX
     }
     static int seekable(void *cookie)
     {
-	InputStream *pT = reinterpret_cast<InputStream*>(cookie);
-	return pT->seekable();
+	return util::is_seekable(reinterpret_cast<int>(cookie));
     }
 };
 
-WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
+WavpackSource::WavpackSource(const WavpackModule &module,
 			     const std::wstring &path)
-    : m_module(module), m_stream(stream)
+    : m_module(module)
 {
     char error[0x100];
     /* wavpack doesn't copy WavpackStreamReader into their context, therefore
      * must be kept in the memory */
     static WavpackStreamReaderImpl reader;
+    m_fp = win32::fopen(path, L"rb");
+    try { m_cfp = win32::fopen(path + L"c", L"rb"); } catch(...) {}
 
-    try {
-	std::wstring cpath = path + L"c";
-	StdioChannel channel(cpath.c_str());
-	m_cstream.reset(new InputStream(channel));
-    } catch (...) {}
+    int flags = OPEN_TAGS | (m_cfp.get() ? OPEN_WVC : 0);
+    void *ra = reinterpret_cast<void*>(fileno(m_fp.get()));
+    void *rc =
+	m_cfp.get() ? reinterpret_cast<void*>(fileno(m_cfp.get())) : 0;
 
-    int flags = OPEN_TAGS | (m_cstream.get() ? OPEN_WVC : 0);
     WavpackContext *wpc =
-	m_module.OpenFileInputEx(&reader, &m_stream, m_cstream.get(),
-				 error, flags, 0);
+	m_module.OpenFileInputEx(&reader, ra, rc, error, flags, 0);
     if (!wpc)
-	throw std::runtime_error(strutil::format("WavpackOpenFileInputEx(): %s", error));
-    m_wpc = std::shared_ptr<WavpackContext>(wpc, m_module.CloseFile);
+	throw std::runtime_error("WavpackOpenFileInputEx() failed");
+    m_wpc.reset(wpc, m_module.CloseFile);
 
     m_asbd = cautil::buildASBDForPCM(m_module.GetSampleRate(wpc),
 				m_module.GetNumChannels(wpc),
@@ -124,8 +127,7 @@ WavpackSource::WavpackSource(const WavpackModule &module, InputStream &stream,
 
 void WavpackSource::skipSamples(int64_t count)
 {
-    uint64_t cur = PartialSource::getSamplesRead();
-    if (!m_module.SeekSample(m_wpc.get(), static_cast<int32_t>(cur + count)))
+    if (!m_module.SeekSample(m_wpc.get(), static_cast<int32_t>(count)))
 	throw std::runtime_error("WavpackSeekSample()");
 }
 

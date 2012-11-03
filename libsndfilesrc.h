@@ -16,8 +16,7 @@ public:
     bool loaded() const { return m_dl.loaded(); }
 
     const char *(*version_string)();
-    SNDFILE *(*wchar_open)(const wchar_t *, int, SF_INFO *);
-    SNDFILE *(*open_fd)(int, int, SF_INFO *, int);
+    SNDFILE *(*open_virtual)(SF_VIRTUAL_IO*, int, SF_INFO*, void*);
     int (*close)(SNDFILE *);
     const char *(*strerror)(SNDFILE *);
     int (*command)(SNDFILE *, int, void *, int);
@@ -32,14 +31,16 @@ class LibSndfileSource:
     public ITagParser, public PartialSource<LibSndfileSource>
 {
     typedef std::shared_ptr<SNDFILE_tag> handle_t;
-    handle_t m_handle;
     LibSndfileModule m_module;
-    AudioStreamBasicDescription m_asbd;
+    handle_t m_handle;
+    std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::string m_format_name;
     std::map<uint32_t, std::wstring> m_tags;
+    AudioStreamBasicDescription m_asbd;
 public:
-    LibSndfileSource(const LibSndfileModule &module, const wchar_t *path);
+    LibSndfileSource(const LibSndfileModule &module,
+		     const std::shared_ptr<FILE> &fp);
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
