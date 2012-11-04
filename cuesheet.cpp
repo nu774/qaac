@@ -249,8 +249,8 @@ namespace Cue {
     }
 
     void CueSheetToChapters(const std::wstring &cuesheet,
-	    unsigned sample_rate, uint64_t duration,
-	    std::vector<std::pair<std::wstring, int64_t> > *chapters,
+	    double duration,
+	    std::vector<chapters::entry_t> *chapters,
 	    std::map<uint32_t, std::wstring> *meta)
     {
 	std::wstringbuf strbuf(cuesheet);
@@ -259,21 +259,20 @@ namespace Cue {
 	if (parser.m_has_multiple_files)
 	    throw std::runtime_error("Multiple FILE in embedded cuesheet");
 	ConvertToItunesTags(parser.m_meta, meta, true);
-	std::vector<std::pair<std::wstring, int64_t> > chaps;
 
-	int64_t dur_acc = 0;
+	std::vector<chapters::entry_t> chaps;
+	unsigned beg, end, last_end = 0;
 	for (size_t i = 0; i < parser.m_tracks.size(); ++i) {
 	    CueTrack &track = parser.m_tracks[i];
-	    unsigned beg = track.m_segments[0].m_begin;
-	    unsigned end = track.m_segments[0].m_end;
-	    int64_t dur;
-	    if (end != -1) {
-		dur = (double(end) - beg) * sample_rate / 75.0 + 0.5;
-		dur_acc += dur;
-	    }
+	    beg = track.m_segments[0].m_begin;
+	    end = track.m_segments[0].m_end;
+	    double track_duration;
+	    if (end != -1)
+		track_duration = (end - beg) / 75.0;
 	    else
-		dur = duration - dur_acc;
-	    chaps.push_back(std::make_pair(track.getName(), dur));
+		track_duration = duration - (last_end / 75.0);
+	    chaps.push_back(std::make_pair(track.getName(), track_duration));
+	    last_end = end;
 	}
 	chapters->swap(chaps);
     }

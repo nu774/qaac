@@ -333,44 +333,6 @@ std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 }
 
 static
-void load_chapter_file(const Options &opts,
-	std::vector<std::pair<std::wstring, int64_t> > *chapters)
-{
-    try {
-	const wchar_t *chapter_file = opts.chapter_file;
-	std::vector<std::pair<std::wstring, int64_t> > chaps;
-
-	std::wstring str = load_text_file(chapter_file, opts.textcp);
-	const wchar_t *tfmt = L"%02d:%02d:%02d.%03d";
-	int h, m, s, ms;
-	int64_t stamp = 0;
-	strutil::Tokenizer<wchar_t> tokens(str.c_str(), L"\n");
-	wchar_t *tok;
-	while (tok = tokens.next()) {
-	    if (std::swscanf(tok, tfmt, &h, &m, &s, &ms) == 4) {
-		strutil::strsep(&tok, L"\t ");
-		std::wstring name = tok ? tok : L"";
-		int64_t hh = h;
-		stamp = (((hh * 60) + m) * 60 + s) * 1000 + ms;
-		chaps.push_back(std::make_pair(name, stamp));
-	    } else if (wcsncmp(tok, L"Chapter", 7) == 0) {
-		wchar_t *key = strutil::strsep(&tok, L"=");
-		if (std::wcsstr(key, L"NAME")) {
-		    std::wstring name = tok ? tok : L"";
-		    chaps.push_back(std::make_pair(name, stamp));
-		} else if (std::swscanf(tok, tfmt, &h, &m, &s, &ms) == 4) {
-		    int64_t hh = h;
-		    stamp = (((hh * 60) + m) * 60 + s) * 1000 + ms;
-		}
-	    }
-	}
-	chapters->swap(chaps);
-    } catch (const std::exception &e) {
-	LOG(L"WARNING: %s\n", errormsg(e).c_str());
-    }
-}
-
-static
 void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	IEncoder *encoder, const std::wstring &encoder_config)
 {
@@ -384,28 +346,14 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
 	&iformat = encoder->getInputDescription(),
 	&oformat = encoder->getOutputDescription();
 
-    double oSampleRate = oformat.mSampleRate;
-    if (opts.isSBR()) oSampleRate /= 2;
-
     ITagParser *parser = dynamic_cast<ITagParser*>(src);
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 
     if (parser) {
 	editor.setTag(parser->getTags());
-	const std::vector<std::pair<std::wstring, int64_t> > *chapters
-	    = parser->getChapters();
-	double rate_ratio = oSampleRate / src->getSampleFormat().mSampleRate;
+	const std::vector<chapters::entry_t> *chapters = parser->getChapters();
 	if (chapters) {
-	    if (rate_ratio == 1.0)
-		editor.setChapters(*chapters);
-	    else {
-		std::vector<std::pair<std::wstring, int64_t> > chaps;
-		std::copy(chapters->begin(), chapters->end(),
-			std::back_inserter(chaps));
-		for (size_t i = 0; i < chaps.size(); ++i)
-		    chaps[i].second = chaps[i].second * rate_ratio + 0.5;
-		editor.setChapters(chaps);
-	    }
+	    editor.setChapters(*chapters);
 	}
     }
     editor.setTag(opts.tagopts);
@@ -430,31 +378,17 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
     if (opts.chapter_file) {
-	std::vector<std::pair<std::wstring, int64_t> > chaps;
-	load_chapter_file(opts, &chaps);
-	if (chaps.size()) {
-	    size_t i = 0;
-	    // convert from absolute millis to dulation in samples
-	    for (i = 0; i < chaps.size() - 1; ++i) {
-		int64_t dur = chaps[i+1].second - chaps[i].second;
-		dur = dur / 1000.0 * oSampleRate + 0.5;
-		chaps[i].second = dur;
-	    }
-	    // last entry needs calculation from media length
+	std::vector<chapters::abs_entry_t> abs_entries;
+	std::vector<chapters::entry_t> chapters;
+	try {
+	    chapters::load_from_file(opts.chapter_file, &abs_entries,
+				     opts.textcp);
 	    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
-	    size_t pos = chaps.size() - 1;
-	    int64_t beg = chaps[pos].second / 1000.0 * oSampleRate + 0.5;
-	    double ratio = oSampleRate / iformat.mSampleRate;
-	    int64_t dur = stat->samplesRead() * ratio - beg;
-	    chaps[pos].second = dur;
-	    // sanity check
-	    for (i = 0; i < chaps.size(); ++i) {
-		if (chaps[i].second < 0) {
-		    LOG(L"WARNING: invalid chapter time\n");
-		    break;
-		}
-	    }
-	    if (i == chaps.size()) editor.setChapters(chaps);
+	    double duration = stat->samplesRead() / iformat.mSampleRate;
+	    chapters::abs_to_duration(abs_entries, &chapters, duration);
+	    editor.setChapters(chapters);
+	} catch (const std::runtime_error &e) {
+	    LOG(L"WARNING: %s\n", errormsg(e).c_str());
 	}
     }
     editor.save(*mp4file);
@@ -1259,7 +1193,7 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 
     CompositeSource *concat_sp = new CompositeSource();
     std::shared_ptr<ISource> concat_spPtr(concat_sp);
-    std::vector<std::pair<std::wstring, int64_t> > chapters;
+    std::vector<chapters::entry_t > chapters;
 
     for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
 	CueTrack &track = cue.m_tracks[i];
@@ -1298,8 +1232,9 @@ void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
 	}
 	if (opts.concat_cue) {
 	    concat_sp->addSource(csPtr);
+	    double rate = csPtr->getSampleFormat().mSampleRate;
 	    chapters.push_back(std::make_pair(track.getName(),
-					      csPtr->length()));
+					      csPtr->length() / rate));
 	} else {
 	    std::wstring formatstr = opts.fname_format
 		? opts.fname_format : L"${tracknumber}${title& }${title}";

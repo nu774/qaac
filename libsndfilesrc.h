@@ -54,10 +54,9 @@ public:
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
-    const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const
+    const std::vector<chapters::entry_t> *getChapters() const
     {
-	    return 0;
+	return 0;
     }
 private:
     size_t readSamples8(void *buffer, size_t nsamples);

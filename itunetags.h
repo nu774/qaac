@@ -91,7 +91,7 @@ L"00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000";
 class TagEditor {
     std::map<uint32_t, std::wstring> m_tags;
     std::map<std::string, std::wstring> m_long_tags;
-    std::vector<std::pair<std::wstring, int64_t> > m_chapters;
+    std::vector<chapters::entry_t> m_chapters;
     std::vector<std::wstring> m_artworks;
     int m_encoder_delay;
     int m_padding;
@@ -130,8 +130,7 @@ public:
 	for (ii = tags.begin(); ii != tags.end(); ++ii)
 	    m_long_tags[ii->first] = ii->second;
     }
-    void setChapters(const std::vector<std::pair<std::wstring, int64_t> >
-	    &chapters)
+    void setChapters(const std::vector<chapters::entry_t> &chapters)
     {
 	m_chapters = chapters;
     }

@@ -174,6 +174,7 @@ void WavpackSource::fetchTags()
 
     int count = m_module.GetNumTagItems(wpc);
     std::map<std::string, std::string> vorbisComments;
+    std::wstring cuesheet;
     std::map<uint32_t, std::wstring> tags;
     for (int i = 0; i < count; ++i) {
 	int size = m_module.GetTagItemIndexed(wpc, i, 0, 0);
@@ -182,18 +183,19 @@ void WavpackSource::fetchTags()
 	size = m_module.GetTagItem(wpc, &name[0], 0, 0);
 	std::vector<char> value(size + 1);
 	m_module.GetTagItem(wpc, &name[0], &value[0], value.size());
-	if (!strcasecmp(&name[0], "cuesheet")) {
-	    try {
-		std::wstring wvalue = strutil::us2w(&value[0]);
-		Cue::CueSheetToChapters(wvalue, m_asbd.mSampleRate,
-			getDuration(), &m_chapters, &tags);
-	    } catch (...) {}
-	} else {
+	if (!strcasecmp(&name[0], "cuesheet"))
+	    cuesheet = strutil::us2w(&value[0]);
+	else
 	    vorbisComments[&name[0]] = &value[0];
-	}
     }
     Vorbis::ConvertToItunesTags(vorbisComments, &m_tags);
-    std::map<uint32_t, std::wstring>::const_iterator it;
-    for (it = tags.begin(); it != tags.end(); ++it)
-	m_tags[it->first] = it->second;
+    if (cuesheet.size()) {
+	std::map<uint32_t, std::wstring> tags;
+	Cue::CueSheetToChapters(cuesheet,
+				getDuration() / m_asbd.mSampleRate,
+				&m_chapters, &tags);
+	std::map<uint32_t, std::wstring>::const_iterator it;
+	for (it = tags.begin(); it != tags.end(); ++it)
+	    m_tags[it->first] = it->second;
+    }
 }

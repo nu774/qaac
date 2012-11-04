@@ -10,7 +10,7 @@ class CompositeSource: public ISource, public ITagParser {
     AudioStreamBasicDescription m_asbd;
     size_t m_curpos;
     std::map<uint32_t, std::wstring> m_tags;
-    std::vector<std::pair<std::wstring, int64_t> > m_chapters;
+    std::vector<chapters::entry_t> m_chapters;
     uint64_t m_samples_read;
 public:
     CompositeSource() : m_curpos(0), m_samples_read(0) {}
@@ -31,7 +31,7 @@ public:
 	ITagParser *tp = dynamic_cast<ITagParser*>(src.get());
 	return tp ? tp->getTags() : m_tags;
     }
-    const std::vector<std::pair<std::wstring, int64_t> > *getChapters() const
+    const std::vector<chapters::entry_t> *getChapters() const
     {
 	if (m_chapters.size())
 	    return &m_chapters;
@@ -42,11 +42,11 @@ public:
     {
 	m_tags = tags;
     }
-    void setChapters(const std::vector<std::pair<std::wstring, int64_t> > &x)
+    void setChapters(const std::vector<chapters::entry_t> &x)
     {
 	m_chapters = x;
     }
-    void addChapter(std::wstring title, int64_t length)
+    void addChapter(std::wstring title, double length)
     {
 	m_chapters.push_back(std::make_pair(title, length));
     }
@@ -80,7 +80,7 @@ public:
 		    }
 		}
 	    }
-	    const std::vector<std::pair<std::wstring, int64_t> > *chaps;
+	    const std::vector<chapters::entry_t> *chaps;
 	    chaps = parser->getChapters();
 	    if (chaps) {
 		for (size_t i = 0; i < chaps->size(); ++i)
@@ -89,13 +89,11 @@ public:
 	    }
 	    tagit = tags.find(Tag::kTitle);
 	    if (tagit != tags.end()) {
-		addChapter(tagit->second, src->length());
+		addChapter(tagit->second, src->length() / m_asbd.mSampleRate);
 		return;
 	    }
 	}
-	std::wstring title =
-	    strutil::format(L"", static_cast<int>(m_chapters.size() + 1));
-	addChapter(title, src->length());
+	addChapter(L"", src->length() / m_asbd.mSampleRate);
     }
     uint64_t length() const
     {

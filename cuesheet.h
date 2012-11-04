@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include "util.h"
+#include "chapters.h"
 
 template <typename CharT>
 struct CueTokenizer {
@@ -85,7 +86,7 @@ namespace Cue {
 	std::map<uint32_t, std::wstring> *to, bool album=false);
 
     void CueSheetToChapters(const std::wstring &cuesheet,
-	unsigned sample_rate, uint64_t duration,
-	std::vector<std::pair<std::wstring, int64_t> > *chapters,
+	double duration,
+	std::vector<chapters::entry_t> *chapters,
 	std::map<uint32_t, std::wstring> *meta);
 }

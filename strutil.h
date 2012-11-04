@@ -139,8 +139,8 @@ namespace strutil {
 	Tokenizer(const std::basic_string<T> &s, const T *sep)
 	    : m_sep(sep)
 	{
-	    m_buffer.resize(s.size() + 1);
-	    std::memcpy(&m_buffer[0], s.data(), m_buffer.size() - 1);
+	    std::copy(s.begin(), s.end(), std::back_inserter(m_buffer));
+	    m_buffer.push_back(0);
 	    m_tok = &m_buffer[0];
 	}
 	T *next()

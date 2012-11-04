@@ -5,6 +5,7 @@
 #include <map>
 #include "CoreAudio/CoreAudioTypes.h"
 #include "util.h"
+#include "chapters.h"
 
 struct GaplessInfo {
     uint32_t delay;
@@ -33,8 +34,7 @@ class ITagParser {
 public:
     virtual ~ITagParser() {}
     virtual const std::map<uint32_t, std::wstring> &getTags() const = 0;
-    virtual const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const = 0;
+    virtual const std::vector<chapters::entry_t> *getChapters() const = 0;
 };
 
 struct IPartialSource {
@@ -96,7 +96,7 @@ public:
 	else
 	    return parser->getTags();
     }
-    const std::vector<std::pair<std::wstring, int64_t> > * getChapters() const
+    const std::vector<chapters::entry_t> * getChapters() const
     {
 	ITagParser *parser = dynamic_cast<ITagParser*>(m_src.get());
 	if (!parser)

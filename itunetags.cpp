@@ -196,17 +196,17 @@ void TagEditor::save(MP4FileX &file)
 	if (m_chapters.size()) {
 	    uint64_t timeScale = file.GetIntegerProperty("moov.mvhd.timeScale");
 	    MP4TrackId track = file.AddChapterTextTrack(1);
-	    int64_t samples = 0;
+	    double off = 0;
 	    for (size_t i = 0; i < m_chapters.size(); ++i) {
 		std::string name = strutil::w2us(m_chapters[i].first);
 		if (name.empty())
 		    name = strutil::format("Track %02u",
 					   static_cast<uint32_t>(i + 1));
-		file.AddChapter(track, m_chapters[i].second, name.c_str());
-		int64_t stamp = static_cast<double>(samples)
-			* 10000000 / timeScale + 0.5;
+		file.AddChapter(track, m_chapters[i].second * timeScale + 0.5,
+				name.c_str());
+		int64_t stamp = off * 10000000 + 0.5;
 		file.AddNeroChapter(stamp, name.c_str());
-		samples += m_chapters[i].second;
+		off += m_chapters[i].second;
 	    }
 	}
 	std::for_each(m_tags.begin(), m_tags.end(), ShortTagWriter(file));

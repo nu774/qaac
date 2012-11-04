@@ -149,22 +149,28 @@ void TakSource::fetchTags()
     TagLibX::FDIOStreamReader stream(fd);
     TagLib::APE::File file(&stream, false);
 
+    std::map<std::string, std::string> vc;
+    std::wstring cuesheet;
+
     TagLib::APE::Tag *tag = file.APETag(false);
     const TagLib::APE::ItemListMap &itemListMap = tag->itemListMap();
     TagLib::APE::ItemListMap::ConstIterator it;
     for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
-	std::string skey = strutil::w2us(it->first.toWString());
+	std::wstring key = it->first.toWString();
 	std::wstring value = it->second.toString().toWString();
-	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
-	if (id)
-	    m_tags[id] = value;
-	else if (!strcasecmp(skey.c_str(), "cuesheet")) {
-	    std::map<uint32_t, std::wstring> meta;
-	    Cue::CueSheetToChapters(value, m_asbd.mSampleRate,
-				    getDuration(), &m_chapters, &meta);
-	    std::map<uint32_t, std::wstring>::iterator it;
-	    for (it = meta.begin(); it != meta.end(); ++it)
-		m_tags[it->first] = it->second;
-	}
+	if (key == L"cuesheet")
+	    cuesheet = value;
+	else
+	    vc[strutil::w2us(key)] = strutil::w2us(value);
+    }
+    Vorbis::ConvertToItunesTags(vc, &m_tags);
+    if (cuesheet.size()) {
+	std::map<uint32_t, std::wstring> tags;
+	Cue::CueSheetToChapters(cuesheet,
+				getDuration() / m_asbd.mSampleRate,
+				&m_chapters, &tags);
+	std::map<uint32_t, std::wstring>::const_iterator it;
+	for (it = tags.begin(); it != tags.end(); ++it)
+	    m_tags[it->first] = it->second;
     }
 }

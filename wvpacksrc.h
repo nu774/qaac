@@ -43,7 +43,7 @@ class WavpackSource:
     std::shared_ptr<FILE> m_fp, m_cfp;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
-    std::vector<std::pair<std::wstring, int64_t> > m_chapters;
+    std::vector<chapters::entry_t > m_chapters;
     AudioStreamBasicDescription m_asbd;
 public:
     WavpackSource(const WavpackModule &module, const std::wstring &path);
@@ -56,8 +56,7 @@ public:
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
-    const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const
+    const std::vector<chapters::entry_t> *getChapters() const
     {
 	if (m_chapters.size())
 	    return &m_chapters;

@@ -16,8 +16,7 @@ class FLACSource :
     decoder_t m_decoder;
     std::vector<std::deque<int32_t> > m_buffer;
     std::map<uint32_t, std::wstring> m_tags;
-    std::wstring m_cuesheet;
-    std::vector<std::pair<std::wstring, int64_t> > m_chapters;
+    std::vector<chapters::entry_t> m_chapters;
     bool m_giveup;
     AudioStreamBasicDescription m_asbd;
 public:
@@ -31,8 +30,7 @@ public:
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);
-    const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const
+    const std::vector<chapters::entry_t> *getChapters() const
     {
 	if (m_chapters.size())
 	    return &m_chapters;

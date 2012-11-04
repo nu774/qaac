@@ -35,8 +35,7 @@ public:
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count) { m_offset += count; }
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
-    const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const { return 0; }
+    const std::vector<chapters::entry_t> *getChapters() const { return 0; }
 };
 
 class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
@@ -68,7 +67,6 @@ public:
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
-    const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const { return 0; }
+    const std::vector<chapters::entry_t> *getChapters() const { return 0; }
 };
 #endif
