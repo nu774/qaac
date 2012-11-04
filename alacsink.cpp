@@ -1,38 +1,24 @@
 #include <algorithm>
 #include "strutil.h"
 #include "alacsink.h"
-#include "ioabst.h"
 
 static
 void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
 	std::vector<uint8_t> *alac,
 	std::vector<uint8_t> *chan)
 {
-    std::string s(cookie.begin(), cookie.end());
-    if (s.find("frmaalac") == std::string::npos) {
-	static const char *const hd = "\x00\x00\x00\x0c" "frmaalac"
-	    "\x00\x00\x00\x24" "alac" "\x00\x00\x00\x00";
-	s = std::string(hd, hd + 24) + s;
-    }
-    MemoryReader reader(s.c_str(), s.size());
-    uint32_t chunk_size, chunk_name;
-
-    while (reader.read32be(&chunk_size)) {
-	if (chunk_size < 8 || !reader.read32be(&chunk_name))
-	    break;
-	chunk_size -= 8;
-	if (chunk_name == 'alac') {
-	    chunk_size -= 4;
-	    if (reader.skip(4) != 4) break;
-	    alac->resize(chunk_size);
-	    if (reader.read(&(*alac)[0], chunk_size) != chunk_size) break;
-	} else if (chunk_name == 'chan') {
-	    chunk_size -= 4;
-	    if (reader.skip(4) != 4) break;
-	    chan->resize(chunk_size);
-	    if (reader.read(&(*chan)[0], chunk_size) != chunk_size) break;
-	} else if (reader.skip(chunk_size) != chunk_size)
-	    break;
+    const uint8_t *cp = &cookie[0];
+    const uint8_t *endp = cp + cookie.size();
+    if (std::memcmp(cp + 4, "frmaalac", 8) == 0)
+	cp += 24;
+    if (endp - cp >= 24) {
+	alac->resize(24);
+	std::memcpy(&(*alac)[0], cp, 24);
+	cp += 24;
+	if (endp - cp >= 24 && !std::memcmp(cp + 4, "chan", 4)) {
+	    chan->resize(12);
+	    std::memcpy(&(*chan)[0], cp + 12, 12);
+	}
     }
 }
 

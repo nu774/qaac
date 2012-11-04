@@ -7,12 +7,6 @@
 #include "util.h"
 #include "chapters.h"
 
-struct GaplessInfo {
-    uint32_t delay;
-    uint32_t padding;
-    uint64_t samples;
-};
-
 class ISource {
 public:
     virtual ~ISource() {}

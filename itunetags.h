@@ -5,6 +5,7 @@
 #include "iointer.h"
 #include "mp4v2wrapper.h"
 #include "cautil.h"
+#include "CoreAudio/AudioFile.h"
 
 namespace Tag {
     const uint32_t kTitle = FOURCC('\xa9','n','a','m');
@@ -104,11 +105,11 @@ public:
 	  m_artwork_size(0),
 	  m_nsamples(0)
     {}
-    void setGaplessInfo(const GaplessInfo &info)
+    void setGaplessInfo(const AudioFilePacketTableInfo &info)
     {
-	m_encoder_delay = info.delay;
-	m_padding = info.padding;
-	m_nsamples = info.samples;
+	m_encoder_delay = info.mPrimingFrames;
+	m_padding = info.mRemainderFrames;
+	m_nsamples = info.mNumberValidFrames;
     }
     void setTag(uint32_t key, const std::wstring &value)
     {

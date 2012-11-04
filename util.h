@@ -161,29 +161,26 @@ namespace util {
 	return (bits & 0x0000ffff) + (bits >>16 & 0x0000ffff);
     }
 
-    /* XXX: assumes little endian host */
     inline uint16_t l2host16(uint16_t n) { return n; }
     inline uint32_t l2host32(uint32_t n) { return n; }
+    inline uint64_t l2host64(uint64_t n) { return n; }
 
     inline uint16_t b2host16(uint16_t n)
     {
-	return (n >> 8) | (n << 8);
+	return _byteswap_ushort(n);
     }
     inline uint32_t b2host32(uint32_t n)
     {
-	return (b2host16(n & 0xffff) << 16) | b2host16(n >> 16);
+	return _byteswap_ulong(n);
     }
     inline uint64_t b2host64(uint64_t n)
     {
-	return (static_cast<uint64_t>(b2host32(n & 0xffffffff)) << 32) |
-		b2host32(n >> 32);
+	return _byteswap_uint64(n);
     }
     inline uint32_t h2big32(uint32_t n)
     {
-	return b2host32(n);
+	return _byteswap_ulong(n);
     }
-
-    void bswap16buffer(uint8_t *buffer, size_t size);
 
     void bswap16buffer(uint8_t *buffer, size_t size);
 

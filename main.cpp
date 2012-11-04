@@ -361,29 +361,21 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
 #ifndef REFALAC
     if (opts.isAAC() && stat->samplesWritten()) {
-	AudioConverterX converter =
-	    dynamic_cast<CoreAudioEncoder*>(encoder)->getConverter();
-	AudioConverterPrimeInfo info;
-	converter.getPrimeInfo(&info);
-	GaplessInfo gi;
-	gi.delay = info.leadingFrames;
-	gi.padding = info.trailingFrames;
-	uint64_t nsamples = stat->samplesWritten();
-	if (opts.isSBR()) nsamples /= 2;
-	gi.samples = nsamples - gi.delay - gi.padding;
-	editor.setGaplessInfo(gi);
+	CoreAudioEncoder *caencoder =
+	    dynamic_cast<CoreAudioEncoder*>(encoder);
+	editor.setGaplessInfo(caencoder->getGaplessInfo());
     }
 #endif
     editor.setArtworkSize(opts.artwork_size);
     for (size_t i = 0; i < opts.artworks.size(); ++i)
 	editor.addArtwork(opts.artworks[i].c_str());
+
     if (opts.chapter_file) {
 	std::vector<chapters::abs_entry_t> abs_entries;
 	std::vector<chapters::entry_t> chapters;
 	try {
 	    chapters::load_from_file(opts.chapter_file, &abs_entries,
 				     opts.textcp);
-	    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 	    double duration = stat->samplesRead() / iformat.mSampleRate;
 	    chapters::abs_to_duration(abs_entries, &chapters, duration);
 	    editor.setChapters(chapters);

@@ -67,6 +67,21 @@ bool CoreAudioEncoder::encodeChunk(UInt32 npackets)
     return true;
 }
 
+AudioFilePacketTableInfo CoreAudioEncoder::getGaplessInfo()
+{
+    AudioConverterPrimeInfo pinfo = { 0 };
+    m_converter.getPrimeInfo(&pinfo);
+    AudioFilePacketTableInfo ptinfo = { 0 };
+    ptinfo.mPrimingFrames = pinfo.leadingFrames;
+    ptinfo.mRemainderFrames = pinfo.trailingFrames;
+    int64_t total = m_stat.samplesWritten();
+    if (m_output_desc.mFormatID == 'aach')
+	total /= 2;
+    ptinfo.mNumberValidFrames =
+	total - pinfo.leadingFrames - pinfo.trailingFrames;
+    return ptinfo;
+}
+
 long CoreAudioEncoder::inputDataProc(UInt32 *npackets, AudioBufferList *abl)
 {
     prepareInputBuffer(abl, *npackets);
