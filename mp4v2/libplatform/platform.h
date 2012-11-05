@@ -34,6 +34,7 @@
 
 #include "libplatform/number/random.h"
 #include "libplatform/process/process.h"
+#include "libplatform/prog/commandline.h"
 #include "libplatform/prog/option.h"
 #include "libplatform/sys/error.h"
 #include "libplatform/time/time.h"

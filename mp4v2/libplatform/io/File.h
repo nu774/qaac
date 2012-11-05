@@ -50,6 +50,7 @@ protected:
 class MP4V2_EXPORT File : public FileProvider
 {
 public:
+    const static int64_t SIZE_UNKNOWN = 0x7fffffffffffffff;
     ///////////////////////////////////////////////////////////////////////////
     //!
     //! Constructor.

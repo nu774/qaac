@@ -387,7 +387,7 @@ char* MP4File::ReadCountedString(uint8_t charSize, bool allowExpandedCount, uint
         charLength = ReadUInt8();
     }
     
-    if (fixedLength && (charLength > fixedLength)) {
+    if (fixedLength && (charLength > fixedLength - 1)) {
         /*
          * The counted length of this string is greater than the
          * maxiumum fixed length, so truncate the string to the

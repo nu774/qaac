@@ -14,7 +14,7 @@ File::File( std::string name_, Mode mode_, FileProvider* provider_ )
     : _name     ( name_ )
     , _isOpen   ( false )
     , _mode     ( mode_ )
-    , _size     ( 0 )
+    , _size     ( provider_ ? SIZE_UNKNOWN : 0 )
     , _position ( 0 )
     , _provider ( provider_ ? *provider_ : standard() )
     , name      ( _name )
@@ -63,7 +63,8 @@ File::open( std::string name_, Mode mode_ )
     if( _provider.open( _name, _mode ))
         return true;
 
-    FileSystem::getFileSize( _name, _size );
+    if (_size == 0)
+	FileSystem::getFileSize( _name, _size );
 
     _isOpen = true;
     return false;

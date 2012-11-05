@@ -80,6 +80,7 @@ AC_ARG_ENABLE([mingw_mt],
 ###############################################################################
 
 AC_PROG_CXX
+AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 
 AC_CHECK_PROG([FOUND_HELP2MAN],[help2man],[yes],[no])
@@ -100,7 +101,6 @@ case ${host} in
     ;;
 *-*-mingw*)
     # do not support shared
-    enable_shared=no
     X_PLATFORM=win32
     X_MINGW_LIBS="$X_MINGW_LIBS"
     X_CXX_W="$X_CXX_W -Wno-format"
@@ -205,6 +205,9 @@ case ${host} in
         X_libmp4v2_la_LDFLAGS='-Wl,-current_version,$(PROJECT_version_major).$(PROJECT_version_minor).$(PROJECT_version_point) -Wl,-compatibility_version,$(PROJECT_version_major).0.0'
         ;;
     *-*-cygwin*)
+        X_libmp4v2_la_LDFLAGS='-no-undefined'
+        ;;
+    *-*-mingw*)
         X_libmp4v2_la_LDFLAGS='-no-undefined'
         ;;
     *)
