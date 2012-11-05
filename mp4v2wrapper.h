@@ -94,4 +94,46 @@ public:
     bool copyNextChunk();
     uint64_t getTotalChunks() { return m_nchunks; }
 };
+
+struct MP4FDReadProvider: public MP4FileProvider
+{
+    MP4FDReadProvider()
+    {
+	static MP4FileProvider t = {
+	    open, seek, read, 0, close
+	};
+	std::memset(this, 0, sizeof t);
+	std::memcpy(this, &t, sizeof t);
+    }
+
+    static void *open(const char *name, MP4FileMode mode)
+    {
+	/*
+	 * file descriptor (in the form of text string) is get passed as
+	 * "name". We decoder it to an integer, and use it as a handle.
+	 * Since returning zero is treated as error on mp4v2 side,
+	 * we cannot use fd 0 (stdin) as handle. So we add 1 to it here,
+	 * and substruct by 1 on the succeeding jobs.
+	 */
+	int fd = std::strtol(name, 0, 10);
+	return reinterpret_cast<void*>(fd + 1);
+    }
+    static int seek(void *handle, int64_t pos)
+    {
+	int fd = reinterpret_cast<int>(handle) - 1;
+	return _lseeki64(fd, pos, SEEK_SET) < 0;
+    }
+    static int read(void *handle, void *buffer, int64_t size, int64_t *nin,
+		    int64_t maxChunkSize)
+    {
+	int fd = reinterpret_cast<int>(handle) - 1;
+	*nin = ::read(fd, buffer, size);
+	return *nin < 0;
+    }
+    static int close(void *handle)
+    {
+	return 0;
+    }
+};
+
 #endif

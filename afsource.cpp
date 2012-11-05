@@ -142,7 +142,7 @@ namespace audiofile {
 }
 
 std::shared_ptr<ISource>
-AudioFileOpenFactory(const std::shared_ptr<FILE> &fp, const std::wstring &path)
+AudioFileOpenFactory(const std::shared_ptr<FILE> &fp)
 {
     AudioFileID afid;
 
@@ -156,7 +156,7 @@ AudioFileOpenFactory(const std::shared_ptr<FILE> &fp, const std::wstring &path)
     if (asbd.mFormatID == 'lpcm')
 	return std::shared_ptr<ISource>(new AFSource(af, fp));
     else if (asbd.mFormatID == 'alac')
-	return std::shared_ptr<ISource>(new ExtAFSource(af, fp, path));
+	return std::shared_ptr<ISource>(new ExtAFSource(af, fp));
     else
 	throw std::runtime_error("Not supported format");
 }
@@ -192,8 +192,7 @@ size_t AFSource::readSamples(void *buffer, size_t nsamples)
     return ns;
 }
 
-ExtAFSource::ExtAFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp,
-			 const std::wstring &path)
+ExtAFSource::ExtAFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp)
     : m_af(af), m_fp(fp)
 {
     std::vector<uint8_t> cookie;
@@ -222,8 +221,12 @@ ExtAFSource::ExtAFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp,
     } catch (...) {}
     if (m_af.getFileFormat() == 'm4af') {
 	try {
+	    int fd = fileno(m_fp.get());
+	    util::FilePositionSaver _(fd);
+	    static MP4FDReadProvider provider;
 	    MP4FileX file;
-	    file.Read(strutil::w2us(path).c_str(), 0);
+	    std::string name = strutil::format("%d", fd);
+	    file.Read(name.c_str(), &provider);
 	    mp4a::fetchTags(file, &m_tags);
 	} catch (...) {}
     } else {

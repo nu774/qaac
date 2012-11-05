@@ -25,8 +25,9 @@ class ALACSource: public ITagParser, public PartialSource<ALACSource>
     AudioStreamBasicDescription m_asbd;
     MP4FileX m_file;
     DecodeBuffer m_buffer;
+    std::shared_ptr<FILE> m_fp;
 public:
-    ALACSource(const std::wstring &path);
+    ALACSource(const std::shared_ptr<FILE> &fp);
     uint64_t length() const { return getDuration(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {

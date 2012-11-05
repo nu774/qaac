@@ -6,7 +6,7 @@
 #include "iointer.h"
 
 std::shared_ptr<ISource>
-AudioFileOpenFactory(const std::shared_ptr<FILE> &fp, const std::wstring &path);
+AudioFileOpenFactory(const std::shared_ptr<FILE> &fp);
 
 class AFSource: public ITagParser, public PartialSource<AFSource>
 {
@@ -48,8 +48,7 @@ class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
     std::map<uint32_t, std::wstring> m_tags;
     AudioStreamBasicDescription m_asbd;
 public:
-    ExtAFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp,
-		const std::wstring &path);
+    ExtAFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp);
     ~ExtAFSource()
     {
 	m_af.attach(0, false);

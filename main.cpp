@@ -311,7 +311,7 @@ std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 	    TRY_MAKE_SHARED(TakSource(opts.libtak, fp));
 #ifndef REFALAC
 	try {
-	    return AudioFileOpenFactory(fp, ifilename);
+	    return AudioFileOpenFactory(fp);
 	} catch (...) {
 	    lseek(fileno(fp.get()), 0, SEEK_SET);
 	}
@@ -320,7 +320,7 @@ std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, fp));
 
 #ifdef REFALAC
-	return std::shared_ptr<ISource>(new ALACSource(ifilename));
+	return std::shared_ptr<ISource>(new ALACSource(fp));
 #endif
     } catch (const std::runtime_error&) {
 #ifdef _DEBUG

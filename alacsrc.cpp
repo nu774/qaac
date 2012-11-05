@@ -6,11 +6,14 @@
 #include "cautil.h"
 #include "chanmap.h"
 
-ALACSource::ALACSource(const std::wstring &path)
-    : m_position(0)
+ALACSource::ALACSource(const std::shared_ptr<FILE> &fp)
+    : m_position(0), m_fp(fp)
 {
     try {
-	m_file.Read(strutil::w2us(path).c_str(), 0);
+	int fd = fileno(m_fp.get());
+	static MP4FDReadProvider provider;
+	std::string name = strutil::format("%d", fd);
+	m_file.Read(name.c_str(), &provider);
 	m_track_id = m_file.FindTrackId(0, MP4_AUDIO_TRACK_TYPE);
 	const char *type = m_file.GetTrackMediaDataName(m_track_id);
 	if (std::strcmp(type, "alac"))
