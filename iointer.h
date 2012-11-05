@@ -71,6 +71,7 @@ public:
     DelegatingSource() {}
     DelegatingSource(std::shared_ptr<ISource> src): m_src(src) {}
     void setSource(std::shared_ptr<ISource> src) { m_src = src; }
+    const ISource *source() const { return m_src.get(); }
     ISource *source() { return m_src.get(); }
     uint64_t length() const { return m_src->length(); }
     uint64_t getSamplesRead() const { return m_src->getSamplesRead(); }

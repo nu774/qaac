@@ -90,6 +90,7 @@ SoxResampler::SoxResampler(const SoxModule &module,
 			   uint32_t rate, bool mt)
     : m_module(module)
 {
+    m_factor = rate / asbd.mSampleRate;
     m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame, 32,
 				kAudioFormatFlagIsFloat);
     lsx_rate_t *converter = m_module.rate_create(

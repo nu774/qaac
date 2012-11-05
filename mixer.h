@@ -26,7 +26,6 @@ public:
     MatrixMixer(const std::shared_ptr<ISource> &source, const SoxModule &module,
 		const std::vector<std::vector<complex_t> > &spec, bool mt,
 		bool normalize=true);
-    uint64_t length() const { return -1; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;

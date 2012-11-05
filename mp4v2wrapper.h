@@ -110,7 +110,7 @@ struct MP4FDReadProvider: public MP4FileProvider
     {
 	/*
 	 * file descriptor (in the form of text string) is get passed as
-	 * "name". We decoder it to an integer, and use it as a handle.
+	 * "name". We decode it to an integer, and use it as a handle.
 	 * Since returning zero is treated as error on mp4v2 side,
 	 * we cannot use fd 0 (stdin) as handle. So we add 1 to it here,
 	 * and substruct by 1 on the succeeding jobs.

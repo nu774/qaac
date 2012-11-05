@@ -110,17 +110,6 @@ void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 {
     uint8_t *bp = static_cast<uint8_t *>(const_cast<void*>(data));
     std::vector<uint8_t> buf;
-    if (m_asbd.mFormatFlags & kAudioFormatFlagIsBigEndian) {
-	buf.resize(length);
-	bp = &buf[0];
-	std::memcpy(bp, data, length);
-	switch (m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame) {
-	case 2: util::bswap16buffer(bp, length); break;
-	case 3: util::bswap24buffer(bp, length); break;
-	case 4: util::bswap32buffer(bp, length); break;
-	case 8: util::bswap64buffer(bp, length); break;
-	}
-    }
     if (m_asbd.mBitsPerChannel <= 8 &&
 	m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
 	buf.resize(length);

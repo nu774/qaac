@@ -81,9 +81,8 @@ namespace util {
 	return fstat(fd, &stb) == 0 && (stb.st_mode & S_IFMT) == S_IFREG;
     }
 
-    /*
     template <typename ForwardIterator>
-    bool is_strict_ordered(ForwardIterator begin, ForwardIterator end)
+    bool is_increasing(ForwardIterator begin, ForwardIterator end)
     {
 	if (begin == end)
 	    return true;
@@ -92,7 +91,6 @@ namespace util {
 		return false;
 	return true;
     }
-    */
 
     template <typename T>
     class AutoDynaCast {

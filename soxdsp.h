@@ -35,6 +35,7 @@ struct ISoxDSPEngine {
     virtual ssize_t process(const float * const *ibuf, float **obuf,
 			    size_t *ilen, size_t *olen,
 			    size_t istride, size_t ostride) = 0;
+    virtual int64_t length(const ISource *src) const = 0;
 };
 
 class SoxDSPProcessor: public DelegatingSource {
@@ -48,7 +49,7 @@ class SoxDSPProcessor: public DelegatingSource {
 public:
     SoxDSPProcessor(const std::shared_ptr<ISoxDSPEngine> &engine,
 		    const std::shared_ptr<ISource> &src);
-    uint64_t length() const { return -1; }
+    uint64_t length() const { return m_engine->length(source()); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
@@ -61,6 +62,7 @@ class SoxResampler: public ISoxDSPEngine {
     SoxModule m_module;
     std::shared_ptr<lsx_rate_t> m_processor;
     AudioStreamBasicDescription m_asbd;
+    double m_factor;
 public:
     SoxResampler(const SoxModule &module,
 		 const AudioStreamBasicDescription &asbd,
@@ -74,6 +76,10 @@ public:
     {
 	return m_module.rate_process(m_processor.get(), ibuf, obuf,
 				     ilen, olen, istride, ostride);
+    }
+    int64_t length(const ISource *src) const
+    {
+	return src->length() * m_factor + 0.5;
     }
 };
 
@@ -94,6 +100,10 @@ public:
     {
 	return m_module.fir_process(m_processor.get(), ibuf, obuf,
 				    ilen, olen, istride, ostride);
+    }
+    int64_t length(const ISource *src) const
+    {
+	return src->length();
     }
 };
 #endif

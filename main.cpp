@@ -27,6 +27,7 @@
 #include "intsrc.h"
 #include "scaler.h"
 #include "pipedreader.h"
+#include "EndianConverter.h"
 #include "wavsink.h"
 #include "chanmap.h"
 #ifdef REFALAC
@@ -212,7 +213,8 @@ public:
 
 static
 void do_encode(IEncoder *encoder, const std::wstring &ofilename,
-	const Options &opts)
+	       const std::vector<std::shared_ptr<ISource> > &chain,
+	       const Options &opts)
 {
     typedef std::shared_ptr<std::FILE> file_t;
     file_t statPtr;
@@ -222,14 +224,8 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 	statPtr = win32::fopen(statname, L"w");
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
-    ISource *src = encoder->src();
-    if (src->length() == -1) {
-	DelegatingSource *dsrc = dynamic_cast<DelegatingSource*>(src);
-	while (dsrc && !dynamic_cast<PipedReader*>(src)) {
-	    src = dsrc->source();
-	    dsrc = dynamic_cast<DelegatingSource*>(src);
-	}
-    }
+
+    std::shared_ptr<ISource> src = chain.back();
     Progress progress(opts.verbose, src->length(),
 		      src->getSampleFormat().mSampleRate);
     try {
@@ -410,24 +406,23 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
     }
 }
 
-static
-std::shared_ptr<ISource> do_normalize(
-    const std::shared_ptr<ISource> &src, const Options &opts)
+static void do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
+			 const Options &opts)
 {
+    std::shared_ptr<ISource> src = chain.back();
     Normalizer *normalizer = new Normalizer(src);
-    std::shared_ptr<ISource> new_src(normalizer);
+    chain.push_back(std::shared_ptr<ISource>(normalizer));
 
     LOG(L"Scanning maximum peak...\n");
     uint64_t n = 0, rc;
     Progress progress(opts.verbose, src->length(),
-	    src->getSampleFormat().mSampleRate);
+		      src->getSampleFormat().mSampleRate);
     while ((rc = normalizer->process(4096)) > 0) {
 	n += rc;
-	progress.update(normalizer->samplesRead());
+	progress.update(src->getSamplesRead());
     }
-    progress.finish(normalizer->samplesRead());
+    progress.finish(src->getSamplesRead());
     LOG(L"Peak value: %g\n", normalizer->getPeak());
-    return new_src;
 }
 
 static
@@ -500,14 +495,13 @@ void matrix_from_preset(const Options &opts,
     result->swap(matrix);
 }
 
-static std::shared_ptr<ISource>
-    mapped_source(const std::shared_ptr<ISource> &src, const Options &opts,
-		  uint32_t *wav_chanmask, uint32_t *aac_layout, bool threading)
+static void
+mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
+	      const Options &opts, uint32_t *wav_chanmask,
+	      uint32_t *aac_layout, bool threading)
 {
-    uint32_t nchannels = src->getSampleFormat().mChannelsPerFrame;
-    std::shared_ptr<ISource> srcx(src);
-
-    const std::vector<uint32_t> *channels = src->getChannels();
+    uint32_t nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
+    const std::vector<uint32_t> *channels = chain.back()->getChannels();
     if (channels) {
 	if (opts.verbose > 1) {
 	    LOG(L"Input layout: %hs\n",
@@ -518,9 +512,13 @@ static std::shared_ptr<ISource>
 	chanmap::convertFromAppleLayout(*channels, &work);
 	std::vector<uint32_t> mapping;
 	chanmap::getMappingToUSBOrder(work, &mapping);
-	srcx.reset(new ChannelMapper(srcx, mapping,
-				     chanmap::getChannelMask(work)));
-	channels = srcx->getChannels();
+	if (!util::is_increasing(mapping.begin(), mapping.end())) {
+	    std::shared_ptr<ISource>
+		mapper(new ChannelMapper(chain.back(), mapping,
+					 chanmap::getChannelMask(work)));
+	    chain.push_back(mapper);
+	    channels = chain.back()->getChannels();
+	}
     }
     // remix
     if (opts.remix_preset || opts.remix_file) {
@@ -534,11 +532,13 @@ static std::shared_ptr<ISource>
 		    static_cast<uint32_t>(matrix[0].size()),
 		    static_cast<uint32_t>(matrix.size()));
 	    }
-	    srcx.reset(new MatrixMixer(srcx, opts.libsoxrate,
-				       matrix, threading,
-				       !opts.no_matrix_normalize));
+	    std::shared_ptr<ISource>
+		mixer(new MatrixMixer(chain.back(), opts.libsoxrate,
+				      matrix, threading,
+				      !opts.no_matrix_normalize));
+	    chain.push_back(mixer);
 	    channels = 0;
-	    nchannels = srcx->getSampleFormat().mChannelsPerFrame;
+	    nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
 	}
     }
     // map with --chanmap option
@@ -546,7 +546,9 @@ static std::shared_ptr<ISource>
 	if (opts.chanmap.size() != nchannels)
 	    throw std::runtime_error(
 		    "nchannels of input and --chanmap spec unmatch");
-	srcx.reset(new ChannelMapper(srcx, opts.chanmap));
+	std::shared_ptr<ISource>
+	    mapper(new ChannelMapper(chain.back(), opts.chanmap));
+	chain.push_back(mapper);
     }
     // retrieve original channel layout, taking --chanmask into account
     if (opts.chanmask > 0 && util::bitcount(opts.chanmask) != nchannels)
@@ -573,8 +575,11 @@ static std::shared_ptr<ISource>
 	*aac_layout = chanmap::AACLayoutFromBitmap(chanmask);
 	std::vector<uint32_t> aacmap;
 	chanmap::getMappingToAAC(chanmask, &aacmap);
-	if (aacmap.size())
-	    srcx = std::shared_ptr<ISource>(new ChannelMapper(srcx, aacmap));
+	if (aacmap.size()) {
+	    std::shared_ptr<ISource>
+		mapper(new ChannelMapper(chain.back(), aacmap));
+	    chain.push_back(mapper);
+	}
 	if (opts.verbose > 1) {
 	    std::vector<uint32_t> vec;
 	    AudioChannelLayout acl = { 0 };
@@ -583,13 +588,13 @@ static std::shared_ptr<ISource>
 	    LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
 	}
     }
-    return srcx;
 }
 
 static
-std::shared_ptr<ISource> delayed_source(const std::shared_ptr<ISource> &src,
-				        const Options & opts)
+void delayed_source(std::vector<std::shared_ptr<ISource> > &chain,
+		    const Options & opts)
 {
+    std::shared_ptr<ISource> src = chain.back();
     double rate = src->getSampleFormat().mSampleRate;
     if (opts.delay > 0) {
 	CompositeSource *cp = new CompositeSource();
@@ -602,7 +607,8 @@ std::shared_ptr<ISource> delayed_source(const std::shared_ptr<ISource> &src,
 	if (opts.verbose > 1 || opts.logfilename)
 	    LOG(L"Delay of %dms: pad %d samples\n", opts.delay,
 		nsamples);
-	return cpPtr;
+	chain.pop_back();
+	chain.push_back(cpPtr);
     } else if (opts.delay < 0) {
 	IPartialSource *p = dynamic_cast<IPartialSource*>(src.get());
 	if (p) {
@@ -617,7 +623,6 @@ std::shared_ptr<ISource> delayed_source(const std::shared_ptr<ISource> &src,
 	else
 	    LOG(L"WARNING: can't set negative delay for this input\n");
     }
-    return src;
 }
 
 #ifndef REFALAC
@@ -631,24 +636,29 @@ inline uint32_t bound_quality(uint32_t n)
 
 #endif
 
-static std::shared_ptr<ISource> 
-preprocess_input(const std::shared_ptr<ISource> &src,
-		 const Options &opts, uint32_t *wChanmask,
-		 uint32_t *aacLayout,
-		 AudioStreamBasicDescription *inputDesc,
-		 AudioStreamBasicDescription *outputDesc)
+void preprocess_input(std::vector<std::shared_ptr<ISource> > &chain,
+		      const Options &opts, uint32_t *wChanmask,
+		      uint32_t *aacLayout,
+		      AudioStreamBasicDescription *inputDesc,
+		      AudioStreamBasicDescription *outputDesc)
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
     bool threading = opts.threading && si.dwNumberOfProcessors > 1;
+
 #ifndef REFALAC
     std::shared_ptr<AudioCodecX> codec;
     if (!opts.isLPCM())
 	codec.reset(new AudioCodecX(opts.output_format));
 #endif
-    std::shared_ptr<ISource> srcx = delayed_source(src, opts);
+    delayed_source(chain, opts);
 
-    srcx = mapped_source(srcx, opts, wChanmask, aacLayout, threading);
+    if (chain.back()->getSampleFormat().mFormatFlags
+	& kAudioFormatFlagIsBigEndian) {
+	std::shared_ptr<ISource> converter(new EndianConverter(chain.back()));
+	chain.push_back(converter);
+    }
+    mapped_source(chain, opts, wChanmask, aacLayout, threading);
     if (!opts.isLPCM()) {
 #ifndef REFALAC
 	if (!codec->isAvailableOutputChannelLayout(*aacLayout))
@@ -677,13 +687,15 @@ preprocess_input(const std::shared_ptr<ISource> &src,
 		LOG(L"Applying LPF: %dHz\n", opts.lowpass);
 	    std::shared_ptr<ISoxDSPEngine>
 		engine(new SoxLowpassFilter(opts.libsoxrate,
-					    srcx->getSampleFormat(),
+					    chain.back()->getSampleFormat(),
 					    opts.lowpass,
 					    threading));
-	    srcx.reset(new SoxDSPProcessor(engine, srcx));
+	    std::shared_ptr<ISource>
+		processor(new SoxDSPProcessor(engine, chain.back()));
+	    chain.push_back(processor);
 	}
     }
-    AudioStreamBasicDescription iasbd = srcx->getSampleFormat();
+    AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
     AudioStreamBasicDescription oasbd = { 0 };
     oasbd.mFormatID = opts.output_format;
     oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
@@ -717,10 +729,12 @@ preprocess_input(const std::shared_ptr<ISource> &src,
 		LOG(L"Using libsoxrate SRC\n");
 	    std::shared_ptr<ISoxDSPEngine>
 		engine(new SoxResampler(opts.libsoxrate,
-					srcx->getSampleFormat(),
+					chain.back()->getSampleFormat(),
 					oasbd.mSampleRate,
 					threading));
-	    srcx.reset(new SoxDSPProcessor(engine, srcx));
+	    std::shared_ptr<ISource>
+		processor(new SoxDSPProcessor(engine, chain.back()));
+	    chain.push_back(processor);
 	} else {
 #ifdef REFALAC
 	    oasbd.mSampleRate = iasbd.mSampleRate;
@@ -735,9 +749,9 @@ preprocess_input(const std::shared_ptr<ISource> &src,
 		if (quality == -1) quality = kAudioConverterQuality_Medium;
 		if (complexity == -1) complexity = 'norm';
 		CoreAudioResampler *resampler =
-		    new CoreAudioResampler(srcx, oasbd.mSampleRate,
+		    new CoreAudioResampler(chain.back(), oasbd.mSampleRate,
 					   bound_quality(quality), complexity);
-		srcx.reset(resampler);
+		chain.push_back(std::shared_ptr<ISource>(resampler));
 		if (opts.verbose > 1 || opts.logfilename)
 		    LOG(L"Using CoreAudio SRC: complexity %hs quality %u\n",
 			util::fourcc(resampler->getComplexity()).svalue,
@@ -749,38 +763,44 @@ preprocess_input(const std::shared_ptr<ISource> &src,
 	}
     }
     if (opts.normalize)
-	srcx = do_normalize(srcx, opts);
+	do_normalize(chain, opts);
     if (opts.gain) {
 	double scale = dB_to_scale(opts.gain);
 	if (opts.verbose > 1 || opts.logfilename)
 	    LOG(L"Gain adjustment: %gdB, scale factor %g\n",
 		opts.gain, scale);
-	srcx.reset(new Scaler(srcx, scale));
+	std::shared_ptr<ISource> scaler(new Scaler(chain.back(), scale));
+	chain.push_back(scaler);
     }
     if (opts.bits_per_sample) {
 	if (opts.isAAC())
 	    LOG(L"WARNING: --bits-per-sample has no effect for AAC\n");
-	else if (srcx->getSampleFormat().mBitsPerChannel
+	else if (chain.back()->getSampleFormat().mBitsPerChannel
 		 != opts.bits_per_sample) {
-	    srcx.reset(new IntegerSource(srcx, opts.bits_per_sample));
+	    std::shared_ptr<ISource>
+		isrc(new IntegerSource(chain.back(), opts.bits_per_sample));
+	    chain.push_back(isrc);
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Convert to %d bit\n", opts.bits_per_sample);
 	}
     } else if (opts.output_format == 'alac') {
-	if (srcx->getSampleFormat().mFormatFlags & kAudioFormatFlagIsFloat) {
-	    srcx.reset(new IntegerSource(srcx, 16));
+	if (chain.back()->getSampleFormat().mFormatFlags
+	    & kAudioFormatFlagIsFloat) {
+	    std::shared_ptr<ISource>
+		isrc(new IntegerSource(chain.back(), 16));
+	    chain.push_back(isrc);
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Convert to 16 bit\n");
 	}
     }
     if (threading && !opts.isLPCM()) {
-	PipedReader *reader = new PipedReader(srcx);
+	PipedReader *reader = new PipedReader(chain.back());
 	reader->start();
-	srcx.reset(reader);
+	chain.push_back(std::shared_ptr<ISource>(reader));
 	if (opts.verbose > 1 || opts.logfilename)
 	    LOG(L"Enable threading\n");
     }
-    iasbd = srcx->getSampleFormat();
+    iasbd = chain.back()->getSampleFormat();
     if (opts.isALAC()) {
 	switch (iasbd.mBitsPerChannel) {
 	case 16:
@@ -797,38 +817,31 @@ preprocess_input(const std::shared_ptr<ISource> &src,
     }
     if (inputDesc) *inputDesc = iasbd;
     if (outputDesc) *outputDesc = oasbd;
-    return srcx;
 }
 
 static
-void decode_file(const std::shared_ptr<ISource> &src,
+void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
 		 const std::wstring &ofilename, const Options &opts,
 		 uint32_t chanmask)
 {
     std::shared_ptr<FILE> fileptr = win32::fopen(ofilename, L"wb");
 
+    const std::shared_ptr<ISource> src = chain.back();
     const AudioStreamBasicDescription &sf = src->getSampleFormat();
     WaveSink sink(fileptr.get(), src->length(), sf, chanmask);
 
-    ISource *srcp = src.get();
-    if (srcp->length() == -1) {
-	DelegatingSource *dsrc = dynamic_cast<DelegatingSource*>(srcp);
-	while (dsrc && !dynamic_cast<PipedReader*>(srcp)) {
-	    srcp = dsrc->source();
-	    dsrc = dynamic_cast<DelegatingSource*>(srcp);
-	}
-    }
-    Progress progress(opts.verbose, srcp->length(),
-		      srcp->getSampleFormat().mSampleRate);
+    Progress progress(opts.verbose, src->length(),
+		      src->getSampleFormat().mSampleRate);
+
     uint32_t bpf = sf.mBytesPerFrame;
     std::vector<uint8_t> buffer(4096 * bpf);
     try {
 	size_t nread;
 	while ((nread = src->readSamples(&buffer[0], 4096)) > 0) {
-	    progress.update(srcp->getSamplesRead());
+	    progress.update(src->getSamplesRead());
 	    sink.writeSamples(&buffer[0], nread * bpf, nread);
 	}
-	progress.finish(srcp->getSamplesRead());
+	progress.finish(src->getSamplesRead());
     } catch (const std::exception &e) {
 	LOG(L"\nERROR: %s\n", errormsg(e).c_str());
     }
@@ -1050,11 +1063,12 @@ void encode_file(const std::shared_ptr<ISource> &src,
     uint32_t aacLayout;
     AudioStreamBasicDescription iasbd, oasbd;
 
-    std::shared_ptr<ISource> srcx =
-	preprocess_input(src, opts, &wavChanmask, &aacLayout, &iasbd, &oasbd);
+    std::vector<std::shared_ptr<ISource> > chain;
+    chain.push_back(src);
+    preprocess_input(chain, opts, &wavChanmask, &aacLayout, &iasbd, &oasbd);
 
     if (opts.isLPCM()) {
-	decode_file(srcx, ofilename, opts, wavChanmask);
+	decode_file(chain, ofilename, opts, wavChanmask);
 	return;
     }
     AudioConverterX converter(iasbd, oasbd);
@@ -1069,15 +1083,15 @@ void encode_file(const std::shared_ptr<ISource> &src,
     std::vector<uint8_t> cookie;
     converter.getCompressionMagicCookie(&cookie);
     CoreAudioEncoder encoder(converter);
-    encoder.setSource(srcx);
+    encoder.setSource(chain.back());
     std::shared_ptr<ISink> sink = open_sink(ofilename, opts, cookie);
     encoder.setSink(sink);
-    do_encode(&encoder, ofilename, opts);
+    do_encode(&encoder, ofilename, chain, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
     MP4SinkBase *asink = dynamic_cast<MP4SinkBase*>(sink.get());
     if (asink) {
 	write_tags(asink->getFile(), opts, src.get(), &encoder,
-	    encoder_config);
+		   encoder_config);
 	if (!opts.no_optimize)
 	    do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
 	asink->close();
@@ -1092,10 +1106,12 @@ void encode_file(const std::shared_ptr<ISource> &src,
     uint32_t wavChanmask;
     uint32_t aacLayout;
     AudioStreamBasicDescription iasbd;
-    std::shared_ptr<ISource> srcx =
-	preprocess_input(src, opts, &wavChanmask, &aacLayout, &iasbd, 0);
+    std::vector<std::shared_ptr<ISource> > chain;
+    chain.push_back(src);
+    preprocess_input(chain, opts, &wavChanmask, &aacLayout, &iasbd, 0);
+
     if (opts.isLPCM()) {
-	decode_file(srcx, ofilename, opts, wavChanmask);
+	decode_file(chain, ofilename, opts, wavChanmask);
 	return;
     }
     ALACEncoderX encoder(iasbd);
@@ -1104,10 +1120,10 @@ void encode_file(const std::shared_ptr<ISource> &src,
     encoder.getMagicCookie(&cookie);
 
     std::shared_ptr<ISink> sink(new ALACSink(ofilename, cookie,
-					   !opts.no_optimize));
-    encoder.setSource(srcx);
+					     !opts.no_optimize));
+    encoder.setSource(chain.back());
     encoder.setSink(sink);
-    do_encode(&encoder, ofilename, opts);
+    do_encode(&encoder, ofilename, chain, opts);
     ALACSink *asink = dynamic_cast<ALACSink*>(sink.get());
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
     write_tags(asink->getFile(), opts, src.get(), &encoder,
