@@ -7,14 +7,23 @@ class ALACSource: public ITagParser, public PartialSource<ALACSource>
     struct DecodeBuffer {
 	uint32_t nsamples;
 	uint32_t done;
+	uint32_t bytes_per_frame;
 	std::vector<uint8_t> v;
 
-	DecodeBuffer(): nsamples(0), done(0) {}
+	DecodeBuffer(): nsamples(0), done(0), bytes_per_frame(0) {}
+	void resize(uint32_t nsamples) { v.resize(nsamples * bytes_per_frame); }
+	uint8_t *read_ptr() { return &v[done * bytes_per_frame]; }
+	uint8_t *write_ptr() { return &v[0]; }
 	void reset() { nsamples = done = 0; }
-	uint32_t rest() { return nsamples - done; }
+	uint32_t count() { return nsamples - done; }
 	void advance(uint32_t n) {
 	    done += n;
 	    if (done >= nsamples) done = nsamples = 0;
+	}
+	void commit(uint32_t count, uint32_t read_pos)
+	{
+	    nsamples = count;
+	    done = read_pos;
 	}
     };
     uint32_t m_track_id;
@@ -38,7 +47,11 @@ public:
 	return m_chanmap.size() ? &m_chanmap: 0;
     }
     size_t readSamples(void *buffer, size_t nsamples);
-    void skipSamples(int64_t count) { m_position += count; }
+    void skipSamples(int64_t count)
+    {
+	m_position = count;
+	m_buffer.reset();
+    }
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const { return 0; }
 };
