@@ -33,4 +33,17 @@ namespace util {
 	for (uint64_t *endp = bp + size / 8; bp != endp; ++bp)
 	    *bp = _byteswap_uint64(*bp);
     }
+
+    void pack(uint8_t *data, size_t *size, unsigned width, unsigned new_width)
+    {
+	unsigned diff = width - new_width;
+	uint8_t *dst = data, *src = data + diff;
+	size_t limit = *size / width;
+	for (size_t i = 0; i < limit; ++i) {
+	    std::memmove(dst, src, new_width);
+	    dst += new_width;
+	    src += width;
+	}
+	*size -= limit * diff;
+    }
 }

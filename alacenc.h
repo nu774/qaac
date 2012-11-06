@@ -16,7 +16,9 @@ class ALACEncoderX: public IEncoder, public IEncoderStat {
     std::shared_ptr<ALACEncoder> m_encoder;
     std::vector<uint8_t> m_input_buffer;
     std::vector<uint8_t> m_output_buffer;
-    ASBD m_input_desc, m_output_desc;
+    AudioStreamBasicDescription m_iasbd;
+    AudioFormatDescription m_iafd;
+    ASBD m_odesc;
     EncoderStat m_stat;
 public:
     ALACEncoderX(const AudioStreamBasicDescription &desc);
@@ -28,11 +30,11 @@ public:
     ISource *src() { return m_src.get(); }
     const AudioStreamBasicDescription &getInputDescription() const
     {
-	return m_input_desc.asbd;
+	return m_iasbd;
     }
     const AudioStreamBasicDescription &getOutputDescription() const
     {
-	return m_output_desc.asbd;
+	return m_odesc.asbd;
     }
     uint64_t samplesRead() const { return m_stat.samplesRead(); }
     uint64_t samplesWritten() const { return m_stat.samplesWritten(); }

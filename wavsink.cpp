@@ -10,78 +10,24 @@
 #include "wavsource.h"
 #include "wavsink.h"
 
-namespace wave {
-    template <typename T>
-    void put(std::streambuf *os, T obj)
-    {
-	os->sputn(reinterpret_cast<char*>(&obj), sizeof obj);
-    }
-
-    void buildHeader(const AudioStreamBasicDescription &asbd,
-		     uint32_t chanmask, std::streambuf *result)
-    {
-	uint16_t fmt;
-	// wFormatTag
-	{
-	    uint32_t bits_per_frame = 
-		asbd.mChannelsPerFrame * asbd.mBitsPerChannel;
-	    fmt = (asbd.mChannelsPerFrame > 2
-		   || asbd.mBitsPerChannel > 16
-		   || (asbd.mBitsPerChannel & 7)
-		   || asbd.mBytesPerFrame * 8 != bits_per_frame)
-		    ? 0xfffe : 1;
-	    put(result, fmt);
-	}
-	// nChannels
-	put(result, static_cast<uint16_t>(asbd.mChannelsPerFrame));
-	// nSamplesPerSec
-	put(result, static_cast<uint32_t>(asbd.mSampleRate));
-
-	uint16_t bpf = asbd.mBytesPerFrame;
-	// nAvgBytesPerSec
-	put(result, static_cast<uint32_t>(asbd.mSampleRate * bpf));
-	// nBlockAlign
-	put(result, bpf);
-	// wBitsPerSample
-	put(result, static_cast<uint16_t>((bpf/asbd.mChannelsPerFrame)<<3));
-
-	// cbSize
-	if (fmt == 0xfffe) {
-	    // WAVEFORMATEXTENSIBLE
-	    put(result, static_cast<uint16_t>(22));
-	    // Samples
-	    put(result, static_cast<uint16_t>(asbd.mBitsPerChannel));
-	    // dwChannelMask
-	    put(result, chanmask);
-	    // SubFormat
-	    if (asbd.mFormatFlags & kAudioFormatFlagIsFloat)
-		put(result, ksFormatSubTypeFloat);
-	    else
-		put(result, ksFormatSubTypePCM);
-	}
-    }
-}
-
 WaveSink::WaveSink(FILE *fp,
 		   uint64_t duration,
 		   const AudioStreamBasicDescription &asbd,
 		   uint32_t chanmask)
 	: m_file(fp), m_bytes_written(0), m_closed(false),
-	  m_seekable(false), m_asbd(asbd)
+	  m_seekable(false), m_chanmask(chanmask), m_asbd(asbd)
 {
     struct stat stb = { 0 };
     if (fstat(fileno(fp), &stb))
 	util::throw_crt_error("fstat()");
     m_seekable = ((stb.st_mode & S_IFMT) == S_IFREG);
-    std::ostringstream os;
-    wave::buildHeader(asbd, chanmask, os.rdbuf());
-    std::string header = os.str();
+    std::string header = buildHeader();
 
     uint32_t hdrsize = header.size();
     uint32_t riffsize = ~0, datasize = ~0;
     m_rf64 = m_seekable;
     if (duration != -1) {
-	uint64_t datasize64 = duration * asbd.mBytesPerFrame;
+	uint64_t datasize64 = duration * m_bytes_per_frame;
 	uint64_t riffsize64 = hdrsize + datasize64 + 20;
 	if (riffsize64 >> 32 == 0) {
 	    datasize = static_cast<uint32_t>(datasize64);
@@ -106,10 +52,59 @@ WaveSink::WaveSink(FILE *fp,
     if (!m_seekable) std::fflush(fp);
 }
 
+std::string WaveSink::buildHeader()
+{
+    std::ostringstream oss;
+    std::stringbuf *os = oss.rdbuf();
+
+    int bits_per_frame = m_asbd.mChannelsPerFrame * m_asbd.mBitsPerChannel;
+    m_bytes_per_frame = ((bits_per_frame + 7) & ~7) / 8 ;
+    
+    // wFormatTag
+    uint16_t fmt = (m_asbd.mChannelsPerFrame > 2
+		    || m_asbd.mBitsPerChannel > 16
+		    || (m_asbd.mBitsPerChannel & 7))
+		 ? 0xfffe : 1;
+    put(os, fmt);
+    // nChannels
+    put(os, static_cast<uint16_t>(m_asbd.mChannelsPerFrame));
+    // nSamplesPerSec
+    put(os, static_cast<uint32_t>(m_asbd.mSampleRate));
+
+    // nAvgBytesPerSec
+    put(os, static_cast<uint32_t>(m_asbd.mSampleRate * m_bytes_per_frame));
+    // nBlockAlign
+    put(os, static_cast<uint16_t>(m_bytes_per_frame));
+    // wBitsPerSample
+    put(os, static_cast<uint16_t>((m_bytes_per_frame /
+				   m_asbd.mChannelsPerFrame) << 3));
+
+    // cbSize
+    if (fmt == 0xfffe) {
+	// WAVEFORMATEXTENSIBLE
+	put(os, static_cast<uint16_t>(22));
+	// Samples
+	put(os, static_cast<uint16_t>(m_asbd.mBitsPerChannel));
+	// dwChannelMask
+	put(os, m_chanmask);
+	// SubFormat
+	if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat)
+	    put(os, wave::ksFormatSubTypeFloat);
+	else
+	    put(os, wave::ksFormatSubTypePCM);
+    }
+    return oss.str();
+}
+
 void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 {
     uint8_t *bp = static_cast<uint8_t *>(const_cast<void*>(data));
     std::vector<uint8_t> buf;
+    if (m_bytes_per_frame < m_asbd.mBytesPerFrame) {
+	unsigned obpc = m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
+	unsigned nbpc = m_bytes_per_frame / m_asbd.mChannelsPerFrame;
+	util::pack(bp, &length, obpc, nbpc);
+    }
     if (m_asbd.mBitsPerChannel <= 8 &&
 	m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
 	buf.resize(length);
@@ -119,8 +114,8 @@ void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 	    bp[i] ^= 0x80;
     }
     write(bp, length);
-    if (!m_seekable) std::fflush(m_file);
     m_bytes_written += length;
+    if (!m_seekable) std::fflush(m_file);
 }
 
 void WaveSink::finishWrite()
@@ -148,7 +143,7 @@ void WaveSink::finishWrite()
 	std::fseek(m_file, 4, SEEK_CUR);
 	write(&riffsize64, 8);
 	write(&datasize64, 8);
-	uint64_t nsamples = m_bytes_written / m_asbd.mBytesPerFrame;
+	uint64_t nsamples = m_bytes_written / m_bytes_per_frame;
 	write(&nsamples, 8);
     }
 }

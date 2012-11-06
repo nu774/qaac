@@ -217,6 +217,9 @@ namespace util {
 	    _lseeki64(m_fd, m_saved_position, SEEK_SET);
 	}
     };
+
+    // drop wasted bytes from LSB side
+    void pack(uint8_t *data, size_t *size, unsigned width, unsigned new_width);
 }
 
 #define CHECKCRT(expr) \
@@ -225,4 +228,5 @@ namespace util {
 	    util::throw_crt_error(#expr); \
 	} \
     } while (0)
+
 #endif

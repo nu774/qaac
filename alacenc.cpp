@@ -2,11 +2,14 @@
 #include "cautil.h"
 
 ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
-    : m_encoder(new ALACEncoder())
+    : m_encoder(new ALACEncoder()), m_iasbd(desc)
 {
-    m_input_desc.asbd = desc;
-    memset(&m_output_desc, 0, sizeof m_output_desc);
-    AudioStreamBasicDescription & oasbd = m_output_desc.asbd;
+    std::memcpy(&m_iafd, &desc, sizeof desc);
+    m_iafd.mBytesPerFrame = desc.mBitsPerChannel * desc.mChannelsPerFrame / 8;
+    m_iafd.mBytesPerPacket = m_iafd.mBytesPerFrame * m_iafd.mFramesPerPacket;
+
+    memset(&m_odesc, 0, sizeof m_odesc);
+    AudioStreamBasicDescription & oasbd = m_odesc.asbd;
     oasbd.mFormatID = kALACFormatAppleLossless;
     if (desc.mFormatFlags & kAudioFormatFlagIsFloat)
 	throw std::runtime_error("ALAC: Float PCM is not supported");
@@ -27,7 +30,7 @@ ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
     oasbd.mChannelsPerFrame = desc.mChannelsPerFrame;
     oasbd.mSampleRate = desc.mSampleRate;
     oasbd.mFramesPerPacket = kALACDefaultFramesPerPacket;
-    CHECKCA(m_encoder->InitializeEncoder(m_output_desc.afd));
+    CHECKCA(m_encoder->InitializeEncoder(m_odesc.afd));
 
     m_stat.setBasicDescription(oasbd);
     uint32_t pullbytes = desc.mBytesPerFrame * kALACDefaultFramesPerPacket;
@@ -37,17 +40,25 @@ ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
 
 bool ALACEncoderX::encodeChunk(UInt32 npackets)
 {
+    const AudioStreamBasicDescription &asbd = getInputDescription();
     for (UInt32 i = 0; i < npackets; ++i) {
 	size_t nsamples =
 	    m_src->readSamples(&m_input_buffer[0], kALACDefaultFramesPerPacket);
 	if (nsamples == 0)
 	    return false;
 	m_stat.updateRead(nsamples);
-	int32_t nbytes = nsamples * m_input_desc.asbd.mBytesPerFrame;
-	m_encoder->Encode(m_input_desc.afd, m_output_desc.afd,
-		&m_input_buffer[0], &m_output_buffer[0], &nbytes);
-	m_sink->writeSamples(&m_output_buffer[0], nbytes, nsamples);
-	m_stat.updateWritten(nsamples, nbytes);
+
+	size_t nbytes = nsamples * asbd.mBytesPerFrame;
+	if (m_iafd.mBytesPerFrame < m_iasbd.mBytesPerFrame) {
+	    uint32_t obpc = m_iasbd.mBytesPerFrame / m_iasbd.mChannelsPerFrame;
+	    uint32_t nbpc = m_iafd.mBytesPerFrame / m_iafd.mChannelsPerFrame;
+	    util::pack(&m_input_buffer[0], &nbytes, obpc, nbpc);
+	}
+	int xbytes = nbytes;
+	m_encoder->Encode(m_iafd, m_odesc.afd, &m_input_buffer[0],
+			  &m_output_buffer[0], &xbytes);
+	m_sink->writeSamples(&m_output_buffer[0], xbytes, nsamples);
+	m_stat.updateWritten(nsamples, xbytes);
     }
     return true;
 }
@@ -55,7 +66,7 @@ bool ALACEncoderX::encodeChunk(UInt32 npackets)
 void ALACEncoderX::getMagicCookie(std::vector<uint8_t> *cookie)
 {
     uint32_t size =
-	m_encoder->GetMagicCookieSize(m_output_desc.asbd.mChannelsPerFrame);
+	m_encoder->GetMagicCookieSize(m_odesc.asbd.mChannelsPerFrame);
     std::vector<uint8_t> vec(size);
     m_encoder->GetMagicCookie(&vec[0], &size);
     cookie->swap(vec);
