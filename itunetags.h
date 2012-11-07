@@ -64,9 +64,8 @@ namespace Tag {
 
 namespace ID3 {
     uint32_t GetIDFromTagName(const char *name);
-    void fetchAiffID3Tags(const wchar_t *filename,
-			  std::map<uint32_t, std::wstring> *result);
     void fetchAiffID3Tags(int fd, std::map<uint32_t, std::wstring> *result);
+    void fetchMPEGID3Tags(int fd, std::map<uint32_t, std::wstring> *result);
 }
 
 namespace Vorbis {

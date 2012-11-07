@@ -156,8 +156,10 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
 
     AudioStreamBasicDescription asbd;
     m_af.getDataFormat(&asbd);
-    if (asbd.mFormatID != 'lpcm' && asbd.mFormatID != 'alac')
+    if (asbd.mFormatID != 'lpcm' && asbd.mFormatID != 'alac' &&
+	asbd.mFormatID != '.mp3')
 	throw std::runtime_error("Not supported input format");
+
     uint32_t fcc = m_af.getFileFormat();
 
     if (asbd.mFormatID == 'lpcm') {
@@ -169,7 +171,7 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
 					  isfloat ? packbits : 32,
 					  isfloat ? kAudioFormatFlagIsFloat
 					    : kAudioFormatFlagIsSignedInteger);
-    } else {
+    } else if (asbd.mFormatID == 'alac') {
 	unsigned bits_per_channel;
 	{
 	    unsigned tab[] = { 16, 20, 24, 32 };
@@ -180,9 +182,12 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
 					  asbd.mChannelsPerFrame,
 					  bits_per_channel, 32,
 					  kAudioFormatFlagIsSignedInteger);
+    } else {
+	m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
+					  asbd.mChannelsPerFrame, 32, 32,
+					  kAudioFormatFlagIsFloat);
     }
     m_eaf.setClientDataFormat(m_asbd);
-    setRange(0, m_eaf.getFileLengthFrames());
 
     std::shared_ptr<AudioChannelLayout> acl;
     try {
@@ -190,9 +195,17 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
 	chanmap::getChannels(acl.get(), &m_chanmap);
     } catch (...) {}
 
+    /* Let AudioFile scan the file and generate index in case of MP3. 
+     * Take up about 1s for 35min MP3 in my environment, but this is 
+     * mandatory to obtain sample accurate information.
+     */
+    m_af.getMaximumPacketSize();
+
+    int64_t length = m_af.getAudioDataPacketCount() * asbd.mFramesPerPacket;
+
     if (fcc == 'AIFF' || fcc == 'AIFC')
 	ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
-    else if (fcc == 'm4af') {
+    else if (fcc == 'm4af' || fcc == 'm4bf' || fcc == 'mp4f') {
 	try {
 	    int fd = fileno(m_fp.get());
 	    util::FilePositionSaver _(fd);
@@ -207,6 +220,24 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
 	    audiofile::fetchTags(m_af, m_fp.get(), &m_tags);
 	} catch (...) {}
     }
+    try {
+	AudioFilePacketTableInfo ptinfo = { 0 };
+	m_af.getPacketTableInfo(&ptinfo);
+	int64_t total =
+	    ptinfo.mNumberValidFrames + ptinfo.mPrimingFrames +
+	    ptinfo.mRemainderFrames;
+	if (total == length) {
+	    length = ptinfo.mNumberValidFrames;
+	} else if (total == length / 2) {
+	    length = ptinfo.mNumberValidFrames * 2;
+	} else if (!ptinfo.mNumberValidFrames && ptinfo.mPrimingFrames)
+	    length = std::max(0LL, length - ptinfo.mPrimingFrames
+			                  - ptinfo.mRemainderFrames);
+    } catch (CoreAudioException &e) {
+	if (!e.isNotSupportedError())
+	    throw;
+    }
+    setRange(0, length);
 }
 
 size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
@@ -233,6 +264,20 @@ size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
 
 void ExtAFSource::skipSamples(int64_t count)
 {
-    CHECKCA(ExtAudioFileSeek(m_eaf, count));
+    int preroll_packets = 0;
+    switch (m_asbd.mFormatID) {
+    case kAudioFormatMPEGLayer1: preroll_packets = 1; break;
+    case kAudioFormatMPEGLayer2: preroll_packets = 1; break;
+    case kAudioFormatMPEGLayer3: preroll_packets = 2; break;
+    }
+    int64_t off
+	= std::max(0LL, count - m_asbd.mFramesPerPacket * preroll_packets);
+    CHECKCA(ExtAudioFileSeek(m_eaf, off));
+    int32_t distance = count - off;
+    if (distance > 0) {
+	size_t nbytes = distance * m_asbd.mBytesPerFrame;
+	m_buffer.resize(nbytes);
+	readSamples(&m_buffer[0], distance);
+    }
 }
 

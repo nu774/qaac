@@ -2,7 +2,9 @@
 #include <aifffile.h>
 #include <apefile.h>
 #include <apetag.h>
-#include "id3v1genres.h"
+#include <mpegfile.h>
+#include <id3v2framefactory.h>
+#include <id3v1genres.h>
 #include "itunetags.h"
 #ifdef _WIN32
 #include "win32util.h"
@@ -272,11 +274,10 @@ namespace ID3 {
 		return map->id;
 	return 0;
     }
-    void fetchAiffID3Tags(TagLib::RIFF::AIFF::File &file,
-			  std::map<uint32_t, std::wstring> *result)
+    void fetchID3v2Tags(TagLib::ID3v2::Tag *tag,
+			std::map<uint32_t, std::wstring> *result)
     {
 	std::map<uint32_t, std::wstring> tags;
-	TagLib::ID3v2::Tag *tag = file.tag();
 	const TagLib::ID3v2::FrameList &frameList = tag->frameList();
 	TagLib::ID3v2::FrameList::ConstIterator it;
 	for (it = frameList.begin(); it != frameList.end(); ++it) {
@@ -298,26 +299,25 @@ namespace ID3 {
 	}
 	result->swap(tags);
     }
-    void fetchAiffID3Tags(const wchar_t *filename,
-			  std::map<uint32_t, std::wstring> *result)
-    {
-#ifdef _WIN32
-	std::wstring fullname = win32::prefixed_path(filename);
-#else
-	std::string fullname = strutil::w2m(filename);
-#endif
-	TagLib::RIFF::AIFF::File file(fullname.c_str(), false);
-	if (!file.isOpen())
-	    throw std::runtime_error("taglib: can't open file");
-	fetchAiffID3Tags(file, result);
-    }
     void fetchAiffID3Tags(int fd, std::map<uint32_t, std::wstring> *result)
     {
 	util::FilePositionSaver _(fd);
 	lseek(fd, 0, SEEK_SET);
 	TagLibX::FDIOStreamReader stream(fd);
 	TagLib::RIFF::AIFF::File file(&stream, false);
-	fetchAiffID3Tags(file, result);
+	TagLib::ID3v2::Tag *tag = file.tag();
+	fetchID3v2Tags(tag, result);
+    }
+    void fetchMPEGID3Tags(int fd, std::map<uint32_t, std::wstring> *result)
+    {
+	util::FilePositionSaver _(fd);
+	lseek(fd, 0, SEEK_SET);
+	TagLibX::FDIOStreamReader stream(fd);
+	TagLib::MPEG::File file(&stream,
+				TagLib::ID3v2::FrameFactory::instance(),
+				false);
+	TagLib::ID3v2::Tag *tag = file.ID3v2Tag();
+	fetchID3v2Tags(tag, result);
     }
 }
 

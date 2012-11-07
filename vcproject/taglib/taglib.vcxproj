@@ -46,6 +46,10 @@
     <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2header.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2synchdata.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\id3v2tag.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\mpegfile.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\mpegheader.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\mpegproperties.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\xingheader.cpp" />
     <ClCompile Include="..\..\taglib\riff\aiff\aifffile.cpp" />
     <ClCompile Include="..\..\taglib\riff\aiff\aiffproperties.cpp" />
     <ClCompile Include="..\..\taglib\riff\rifffile.cpp" />

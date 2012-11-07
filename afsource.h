@@ -13,6 +13,7 @@ class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
+    std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
 public:
     ExtAFSource(const std::shared_ptr<FILE> &fp);
