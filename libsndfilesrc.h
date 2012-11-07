@@ -31,12 +31,12 @@ class LibSndfileSource:
     public ITagParser, public PartialSource<LibSndfileSource>
 {
     typedef std::shared_ptr<SNDFILE_tag> handle_t;
-    LibSndfileModule m_module;
     handle_t m_handle;
+    std::string m_format_name;
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
-    std::string m_format_name;
     std::map<uint32_t, std::wstring> m_tags;
+    LibSndfileModule m_module;
     AudioStreamBasicDescription m_asbd;
 public:
     LibSndfileSource(const LibSndfileModule &module,

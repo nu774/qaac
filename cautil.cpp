@@ -65,4 +65,25 @@ namespace cautil {
 	asbd.mBytesPerPacket = asbd.mFramesPerPacket * asbd.mBytesPerFrame;
 	return asbd;
     }
+
+    AudioStreamBasicDescription
+	buildASBDForPCM2(double sample_rate, unsigned channels_per_frame,
+			 unsigned valid_bits, unsigned pack_bits,
+			 unsigned type, unsigned alignment)
+    {
+	AudioStreamBasicDescription asbd = { 0 };
+	asbd.mFormatID = 'lpcm';
+	asbd.mFormatFlags = type;
+	if (valid_bits != pack_bits)
+	    asbd.mFormatFlags |= alignment;
+	else
+	    asbd.mFormatFlags |= kAudioFormatFlagIsPacked;
+	asbd.mSampleRate = sample_rate;
+	asbd.mChannelsPerFrame = channels_per_frame;
+	asbd.mBitsPerChannel = valid_bits;
+	asbd.mFramesPerPacket = 1;
+	asbd.mBytesPerFrame = asbd.mChannelsPerFrame * pack_bits / 8;
+	asbd.mBytesPerPacket = asbd.mFramesPerPacket * asbd.mBytesPerFrame;
+	return asbd;
+    }
 }

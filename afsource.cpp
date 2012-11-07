@@ -141,85 +141,58 @@ namespace audiofile {
     }
 }
 
-std::shared_ptr<ISource>
-AudioFileOpenFactory(const std::shared_ptr<FILE> &fp)
+ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
+    : m_fp(fp)
 {
     AudioFileID afid;
-
     void *ctx = reinterpret_cast<void*>(fileno(fp.get()));
     CHECKCA(AudioFileOpenWithCallbacks(ctx, audiofile::read, 0,
 				       audiofile::size, 0, 0, &afid));
-    AudioFileX af(afid, true);
-    AudioStreamBasicDescription asbd;
-    af.getDataFormat(&asbd);
+    m_af.attach(afid, true);
 
-    if (asbd.mFormatID == 'lpcm')
-	return std::shared_ptr<ISource>(new AFSource(af, fp));
-    else if (asbd.mFormatID == 'alac')
-	return std::shared_ptr<ISource>(new ExtAFSource(af, fp));
-    else
-	throw std::runtime_error("Not supported format");
-}
-
-AFSource::AFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp)
-    : m_af(af), m_offset(0), m_fp(fp)
-{
-    util::fourcc fcc(m_af.getFileFormat());
-    m_af.getDataFormat(&m_asbd);
-    setRange(0, m_af.getAudioDataPacketCount());
-    std::shared_ptr<AudioChannelLayout> acl;
-    try {
-	m_af.getChannelLayout(&acl);
-	chanmap::getChannels(acl.get(), &m_chanmap);
-    } catch (...) {}
-    try {
-	if (fcc == 'AIFF' || fcc == 'AIFC')
-	    ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
-	else
-	    audiofile::fetchTags(m_af, m_fp.get(), &m_tags);
-    } catch (...) {}
-}
-
-size_t AFSource::readSamples(void *buffer, size_t nsamples)
-{
-    nsamples = adjustSamplesToRead(nsamples);
-    if (!nsamples) return 0;
-    UInt32 ns = nsamples;
-    UInt32 nb = ns * m_asbd.mBytesPerFrame;
-    CHECKCA(AudioFileReadPackets(m_af, false, &nb, 0,
-				 m_offset + getSamplesRead(), &ns, buffer));
-    addSamplesRead(ns);
-    return ns;
-}
-
-ExtAFSource::ExtAFSource(AudioFileX &af, const std::shared_ptr<FILE> &fp)
-    : m_af(af), m_fp(fp)
-{
-    std::vector<uint8_t> cookie;
     ExtAudioFileRef eaf;
     CHECKCA(ExtAudioFileWrapAudioFileID(m_af, false, &eaf));
     m_eaf.attach(eaf, true);
+
     AudioStreamBasicDescription asbd;
     m_af.getDataFormat(&asbd);
+    if (asbd.mFormatID != 'lpcm' && asbd.mFormatID != 'alac')
+	throw std::runtime_error("Not supported input format");
+    uint32_t fcc = m_af.getFileFormat();
 
-    unsigned bits_per_channel;
-    {
-	unsigned tab[] = { 16, 20, 24, 32 };
-	unsigned index = (asbd.mFormatFlags - 1) & 0x3;
-	bits_per_channel = tab[index];
+    if (asbd.mFormatID == 'lpcm') {
+	bool isfloat = asbd.mFormatFlags & kAudioFormatFlagIsFloat;
+	uint32_t packbits = asbd.mBytesPerFrame / asbd.mChannelsPerFrame * 8;
+	m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
+					  asbd.mChannelsPerFrame,
+					  asbd.mBitsPerChannel,
+					  isfloat ? packbits : 32,
+					  isfloat ? kAudioFormatFlagIsFloat
+					    : kAudioFormatFlagIsSignedInteger);
+    } else {
+	unsigned bits_per_channel;
+	{
+	    unsigned tab[] = { 16, 20, 24, 32 };
+	    unsigned index = (asbd.mFormatFlags - 1) & 0x3;
+	    bits_per_channel = tab[index];
+	}
+	m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
+					  asbd.mChannelsPerFrame,
+					  bits_per_channel, 32,
+					  kAudioFormatFlagIsSignedInteger);
     }
-    m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
-				     bits_per_channel,
-				     kAudioFormatFlagIsSignedInteger,
-				     kAudioFormatFlagIsAlignedHigh);
     m_eaf.setClientDataFormat(m_asbd);
     setRange(0, m_eaf.getFileLengthFrames());
+
     std::shared_ptr<AudioChannelLayout> acl;
     try {
 	m_af.getChannelLayout(&acl);
 	chanmap::getChannels(acl.get(), &m_chanmap);
     } catch (...) {}
-    if (m_af.getFileFormat() == 'm4af') {
+
+    if (fcc == 'AIFF' || fcc == 'AIFC')
+	ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
+    else if (fcc == 'm4af') {
 	try {
 	    int fd = fileno(m_fp.get());
 	    util::FilePositionSaver _(fd);

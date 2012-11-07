@@ -27,26 +27,39 @@ WaveSource::WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength)
     m_seekable = util::is_seekable(fileno(m_fp.get()));
     int64_t data_length = parse();
     if (ignorelength || !data_length ||
-	data_length % m_asbd.mBytesPerPacket)
+	data_length % m_block_align)
 	setRange(0, -1LL);
     else
-	setRange(0, data_length / m_asbd.mBytesPerPacket);
+	setRange(0, data_length / m_block_align);
 }
 
 size_t WaveSource::readSamples(void *buffer, size_t nsamples)
 {
     nsamples = adjustSamplesToRead(nsamples);
     if (nsamples) {
-	ssize_t nbytes = nsamples * m_asbd.mBytesPerFrame;
-	nbytes = read(fd(), buffer, nbytes);
-	nsamples = nbytes > 0 ? nbytes / m_asbd.mBytesPerFrame: 0;
+	ssize_t nbytes = nsamples * m_block_align;
+	m_buffer.resize(nbytes);
+	nbytes = read(fd(), &m_buffer[0], nbytes);
+	nsamples = nbytes > 0 ? nbytes / m_block_align: 0;
+	if (nsamples) {
+	    size_t size = nsamples * m_block_align;
+	    uint8_t *bp = &m_buffer[0];
+	    /* convert to signed */
+	    if (m_asbd.mBitsPerChannel <= 8) {
+		for (size_t i = 0; i < size; ++i)
+		    bp[i] ^= 0x80;
+	    }
+	    util::unpack(bp, buffer, &size,
+			 m_block_align / m_asbd.mChannelsPerFrame,
+			 m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame);
+	}
 	addSamplesRead(nsamples);
     }
     return nsamples;
 }
 void WaveSource::skipSamples(int64_t count)
 {
-    skip(count * m_asbd.mBytesPerFrame);
+    skip(count * m_block_align);
 }
 
 int64_t WaveSource::parse()
@@ -189,19 +202,11 @@ void WaveSource::fmt(size_t size)
 	if (!wValidBitsPerSample || wValidBitsPerSample > wBitsPerSample)
 	    throw std::runtime_error("WaveSource: invalid wave fmt");
     }
-    m_asbd.mFormatID = FOURCC('l','p','c','m');
-    m_asbd.mSampleRate = nSamplesPerSec;
-    m_asbd.mBytesPerPacket = nBlockAlign;
-    m_asbd.mFramesPerPacket = 1;
-    m_asbd.mBytesPerFrame = nBlockAlign;
-    m_asbd.mChannelsPerFrame = nChannels;
-    m_asbd.mBitsPerChannel = wValidBitsPerSample;
-    if (isfloat)
-	m_asbd.mFormatFlags |= kAudioFormatFlagIsFloat;
-    else if (wBitsPerSample > 8)
-	m_asbd.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
-    if (wBitsPerSample == wValidBitsPerSample)
-	m_asbd.mFormatFlags |= kAudioFormatFlagIsPacked;
-    else
-	m_asbd.mFormatFlags |= kAudioFormatFlagIsAlignedHigh;
+
+    m_block_align = nBlockAlign;
+    m_asbd = cautil::buildASBDForPCM2(nSamplesPerSec, nChannels,
+				      wValidBitsPerSample,
+				      isfloat ? wBitsPerSample : 32,
+				      isfloat ? kAudioFormatFlagIsFloat
+				       	: kAudioFormatFlagIsSignedInteger);
 }

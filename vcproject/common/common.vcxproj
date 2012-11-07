@@ -153,6 +153,7 @@
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />
     <ClCompile Include="..\..\normalize.cpp" />
     <ClCompile Include="..\..\pipedreader.cpp" />
+    <ClCompile Include="..\..\rawsource.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
     <ClCompile Include="..\..\soxdsp.cpp" />
     <ClCompile Include="..\..\strutil.cpp" />

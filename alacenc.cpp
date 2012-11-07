@@ -5,7 +5,8 @@ ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
     : m_encoder(new ALACEncoder()), m_iasbd(desc)
 {
     std::memcpy(&m_iafd, &desc, sizeof desc);
-    m_iafd.mBytesPerFrame = desc.mBitsPerChannel * desc.mChannelsPerFrame / 8;
+    m_iafd.mBytesPerFrame =
+	((desc.mBitsPerChannel + 7) & ~7) * desc.mChannelsPerFrame / 8;
     m_iafd.mBytesPerPacket = m_iafd.mBytesPerFrame * m_iafd.mFramesPerPacket;
 
     memset(&m_odesc, 0, sizeof m_odesc);

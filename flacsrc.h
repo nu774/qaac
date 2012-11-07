@@ -9,15 +9,37 @@
 class FLACSource :
     public ITagParser, public PartialSource<FLACSource>
 {
+    struct DecodeBuffer {
+	uint32_t nsamples;
+	uint32_t done;
+	uint32_t channels;
+	std::vector<int32_t> v;
+
+	DecodeBuffer(): nsamples(0), done(0), channels(0) {}
+	void resize(uint32_t nsamples) { v.resize(nsamples * channels); }
+	int32_t *read_ptr() { return &v[done * channels]; }
+	int32_t *write_ptr() { return &v[0]; }
+	void reset() { nsamples = done = 0; }
+	uint32_t count() { return nsamples - done; }
+	void advance(uint32_t n) {
+	    done += n;
+	    if (done >= nsamples) done = nsamples = 0;
+	}
+	void commit(uint32_t count)
+	{
+	    nsamples = count;
+	    done = 0;
+	}
+    };
     typedef std::shared_ptr<FLAC__StreamDecoder> decoder_t;
     FLACModule m_module;
     std::shared_ptr<FILE> m_fp;
     bool m_eof;
     decoder_t m_decoder;
-    std::vector<std::deque<int32_t> > m_buffer;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<chapters::entry_t> m_chapters;
     bool m_giveup;
+    DecodeBuffer m_buffer;
     AudioStreamBasicDescription m_asbd;
 public:
     FLACSource(const FLACModule &module, const std::shared_ptr<FILE> &fp);
@@ -38,8 +60,6 @@ public:
 	    return 0;
     }
 private:
-    template <class MemorySink>
-    size_t readSamplesT(void *buffer, size_t nsamples);
     void close(FLAC__StreamDecoder *decoder)
     {
 	m_module.stream_decoder_finish(decoder);

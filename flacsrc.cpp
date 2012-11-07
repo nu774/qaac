@@ -63,7 +63,7 @@ FLACSource::FLACSource(const FLACModule &module,
 		m_decoder.get()));
     if (m_giveup || m_asbd.mBitsPerChannel == 0)
 	flac::want(false);
-    m_buffer.resize(m_asbd.mChannelsPerFrame);
+    m_buffer.channels = m_asbd.mChannelsPerFrame;
 }
 
 void FLACSource::skipSamples(int64_t count)
@@ -71,27 +71,22 @@ void FLACSource::skipSamples(int64_t count)
     TRYFL(m_module.stream_decoder_seek_absolute(m_decoder.get(), count));
 }
 
-template <class MemorySink>
-size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
+size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 {
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
-    MemorySink sink(buffer);
-    size_t processed = 0;
-    uint32_t shifts = (8 - m_asbd.mBitsPerChannel) % 8;
-    while (processed < nsamples) {
-	while (m_buffer[0].size() && processed < nsamples) {
-	    for (size_t i = 0; i < m_buffer.size(); ++i) {
-		int value = m_buffer[i].front();
-		m_buffer[i].pop_front();
-		// FLAC samples are aligned to low.
-		if (shifts)
-		    value <<= shifts;
-		sink.put(value);
-	    }
-	    ++processed;
+    uint32_t rest = nsamples;
+    uint8_t *bp = static_cast<uint8_t*>(buffer);
+    while (rest > 0) {
+	if (m_buffer.count() > 0) {
+	    uint32_t count = std::min(m_buffer.count(), rest);
+	    uint32_t bytes = count * m_asbd.mChannelsPerFrame * 4;
+	    std::memcpy(bp, m_buffer.read_ptr(), bytes);
+	    bp += bytes;
+	    m_buffer.advance(count);
+	    rest -= count;
 	}
-	if (processed < nsamples) {
+	if (rest) {
 	    if (m_giveup)
 		throw std::runtime_error("FLAC decoder error");
 	    if (m_module.stream_decoder_get_state(m_decoder.get()) ==
@@ -100,22 +95,9 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
 	    TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
 	}
     }
+    size_t processed = nsamples - rest;
     addSamplesRead(processed);
     return processed;
-}
-
-size_t FLACSource::readSamples(void *buffer, size_t nsamples)
-{
-    uint32_t bytesPerChannel =
-	m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
-    if (bytesPerChannel == 1)
-	return readSamplesT<util::MemorySink8>(buffer, nsamples);
-    else if (bytesPerChannel == 2)
-	return readSamplesT<util::MemorySink16LE>(buffer, nsamples);
-    else if (bytesPerChannel == 3)
-	return readSamplesT<util::MemorySink24LE>(buffer, nsamples);
-    else
-	return readSamplesT<util::MemorySink32LE>(buffer, nsamples);
 }
 
 FLAC__StreamDecoderReadStatus
@@ -175,9 +157,17 @@ FLACSource::writeCallback( const FLAC__Frame *frame,
      || h.bits_per_sample != m_asbd.mBitsPerChannel)
 	return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
-    for (size_t i = 0; i < h.channels; ++i)
-	std::copy(buffer[i], buffer[i] + h.blocksize,
-		  std::back_inserter(m_buffer[i]));
+    /*
+     * FLAC sample is aligned to low. We make it aligned to high by
+     * shifting to MSB side.
+     */
+    uint32_t shifts = 32 - h.bits_per_sample;
+    m_buffer.resize(h.blocksize);
+    int32_t *bp = m_buffer.write_ptr();
+    for (size_t i = 0; i < h.blocksize; ++i)
+	for (size_t n = 0; n < h.channels; ++n)
+	    *bp++ = (buffer[n][i] << shifts);
+    m_buffer.commit(h.blocksize);
 
     return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 }
@@ -204,10 +194,9 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 	return;
     }
     setRange(0, si.total_samples);
-    m_asbd = cautil::buildASBDForPCM(si.sample_rate, si.channels,
-				si.bits_per_sample,
-				kAudioFormatFlagIsSignedInteger,
-				kAudioFormatFlagIsAlignedHigh);
+    m_asbd = cautil::buildASBDForPCM2(si.sample_rate, si.channels,
+				      si.bits_per_sample, 32,
+				      kAudioFormatFlagIsSignedInteger);
 }
 
 void FLACSource::handleVorbisComment(

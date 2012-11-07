@@ -131,17 +131,22 @@ LibSndfileSource::LibSndfileSource(
     };
     if (subformat < 1 || subformat > 7)
 	throw std::runtime_error("Unsupported input subformat");
-    m_asbd = cautil::buildASBDForPCM(info.samplerate, info.channels,
-				mapping[subformat].bits,
-				mapping[subformat].type);
+
+    int pack_bits = mapping[subformat].bits;
+    if (mapping[subformat].type == kAudioFormatFlagIsSignedInteger)
+	pack_bits = 32;
+
+    m_asbd = cautil::buildASBDForPCM2(info.samplerate, info.channels,
+				      mapping[subformat].bits, pack_bits,
+				      mapping[subformat].type);
 
     m_chanmap.resize(info.channels);
     if (m_module.command(sf, SFC_GET_CHANNEL_MAP_INFO, &m_chanmap[0],
-	    m_chanmap.size() * sizeof(uint32_t)) == SF_FALSE)
+			 m_chanmap.size() * sizeof(uint32_t)) == SF_FALSE)
 	m_chanmap.clear();
     else
 	std::transform(m_chanmap.begin(), m_chanmap.end(),
-		m_chanmap.begin(), convert_chanmap);
+		       m_chanmap.begin(), convert_chanmap);
     if (m_format_name == "aiff") {
 	try {
 	    ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
@@ -164,40 +169,15 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
     if (!nsamples) return 0;
     nsamples *= m_asbd.mChannelsPerFrame;
     sf_count_t rc;
-    uint32_t bpc = m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
-    if (bpc == 1)
-	rc = readSamples8(buffer, nsamples);
-    else if (bpc == 2)
-	rc = SF_READ(short, m_handle.get(), buffer, nsamples);
-    else if (bpc == 3)
-	rc = readSamples24(buffer, nsamples);
-    else if (bpc == 8)
-	rc = SF_READ(double, m_handle.get(), buffer, nsamples);
-    else if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat)
-	rc = SF_READ(float, m_handle.get(), buffer, nsamples);
-    else
+    if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
+	if (m_asbd.mBitsPerChannel <= 32)
+	    rc = SF_READ(float, m_handle.get(), buffer, nsamples);
+	else
+	    rc = SF_READ(double, m_handle.get(), buffer, nsamples);
+    } else
 	rc = SF_READ(int, m_handle.get(), buffer, nsamples);
+
     nsamples = static_cast<size_t>(rc / m_asbd.mChannelsPerFrame);
     addSamplesRead(nsamples);
     return nsamples;
-}
-
-size_t LibSndfileSource::readSamples8(void *buffer, size_t nsamples)
-{
-    std::vector<short> v(m_asbd.mChannelsPerFrame * nsamples);
-    sf_count_t rc = SF_READ(short, m_handle.get(), &v[0], nsamples);
-    char *bp = reinterpret_cast<char*>(buffer);
-    for (size_t i = 0; i < rc; ++i)
-	*bp++ = static_cast<char>(v[i] / 256);
-    return static_cast<size_t>(rc);
-}
-
-size_t LibSndfileSource::readSamples24(void *buffer, size_t nsamples)
-{
-    std::vector<int32_t> v(m_asbd.mChannelsPerFrame * nsamples);
-    sf_count_t rc = SF_READ(int, m_handle.get(), &v[0], nsamples);
-    util::MemorySink24LE sink(buffer);
-    for (size_t i = 0; i < rc; ++i)
-	sink.put(v[i] / 256);
-    return static_cast<size_t>(rc);
 }

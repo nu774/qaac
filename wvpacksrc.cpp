@@ -107,13 +107,13 @@ WavpackSource::WavpackSource(const WavpackModule &module,
 	throw std::runtime_error("WavpackOpenFileInputEx() failed");
     m_wpc.reset(wpc, m_module.CloseFile);
 
-    m_asbd = cautil::buildASBDForPCM(m_module.GetSampleRate(wpc),
-				m_module.GetNumChannels(wpc),
-				m_module.GetBitsPerSample(wpc),
-				(m_module.GetMode(wpc) & MODE_FLOAT)
-				 ? kAudioFormatFlagIsFloat 
-				 : kAudioFormatFlagIsSignedInteger,
-				kAudioFormatFlagIsAlignedHigh);
+    bool is_float = m_module.GetMode(wpc) & MODE_FLOAT;
+    m_asbd = cautil::buildASBDForPCM2(m_module.GetSampleRate(wpc),
+				      m_module.GetNumChannels(wpc),
+				      m_module.GetBitsPerSample(wpc),
+				      32,
+				      is_float ? kAudioFormatFlagIsFloat 
+					 : kAudioFormatFlagIsSignedInteger);
 
     uint64_t duration = m_module.GetNumSamples(wpc);
     if (duration == 0xffffffff) duration = -1LL;
@@ -131,41 +131,34 @@ void WavpackSource::skipSamples(int64_t count)
 	throw std::runtime_error("WavpackSeekSample()");
 }
 
-template <class MemorySink>
-size_t WavpackSource::readSamplesT(void *buffer, size_t nsamples)
+size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
 {
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
-    std::vector<int32_t> vbuf(nsamples * m_asbd.mChannelsPerFrame);
-    MemorySink sink(buffer);
-    size_t total = 0, rc;
-    const int32_t *bp = &vbuf[0];
+    /*
+     * Wavpack sample is aligned to low per byte basis.
+     * Inside of valid bytes, bits are aligned to high.
+     * 20bits sample is stored like the following:
+     * <-- MSB ------------------ LSB ---->
+     * 00000000 xxxxxxxx xxxxxxxx xxxx0000
+     */
+    int shifts = 32 - ((m_asbd.mBitsPerChannel + 7) & ~7);
+    size_t total = 0;
+    int *bp = static_cast<int*>(buffer);
     while (total < nsamples) {
-	rc = m_module.UnpackSamples(m_wpc.get(), &vbuf[0], nsamples - total);
+	int rc = m_module.UnpackSamples(m_wpc.get(), bp, nsamples - total);
 	if (rc <= 0)
 	    break;
-	size_t nblk = rc * m_asbd.mChannelsPerFrame;
-	for (size_t i = 0; i < nblk; ++i) {
-	    int32_t value = bp[i];
-	    sink.put(value);
+	if (shifts) {
+	    /* align to MSB side */
+	    for (size_t i = 0; i < rc * m_asbd.mChannelsPerFrame; ++i)
+		bp[i] <<= shifts; 
 	}
 	total += rc;
+	bp += rc;
     }
     addSamplesRead(total);
     return total;
-}
-
-size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
-{
-    uint32_t bpc = m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
-    if (bpc == 1)
-	return readSamplesT<util::MemorySink8>(buffer, nsamples);
-    else if (bpc == 2)
-	return readSamplesT<util::MemorySink16LE>(buffer, nsamples);
-    else if (bpc == 3)
-	return readSamplesT<util::MemorySink24LE>(buffer, nsamples);
-    else
-	return readSamplesT<util::MemorySink32LE>(buffer, nsamples);
 }
 
 void WavpackSource::fetchTags()

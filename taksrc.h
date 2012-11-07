@@ -41,6 +41,8 @@ class TakSource:
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<chapters::entry_t> m_chapters;
+    uint32_t m_block_align;
+    std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
 public:
     TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp);

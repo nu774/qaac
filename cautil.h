@@ -87,6 +87,12 @@ namespace cautil {
 	buildASBDForPCM(double sample_rate, unsigned channels,
 			unsigned bits, unsigned type_flags,
 			unsigned alignment=0);
+
+    AudioStreamBasicDescription
+	buildASBDForPCM2(double sample_rate, unsigned channels,
+			 unsigned valid_bits, unsigned pack_bits,
+			 unsigned type_flags,
+			 unsigned alignment=kAudioFormatFlagIsAlignedHigh);
 }
 
 #endif

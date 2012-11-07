@@ -106,49 +106,6 @@ namespace util {
 	if (!expr) throw std::runtime_error("Premature EOF");
     }
 
-    class MemorySink8 {
-	char *m_ptr;
-    public:
-	MemorySink8(void *ptr): m_ptr(reinterpret_cast<char*>(ptr)) {}
-	void put(uint32_t value) { *m_ptr++ = value; }
-    };
-
-    class MemorySink16LE {
-	char *m_ptr;
-    public:
-	MemorySink16LE(void *ptr): m_ptr(reinterpret_cast<char*>(ptr)) {}
-	void put(uint32_t value)
-	{
-	    *m_ptr++ = value;
-	    *m_ptr++ = value >> 8;
-	}
-    };
-
-    class MemorySink24LE {
-	char *m_ptr;
-    public:
-	MemorySink24LE(void *ptr): m_ptr(reinterpret_cast<char*>(ptr)) {}
-	void put(uint32_t value)
-	{
-	    *m_ptr++ = value;
-	    *m_ptr++ = value >> 8;
-	    *m_ptr++ = value >> 16;
-	}
-    };
-
-    class MemorySink32LE {
-	char *m_ptr;
-    public:
-	MemorySink32LE(void *ptr): m_ptr(reinterpret_cast<char*>(ptr)) {}
-	void put(uint32_t value)
-	{
-	    *m_ptr++ = value;
-	    *m_ptr++ = value >> 8;
-	    *m_ptr++ = value >> 16;
-	    *m_ptr++ = value >> 24;
-	}
-    };
-
     inline
     uint32_t bitcount(uint32_t bits)
     {
@@ -180,13 +137,7 @@ namespace util {
 	return _byteswap_ulong(n);
     }
 
-    void bswap16buffer(uint8_t *buffer, size_t size);
-
-    void bswap24buffer(uint8_t *buffer, size_t size);
-
-    void bswap32buffer(uint8_t *buffer, size_t size);
-
-    void bswap64buffer(uint8_t *buffer, size_t size);
+    void bswapbuffer(uint8_t *buffer, size_t size, uint32_t width);
 
     inline void throw_crt_error(const std::string &message)
     {
@@ -218,8 +169,10 @@ namespace util {
 	}
     };
 
-    // drop wasted bytes from LSB side
-    void pack(uint8_t *data, size_t *size, unsigned width, unsigned new_width);
+    void pack(void *data, size_t *size, unsigned width, unsigned new_width);
+
+    void unpack(const void *input, void *output, size_t *size, unsigned width,
+		unsigned new_width);
 }
 
 #define CHECKCRT(expr) \

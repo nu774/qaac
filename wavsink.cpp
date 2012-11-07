@@ -57,8 +57,8 @@ std::string WaveSink::buildHeader()
     std::ostringstream oss;
     std::stringbuf *os = oss.rdbuf();
 
-    int bits_per_frame = m_asbd.mChannelsPerFrame * m_asbd.mBitsPerChannel;
-    m_bytes_per_frame = ((bits_per_frame + 7) & ~7) / 8 ;
+    int bpc = ((m_asbd.mBitsPerChannel + 7) & ~7) / 8;
+    m_bytes_per_frame = bpc * m_asbd.mChannelsPerFrame;
     
     // wFormatTag
     uint16_t fmt = (m_asbd.mChannelsPerFrame > 2
@@ -76,8 +76,7 @@ std::string WaveSink::buildHeader()
     // nBlockAlign
     put(os, static_cast<uint16_t>(m_bytes_per_frame));
     // wBitsPerSample
-    put(os, static_cast<uint16_t>((m_bytes_per_frame /
-				   m_asbd.mChannelsPerFrame) << 3));
+    put(os, static_cast<uint16_t>(bpc << 3));
 
     // cbSize
     if (fmt == 0xfffe) {

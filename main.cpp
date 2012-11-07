@@ -27,7 +27,6 @@
 #include "intsrc.h"
 #include "scaler.h"
 #include "pipedreader.h"
-#include "EndianConverter.h"
 #include "wavsink.h"
 #include "chanmap.h"
 #ifdef REFALAC
@@ -243,15 +242,15 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 }
 
 static
-std::shared_ptr<ISource> open_raw(const wchar_t *ifilename,
+std::shared_ptr<ISource> open_raw(const std::shared_ptr<FILE> &fp,
 				  const Options &opts)
 {
     int bits;
-    unsigned char c_type, c_endian;
+    unsigned char c_type, c_endian = 'L';
     int itype, iendian;
 
     if (std::swscanf(opts.raw_format, L"%hc%d%hc",
-		    &c_type, &bits, &c_endian) != 3)
+		    &c_type, &bits, &c_endian) < 2)
 	throw std::runtime_error("Invalid --raw-format spec");
     if ((itype = strutil::strindex("USF", toupper(c_type))) == -1)
 	throw std::runtime_error("Invalid --raw-format spec");
@@ -259,6 +258,10 @@ std::shared_ptr<ISource> open_raw(const wchar_t *ifilename,
 	throw std::runtime_error("Invalid --raw-format spec");
     if (bits <= 0)
 	throw std::runtime_error("Invalid --raw-format spec");
+    if (itype < 2 && bits > 32)
+	throw std::runtime_error("Bits per sample too large");
+    if (itype == 2 && bits != 32 && bits != 64)
+	throw std::runtime_error("Invalid bits per sample");
 
     uint32_t type_tab[] = {
 	0, kAudioFormatFlagIsSignedInteger, kAudioFormatFlagIsFloat
@@ -269,7 +272,7 @@ std::shared_ptr<ISource> open_raw(const wchar_t *ifilename,
     if (iendian)
 	asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
 
-    return std::shared_ptr<ISource>(new RawSource(ifilename, asbd));
+    return std::shared_ptr<ISource>(new RawSource(fp, asbd));
 }
 
 static
@@ -285,10 +288,10 @@ std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 	} \
     } while (0) 
 
-    if (opts.is_raw)
-	return open_raw(ifilename, opts);
-
     std::shared_ptr<FILE> fp(win32::fopen(ifilename, L"rb"));
+    if (opts.is_raw)
+	return open_raw(fp, opts);
+
     try {
 	try {
 	    return MAKE_SHARED(WaveSource(fp, opts.ignore_length));
@@ -306,11 +309,7 @@ std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
 	if (opts.libtak.loaded() && opts.libtak.compatible())
 	    TRY_MAKE_SHARED(TakSource(opts.libtak, fp));
 #ifndef REFALAC
-	try {
-	    return AudioFileOpenFactory(fp);
-	} catch (...) {
-	    lseek(fileno(fp.get()), 0, SEEK_SET);
-	}
+	TRY_MAKE_SHARED(ExtAFSource(fp));
 #endif
 	if (opts.libsndfile.loaded())
 	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, fp));
@@ -652,13 +651,8 @@ void preprocess_input(std::vector<std::shared_ptr<ISource> > &chain,
 	codec.reset(new AudioCodecX(opts.output_format));
 #endif
     delayed_source(chain, opts);
-
-    if (chain.back()->getSampleFormat().mFormatFlags
-	& kAudioFormatFlagIsBigEndian) {
-	std::shared_ptr<ISource> converter(new EndianConverter(chain.back()));
-	chain.push_back(converter);
-    }
     mapped_source(chain, opts, wChanmask, aacLayout, threading);
+
     if (!opts.isLPCM()) {
 #ifndef REFALAC
 	if (!codec->isAvailableOutputChannelLayout(*aacLayout))

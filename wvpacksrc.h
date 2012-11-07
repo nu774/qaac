@@ -64,8 +64,6 @@ public:
 	    return 0;
     }
 private:
-    template <class MemorySink>
-    size_t readSamplesT(void *buffer, size_t nsamples);
     void fetchTags();
 };
 

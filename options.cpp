@@ -415,6 +415,10 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		std::fputws(L"--raw-channels requires an integer.\n", stderr);
 		return false;
 	    }
+	    if (this->raw_channels == 0)
+		std::fputws(L"Invalid --raw-channels value.\n", stderr);
+	    if (this->raw_channels > 8)
+		std::fputws(L"--raw-channels too large.\n", stderr);
 	}
 	else if (ch == 'Rrat') {
 	    if (std::swscanf(wide::optarg, L"%u",
@@ -422,6 +426,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		std::fputws(L"--raw-rate requires an integer.\n", stderr);
 		return false;
 	    }
+	    if (this->raw_sample_rate == 0)
+		std::fputws(L"Invalid --raw-rate value.\n", stderr);
 	}
 	else if (ch == 'b') {
 	    uint32_t n;

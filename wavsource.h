@@ -18,7 +18,9 @@ namespace wave {
 class WaveSource: public PartialSource<WaveSource> {
     std::shared_ptr<FILE> m_fp;
     bool m_seekable;
+    int m_block_align;
     std::vector<uint32_t> m_chanmap;
+    std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
 public:
     WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength = false);

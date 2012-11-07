@@ -102,15 +102,11 @@ TakSource::TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp)
     TRYTAK(m_module.SSD_GetStreamInfo(ssd, &info));
     uint32_t type =
 	info.Audio.SampleBits == 8 ? 0 : kAudioFormatFlagIsSignedInteger;
-    m_asbd = cautil::buildASBDForPCM(info.Audio.SampleRate,
-				info.Audio.ChannelNum,
-				info.Audio.SampleBits,
-				type,
-				kAudioFormatFlagIsAlignedHigh);
-    if (m_asbd.mBytesPerFrame != info.Audio.BlockSize)
-	throw std::runtime_error(
-		strutil::format("blocksize: %d is different from expected",
-		    info.Audio.BlockSize));
+    m_asbd = cautil::buildASBDForPCM2(info.Audio.SampleRate,
+				      info.Audio.ChannelNum,
+				      info.Audio.SampleBits, 32,
+				      kAudioFormatFlagIsSignedInteger);
+    m_block_align = info.Audio.BlockSize;
     setRange(0, info.Sizes.SampleNum);
     try {
 	fetchTags();
@@ -126,16 +122,27 @@ size_t TakSource::readSamples(void *buffer, size_t nsamples)
 {
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
-    uint8_t *bufp = reinterpret_cast<uint8_t*>(buffer);
+    m_buffer.resize(nsamples * m_block_align);
     size_t total = 0;
+    uint8_t *bufp = static_cast<uint8_t*>(buffer);
     while (total < nsamples) {
 	int32_t nread;
-	TRYTAK(m_module.SSD_ReadAudio(
-		    m_decoder.get(), bufp, nsamples - total, &nread));
+	TRYTAK(m_module.SSD_ReadAudio(m_decoder.get(), &m_buffer[0],
+				      nsamples - total, &nread));
 	if (nread == 0)
 	    break;
+	size_t size = nread * m_block_align;
+	uint8_t *bp = &m_buffer[0];
+	/* convert to signed */
+	if (m_asbd.mBitsPerChannel <= 8) {
+	    for (size_t i = 0; i < size; ++i)
+		bp[i] ^= 0x80;
+	}
+	util::unpack(bp, bufp, &size,
+		     m_block_align / m_asbd.mChannelsPerFrame,
+		     m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame);
 	total += nread;
-	bufp += nread * m_asbd.mBytesPerFrame;
+	bufp += size;
     }
     addSamplesRead(total);
     return total;
