@@ -35,11 +35,20 @@ FLACSource::FLACSource(const FLACModule &module,
 {
     char buffer[33];
     util::check_eof(read(fileno(m_fp.get()), buffer, 33) == 33);
+    if (std::memcmp(buffer, "ID3", 3) == 0) {
+	uint32_t size = 0;
+	for (int i = 6; i < 10; ++i) {
+	    size <<= 7;
+	    size |= buffer[i];
+	}
+	CHECKCRT(_lseeki64(fileno(m_fp.get()), 10 + size, SEEK_SET) < 0);
+	util::check_eof(read(fileno(m_fp.get()), buffer, 33) == 33);
+    }
     uint32_t fcc = util::fourcc(buffer);
     if ((fcc != 'fLaC' && fcc != 'OggS')
      || (fcc == 'OggS' && std::memcmp(&buffer[28], "\177FLAC", 5)))
 	throw std::runtime_error("Not a FLAC file");
-    _lseeki64(fileno(m_fp.get()), 0, SEEK_SET);
+    CHECKCRT(_lseeki64(fileno(m_fp.get()), 0, SEEK_SET) < 0);
 
     m_decoder =
 	decoder_t(m_module.stream_decoder_new(),
