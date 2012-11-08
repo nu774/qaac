@@ -34,6 +34,7 @@ namespace win32 {
 	std::wstring sprefix =
 	    strutil::format(L"%s.%d.", prefix, GetCurrentProcessId());
 	wchar_t *tmpname = _wtempnam(0, sprefix.c_str());
+	std::shared_ptr<wchar_t> tmpname_p(tmpname, std::free);
 	HANDLE fh = CreateFileW(prefixed_path(tmpname).c_str(),
 				GENERIC_READ | GENERIC_WRITE,
 				0, 0, CREATE_ALWAYS,
