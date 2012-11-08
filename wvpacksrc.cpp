@@ -136,8 +136,8 @@ size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
     nsamples = adjustSamplesToRead(nsamples);
     if (!nsamples) return 0;
     /*
-     * Wavpack sample is aligned to low per byte basis.
-     * Inside of valid bytes, bits are aligned to high.
+     * Wavpack sample is aligned to low at byte level,
+     * but aligned to high at bit level inside of valid bytes.
      * 20bits sample is stored like the following:
      * <-- MSB ------------------ LSB ---->
      * 00000000 xxxxxxxx xxxxxxxx xxxx0000
