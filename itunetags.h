@@ -63,20 +63,15 @@ namespace Tag {
 }
 
 namespace ID3 {
-    uint32_t GetIDFromTagName(const char *name);
     void fetchAiffID3Tags(int fd, std::map<uint32_t, std::wstring> *result);
     void fetchMPEGID3Tags(int fd, std::map<uint32_t, std::wstring> *result);
 }
 
 namespace Vorbis {
     uint32_t GetIDFromTagName(const char *name);
-    const char *GetNameFromTagID(uint32_t fcc);
     void ConvertToItunesTags(
 	    const std::map<std::string, std::string> &vorbisComments,
 	    std::map<uint32_t, std::wstring> *itunesTags);
-    void ConvertFromItunesTags(
-	    const std::map<uint32_t, std::wstring> &itunesTags,
-	    std::map<std::string, std::string> *vorbisComments);
 }
 
 namespace mp4a {

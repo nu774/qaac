@@ -203,8 +203,10 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
 
     int64_t length = m_af.getAudioDataPacketCount() * asbd.mFramesPerPacket;
 
-    if (fcc == 'AIFF' || fcc == 'AIFC')
+    if (fcc == kAudioFileAIFFType || fcc == kAudioFileAIFCType)
 	ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
+    else if (fcc == kAudioFileMP3Type)
+	ID3::fetchMPEGID3Tags(fileno(m_fp.get()), &m_tags);
     else if (fcc == 'm4af' || fcc == 'm4bf' || fcc == 'mp4f') {
 	try {
 	    int fd = fileno(m_fp.get());

@@ -1,10 +1,11 @@
 #include <algorithm>
-#include <aifffile.h>
-#include <apefile.h>
-#include <apetag.h>
-#include <mpegfile.h>
-#include <id3v2framefactory.h>
-#include <id3v1genres.h>
+#include <riff/aiff/aifffile.h>
+#include <ape/apefile.h>
+#include <ape/apetag.h>
+#include <mpeg/mpegfile.h>
+#include <mpeg/id3v1/id3v1genres.h>
+#include <mpeg/id3v2/id3v2framefactory.h>
+#include <mpeg/id3v2/frames/textidentificationframe.h>
 #include "itunetags.h"
 #ifdef _WIN32
 #include "win32util.h"
@@ -249,55 +250,72 @@ void TagEditor::saveArtworks(MP4FileX &file)
 }
 
 namespace ID3 {
-    const Tag::NameIDMap tagNameMap[] = {
-	{ "TIT1", Tag::kGrouping },
-	{ "TIT2", Tag::kTitle },
-	{ "TIT3", Tag::kSubTitle },
-	{ "TPE1", Tag::kArtist },
-	{ "TPE2", Tag::kAlbumArtist },
-	{ "TALB", Tag::kAlbum },
-	{ "TCOM", Tag::kComposer },
-	{ "TCON", Tag::kGenre },
-	{ "TDRC", Tag::kDate },
-	{ "TRCK", Tag::kTrack },
-	{ "TPOS", Tag::kDisk },
-	{ "TBPM", Tag::kTempo },
-	{ "TCOP", Tag::kCopyright },
-	{ "TCMP", Tag::kCompilation },
-	{ "USLT", Tag::kLyrics },
-	{ 0, 0 }
+    const char *known_keys[][2] = {
+	{ "TALB", "album"		},
+	{ "TBPM", "bpm"			},
+	{ "TCMP", "itunescompilation" 	},
+	{ "TCOM", "composer"		},
+	{ "TCON", "genre"		},
+	{ "TCOP", "copyright"		},
+	{ "TDRC", "date"		},
+	{ "TIT1", "content group"	},
+	{ "TIT2", "title"		},
+	{ "TIT3", "subtitle"		},
+	{ "TPE1", "artist"		},
+	{ "TPE2", "album artist"	},
+	{ "TPOS", "discnumber"		},
+	{ "TRCK", "tracknumber"		},
+	{ "TSO2", "albumartistsort"	},
+	{ "TSOA", "albumsort"		},
+	{ "TSOC", "composersort"	},
+	{ "TSOP", "artistsort"		},
+	{ "TSOT", "titlesort"		},
     };
-    uint32_t GetIDFromTagName(const char *name) {
-	const Tag::NameIDMap *map = tagNameMap;
-	for (; map->name; ++map)
-	    if (!std::strcmp(map->name, name))
-		return map->id;
-	return 0;
-    }
     void fetchID3v2Tags(TagLib::ID3v2::Tag *tag,
 			std::map<uint32_t, std::wstring> *result)
     {
-	std::map<uint32_t, std::wstring> tags;
-	const TagLib::ID3v2::FrameList &frameList = tag->frameList();
-	TagLib::ID3v2::FrameList::ConstIterator it;
+	using TagLib::ID3v2::Frame;
+	using TagLib::ID3v2::FrameList;
+	using TagLib::ID3v2::TextIdentificationFrame;
+
+	typedef const char *entry_t[2];
+	struct comparator {
+	    static int call(const void *k, const void *v)
+	    {
+		const char *key = static_cast<const char *>(k);
+		const entry_t *ent = static_cast<const entry_t *>(v);
+		return std::strcmp(key, (*ent)[0]);
+	    }
+	};
+
+	std::map<std::string, std::string> tags;
+
+	const FrameList &frameList = tag->frameList();
+	FrameList::ConstIterator it;
 	for (it = frameList.begin(); it != frameList.end(); ++it) {
-	    TagLib::ByteVector vID = (*it)->frameID();
+	    Frame *frame = *it;
+	    TagLib::ByteVector vID = frame->frameID();
 	    std::string sID(vID.data(), vID.data() + vID.size());
-	    std::wstring value = (*it)->toString().toWString();
-	    uint32_t id = ID3::GetIDFromTagName(sID.c_str());
-	    if (id) {
-		if (id == Tag::kGenre) {
-		    wchar_t *endp;
-		    long n = std::wcstol(value.c_str(), &endp, 10);
-		    if (!*endp) {
-			id = Tag::kGenreID3;
-			value = strutil::format(L"%d", n + 1);
-		    }
+
+	    if (sID == "TXXX") {
+		TextIdentificationFrame *txframe
+		    = dynamic_cast<TextIdentificationFrame*>(frame);
+		TagLib::StringList fields = txframe->fieldList();
+		std::wstring k = fields.begin()->toWString();
+		std::wstring v = (++fields.begin())->toWString();
+		tags[strutil::w2us(k)] = strutil::w2us(v);
+	    } else {
+		entry_t *entry = static_cast<entry_t*>(
+		    std::bsearch(sID.c_str(), known_keys,
+				 util::sizeof_array(known_keys),
+				 sizeof(known_keys[0]), comparator::call));
+		if (entry) {
+		    std::wstring value = frame->toString().toWString();
+		    tags[(*entry)[1]] = strutil::w2us(value);
 		}
-		tags[id] = value;
 	    }
 	}
-	result->swap(tags);
+	Vorbis::ConvertToItunesTags(tags, result);
     }
     void fetchAiffID3Tags(int fd, std::map<uint32_t, std::wstring> *result)
     {
@@ -323,106 +341,104 @@ namespace ID3 {
 
 namespace Vorbis {
     const Tag::NameIDMap tagNameMap[] = {
-	{ "title", Tag::kTitle },
-	{ "artist", Tag::kArtist },
-	{ "albumartist", Tag::kAlbumArtist },
-	{ "album artist", Tag::kAlbumArtist },
-	{ "album", Tag::kAlbum },
-	{ "grouping", Tag::kGrouping },
-	{ "composer", Tag::kComposer },
-	{ "genre", Tag::kGenre },
-	{ "genre", Tag::kGenreID3 },
-	{ "date", Tag::kDate },
-	{ "year", Tag::kDate },
-	{ "tracknumber", Tag::kTrack },
-	{ "track", Tag::kTrack },
-	{ "discnumber", Tag::kDisk },
-	{ "disc", Tag::kDisk },
-	{ "comment", Tag::kComment },
-	{ "subtitle", Tag::kSubTitle },
-	{ "lyrics", Tag::kLyrics },
-	{ 0, 0 }
+	{ "album",			Tag::kAlbum		},
+	{ "album artist",		Tag::kAlbumArtist	},
+	{ "albumartist",		Tag::kAlbumArtist	},
+	{ "albumartistsort",		'soaa'			},
+	{ "albumartistsortorder",	'soaa'			},
+	{ "albumsort",			'soal'			},
+	{ "albumsortorder",		'soal'			},
+	{ "artist",			Tag::kArtist		},
+	{ "artistsort",			'soar'			},
+	{ "artistsortorder",		'soar'			},
+	{ "band",			Tag::kAlbumArtist	},
+	{ "bpm",			Tag::kTempo		},
+	{ "comment",			Tag::kComment		},
+	{ "compilation",		Tag::kCompilation	},
+	{ "composer",			Tag::kComposer		},
+	{ "composersort",		'soco'			},
+	{ "composersortorder",		'soco'			},
+	{ "content group",		Tag::kGrouping		},
+	{ "contentgroup",		Tag::kGrouping		},
+	{ "copyright",			Tag::kCopyright		},
+	{ "date",			Tag::kDate		},
+	{ "disc",			Tag::kDisk		},
+	{ "disc number",		Tag::kDisk		},
+	{ "discnumber",			Tag::kDisk		},
+	{ "genre",			Tag::kGenre		},
+	{ "grouping",			Tag::kGrouping		},
+	{ "itunescompilation",		Tag::kCompilation	},
+	{ "lyrics",			Tag::kLyrics		},
+	{ "subtitle",			Tag::kSubTitle		},
+	{ "title",			Tag::kTitle		},
+	{ "titlesort",			'sonm'			},
+	{ "titlesortorder",		'sonm'			},
+	{ "track",			Tag::kTrack		},
+	{ "track number",		Tag::kTrack		},
+	{ "tracknumber",		Tag::kTrack		},
+	{ "unsynced lyrics",		Tag::kLyrics		},
+	{ "year",			Tag::kDate		},
     };
     uint32_t GetIDFromTagName(const char *name)
     {
-	const Tag::NameIDMap *map = tagNameMap;
-	for (; map->name; ++map)
-	    if (!strcasecmp(map->name, name))
-		return map->id;
-	return 0;
+	struct comparator {
+	    static int call(const void *k, const void *v)
+	    {
+		const char *key = static_cast<const char *>(k);
+		const Tag::NameIDMap *ent
+		    = static_cast<const Tag::NameIDMap *>(v);
+		return std::strcmp(key, ent->name);
+	    }
+	};
+	const Tag::NameIDMap *entry =
+	    static_cast<const Tag::NameIDMap *>(
+		std::bsearch(name, tagNameMap, util::sizeof_array(tagNameMap),
+			     sizeof(tagNameMap[0]), comparator::call));
+	return entry ? entry->id : 0;
     }
 
-    const char *GetNameFromTagID(uint32_t fcc)
+    void processTotal(const std::map<std::string, std::string> &vc,
+		      std::map<uint32_t, std::wstring> &itags)
     {
-	const Tag::NameIDMap *map = tagNameMap;
-	for (; map->name; ++map)
-	    if (map->id == fcc)
-		return map->name;
-	return 0;
+	std::map<std::string, std::string>::const_iterator vit;
+	std::map<uint32_t, std::wstring>::iterator iit;
+
+#define MERGE_TAG(x, y) \
+	do { x->second = strutil::format(L"%d/%d", \
+					 _wtoi(x->second.c_str()), \
+					 atoi(y->second.c_str())); \
+	} while (0)
+
+	if ((iit = itags.find(Tag::kTrack)) != itags.end()) {
+	    if ((vit = vc.find("totaltracks")) != vc.end())
+		MERGE_TAG(iit, vit);
+	    else if ((vit = vc.find("tracktotal")) != vc.end())
+		MERGE_TAG(iit, vit);
+	}
+	if ((iit = itags.find(Tag::kDisk)) != itags.end()) {
+	    if ((vit = vc.find("totaldiscs")) != vc.end())
+		MERGE_TAG(iit, vit);
+	    else if ((vit = vc.find("disctotal")) != vc.end())
+		MERGE_TAG(iit, vit);
+	}
+#undef MERGE_TAG
     }
-    void ConvertToItunesTags(
-	    const std::map<std::string, std::string> &vc,
-	    std::map<uint32_t, std::wstring> *itags)
+    void ConvertToItunesTags(const std::map<std::string, std::string> &vc,
+			     std::map<uint32_t, std::wstring> *itags)
     {
 	std::map<std::string, std::string>::const_iterator it;
+	std::map<std::string, std::string> lcvc;
 	std::map<uint32_t, std::wstring> result;
-	std::string totaltracks, totaldiscs;
 	uint32_t id;
-	for (it = vc.begin(); it != vc.end(); ++it) {
-	    std::string key = strutil::slower(it->first);
-	    if (key == "totaltracks" || key == "tracktotal")
-		totaltracks = it->second;
-	    else if (key == "totaldiscs" || key == "disctotal")
-		totaldiscs = it->second;
-	    else if ((id = GetIDFromTagName(it->first.c_str())) > 0)
+	for (it = vc.begin(); it != vc.end(); ++it)
+	    lcvc[strutil::slower(it->first)] = it->second;
+
+	for (it = lcvc.begin(); it != lcvc.end(); ++it) {
+	    if ((id = GetIDFromTagName(it->first.c_str())) > 0)
 		result[id] = strutil::us2w(it->second);
 	}
-	if (!totaltracks.empty() && result.find(Tag::kTrack) != result.end()) {
-	    result[Tag::kTrack] =
-		strutil::format(L"%d/%d", _wtoi(result[Tag::kTrack].c_str()),
-		       atoi(totaltracks.c_str()));
-	}
-	if (!totaldiscs.empty() && result.find(Tag::kDisk) != result.end()) {
-	    result[Tag::kDisk] = strutil::format(L"%d/%d",
-					_wtoi(result[Tag::kDisk].c_str()),
-					atoi(totaldiscs.c_str()));
-	}
+	processTotal(lcvc, result);
 	itags->swap(result);
-    }
-    void ConvertFromItunesTags(
-	    const std::map<uint32_t, std::wstring> &itags,
-	    std::map<std::string, std::string> *vc)
-    {
-	std::map<uint32_t, std::wstring>::const_iterator ii;
-	std::map<std::string, std::string> result;
-	for (ii = itags.begin(); ii != itags.end(); ++ii) {
-	    const char *name = GetNameFromTagID(ii->first);
-	    if (!name) continue;
-	    if (ii->first == Tag::kTrack) {
-		unsigned n, t = 0;
-		if (swscanf(ii->second.c_str(), L"%u/%u", &n, &t) < 1)
-		    continue;
-		result["tracknumber"] = strutil::format("%u", n);
-		if (t > 0) result["tracktotal"] = strutil::format("%u", t);
-	    }
-	    else if (ii->first == Tag::kDisk) {
-		unsigned n, t = 0;
-		if (swscanf(ii->second.c_str(), L"%u/%u", &n, &t) < 1)
-		    continue;
-		result["discnumber"] = strutil::format("%u", n);
-		if (t > 0) result["disctotal"] = strutil::format("%u", t);
-	    }
-	    else if (ii->first == Tag::kGenreID3) {
-		unsigned n;
-		if (swscanf(ii->second.c_str(), L"%u", &n) == 1) {
-		    TagLib::String v = TagLib::ID3v1::genre(n-1);
-		    result[name] = v.toCString();
-		}
-	    }
-	    else
-		result[name] = strutil::w2us(ii->second);
-	}
-	vc->swap(result);
     }
 }
 
