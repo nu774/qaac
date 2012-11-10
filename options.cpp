@@ -46,7 +46,6 @@ static wide::option long_options[] = {
     { L"raw-format", required_argument, 0,  'Rfmt' },
     { L"ignorelength", no_argument, 0, 'i' },
     { L"concat", no_argument, 0, 'cat ' },
-    { L"concat-cuesheet", no_argument, 0, 'conc' },
     { L"fname-format", required_argument, 0, 'nfmt' },
     { L"log", required_argument, 0, 'log ' },
     { L"title", required_argument, 0, Tag::kTitle },
@@ -182,7 +181,6 @@ void usage()
 "                       Requires output filename (with -o)\n"
 "\n"
 "Option for cue sheet input:\n"
-"--concat-cuesheet         Output single file rather than splitting by tracks\n"
 "--fname-format <string>   Format string for output filename\n"
 "\n"
 "Options for Raw PCM input only:\n"
@@ -361,9 +359,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	else if (ch == 'noop')
 	    this->no_optimize = true;
 	else if (ch == 'cat ')
-	    this->concat = this->concat_cue = true;
-	else if (ch == 'conc')
-	    this->concat_cue = true;
+	    this->concat = true;
 	else if (ch == 'nfmt')
 	    this->fname_format = wide::optarg;
 	else if (ch == 'tmpd')

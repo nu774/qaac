@@ -27,11 +27,11 @@ public:
     sf_count_t (*read_double)(SNDFILE *, double *, sf_count_t);
 };
 
-class LibSndfileSource:
-    public ITagParser, public PartialSource<LibSndfileSource>
+class LibSndfileSource: public ISeekableSource, public ITagParser
 {
     typedef std::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
+    uint8_t m_length;
     std::string m_format_name;
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
@@ -41,7 +41,7 @@ class LibSndfileSource:
 public:
     LibSndfileSource(const LibSndfileModule &module,
 		     const std::shared_ptr<FILE> &fp);
-    uint64_t length() const { return getDuration(); }
+    uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
@@ -52,7 +52,9 @@ public:
 	return m_chanmap.size() ? &m_chanmap: 0;
     }
     size_t readSamples(void *buffer, size_t nsamples);
-    void skipSamples(int64_t count);
+    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    void seekTo(int64_t count);
+    int64_t getPosition();
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {

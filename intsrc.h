@@ -6,7 +6,7 @@
 #include "iointer.h"
 #include "cautil.h"
 
-class IntegerSource: public DelegatingSource {
+class IntegerSource: public FilterBase {
     AudioStreamBasicDescription m_asbd;
     std::mt19937 m_mt;
     std::uniform_real_distribution<double> m_dist;
@@ -14,7 +14,7 @@ class IntegerSource: public DelegatingSource {
     std::vector<float> m_fbuffer;
 public:
     IntegerSource(const std::shared_ptr<ISource> &source, uint32_t bitdepth)
-	: DelegatingSource(source), m_dist(-0.5, 0.5)
+	: FilterBase(source), m_dist(-0.5, 0.5)
     {
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
 	m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,

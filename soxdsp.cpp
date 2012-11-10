@@ -32,17 +32,21 @@ SoxModule::SoxModule(const std::wstring &path)
 
 SoxDSPProcessor::SoxDSPProcessor(const std::shared_ptr<ISoxDSPEngine> &engine,
 				 const std::shared_ptr<ISource> &src)
-    : DelegatingSource(src), m_engine(engine),
-      m_end_of_input(false), m_input_frames(0), m_samples_read(0)
+    : FilterBase(src), m_engine(engine),
+      m_end_of_input(false), m_input_frames(0), m_position(0)
 {
-    const AudioStreamBasicDescription &srcFormat = source()->getSampleFormat();
-    if (srcFormat.mBitsPerChannel == 64)
+    const AudioStreamBasicDescription &sfmt = source()->getSampleFormat();
+    if (sfmt.mBitsPerChannel == 64)
 	throw std::runtime_error("Can't handle 64bit sample");
 
     m_asbd = m_engine->getSampleFormat();
 
     m_fbuffer.resize(4096 * m_asbd.mChannelsPerFrame);
     m_ibuffer.resize(m_fbuffer.size() * m_asbd.mBytesPerFrame);
+
+    double factor = m_asbd.mSampleRate / sfmt.mSampleRate;
+    uint64_t len = source()->length();
+    m_length = (len == ~0ULL ? ~0ULL : len * factor + .5);
 }
 
 size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
@@ -81,7 +85,7 @@ size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
 		     m_input_frames * nchannels * sizeof(float));
     }
     nsamples = (dst - static_cast<float*>(buffer)) / nchannels;
-    m_samples_read += nsamples;
+    m_position += nsamples;
     return nsamples;
 }
 

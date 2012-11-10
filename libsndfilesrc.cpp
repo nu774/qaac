@@ -102,7 +102,7 @@ LibSndfileSource::LibSndfileSource(
     if (!sf)
 	throw std::runtime_error(m_module.strerror(0));
     m_handle.reset(sf, m_module.close);
-    setRange(0, info.frames);
+    m_length = info.frames;
 
     SF_FORMAT_INFO finfo = { 0 };
     int count;
@@ -154,10 +154,18 @@ LibSndfileSource::LibSndfileSource(
     }
 }
 
-void LibSndfileSource::skipSamples(int64_t count)
+void LibSndfileSource::seekTo(int64_t count)
 {
-    if (m_module.seek(m_handle.get(), count, SEEK_CUR) == -1)
-	throw std::runtime_error("sf_seek failed");
+    if (m_module.seek(m_handle.get(), count, SEEK_SET) == -1)
+	throw std::runtime_error("sf_seek() failed");
+}
+
+int64_t LibSndfileSource::getPosition()
+{
+    sf_count_t pos;
+    if ((pos = m_module.seek(m_handle.get(), 0, SEEK_CUR)) == -1)
+	throw std::runtime_error("sf_seek() failed");
+    return pos;
 }
 
 #define SF_READ(type, handle, buffer, nsamples) \
@@ -165,8 +173,6 @@ void LibSndfileSource::skipSamples(int64_t count)
 
 size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
 {
-    nsamples = adjustSamplesToRead(nsamples);
-    if (!nsamples) return 0;
     nsamples *= m_asbd.mChannelsPerFrame;
     sf_count_t rc;
     if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
@@ -178,6 +184,5 @@ size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
 	rc = SF_READ(int, m_handle.get(), buffer, nsamples);
 
     nsamples = static_cast<size_t>(rc / m_asbd.mChannelsPerFrame);
-    addSamplesRead(nsamples);
     return nsamples;
 }

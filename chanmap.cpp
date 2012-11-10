@@ -352,7 +352,7 @@ void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result)
 ChannelMapper::ChannelMapper(const std::shared_ptr<ISource> &source,
 			     const std::vector<uint32_t> &chanmap,
 			     uint32_t bitmap)
-    : DelegatingSource(source)
+    : FilterBase(source)
 {
     for (size_t i = 0; i < chanmap.size(); ++i)
 	m_chanmap.push_back(chanmap[i] - 1);
@@ -361,7 +361,7 @@ ChannelMapper::ChannelMapper(const std::shared_ptr<ISource> &source,
 	    if (bitmap & 1) m_layout.push_back(i + 1);
     } else {
 	const std::vector<uint32_t> *orig =
-	    DelegatingSource::getChannels();
+	    FilterBase::getChannels();
 	if (orig)
 	    for (size_t i = 0; i < m_chanmap.size(); ++i)
 		m_layout.push_back(orig->at(m_chanmap[i]));

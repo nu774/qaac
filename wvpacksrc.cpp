@@ -21,13 +21,14 @@ WavpackModule::WavpackModule(const std::wstring &path)
 	      m_dl.fetch( "WavpackGetLibraryVersionString"));
 	CHECK(OpenFileInputEx = m_dl.fetch( "WavpackOpenFileInputEx"));
 	CHECK(CloseFile = m_dl.fetch( "WavpackCloseFile"));
+	CHECK(GetBitsPerSample = m_dl.fetch( "WavpackGetBitsPerSample"));
+	CHECK(GetChannelMask = m_dl.fetch( "WavpackGetChannelMask"));
 	CHECK(GetMode = m_dl.fetch( "WavpackGetMode"));
 	CHECK(GetNumChannels = m_dl.fetch( "WavpackGetNumChannels"));
-	CHECK(GetSampleRate = m_dl.fetch( "WavpackGetSampleRate"));
-	CHECK(GetBitsPerSample = m_dl.fetch( "WavpackGetBitsPerSample"));
 	CHECK(GetNumSamples = m_dl.fetch( "WavpackGetNumSamples"));
-	CHECK(GetChannelMask = m_dl.fetch( "WavpackGetChannelMask"));
 	CHECK(GetNumTagItems = m_dl.fetch( "WavpackGetNumTagItems"));
+	CHECK(GetSampleIndex = m_dl.fetch( "WavpackGetSampleIndex"));
+	CHECK(GetSampleRate = m_dl.fetch( "WavpackGetSampleRate"));
 	CHECK(GetTagItem = m_dl.fetch( "WavpackGetTagItem"));
 	CHECK(GetTagItemIndexed = m_dl.fetch( "WavpackGetTagItemIndexed"));
 	CHECK(SeekSample = m_dl.fetch( "WavpackSeekSample"));
@@ -116,8 +117,8 @@ WavpackSource::WavpackSource(const WavpackModule &module,
 					 : kAudioFormatFlagIsSignedInteger);
 
     uint64_t duration = m_module.GetNumSamples(wpc);
-    if (duration == 0xffffffff) duration = -1LL;
-    setRange(0, duration);
+    if (duration == 0xffffffff) duration = ~0ULL;
+    m_length = duration;
 
     unsigned mask = m_module.GetChannelMask(wpc);
     chanmap::getChannels(mask, &m_chanmap, m_asbd.mChannelsPerFrame);
@@ -125,16 +126,19 @@ WavpackSource::WavpackSource(const WavpackModule &module,
     fetchTags();
 }
 
-void WavpackSource::skipSamples(int64_t count)
+void WavpackSource::seekTo(int64_t count)
 {
     if (!m_module.SeekSample(m_wpc.get(), static_cast<int32_t>(count)))
 	throw std::runtime_error("WavpackSeekSample()");
 }
 
+int64_t WavpackSource::getPosition()
+{
+    return m_module.GetSampleIndex(m_wpc.get());
+}
+
 size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
 {
-    nsamples = adjustSamplesToRead(nsamples);
-    if (!nsamples) return 0;
     /*
      * Wavpack sample is aligned to low at byte level,
      * but aligned to high at bit level inside of valid bytes.
@@ -157,7 +161,6 @@ size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
 	total += rc;
 	bp += rc;
     }
-    addSamplesRead(total);
     return total;
 }
 
@@ -185,7 +188,7 @@ void WavpackSource::fetchTags()
     if (cuesheet.size()) {
 	std::map<uint32_t, std::wstring> tags;
 	Cue::CueSheetToChapters(cuesheet,
-				getDuration() / m_asbd.mSampleRate,
+				m_length / m_asbd.mSampleRate,
 				&m_chapters, &tags);
 	std::map<uint32_t, std::wstring>::const_iterator it;
 	for (it = tags.begin(); it != tags.end(); ++it)

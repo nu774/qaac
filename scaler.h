@@ -9,13 +9,13 @@ inline double dB_to_scale(double dB)
     return std::pow(10, 0.05 * dB);
 }
 
-class Scaler: public DelegatingSource {
+class Scaler: public FilterBase {
     double m_scale;
     std::vector<uint8_t> m_ibuffer;
     AudioStreamBasicDescription m_asbd;
 public:
     Scaler(const std::shared_ptr<ISource> &source, double scale)
-	: DelegatingSource(source), m_scale(scale)
+	: FilterBase(source), m_scale(scale)
     {
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
 	if (asbd.mBitsPerChannel == 64)

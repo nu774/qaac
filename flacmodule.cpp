@@ -30,6 +30,10 @@ FLACModule::FLACModule(const std::wstring &path)
 	      m_dl.fetch("FLAC__stream_decoder_process_single"));
 	CHECK(stream_decoder_seek_absolute =
 	      m_dl.fetch("FLAC__stream_decoder_seek_absolute"));
+	CHECK(stream_decoder_get_decode_position =
+	      m_dl.fetch("FLAC__stream_decoder_get_decode_position"));
+	CHECK(stream_decoder_reset =
+	      m_dl.fetch("FLAC__stream_decoder_reset"));
     } catch (...) {
 	m_dl.reset();
     }

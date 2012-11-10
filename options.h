@@ -3,14 +3,7 @@
 
 #include <vector>
 #include <map>
-#include "libsndfilesrc.h"
-#include "flacsrc.h"
-#include "wvpacksrc.h"
-#ifdef _WIN32
-#include "taksrc.h"
-#endif
 #include "itunetags.h"
-#include "soxdsp.h"
 
 struct Options {
 //    enum { kABR, kTVBR, kCVBR, kCBR };
@@ -39,7 +32,7 @@ struct Options {
        	nice(false), native_chanmapper(false), ignore_length(false),
 	no_optimize(false), native_resampler(false), check_only(false),
 	normalize(false), print_available_formats(false), alac_fast(false),
-	threading(false), concat_cue(false), concat(false),
+	threading(false), concat(false),
 	no_matrix_normalize(false),
 	textcp(0),
 	delay(0),
@@ -69,10 +62,6 @@ struct Options {
     bool isLPCM() const
     {
 	return output_format == 'lpcm';
-    }
-    bool isNativeResampler() const
-    {
-	return !libsoxrate.loaded() || native_resampler;
     }
     const wchar_t *extension() const
     {
@@ -104,7 +93,7 @@ struct Options {
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
 	 ignore_length, no_optimize, native_resampler, check_only,
 	 normalize, print_available_formats, alac_fast, threading,
-	 concat_cue, concat, no_matrix_normalize;
+	 concat, no_matrix_normalize;
     uint32_t textcp;
     int delay;
     double gain;
@@ -115,14 +104,6 @@ struct Options {
     std::vector<uint32_t> chanmap;
 
     bool is_console_visible;
-
-    LibSndfileModule libsndfile;
-    FLACModule libflac;
-    WavpackModule libwavpack;
-    SoxModule libsoxrate;
-#ifdef _WIN32
-    TakModule libtak;
-#endif
 };
 
 #endif

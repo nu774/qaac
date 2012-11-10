@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 #include "util.h"
-#include "chapters.h"
+#include "iointer.h"
 
 template <typename CharT>
 struct CueTokenizer {
@@ -32,30 +32,53 @@ struct CueSegment {
     unsigned m_end;
 };
 
-struct CueTrack {
+class CueTrack {
+    friend class CueSheet;
     unsigned m_number;
     std::vector<CueSegment> m_segments;
     std::map<std::wstring, std::wstring> m_meta;
+public:
+    typedef std::vector<CueSegment>::const_iterator iterator;
 
     CueTrack(unsigned number) : m_number(number) {}
-    std::wstring getName()
+    std::wstring name() const
     {
-	std::map<std::wstring, std::wstring>::iterator
+	std::map<std::wstring, std::wstring>::const_iterator
 	    it = m_meta.find(L"TITLE");
-	if (it != m_meta.end())
-	    return it->second;
-	return L"";
+	return it == m_meta.end() ? L"" : it->second;
     }
+    unsigned number() const { return m_number; }
+    const std::map<std::wstring, std::wstring> &meta() const
+    {
+	return m_meta;
+    }
+    iterator begin() const { return m_segments.begin(); }
+    iterator end() const { return m_segments.end(); }
 };
 
 class CueSheet {
-public:
-    CueSheet(): m_has_multiple_files(false) {}
-    void parse(std::wstreambuf *src);
-
+    bool m_has_multiple_files;
+    size_t m_lineno;
+    std::wstring m_cur_file;
     std::vector<CueTrack> m_tracks;
     std::map<std::wstring, std::wstring> m_meta;
-    bool m_has_multiple_files;
+public:
+    typedef std::vector<CueTrack>::const_iterator iterator;
+
+    CueSheet(): m_has_multiple_files(false) {}
+    void parse(std::wstreambuf *src);
+    void loadTracks(std::vector<chapters::Track> &tracks,
+		    const std::wstring &cuedir,
+		    const std::wstring &fname_format);
+
+    unsigned count() const { return m_tracks.size(); }
+    const std::map<std::wstring, std::wstring> &meta() const
+    {
+	return m_meta;
+    }
+    iterator begin() const { return m_tracks.begin(); }
+    iterator end() const { return m_tracks.end(); }
+    bool has_multiple_files() const { return m_has_multiple_files; }
 private:
     void arrange();
     void parseFile(const std::wstring *args);
@@ -67,8 +90,8 @@ private:
     void parseRem(const std::wstring *args) { parseMeta(args + 1); }
     void die(const std::string &msg)
     {
-	throw std::runtime_error(
-		strutil::format("cuesheet: %s at line %d", msg.c_str(), m_lineno));
+	throw std::runtime_error(strutil::format("cuesheet: %s at line %d",
+						 msg.c_str(), m_lineno));
     }
     CueSegment *lastSegment()
     {
@@ -77,8 +100,6 @@ private:
 		return &m_tracks[i].m_segments.back();
 	return 0;
     }
-    std::wstring m_cur_file;
-    size_t m_lineno;
 };
 
 namespace Cue {

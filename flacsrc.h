@@ -6,8 +6,7 @@
 #include "iointer.h"
 #include "flacmodule.h"
 
-class FLACSource :
-    public ITagParser, public PartialSource<FLACSource>
+class FLACSource: public ISeekableSource, public ITagParser
 {
     struct DecodeBuffer {
 	uint32_t nsamples;
@@ -32,32 +31,34 @@ class FLACSource :
 	}
     };
     typedef std::shared_ptr<FLAC__StreamDecoder> decoder_t;
-    FLACModule m_module;
-    std::shared_ptr<FILE> m_fp;
     bool m_eof;
+    bool m_giveup;
+    bool m_initialize_done;
     decoder_t m_decoder;
+    uint64_t m_length;
+    int64_t m_position;
+    std::shared_ptr<FILE> m_fp;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<chapters::entry_t> m_chapters;
-    bool m_giveup;
     DecodeBuffer m_buffer;
     AudioStreamBasicDescription m_asbd;
+    FLACModule m_module;
 public:
     FLACSource(const FLACModule &module, const std::shared_ptr<FILE> &fp);
-    uint64_t length() const { return getDuration(); }
+    uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
-    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
+    int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    void skipSamples(int64_t count);
+    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    void seekTo(int64_t count);
+    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {
-	if (m_chapters.size())
-	    return &m_chapters;
-	else
-	    return 0;
+	return m_chapters.size() ? &m_chapters : 0;
     }
 private:
     void close(FLAC__StreamDecoder *decoder)

@@ -8,34 +8,31 @@
 #include "win32util.h"
 #include <shellapi.h>
 #include "itunetags.h"
-#include "sink.h"
-#include "rawsource.h"
-#include "flacsrc.h"
-#include "alacsrc.h"
-#include "alacsink.h"
 #include "options.h"
+#include "inputfactory.h"
+#include "sink.h"
+#include "alacsink.h"
+#include "wavsink.h"
 #include "cuesheet.h"
 #include "composite.h"
 #include "nullsource.h"
-#include "wavsource.h"
-#include "expand.h"
 #include "soxdsp.h"
 #include "normalize.h"
-#include "logging.h"
-#include "textfile.h"
 #include "mixer.h"
 #include "intsrc.h"
 #include "scaler.h"
 #include "pipedreader.h"
-#include "wavsink.h"
+#include "TrimmedSource.h"
 #include "chanmap.h"
+#include "logging.h"
+#include "textfile.h"
+#include "expand.h"
 #ifdef REFALAC
 #include "alacenc.h"
 #else
 #include <delayimp.h>
 #include "AudioCodecX.h"
 #include "CoreAudioEncoder.h"
-#include "afsource.h"
 #include "CoreAudioResampler.h"
 #endif
 #include <ShlObj.h>
@@ -230,11 +227,11 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
     try {
 	FILE *statfp = statPtr.get();
 	while (encoder->encodeChunk(1)) {
-	    progress.update(src->getSamplesRead());
+	    progress.update(src->getPosition());
 	    if (statfp)
 		std::fwprintf(statfp, L"%g\n", stat->currentBitrate());
 	}
-	progress.finish(src->getSamplesRead());
+	progress.finish(src->getPosition());
     } catch (...) {
 	LOG(L"\n");
 	throw;
@@ -242,8 +239,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 }
 
 static
-std::shared_ptr<ISource> open_raw(const std::shared_ptr<FILE> &fp,
-				  const Options &opts)
+void getRawFormat(const Options &opts, AudioStreamBasicDescription *result)
 {
     int bits;
     unsigned char c_type, c_endian = 'L';
@@ -271,60 +267,7 @@ std::shared_ptr<ISource> open_raw(const std::shared_ptr<FILE> &fp,
 				bits, type_tab[itype]);
     if (iendian)
 	asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
-
-    return std::shared_ptr<ISource>(new RawSource(fp, asbd));
-}
-
-static
-std::shared_ptr<ISource> open_source(const wchar_t *ifilename,
-				     const Options &opts)
-{
-#define MAKE_SHARED(Foo) std::shared_ptr<ISource>(new Foo)
-#define TRY_MAKE_SHARED(Foo) \
-    do { \
-	try { return MAKE_SHARED(Foo); } \
-	catch (std::exception) { \
-	    lseek(fileno(fp.get()), 0, SEEK_SET); \
-	} \
-    } while (0) 
-
-    std::shared_ptr<FILE> fp(win32::fopen(ifilename, L"rb"));
-    if (opts.is_raw)
-	return open_raw(fp, opts);
-
-    try {
-	try {
-	    return MAKE_SHARED(WaveSource(fp, opts.ignore_length));
-	} catch (const std::runtime_error&) {
-	    if (!util::is_seekable(fileno(fp.get())))
-		throw;
-	    lseek(fileno(fp.get()), 0, SEEK_SET);
-	}
-	if (opts.libflac.loaded())
-	    TRY_MAKE_SHARED(FLACSource(opts.libflac, fp));
-
-	if (opts.libwavpack.loaded())
-	    TRY_MAKE_SHARED(WavpackSource(opts.libwavpack, ifilename));
-
-	if (opts.libtak.loaded() && opts.libtak.compatible())
-	    TRY_MAKE_SHARED(TakSource(opts.libtak, fp));
-#ifndef REFALAC
-	TRY_MAKE_SHARED(ExtAFSource(fp));
-#endif
-	if (opts.libsndfile.loaded())
-	    TRY_MAKE_SHARED(LibSndfileSource(opts.libsndfile, fp));
-
-#ifdef REFALAC
-	return std::shared_ptr<ISource>(new ALACSource(fp));
-#endif
-    } catch (const std::runtime_error&) {
-#ifdef _DEBUG
-	throw;
-#endif
-    }
-    throw std::runtime_error("Not available input file format");
-#undef TRY_MAKE_SHARED
-#undef MAKE_SHARED
+    *result = asbd;
 }
 
 static
@@ -405,11 +348,11 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
     }
 }
 
-static void do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
-			 const Options &opts)
+static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
+			   const Options &opts, bool seekable)
 {
     std::shared_ptr<ISource> src = chain.back();
-    Normalizer *normalizer = new Normalizer(src);
+    Normalizer *normalizer = new Normalizer(src, seekable);
     chain.push_back(std::shared_ptr<ISource>(normalizer));
 
     LOG(L"Scanning maximum peak...\n");
@@ -418,10 +361,11 @@ static void do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
 		      src->getSampleFormat().mSampleRate);
     while ((rc = normalizer->process(4096)) > 0) {
 	n += rc;
-	progress.update(src->getSamplesRead());
+	progress.update(src->getPosition());
     }
-    progress.finish(src->getSamplesRead());
+    progress.finish(src->getPosition());
     LOG(L"Peak value: %g\n", normalizer->getPeak());
+    return normalizer->getPeak();
 }
 
 static
@@ -521,7 +465,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
     }
     // remix
     if (opts.remix_preset || opts.remix_file) {
-	if (!opts.libsoxrate.loaded())
+	if (!input::factory()->libsoxrate.loaded())
 	    LOG(L"WARNING: mixer requires libsoxrate. Mixing disabled\n");
 	else {
 	    std::vector<std::vector<complex_t> > matrix;
@@ -532,7 +476,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
 		    static_cast<uint32_t>(matrix.size()));
 	    }
 	    std::shared_ptr<ISource>
-		mixer(new MatrixMixer(chain.back(), opts.libsoxrate,
+		mixer(new MatrixMixer(chain.back(), input::factory()->libsoxrate,
 				      matrix, threading,
 				      !opts.no_matrix_normalize));
 	    chain.push_back(mixer);
@@ -590,38 +534,28 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
 }
 
 static
-void delayed_source(std::vector<std::shared_ptr<ISource> > &chain,
-		    const Options & opts)
+std::shared_ptr<ISeekableSource>
+delayed_source(const std::shared_ptr<ISeekableSource> &src,
+	       const Options & opts)
 {
-    std::shared_ptr<ISource> src = chain.back();
-    double rate = src->getSampleFormat().mSampleRate;
+    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
+    double rate = asbd.mSampleRate;
     if (opts.delay > 0) {
-	CompositeSource *cp = new CompositeSource();
-	std::shared_ptr<ISource> cpPtr(cp);
-	NullSource *ns = new NullSource(src->getSampleFormat());
 	int nsamples = lrint(0.001 * opts.delay * rate);
-	ns->setRange(0, nsamples);
-	cp->addSource(std::shared_ptr<ISource>(ns));
-	cp->addSource(src);
 	if (opts.verbose > 1 || opts.logfilename)
-	    LOG(L"Delay of %dms: pad %d samples\n", opts.delay,
-		nsamples);
-	chain.pop_back();
-	chain.push_back(cpPtr);
+	    LOG(L"Delay of %dms: pad %d samples\n", opts.delay, nsamples);
+	std::shared_ptr<CompositeSource> cp(new CompositeSource());
+	std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
+	cp->addSource(std::make_shared<TrimmedSource>(ns, 0, nsamples));
+	cp->addSource(src);
+	return cp;
     } else if (opts.delay < 0) {
-	IPartialSource *p = dynamic_cast<IPartialSource*>(src.get());
-	if (p) {
-	    int nsamples = lrint(-0.001 * opts.delay * rate);
-	    if (src->length() >= 0 && nsamples > src->length())
-		nsamples = src->length();
-	    p->setRange(nsamples, -1);
-	    if (opts.verbose > 1 || opts.logfilename)
-		LOG(L"Delay of %dms: truncate %d samples\n", opts.delay,
-		    nsamples);
-	}
-	else
-	    LOG(L"WARNING: can't set negative delay for this input\n");
+	int nsamples = lrint(-0.001 * opts.delay * rate);
+	if (opts.verbose > 1 || opts.logfilename)
+	    LOG(L"Delay of %dms: truncate %d samples\n", opts.delay, nsamples);
+	return std::make_shared<TrimmedSource>(src, nsamples, -1);
     }
+    return src;
 }
 
 #ifndef REFALAC
@@ -635,11 +569,13 @@ inline uint32_t bound_quality(uint32_t n)
 
 #endif
 
-void preprocess_input(std::vector<std::shared_ptr<ISource> > &chain,
-		      const Options &opts, uint32_t *wChanmask,
-		      uint32_t *aacLayout,
-		      AudioStreamBasicDescription *inputDesc,
-		      AudioStreamBasicDescription *outputDesc)
+void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
+			    std::vector<std::shared_ptr<ISource> > &chain,
+			    const Options &opts, uint32_t *wChanmask,
+			    uint32_t *aacLayout,
+			    AudioStreamBasicDescription *inputDesc,
+			    AudioStreamBasicDescription *outputDesc,
+			    bool normalize_pass=false)
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
@@ -650,7 +586,7 @@ void preprocess_input(std::vector<std::shared_ptr<ISource> > &chain,
     if (!opts.isLPCM())
 	codec.reset(new AudioCodecX(opts.output_format));
 #endif
-    delayed_source(chain, opts);
+    //chain.push_back(delayed_source(src, opts));
     mapped_source(chain, opts, wChanmask, aacLayout, threading);
 
     if (!opts.isLPCM()) {
@@ -674,13 +610,13 @@ void preprocess_input(std::vector<std::shared_ptr<ISource> > &chain,
 #endif
     }
     if (opts.lowpass > 0) {
-	if (!opts.libsoxrate.loaded())
+	if (!input::factory()->libsoxrate.loaded())
 	    LOG(L"WARNING: --lowpass requires libsoxrate. LPF disabled\n");
         else {
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Applying LPF: %dHz\n", opts.lowpass);
 	    std::shared_ptr<ISoxDSPEngine>
-		engine(new SoxLowpassFilter(opts.libsoxrate,
+		engine(new SoxLowpassFilter(input::factory()->libsoxrate,
 					    chain.back()->getSampleFormat(),
 					    opts.lowpass,
 					    threading));
@@ -718,11 +654,11 @@ void preprocess_input(std::vector<std::shared_ptr<ISource> > &chain,
 #endif
     if (oasbd.mSampleRate != iasbd.mSampleRate) {
 	LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
-	if (!opts.native_resampler && opts.libsoxrate.loaded()) {
+	if (!opts.native_resampler && input::factory()->libsoxrate.loaded()) {
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Using libsoxrate SRC\n");
 	    std::shared_ptr<ISoxDSPEngine>
-		engine(new SoxResampler(opts.libsoxrate,
+		engine(new SoxResampler(input::factory()->libsoxrate,
 					chain.back()->getSampleFormat(),
 					oasbd.mSampleRate,
 					threading));
@@ -756,8 +692,12 @@ void preprocess_input(std::vector<std::shared_ptr<ISource> > &chain,
 #endif
 	}
     }
-    if (opts.normalize)
-	do_normalize(chain, opts);
+    if (normalize_pass) {
+	do_normalize(chain, opts, src->isSeekable());
+	if (src->isSeekable())
+	    return;
+    }
+
     if (opts.gain) {
 	double scale = dB_to_scale(opts.gain);
 	if (opts.verbose > 1 || opts.logfilename)
@@ -813,6 +753,29 @@ void preprocess_input(std::vector<std::shared_ptr<ISource> > &chain,
     if (outputDesc) *outputDesc = oasbd;
 }
 
+void build_filter_chain(std::shared_ptr<ISeekableSource> src,
+		        std::vector<std::shared_ptr<ISource> > &chain,
+		        const Options &opts, uint32_t *wChanmask,
+		        uint32_t *aacLayout,
+		        AudioStreamBasicDescription *inputDesc,
+		        AudioStreamBasicDescription *outputDesc)
+{
+    chain.push_back(src);
+    build_filter_chain_sub(src, chain, opts, wChanmask, aacLayout,
+			   inputDesc, outputDesc, opts.normalize);
+    if (opts.normalize && src->isSeekable()) {
+	src->seekTo(0);
+	Normalizer *normalizer = dynamic_cast<Normalizer*>(chain.back().get());
+	double peak = normalizer->getPeak();
+	chain.clear();
+	chain.push_back(src);
+	if (peak > FLT_MIN)
+	    chain.push_back(std::make_shared<Scaler>(src, 1.0/peak));
+	build_filter_chain_sub(src, chain, opts, wChanmask, aacLayout,
+			       inputDesc, outputDesc, false);
+    }
+}
+
 static
 void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
 		 const std::wstring &ofilename, const Options &opts,
@@ -832,10 +795,10 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
     try {
 	size_t nread;
 	while ((nread = src->readSamples(&buffer[0], 4096)) > 0) {
-	    progress.update(src->getSamplesRead());
+	    progress.update(src->getPosition());
 	    sink.writeSamples(&buffer[0], nread * bpf, nread);
 	}
-	progress.finish(src->getSamplesRead());
+	progress.finish(src->getPosition());
     } catch (const std::exception &e) {
 	LOG(L"\nERROR: %s\n", errormsg(e).c_str());
     }
@@ -1050,7 +1013,7 @@ void config_aac_codec(AudioConverterX &converter, const Options &opts)
 }
 
 static
-void encode_file(const std::shared_ptr<ISource> &src,
+void encode_file(const std::shared_ptr<ISeekableSource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
     uint32_t wavChanmask;
@@ -1058,9 +1021,8 @@ void encode_file(const std::shared_ptr<ISource> &src,
     AudioStreamBasicDescription iasbd, oasbd;
 
     std::vector<std::shared_ptr<ISource> > chain;
-    chain.push_back(src);
-    preprocess_input(chain, opts, &wavChanmask, &aacLayout, &iasbd, &oasbd);
-
+    build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout,
+		       &iasbd, &oasbd);
     if (opts.isLPCM()) {
 	decode_file(chain, ofilename, opts, wavChanmask);
 	return;
@@ -1094,15 +1056,14 @@ void encode_file(const std::shared_ptr<ISource> &src,
 #else // REFALAC
 
 static
-void encode_file(const std::shared_ptr<ISource> &src,
+void encode_file(const std::shared_ptr<ISeekableSource> &src,
 	const std::wstring &ofilename, const Options &opts)
 {
     uint32_t wavChanmask;
     uint32_t aacLayout;
     AudioStreamBasicDescription iasbd;
     std::vector<std::shared_ptr<ISource> > chain;
-    chain.push_back(src);
-    preprocess_input(chain, opts, &wavChanmask, &aacLayout, &iasbd, 0);
+    build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout, &iasbd, 0);
 
     if (opts.isLPCM()) {
 	decode_file(chain, ofilename, opts, wavChanmask);
@@ -1130,140 +1091,76 @@ void encode_file(const std::shared_ptr<ISource> &src,
 const char *get_qaac_version();
 
 static
-void load_modules(Options &opts)
+void setup_input_factory(const Options &opts)
 {
-    opts.libsndfile = LibSndfileModule(L"libsndfile-1.dll");
-    opts.libflac = FLACModule(L"libFLAC.dll");
-    if (!opts.libflac.loaded())
-	opts.libflac = FLACModule(L"libFLAC-8.dll");
-    opts.libwavpack = WavpackModule(L"wavpackdll.dll");
-    if (!opts.libwavpack.loaded())
-	opts.libwavpack = WavpackModule(L"libwavpack-1.dll");
-    opts.libtak = TakModule(L"tak_deco_lib.dll");
+    input::InputFactory *factory = input::factory();
+
+    factory->libsndfile = LibSndfileModule(L"libsndfile-1.dll");
+    factory->libflac = FLACModule(L"libFLAC.dll");
+    if (!factory->libflac.loaded())
+	factory->libflac = FLACModule(L"libFLAC-8.dll");
+    factory->libwavpack = WavpackModule(L"wavpackdll.dll");
+    if (!factory->libwavpack.loaded())
+	factory->libwavpack = WavpackModule(L"libwavpack-1.dll");
+    factory->libtak = TakModule(L"tak_deco_lib.dll");
 #ifdef _WIN64
-    opts.libsoxrate = SoxModule(L"libsoxrate64.dll");
+    factory->libsoxrate = SoxModule(L"libsoxrate64.dll");
 #else
-    opts.libsoxrate = SoxModule(L"libsoxrate.dll");
+    factory->libsoxrate = SoxModule(L"libsoxrate.dll");
 #endif
-}
 
-struct TagLookup {
-    typedef std::map<uint32_t, std::wstring> meta_t;
-    const CueTrack &track;
-    const meta_t &tracktags;
-
-    TagLookup(const CueTrack &track_, const meta_t &tags)
-	: track(track_), tracktags(tags) {}
-
-    std::wstring operator()(const std::wstring &name) {
-	std::wstring namex = strutil::wslower(name);
-	if (namex == L"tracknumber")
-	    return strutil::format(L"%02d", track.m_number);
-	std::string skey = strutil::w2us(namex);
-	uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
-	if (id == 0) return L"";
-	meta_t::const_iterator iter = tracktags.find(id);
-	return iter == tracktags.end() ? L"" : iter->second;
+    if (opts.is_raw) {
+	AudioStreamBasicDescription asbd;
+	getRawFormat(opts, &asbd);
+	factory->setRawFormat(asbd);
     }
-};
-
-static inline
-uint64_t cue_frame_to_sample(uint32_t sampling_rate, uint32_t nframe)
-{
-    return static_cast<uint64_t>(nframe / 75.0 * sampling_rate + 0.5);
+    factory->setIgnoreLength(opts.ignore_length);
 }
 
 static
-void handle_cue_sheet(const wchar_t *ifilename, const Options &opts,
-		      std::shared_ptr<ISource> *result=0)
+void load_cue_sheet(const wchar_t *ifilename, const Options &opts,
+		      std::vector<chapters::Track> &tracks)
 {
-    std::wstring cuepath = ifilename;
-    std::wstring cuedir = L".";
-    for (size_t i = 0; i < cuepath.size(); ++i)
-	if (cuepath[i] == L'/') cuepath[i] = L'\\';
-    const wchar_t *p = std::wcsrchr(cuepath.c_str(), L'\\');
-    if (p) cuedir = cuepath.substr(0, p - cuepath.c_str());
+    const wchar_t *base_p = PathFindFileNameW(ifilename);
+    std::wstring cuedir =
+	(base_p == ifilename ? L"." : std::wstring(ifilename, base_p));
     cuedir = win32::GetFullPathNameX(cuedir);
 
     std::wstring cuetext = load_text_file(ifilename, opts.textcp);
     std::wstringbuf istream(cuetext);
     CueSheet cue;
     cue.parse(&istream);
-    typedef std::map<uint32_t, std::wstring> meta_t;
-    meta_t album_tags;
-    Cue::ConvertToItunesTags(cue.m_meta, &album_tags, true);
+    cue.loadTracks(tracks, cuedir, 
+		   opts.fname_format ? opts.fname_format
+				     : L"${tracknumber}${title& }${title}");
+}
 
-    CompositeSource *concat_sp = new CompositeSource();
-    std::shared_ptr<ISource> concat_spPtr(concat_sp);
-    std::vector<chapters::entry_t > chapters;
+static
+void load_track(const wchar_t *ifilename, const Options &opts,
+	        std::vector<chapters::Track> &tracks)
+{
+    const wchar_t *name = L"stdin";
+    if (std::wcscmp(ifilename, L"-"))
+	name = PathFindFileNameW(ifilename);
+    std::wstring title(name, PathFindExtensionW(name));
 
-    for (size_t i = 0; i < cue.m_tracks.size(); ++i) {
-	CueTrack &track = cue.m_tracks[i];
-	meta_t track_tags = album_tags;
-	{
-	    meta_t tmp;
-	    Cue::ConvertToItunesTags(track.m_meta, &tmp);
-	    for (meta_t::iterator it = tmp.begin(); it != tmp.end(); ++it)
-		track_tags[it->first] = it->second;
-	    track_tags[Tag::kTrack] =
-		strutil::format(L"%d/%d", track.m_number, cue.m_tracks.back().m_number);
-	}
-	CompositeSource *csp = new CompositeSource();
-	std::shared_ptr<ISource> csPtr(csp);
-	csp->setTags(track_tags);
-	std::shared_ptr<ISource> src;
-	for (size_t j = 0; j < track.m_segments.size(); ++j) {
-	    CueSegment &seg = track.m_segments[j];
-	    if (seg.m_filename == L"__GAP__") {
-		if (!src.get()) continue;
-		src.reset(new NullSource(src->getSampleFormat()));
-	    } else {
-		std::wstring ifilename =
-		    win32::PathCombineX(cuedir, seg.m_filename);
-		src = open_source(ifilename.c_str(), opts);
-	    }
-	    unsigned rate = src->getSampleFormat().mSampleRate;
-	    int64_t begin = cue_frame_to_sample(rate, seg.m_begin);
-	    int64_t end = seg.m_end == -1 ? -1:
-		cue_frame_to_sample(rate, seg.m_end) - begin;
-	    IPartialSource *psrc = dynamic_cast<IPartialSource*>(src.get());
-	    if (!psrc)
-		throw std::runtime_error("Cannot set range this filetype");
-	    psrc->setRange(begin, end);
-	    csp->addSource(src);
-	}
-	if (opts.concat_cue) {
-	    concat_sp->addSource(csPtr);
-	    double rate = csPtr->getSampleFormat().mSampleRate;
-	    chapters.push_back(std::make_pair(track.getName(),
-					      csPtr->length() / rate));
-	} else {
-	    std::wstring formatstr = opts.fname_format
-		? opts.fname_format : L"${tracknumber}${title& }${title}";
-	    std::wstring ofilename =
-		process_template(formatstr, TagLookup(track, track_tags));
+    std::shared_ptr<ISeekableSource>
+	src(input::factory()->open(ifilename));
 
-	    struct F {
-		static wchar_t trans(wchar_t ch) {
-		    return std::wcschr(L":/\\?|<>*\"", ch) ? L'_' : ch;
-		}
-	    };
-	    ofilename = strutil::strtransform(ofilename, F::trans) + L".stub";
-	    ofilename = get_output_filename(ofilename.c_str(), opts);
-	    LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
-	    encode_file(csPtr, ofilename, opts);
-	}
+    ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
+    if (parser) {
+	const std::map<uint32_t, std::wstring> &meta =
+	    parser->getTags();
+	std::map<uint32_t, std::wstring>::const_iterator it
+	    = meta.find(Tag::kTitle);
+	if (it != meta.end())
+	    title = it->second;
     }
-    if (opts.concat_cue) {
-	concat_sp->setTags(album_tags);
-	concat_sp->setChapters(chapters);
-	if (opts.concat)
-	    result->swap(concat_spPtr);
-	else {
-	    std::wstring ofilename = get_output_filename(ifilename, opts);
-	    encode_file(concat_spPtr, ofilename, opts);
-	}
-    }
+    chapters::Track new_track;
+    new_track.name = title;
+    new_track.source = src;
+    new_track.ofilename = name;
+    tracks.push_back(new_track);
 }
 
 struct ConsoleTitleSaver {
@@ -1349,25 +1246,26 @@ int wmain1(int argc, wchar_t **argv)
 	if (!opts.print_available_formats)
 	    LOG(L"%s\n", opts.encoder_name.c_str());
 
-	load_modules(opts);
+	setup_input_factory(opts);
+	input::InputFactory *factory = input::factory();
 
 	if (opts.check_only) {
-	    if (opts.libsoxrate.loaded())
+	    if (factory->libsoxrate.loaded())
 		LOG(L"libsoxrate %hs\n",
-		    opts.libsoxrate.version_string());
-	    if (opts.libsndfile.loaded())
-		LOG(L"%hs\n", opts.libsndfile.version_string());
-	    if (opts.libflac.loaded())
-		LOG(L"libFLAC %hs\n", opts.libflac.VERSION_STRING);
-	    if (opts.libwavpack.loaded())
+		    factory->libsoxrate.version_string());
+	    if (factory->libsndfile.loaded())
+		LOG(L"%hs\n", factory->libsndfile.version_string());
+	    if (factory->libflac.loaded())
+		LOG(L"libFLAC %hs\n", factory->libflac.VERSION_STRING);
+	    if (factory->libwavpack.loaded())
 		LOG(L"wavpackdll %hs\n",
-		    opts.libwavpack.GetLibraryVersionString());
-	    if (opts.libtak.loaded()) {
+		    factory->libwavpack.GetLibraryVersionString());
+	    if (factory->libtak.loaded()) {
 		TtakInt32 var, comp;
-		opts.libtak.GetLibraryVersion(&var, &comp);
+		factory->libtak.GetLibraryVersion(&var, &comp);
 		LOG(L"tak_deco_lib %u.%u.%u %hs\n",
 			var >> 16, (var >> 8) & 0xff, var & 0xff,
-			opts.libtak.compatible() ? "compatible"
+			factory->libtak.compatible() ? "compatible"
 			                         : "incompatible");
 	    }
 	    return 0;
@@ -1401,30 +1299,40 @@ int wmain1(int argc, wchar_t **argv)
 		_setmode(1, _O_BINARY);
 	    }
 	}
-	CompositeSource *csp = new CompositeSource();
-	std::shared_ptr<ISource> csPtr(csp);
+
+	std::vector<chapters::Track> tracks;
 	const wchar_t *ifilename = 0;
+
 	for (int i = 0; i < argc; ++i) {
 	    ifilename = argv[i];
-	    std::shared_ptr<ISource> src;
-	    const wchar_t *name = L"<stdin>";
-	    if (std::wcscmp(ifilename, L"-"))
-		name = PathFindFileNameW(ifilename);
-	    if (!opts.concat) LOG(L"\n%s\n", name);
-	    if (strutil::wslower(PathFindExtension(ifilename)) == L".cue")
-		handle_cue_sheet(ifilename, opts, &src);
-	    else {
-		std::wstring ofilename
-		    = get_output_filename(ifilename, opts);
-		src = open_source(ifilename, opts);
-		if (!opts.concat) encode_file(src, ofilename, opts);
-	    }
-	    if (opts.concat) csp->addSourceWithChapter(src);
+	    if (strutil::wslower(PathFindExtensionW(ifilename)) == L".cue")
+		load_cue_sheet(ifilename, opts, tracks);
+	    else
+		load_track(ifilename, opts, tracks);
 	}
-	if (opts.concat) {
+	if (!opts.concat) {
+	    for (size_t i = 0; i < tracks.size(); ++i) {
+		chapters::Track &track = tracks[i];
+		std::wstring ofilename =
+		    get_output_filename(track.ofilename.c_str(), opts);
+		LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
+		std::shared_ptr<ISeekableSource> src =
+		    delayed_source(track.source, opts);
+		src->seekTo(0);
+		encode_file(src, ofilename, opts);
+	    }
+	} else {
 	    std::wstring ofilename = get_output_filename(ifilename, opts);
 	    LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
-	    encode_file(csPtr, ofilename, opts);
+	    std::shared_ptr<CompositeSource> cs
+		= std::make_shared<CompositeSource>();
+	    for (size_t i = 0; i < tracks.size(); ++i) {
+		chapters::Track &track = tracks[i];
+		cs->addSourceWithChapter(track.source, track.name);
+	    }
+	    std::shared_ptr<ISeekableSource> src(delayed_source(cs, opts));
+	    src->seekTo(0);
+	    encode_file(src, ofilename, opts);
 	}
     } catch (const std::exception &e) {
 	if (opts.print_available_formats)

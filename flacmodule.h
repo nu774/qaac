@@ -26,8 +26,7 @@ public:
 	    FLAC__StreamDecoderWriteCallback,
 	    FLAC__StreamDecoderMetadataCallback,
 	    FLAC__StreamDecoderErrorCallback,
-	    void *
-    );
+	    void *);
     FLAC__StreamDecoderInitStatus (*stream_decoder_init_ogg_stream)(
 	    FLAC__StreamDecoder *,
 	    FLAC__StreamDecoderReadCallback,
@@ -38,17 +37,19 @@ public:
 	    FLAC__StreamDecoderWriteCallback,
 	    FLAC__StreamDecoderMetadataCallback,
 	    FLAC__StreamDecoderErrorCallback,
-	    void *
-    );
-    FLAC__bool (*stream_decoder_set_metadata_respond)(
-	    FLAC__StreamDecoder *, FLAC__MetadataType);
-    FLAC__bool (*stream_decoder_process_until_end_of_metadata)(
-	    FLAC__StreamDecoder *);
-    FLAC__StreamDecoderState (*stream_decoder_get_state)(
-	    const FLAC__StreamDecoder *);
+	    void *);
+    FLAC__bool (*stream_decoder_set_metadata_respond)(FLAC__StreamDecoder *,
+						      FLAC__MetadataType);
+    FLAC__bool
+    (*stream_decoder_process_until_end_of_metadata)(FLAC__StreamDecoder *);
+    FLAC__StreamDecoderState
+    (*stream_decoder_get_state)(const FLAC__StreamDecoder *);
     FLAC__bool (*stream_decoder_process_single)(FLAC__StreamDecoder *);
-    FLAC__bool (*stream_decoder_seek_absolute)(
-	    FLAC__StreamDecoder *, FLAC__uint64);
+    FLAC__bool (*stream_decoder_seek_absolute)(FLAC__StreamDecoder *,
+					       FLAC__uint64);
+    FLAC__bool (*stream_decoder_get_decode_position)(FLAC__StreamDecoder *,
+						     FLAC__uint64*);
+    FLAC__bool (*stream_decoder_reset)(FLAC__StreamDecoder *);
 
 };
 

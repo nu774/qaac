@@ -237,32 +237,23 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
 	if (!e.isNotSupportedError())
 	    throw;
     }
-    setRange(0, length);
+    m_length = length;
 }
 
 size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
 {
-    nsamples = adjustSamplesToRead(nsamples);
-    if (!nsamples) return 0;
-    size_t processed = 0;
-    uint8_t *bp = static_cast<uint8_t*>(buffer);
-    while (processed < nsamples) {
-	UInt32 ns = nsamples - processed;
-	UInt32 nb = ns * m_asbd.mBytesPerFrame;
-	AudioBufferList abl = { 0 };
-	abl.mNumberBuffers = 1;
-	abl.mBuffers[0].mData = bp;
-	abl.mBuffers[0].mDataByteSize = nb;
-	CHECKCA(ExtAudioFileRead(m_eaf, &ns, &abl));
-	if (ns == 0) break;
-	processed += ns;
-	bp += ns * m_asbd.mBytesPerFrame;
-	addSamplesRead(ns);
-    }
-    return processed;
+    UInt32 ns = nsamples;
+    UInt32 nb = ns * m_asbd.mBytesPerFrame;
+    AudioBufferList abl = { 0 };
+    abl.mNumberBuffers = 1;
+    abl.mBuffers[0].mNumberChannels = m_asbd.mChannelsPerFrame;
+    abl.mBuffers[0].mData = buffer;
+    abl.mBuffers[0].mDataByteSize = nb;
+    CHECKCA(ExtAudioFileRead(m_eaf, &ns, &abl));
+    return ns;
 }
 
-void ExtAFSource::skipSamples(int64_t count)
+void ExtAFSource::seekTo(int64_t count)
 {
     int preroll_packets = 0;
     switch (m_asbd.mFormatID) {
@@ -274,10 +265,19 @@ void ExtAFSource::skipSamples(int64_t count)
 	= std::max(0LL, count - m_asbd.mFramesPerPacket * preroll_packets);
     CHECKCA(ExtAudioFileSeek(m_eaf, off));
     int32_t distance = count - off;
-    if (distance > 0) {
+    while (distance > 0) {
 	size_t nbytes = distance * m_asbd.mBytesPerFrame;
-	m_buffer.resize(nbytes);
-	readSamples(&m_buffer[0], distance);
+	if (nbytes > m_buffer.size())
+	    m_buffer.resize(nbytes);
+	size_t n = readSamples(&m_buffer[0], distance);
+	if (n <= 0) break;
+	distance -= n;
     }
 }
 
+int64_t ExtAFSource::getPosition()
+{
+   int64_t pos;
+   CHECKCA(ExtAudioFileTell(m_eaf, &pos));
+   return pos;
+}

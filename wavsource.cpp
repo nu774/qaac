@@ -21,45 +21,60 @@ namespace wave {
 }
 
 WaveSource::WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength)
-    : m_fp(fp)
+    : m_data_pos(0), m_position(0), m_fp(fp)
 {
     std::memset(&m_asbd, 0, sizeof m_asbd);
     m_seekable = util::is_seekable(fileno(m_fp.get()));
     int64_t data_length = parse();
-    if (ignorelength || !data_length ||
-	data_length % m_block_align)
-	setRange(0, -1LL);
+    if (ignorelength || !data_length || data_length % m_block_align)
+	m_length = ~0ULL;
     else
-	setRange(0, data_length / m_block_align);
+	m_length = data_length / m_block_align;
+    if (m_seekable)
+	m_data_pos = _lseeki64(fd(), 0, SEEK_CUR);
 }
 
 size_t WaveSource::readSamples(void *buffer, size_t nsamples)
 {
-    nsamples = adjustSamplesToRead(nsamples);
+    ssize_t nbytes = nsamples * m_block_align;
+    m_buffer.resize(nbytes);
+    nbytes = read(fd(), &m_buffer[0], nbytes);
+    nsamples = nbytes > 0 ? nbytes / m_block_align: 0;
     if (nsamples) {
-	ssize_t nbytes = nsamples * m_block_align;
-	m_buffer.resize(nbytes);
-	nbytes = read(fd(), &m_buffer[0], nbytes);
-	nsamples = nbytes > 0 ? nbytes / m_block_align: 0;
-	if (nsamples) {
-	    size_t size = nsamples * m_block_align;
-	    uint8_t *bp = &m_buffer[0];
-	    /* convert to signed */
-	    if (m_asbd.mBitsPerChannel <= 8) {
-		for (size_t i = 0; i < size; ++i)
-		    bp[i] ^= 0x80;
-	    }
-	    util::unpack(bp, buffer, &size,
-			 m_block_align / m_asbd.mChannelsPerFrame,
-			 m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame);
+	size_t size = nsamples * m_block_align;
+	uint8_t *bp = &m_buffer[0];
+	/* convert to signed */
+	if (m_asbd.mBitsPerChannel <= 8) {
+	    for (size_t i = 0; i < size; ++i)
+		bp[i] ^= 0x80;
 	}
-	addSamplesRead(nsamples);
+	util::unpack(bp, buffer, &size,
+		     m_block_align / m_asbd.mChannelsPerFrame,
+		     m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame);
+	m_position += nsamples;
     }
     return nsamples;
 }
-void WaveSource::skipSamples(int64_t count)
+void WaveSource::seekTo(int64_t count)
 {
-    skip(count * m_block_align);
+    if (m_seekable) {
+	CHECKCRT(_lseeki64(fd(), m_data_pos + count * m_block_align,
+			   SEEK_SET) < 0);
+	m_position = count;
+    }
+    else if (m_position > count)
+	throw std::runtime_error("Cannot seek back the input");
+    else {
+	char buf[0x1000];
+	int64_t nread = 0;
+	int64_t bytes = (count - m_position) * m_block_align;
+	while (nread < bytes) {
+	    int n = read(fd(), buf, std::min(bytes - nread, 0x1000LL));
+	    if (n < 0) break;
+	    nread += n;
+	}
+	m_position += nread / m_block_align;
+    }
 }
 
 int64_t WaveSource::parse()
@@ -109,7 +124,7 @@ inline void WaveSource::read64le(void *n)
 void WaveSource::skip(int64_t n)
 {
     if (m_seekable)
-	_lseeki64(fd(), n, SEEK_CUR);
+	CHECKCRT(_lseeki64(fd(), n, SEEK_CUR) < 0);
     else {
 	char buf[8192];
 	while (n > 0) {

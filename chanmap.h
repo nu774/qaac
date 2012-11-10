@@ -21,7 +21,7 @@ namespace chanmap {
     void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result);
 }
 
-class ChannelMapper: public DelegatingSource {
+class ChannelMapper: public FilterBase {
     std::vector<uint32_t> m_chanmap;
     std::vector<uint32_t> m_layout;
 public:

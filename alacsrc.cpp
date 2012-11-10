@@ -66,7 +66,7 @@ ALACSource::ALACSource(const std::shared_ptr<FILE> &fp)
 	}
 	m_decoder = std::shared_ptr<ALACDecoder>(new ALACDecoder());
 	CHECKCA(m_decoder->Init(&alac[0], alac.size()));
-	setRange(0, m_file.GetTrackDuration(m_track_id));
+	m_length = m_file.GetTrackDuration(m_track_id);
 
 	mp4a::fetchTags(m_file, &m_tags);
     } catch (mp4v2::impl::Exception *e) {
@@ -76,55 +76,45 @@ ALACSource::ALACSource(const std::shared_ptr<FILE> &fp)
 
 size_t ALACSource::readSamples(void *buffer, size_t nsamples)
 {
-    nsamples = adjustSamplesToRead(nsamples);
-    if (!nsamples) return 0;
-
     uint32_t bpf = m_asbd.mBytesPerFrame;
-    uint8_t *bufp = static_cast<uint8_t*>(buffer);
-    uint32_t nread = 0;
 
-    while (nread < nsamples) {
-	if (!m_buffer.count()) {
-	    uint32_t size;
-	    MP4SampleId sid;
-	    try {
-		sid = m_file.GetSampleIdFromTime(m_track_id, m_position);
-		size = m_file.GetSampleSize(m_track_id, sid);
-	    } catch (mp4v2::impl::Exception *e) {
-		delete e;
-		break;
-	    }
-	    MP4Timestamp start;
-	    MP4Duration duration;
-	    std::vector<uint8_t> ivec(size);
-	    uint8_t *vp = &ivec[0];
-
-	    try {
-		m_file.ReadSample(m_track_id, sid, &vp, &size, &start,
-				  &duration);
-	    } catch (mp4v2::impl::Exception *e) {
-		handle_mp4error(e);
-	    }
-	    BitBuffer bits;
-	    BitBufferInit(&bits, vp, size);
-	    m_buffer.resize(duration);
-	    uint32_t ncount;
-	    CHECKCA(m_decoder->Decode(&bits, m_buffer.write_ptr(),
-				      duration, m_asbd.mChannelsPerFrame,
-				      &ncount));
-	    m_buffer.commit(ncount, m_position - start);
-	    m_position = start + ncount;
+    if (!m_buffer.count()) {
+	uint32_t size;
+	MP4SampleId sid;
+	try {
+	    sid = m_file.GetSampleIdFromTime(m_track_id, m_position);
+	    size = m_file.GetSampleSize(m_track_id, sid);
+	} catch (mp4v2::impl::Exception *e) {
+	    delete e;
+	    return 0;
 	}
-	uint32_t count = std::min(m_buffer.count(),
-				  static_cast<uint32_t>(nsamples) - nread);
-	size_t nbytes = count * bpf;
-	util::unpack(m_buffer.read_ptr(), bufp, &nbytes,
-		     m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame,
-		     m_oasbd.mBytesPerFrame / m_oasbd.mChannelsPerFrame);
-	m_buffer.advance(count);
-	nread += count;
-	bufp += nbytes;
+	MP4Timestamp start;
+	MP4Duration duration;
+	std::vector<uint8_t> ivec(size);
+	uint8_t *vp = &ivec[0];
+
+	try {
+	    m_file.ReadSample(m_track_id, sid, &vp, &size, &start,
+			      &duration);
+	} catch (mp4v2::impl::Exception *e) {
+	    handle_mp4error(e);
+	}
+	BitBuffer bits;
+	BitBufferInit(&bits, vp, size);
+	m_buffer.resize(duration);
+	uint32_t ncount;
+	CHECKCA(m_decoder->Decode(&bits, m_buffer.write_ptr(),
+				  duration, m_asbd.mChannelsPerFrame,
+				  &ncount));
+	m_buffer.commit(ncount, m_position - start);
     }
-    addSamplesRead(nread);
-    return nread;
+    uint32_t count = std::min(m_buffer.count(),
+			      static_cast<uint32_t>(nsamples));
+    size_t nbytes = count * bpf;
+    util::unpack(m_buffer.read_ptr(), buffer, &nbytes,
+		 m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame,
+		 m_oasbd.mBytesPerFrame / m_oasbd.mChannelsPerFrame);
+    m_buffer.advance(count);
+    m_position += count;
+    return count;
 }

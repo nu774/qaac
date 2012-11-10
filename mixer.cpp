@@ -79,8 +79,11 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
 			 const std::vector<std::vector<complex_t> > &spec,
 			 bool mt,
 			 bool normalize)
-    : DelegatingSource(source), m_module(module), m_matrix(spec),
-      m_input_frames(0), m_end_of_input(false), m_samples_read(0)
+    : FilterBase(source),
+      m_mt(mt),
+      m_position(0),
+      m_matrix(spec),
+      m_module(module)
 {
     const AudioStreamBasicDescription &fmt = source->getSampleFormat();
     if (!validateMatrix(m_matrix, &m_shiftMask))
@@ -90,29 +93,39 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
     if (normalize)
 	normalizeMatrix(m_matrix);
     m_asbd = cautil::buildASBDForPCM(fmt.mSampleRate, spec.size(),
-				32, kAudioFormatFlagIsFloat);
+				     32, kAudioFormatFlagIsFloat);
 
     if (m_shiftMask) {
 	size_t numtaps = fmt.mSampleRate / 12;
 	if (!(numtaps & 1)) ++numtaps;
-	std::vector<double> coefs(numtaps);
-	hilbert(&coefs[0], numtaps);
-	applyHamming(&coefs[0], numtaps);
-	m_filter_gain = calcGain(&coefs[0], numtaps);
-	lsx_fir_t *filter =
-	    m_module.fir_create(util::bitcount(m_shiftMask), &coefs[0], numtaps,
-				numtaps >> 1, mt);
-	if (!filter)
-	    throw std::runtime_error("failed to init hilbert transformer");
-	m_filter = std::shared_ptr<lsx_fir_t>(filter, m_module.fir_close);
-	if (m_module.fir_start(m_filter.get()) < 0)
-	    throw std::runtime_error("failed to init hilbert transformer");
+	m_coefs.resize(numtaps);
+	hilbert(&m_coefs[0], numtaps);
+	applyHamming(&m_coefs[0], numtaps);
+	m_filter_gain = calcGain(&m_coefs[0], numtaps);
 
 	for (size_t i = 0; i < fmt.mChannelsPerFrame; ++i)
 	    if (m_shiftMask & (1 << i))
 		m_shift_channels.push_back(i);
 	    else
 		m_pass_channels.push_back(i);
+    }
+    init();
+}
+
+void MatrixMixer::init()
+{
+    m_end_of_input = false;
+    m_input_frames = 0;
+
+    if (m_shiftMask) {
+	lsx_fir_t *filter =
+	    m_module.fir_create(util::bitcount(m_shiftMask), &m_coefs[0],
+				m_coefs.size(), m_coefs.size() / 2, m_mt);
+	if (!filter)
+	    throw std::runtime_error("failed to init hilbert transformer");
+	m_filter.reset(filter, m_module.fir_close);
+	if (m_module.fir_start(m_filter.get()) < 0)
+	    throw std::runtime_error("failed to init hilbert transformer");
     }
 }
 
@@ -140,7 +153,7 @@ size_t MatrixMixer::readSamples(void *buffer, size_t nsamples)
 	    *op++ = value;
 	}
     }
-    m_samples_read += nsamples;
+    m_position += nsamples;
     return nsamples;
 }
 

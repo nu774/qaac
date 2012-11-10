@@ -15,16 +15,19 @@ namespace wave {
     extern const GUID ksFormatSubTypeFloat;
 }
 
-class WaveSource: public PartialSource<WaveSource> {
-    std::shared_ptr<FILE> m_fp;
+class WaveSource: public ISeekableSource {
     bool m_seekable;
     int m_block_align;
+    int64_t m_data_pos;
+    int64_t m_position;
+    uint64_t m_length;
+    std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
 public:
     WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength = false);
-    uint64_t length() const { return getDuration(); }
+    uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
@@ -33,8 +36,10 @@ public:
     {
 	return m_chanmap.size() ? &m_chanmap : 0;
     }
+    int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    void skipSamples(int64_t count);
+    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    void seekTo(int64_t count);
 private:
     int fd() { return fileno(m_fp.get()); }
     int64_t parse();

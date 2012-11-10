@@ -5,9 +5,9 @@
 #include "win32util.h"
 #include <process.h>
 
-class PipedReader: public DelegatingSource {
+class PipedReader: public FilterBase {
     std::shared_ptr<void> m_readPipe, m_writePipe, m_thread;
-    uint64_t m_samples_read;
+    int64_t m_position;
 public:
     PipedReader(std::shared_ptr<ISource> &src);
     ~PipedReader();
@@ -19,7 +19,7 @@ public:
 	    throw std::runtime_error(std::strerror(errno));
 	m_thread.reset(reinterpret_cast<HANDLE>(h), CloseHandle);
     }
-    uint64_t getSamplesRead() const { return m_samples_read; }
+    int64_t getPosition() { return m_position; }
 private:
     void inputThreadProc();
     static unsigned __stdcall staticInputThreadProc(void *arg)

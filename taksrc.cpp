@@ -25,6 +25,7 @@ TakModule::TakModule(const std::wstring &path)
 	CHECK(SSD_GetStreamInfo = m_dl.fetch("tak_SSD_GetStreamInfo"));
 	CHECK(SSD_Seek = m_dl.fetch("tak_SSD_Seek"));
 	CHECK(SSD_ReadAudio = m_dl.fetch("tak_SSD_ReadAudio"));
+	CHECK(SSD_GetReadPos = m_dl.fetch("tak_SSD_GetReadPos"));
 	CHECK(SSD_GetAPEv2Tag = m_dl.fetch("tak_SSD_GetAPEv2Tag"));
 	CHECK(APE_GetItemNum = m_dl.fetch("tak_APE_GetItemNum"));
 	CHECK(APE_GetItemKey = m_dl.fetch("tak_APE_GetItemKey"));
@@ -87,7 +88,7 @@ struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
 };
 
 TakSource::TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp)
-    : m_module(module), m_fp(fp)
+    : m_fp(fp), m_module(module)
 {
     static TakStreamIoInterfaceImpl io;
     TtakSSDOptions options = { tak_Cpu_Any, 0 };
@@ -107,30 +108,31 @@ TakSource::TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp)
 				      info.Audio.SampleBits, 32,
 				      kAudioFormatFlagIsSignedInteger);
     m_block_align = info.Audio.BlockSize;
-    setRange(0, info.Sizes.SampleNum);
+    m_length = info.Sizes.SampleNum;
     try {
 	fetchTags();
     } catch (...) {}
 }
 
-void TakSource::skipSamples(int64_t count)
+void TakSource::seekTo(int64_t count)
 {
     TRYTAK(m_module.SSD_Seek(m_decoder.get(), count));
 }
 
+int64_t TakSource::getPosition()
+{
+    return m_module.SSD_GetReadPos(m_decoder.get());
+}
+
 size_t TakSource::readSamples(void *buffer, size_t nsamples)
 {
-    nsamples = adjustSamplesToRead(nsamples);
-    if (!nsamples) return 0;
-    m_buffer.resize(nsamples * m_block_align);
-    size_t total = 0;
-    uint8_t *bufp = static_cast<uint8_t*>(buffer);
-    while (total < nsamples) {
-	int32_t nread;
-	TRYTAK(m_module.SSD_ReadAudio(m_decoder.get(), &m_buffer[0],
-				      nsamples - total, &nread));
-	if (nread == 0)
-	    break;
+    if (m_buffer.size() < nsamples * m_block_align)
+	m_buffer.resize(nsamples * m_block_align);
+
+    int32_t nread;
+    TRYTAK(m_module.SSD_ReadAudio(m_decoder.get(), &m_buffer[0],
+				  nsamples, &nread));
+    if (nread > 0) {
 	size_t size = nread * m_block_align;
 	uint8_t *bp = &m_buffer[0];
 	/* convert to signed */
@@ -138,14 +140,11 @@ size_t TakSource::readSamples(void *buffer, size_t nsamples)
 	    for (size_t i = 0; i < size; ++i)
 		bp[i] ^= 0x80;
 	}
-	util::unpack(bp, bufp, &size,
+	util::unpack(bp, buffer, &size,
 		     m_block_align / m_asbd.mChannelsPerFrame,
 		     m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame);
-	total += nread;
-	bufp += size;
     }
-    addSamplesRead(total);
-    return total;
+    return nread;
 }
 
 void TakSource::fetchTags()
@@ -174,7 +173,7 @@ void TakSource::fetchTags()
     if (cuesheet.size()) {
 	std::map<uint32_t, std::wstring> tags;
 	Cue::CueSheetToChapters(cuesheet,
-				getDuration() / m_asbd.mSampleRate,
+				m_length / m_asbd.mSampleRate,
 				&m_chapters, &tags);
 	std::map<uint32_t, std::wstring>::const_iterator it;
 	for (it = tags.begin(); it != tags.end(); ++it)

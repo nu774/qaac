@@ -24,6 +24,7 @@ public:
     TtakResult (*SSD_Seek)(TtakSeekableStreamDecoder, TtakInt64);
     TtakResult (*SSD_ReadAudio)(TtakSeekableStreamDecoder, void *,
 	    TtakInt32, TtakInt32 *);
+    TtakInt64 (*SSD_GetReadPos)(TtakSeekableStreamDecoder);
     TtakAPEv2Tag (*SSD_GetAPEv2Tag)(TtakSeekableStreamDecoder);
     TtakInt32 (*APE_GetItemNum)(TtakAPEv2Tag);
     TtakResult (*APE_GetItemKey)(TtakAPEv2Tag, TtakInt32, char *,
@@ -32,35 +33,34 @@ public:
 	    TtakInt32, TtakInt32 *);
 };
 
-class TakSource:
-    public ITagParser, public PartialSource<TakSource>
+class TakSource: public ISeekableSource, public ITagParser
 {
-    TakModule m_module;
+    uint32_t m_block_align;
+    uint64_t m_length;
     std::shared_ptr<void> m_decoder;
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<chapters::entry_t> m_chapters;
-    uint32_t m_block_align;
     std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
+    TakModule m_module;
 public:
     TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp);
-    uint64_t length() const { return getDuration(); }
+    uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
+    int64_t getPosition();
     size_t readSamples(void *buffer, size_t nsamples);
-    void skipSamples(int64_t count);
+    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    void seekTo(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {
-	if (m_chapters.size())
-	    return &m_chapters;
-	else
-	    return 0;
+	return m_chapters.size() ? &m_chapters : 0;
     }
 private:
     void fetchTags();

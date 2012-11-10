@@ -3,13 +3,14 @@
 
 #include "iointer.h"
 
-class NullSource: public PartialSource<NullSource> {
+class NullSource: public ISeekableSource {
     AudioStreamBasicDescription m_asbd;
+    int64_t m_position;
 public:
     NullSource(const AudioStreamBasicDescription &asbd):
-	m_asbd(asbd)
+	m_asbd(asbd), m_position(0)
     {}
-    uint64_t length() const { return getDuration(); }
+    uint64_t length() const { return -1; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
@@ -17,15 +18,13 @@ public:
     const std::vector<uint32_t> *getChannels() const { return 0; }
     size_t readSamples(void *buffer, size_t nsamples)
     {
-	nsamples = adjustSamplesToRead(nsamples);
-	if (nsamples) {
-	    size_t nblocks = m_asbd.mBytesPerFrame;
-	    std::memset(buffer, 0, nsamples * nblocks);
-	    addSamplesRead(nsamples);
-	}
+	std::memset(buffer, 0, nsamples * m_asbd.mBytesPerFrame);
+	m_position += nsamples;
 	return nsamples;
     }
-    void skipSamples(int64_t count) {}
+    bool isSeekable() { return true; }
+    void seekTo(int64_t count) { m_position = count; }
+    int64_t getPosition() { return m_position; }
 };
 
 #endif

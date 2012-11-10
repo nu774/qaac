@@ -176,6 +176,7 @@
     <ClCompile Include="..\..\alacenc.cpp" />
     <ClCompile Include="..\..\alacsrc.cpp" />
     <ClCompile Include="..\..\cautil.cpp" />
+    <ClCompile Include="..\..\inputfactory.cpp" />
     <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\version.cpp" />

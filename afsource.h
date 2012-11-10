@@ -5,11 +5,11 @@
 #include "ExtAudioFileX.h"
 #include "iointer.h"
 
-class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
+class ExtAFSource: public ISeekableSource, public ITagParser
 {
     AudioFileX m_af;
     ExtAudioFileX m_eaf;
-    uint64_t m_offset;
+    uint64_t m_length;
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
@@ -22,7 +22,7 @@ public:
 	m_af.attach(0, false);
 	m_eaf.attach(0, false);
     }
-    uint64_t length() const { return getDuration(); }
+    uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
@@ -31,8 +31,10 @@ public:
     {
 	return m_chanmap.size() ? &m_chanmap: 0;
     }
+    int64_t getPosition();
     size_t readSamples(void *buffer, size_t nsamples);
-    void skipSamples(int64_t count);
+    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    void seekTo(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const { return 0; }
 };

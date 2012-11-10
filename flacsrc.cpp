@@ -28,10 +28,13 @@ namespace flac {
 
 FLACSource::FLACSource(const FLACModule &module,
 		       const std::shared_ptr<FILE> &fp):
-    m_module(module),
-    m_fp(fp),
     m_eof(false),
-    m_giveup(false)
+    m_giveup(false),
+    m_initialize_done(false),
+    m_length(0),
+    m_position(0),
+    m_fp(fp),
+    m_module(module)
 {
     char buffer[33];
     util::check_eof(read(fileno(m_fp.get()), buffer, 33) == 33);
@@ -73,40 +76,36 @@ FLACSource::FLACSource(const FLACModule &module,
     if (m_giveup || m_asbd.mBitsPerChannel == 0)
 	flac::want(false);
     m_buffer.channels = m_asbd.mChannelsPerFrame;
+    m_initialize_done = true;
 }
 
-void FLACSource::skipSamples(int64_t count)
+void FLACSource::seekTo(int64_t count)
 {
+    if (count == m_position)
+	return;
+    m_buffer.reset();
     TRYFL(m_module.stream_decoder_seek_absolute(m_decoder.get(), count));
+    m_position = count;
 }
 
 size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 {
-    nsamples = adjustSamplesToRead(nsamples);
-    if (!nsamples) return 0;
-    uint32_t rest = nsamples;
-    uint8_t *bp = static_cast<uint8_t*>(buffer);
-    while (rest > 0) {
-	if (m_buffer.count() > 0) {
-	    uint32_t count = std::min(m_buffer.count(), rest);
-	    uint32_t bytes = count * m_asbd.mChannelsPerFrame * 4;
-	    std::memcpy(bp, m_buffer.read_ptr(), bytes);
-	    bp += bytes;
-	    m_buffer.advance(count);
-	    rest -= count;
-	}
-	if (rest) {
-	    if (m_giveup)
-		throw std::runtime_error("FLAC decoder error");
-	    if (m_module.stream_decoder_get_state(m_decoder.get()) ==
-		    FLAC__STREAM_DECODER_END_OF_STREAM)
-		break;
-	    TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
-	}
+    if (m_giveup)
+	throw std::runtime_error("FLAC decoder error");
+    if (!m_buffer.count()) {
+	if (m_module.stream_decoder_get_state(m_decoder.get()) ==
+		FLAC__STREAM_DECODER_END_OF_STREAM)
+	    return 0;
+	TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
     }
-    size_t processed = nsamples - rest;
-    addSamplesRead(processed);
-    return processed;
+    uint32_t count = std::min(m_buffer.count(), nsamples);
+    if (count) {
+	uint32_t bytes = count * m_asbd.mChannelsPerFrame * 4;
+	std::memcpy(buffer, m_buffer.read_ptr(), bytes);
+	m_buffer.advance(count);
+	m_position += count;
+    }
+    return count;
 }
 
 FLAC__StreamDecoderReadStatus
@@ -183,6 +182,8 @@ FLACSource::writeCallback( const FLAC__Frame *frame,
 
 void FLACSource::metadataCallback(const FLAC__StreamMetadata *metadata)
 {
+    if (m_initialize_done)
+	return;
     if (metadata->type == FLAC__METADATA_TYPE_STREAMINFO)
 	handleStreamInfo(metadata->data.stream_info);
     else if (metadata->type == FLAC__METADATA_TYPE_VORBIS_COMMENT)
@@ -202,7 +203,7 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 	m_giveup = true;
 	return;
     }
-    setRange(0, si.total_samples);
+    m_length = si.total_samples;
     m_asbd = cautil::buildASBDForPCM2(si.sample_rate, si.channels,
 				      si.bits_per_sample, 32,
 				      kAudioFormatFlagIsSignedInteger);
@@ -230,7 +231,7 @@ void FLACSource::handleVorbisComment(
     if (cuesheet.size()) {
 	std::map<uint32_t, std::wstring> tags;
 	Cue::CueSheetToChapters(cuesheet,
-				getDuration() / m_asbd.mSampleRate,
+				m_length / m_asbd.mSampleRate,
 				&m_chapters, &tags);
 	std::map<uint32_t, std::wstring>::const_iterator it;
 	for (it = tags.begin(); it != tags.end(); ++it)

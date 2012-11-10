@@ -1,7 +1,7 @@
 #include "pipedreader.h"
 
 PipedReader::PipedReader(std::shared_ptr<ISource> &src):
-    DelegatingSource(src), m_thread(0), m_samples_read(0)
+    FilterBase(src), m_thread(0), m_position(0)
 {
     HANDLE hr, hw;
     if (!CreatePipe(&hr, &hw, 0, 0x8000))
@@ -38,7 +38,7 @@ size_t PipedReader::readSamples(void *buffer, size_t nsamples)
 	}
     }
     nsamples = (bp - static_cast<uint8_t*>(buffer)) / bpf;
-    m_samples_read += nsamples;
+    m_position += nsamples;
     return nsamples;
 }
 
