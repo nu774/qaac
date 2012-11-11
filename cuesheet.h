@@ -24,7 +24,7 @@ struct CueTokenizer {
 
 struct CueSegment {
     CueSegment(const std::wstring &filename, unsigned index)
-	: m_filename(filename), m_index(index), m_begin(0), m_end(-1)
+	: m_filename(filename), m_index(index), m_begin(0), m_end(~0U)
     {}
     std::wstring m_filename;
     unsigned m_index;
@@ -32,15 +32,19 @@ struct CueSegment {
     unsigned m_end;
 };
 
+class CueSheet;
+
 class CueTrack {
-    friend class CueSheet;
+    CueSheet *m_cuesheet;
     unsigned m_number;
     std::vector<CueSegment> m_segments;
     std::map<std::wstring, std::wstring> m_meta;
 public:
-    typedef std::vector<CueSegment>::const_iterator iterator;
+    typedef std::vector<CueSegment>::iterator iterator;
+    typedef std::vector<CueSegment>::const_iterator const_iterator;
 
-    CueTrack(unsigned number) : m_number(number) {}
+    CueTrack(CueSheet *cuesheet, unsigned number)
+	: m_cuesheet(cuesheet), m_number(number) {}
     std::wstring name() const
     {
 	std::map<std::wstring, std::wstring>::const_iterator
@@ -48,12 +52,25 @@ public:
 	return it == m_meta.end() ? L"" : it->second;
     }
     unsigned number() const { return m_number; }
-    const std::map<std::wstring, std::wstring> &meta() const
+    void addSegment(const CueSegment &seg);
+    void setTag(const std::wstring &key, const std::wstring &value)
+    {
+	m_meta[key] = value;
+    }
+    const std::map<std::wstring, std::wstring> &getTags() const
     {
 	return m_meta;
     }
-    iterator begin() const { return m_segments.begin(); }
-    iterator end() const { return m_segments.end(); }
+    void iTunesTags(std::map<uint32_t, std::wstring> *tags) const;
+
+    iterator begin() { return m_segments.begin(); }
+    iterator end() { return m_segments.end(); }
+    const_iterator begin() const { return m_segments.begin(); }
+    const_iterator end() const { return m_segments.end(); }
+    CueSegment *lastSegment()
+    {
+	return m_segments.size() ? &m_segments.back() : 0;
+    }
 };
 
 class CueSheet {
@@ -63,24 +80,29 @@ class CueSheet {
     std::vector<CueTrack> m_tracks;
     std::map<std::wstring, std::wstring> m_meta;
 public:
-    typedef std::vector<CueTrack>::const_iterator iterator;
+    typedef std::vector<CueTrack>::iterator iterator;
+    typedef std::vector<CueTrack>::const_iterator const_iterator;
 
     CueSheet(): m_has_multiple_files(false) {}
     void parse(std::wstreambuf *src);
     void loadTracks(std::vector<chapters::Track> &tracks,
 		    const std::wstring &cuedir,
 		    const std::wstring &fname_format);
-
-    unsigned count() const { return m_tracks.size(); }
-    const std::map<std::wstring, std::wstring> &meta() const
+    void asChapters(double duration, /* total duration in sec. */
+		    std::vector<chapters::entry_t> *chapters) const;
+    const std::map<std::wstring, std::wstring> &getTags() const
     {
 	return m_meta;
     }
-    iterator begin() const { return m_tracks.begin(); }
-    iterator end() const { return m_tracks.end(); }
-    bool has_multiple_files() const { return m_has_multiple_files; }
+    void iTunesTags(std::map<uint32_t, std::wstring> *tags) const;
+
+    unsigned count() const { return m_tracks.size(); }
+    iterator begin() { return m_tracks.begin(); }
+    iterator end() { return m_tracks.end(); }
+    const_iterator begin() const { return m_tracks.begin(); }
+    const_iterator end() const { return m_tracks.end(); }
 private:
-    void arrange();
+    void validate();
     void parseFile(const std::wstring *args);
     void parseTrack(const std::wstring *args);
     void parseIndex(const std::wstring *args);
@@ -95,9 +117,10 @@ private:
     }
     CueSegment *lastSegment()
     {
+	CueSegment *seg;
 	for (ssize_t i = m_tracks.size() - 1; i >= 0; --i)
-	    if (m_tracks[i].m_segments.size())
-		return &m_tracks[i].m_segments.back();
+	    if ((seg = m_tracks[i].lastSegment()) != 0)
+		return seg;
 	return 0;
     }
 };

@@ -16,7 +16,7 @@ unsigned msf2frames(unsigned mm, unsigned ss, unsigned ff)
 }
 
 static inline
-uint64_t frame2sample(uint32_t sampling_rate, uint32_t nframe)
+uint64_t frame2sample(double sampling_rate, uint32_t nframe)
 {
     return static_cast<uint64_t>(nframe / 75.0 * sampling_rate + 0.5);
 }
@@ -67,6 +67,61 @@ bool CueTokenizer<CharT>::nextline()
 template struct CueTokenizer<char>;
 template struct CueTokenizer<wchar_t>;
 
+void CueTrack::addSegment(const CueSegment &seg)
+{
+    if (m_segments.size()) {
+	CueSegment &last = m_segments.back();
+	if (last.m_index >= seg.m_index) {
+	    if (last.m_index == 0x7fffffff) {
+		std::string msg =
+		    strutil::format("cuesheet: conflicting use of "
+				    "INDEX00 or PREGAP found on "
+				    "track %u-%u", m_number, m_number + 1);
+		throw std::runtime_error(msg);
+	    }
+	    std::string msg =
+		strutil::format("cuesheet: INDEX must be in strictly "
+				"ascending order: track %u", m_number);
+	    throw std::runtime_error(msg);
+	}
+	if (last.m_filename == seg.m_filename && last.m_end == seg.m_begin)
+	{
+	    last.m_end = seg.m_end;
+	    return;
+	}
+    }
+    m_segments.push_back(seg);
+}
+
+void CueTrack::iTunesTags(std::map<uint32_t, std::wstring> *tags) const
+{
+    std::map<uint32_t, std::wstring> result;
+    m_cuesheet->iTunesTags(&result);
+    std::map<std::wstring, std::wstring>::const_iterator it;
+    for (it = m_meta.begin(); it != m_meta.end(); ++it) {
+	std::wstring key = strutil::wslower(it->first);
+	uint32_t ikey = 0;
+	if (key == L"title")
+	    ikey = Tag::kTitle;
+	else if (key == L"performer")
+	    ikey = Tag::kArtist;
+	else if (key == L"genre")
+	    ikey = Tag::kGenre;
+	else if (key == L"date")
+	    ikey = Tag::kDate;
+	else if (key == L"songwriter")
+	    ikey = Tag::kComposer;
+	if (ikey) result[ikey] = it->second;
+    }
+    result[Tag::kTrack] = strutil::format(L"%d/%d", number(),
+					  m_cuesheet->count());
+    std::map<uint32_t, std::wstring>::iterator iaa
+	= result.find(Tag::kAlbumArtist);
+    if (result.find(Tag::kArtist) == result.end() && iaa != result.end())
+	result[Tag::kArtist] = iaa->second;
+    tags->swap(result);
+}
+
 void CueSheet::parse(std::wstreambuf *src)
 {
     static struct handler_t {
@@ -105,7 +160,7 @@ void CueSheet::parse(std::wstreambuf *src)
 	}
 	// if (!p->cmd) die("Unknown command");
     }
-    arrange();
+    validate();
 }
 
 struct TagLookup {
@@ -132,23 +187,13 @@ void CueSheet::loadTracks(std::vector<chapters::Track> &tracks,
 			  const std::wstring &cuedir,
 			  const std::wstring &fname_format)
 {
-    typedef std::map<uint32_t, std::wstring> meta_t;
-    meta_t album_tags;
-    Cue::ConvertToItunesTags(m_meta, &album_tags, true);
-
-    for (iterator track = begin(); track != end(); ++track) {
-	meta_t track_tags;
-	{
-	    meta_t tmp;
-	    Cue::ConvertToItunesTags(track->meta(), &track_tags);
-	    track_tags.insert(album_tags.begin(), album_tags.end());
-	    track_tags[Tag::kTrack] =
-		strutil::format(L"%d/%d", track->number(), count());
-	}
+    std::shared_ptr<ISeekableSource> src;
+    for (const_iterator track = begin(); track != end(); ++track) {
 	std::shared_ptr<CompositeSource> track_source(new CompositeSource());
+	std::map<uint32_t, std::wstring> track_tags;
+	track->iTunesTags(&track_tags);
 	track_source->setTags(track_tags);
-	std::shared_ptr<ISeekableSource> src;
-	for (CueTrack::iterator
+	for (CueTrack::const_iterator
 	     segment = track->begin(); segment != track->end(); ++segment)
 	{
 	    if (segment->m_filename == L"__GAP__") {
@@ -159,10 +204,10 @@ void CueSheet::loadTracks(std::vector<chapters::Track> &tracks,
 		    win32::PathCombineX(cuedir, segment->m_filename);
 		src = input::factory()->open(ifilename.c_str());
 	    }
-	    unsigned rate = src->getSampleFormat().mSampleRate;
-	    int64_t begin = frame2sample(rate, segment->m_begin);
-	    int64_t duration = -1;
-	    if (segment->m_end != -1)
+	    double rate = src->getSampleFormat().mSampleRate;
+	    uint64_t begin = frame2sample(rate, segment->m_begin);
+	    uint64_t duration = ~0ULL;
+	    if (segment->m_end != ~0U)
 		duration = frame2sample(rate, segment->m_end) - begin;
 	    src.reset(new TrimmedSource(src, begin, duration));
 	    track_source->addSource(src);
@@ -170,12 +215,12 @@ void CueSheet::loadTracks(std::vector<chapters::Track> &tracks,
 
 	std::wstring ofilename =
 	    process_template(fname_format, TagLookup(*track, track_tags));
-	struct F {
-	    static wchar_t trans(wchar_t ch) {
+	struct ToSafe {
+	    static wchar_t call(wchar_t ch) {
 		return std::wcschr(L":/\\?|<>*\"", ch) ? L'_' : ch;
 	    }
 	};
-	ofilename = strutil::strtransform(ofilename, F::trans) + L".stub";
+	ofilename = strutil::strtransform(ofilename, ToSafe::call) + L".stub";
 
 	chapters::Track new_track;
 	new_track.name = track->name();
@@ -185,51 +230,74 @@ void CueSheet::loadTracks(std::vector<chapters::Track> &tracks,
     }
 }
 
-void CueSheet::arrange()
+void CueSheet::asChapters(double duration,
+			  std::vector<chapters::entry_t> *chapters) const
 {
-    for (size_t i = 0; i < m_tracks.size(); ++i) {
+    if (m_has_multiple_files)
+	throw std::runtime_error("Multiple FILE in embedded cuesheet");
+
+    std::vector<chapters::entry_t> chaps;
+    unsigned tbeg, tend, last_end = 0;
+    for (const_iterator track = begin(); track != end(); ++track) {
+	tbeg = track->begin()->m_begin;
+	tend = track->begin()->m_end;
+	double track_duration;
+	if (tend != ~0U)
+	    track_duration = (tend - tbeg) / 75.0;
+	else
+	    track_duration = duration - (last_end / 75.0);
+	chaps.push_back(std::make_pair(track->name(), track_duration));
+	last_end = tend;
+    }
+    chapters->swap(chaps);
+}
+
+void CueSheet::iTunesTags(std::map<uint32_t, std::wstring> *tags) const
+{
+    std::map<std::wstring, std::wstring>::const_iterator it;
+    std::map<uint32_t, std::wstring> result;
+    int discnumber = 0, totaldiscs = 0;
+    for (it = m_meta.begin(); it != m_meta.end(); ++it) {
+	std::wstring key = strutil::wslower(it->first);
+	uint32_t ikey = 0;
+	if (key == L"title")
+	    ikey = Tag::kAlbum;
+	else if (key == L"performer")
+	    ikey = Tag::kAlbumArtist;
+	else if (key == L"genre")
+	    ikey = Tag::kGenre;
+	else if (key == L"date")
+	    ikey = Tag::kDate;
+	else if (key == L"songwriter")
+	    ikey = Tag::kComposer;
+	else if (key == L"discnumber")
+	    discnumber = _wtoi(it->second.c_str());
+	else if (key == L"totaldiscs")
+	    totaldiscs = _wtoi(it->second.c_str());
+	if (ikey) result[ikey] = it->second;
+    }
+    if (discnumber) {
+	result[Tag::kDisk] =
+	    totaldiscs ? strutil::format(L"%d/%d", discnumber, totaldiscs)
+		       : strutil::format(L"%d", discnumber);
+    }
+    tags->swap(result);
+}
+
+void CueSheet::validate()
+{
+    CueTrack::const_iterator segment;
+    for (iterator track = begin(); track != end(); ++track) {
 	bool index1_found = false;
-	int64_t last_index = -1;
-	CueTrack &track = m_tracks[i];
-	for (size_t j = 0; j < track.m_segments.size(); ++j) {
-	    if (last_index >= track.m_segments[j].m_index)
-		throw std::runtime_error(strutil::format("cuesheet: "
-						"INDEX must be in "
-						"strictly ascending order: "
-						"track %u", track.m_number));
-	    last_index = track.m_segments[j].m_index;
-	    if (last_index == 1) index1_found = true;
+	for (segment = track->begin(); segment != track->end(); ++segment)
+	    if (segment->m_index == 1)
+		index1_found = true;
+	if (!index1_found) {
+	    std::string msg =
+		strutil::format("cuesheet: INDEX01 not found on track %u",
+				track->number());
+	    throw std::runtime_error(msg);
 	}
-	if (!index1_found)
-	    throw std::runtime_error(strutil::format("cuesheet: "
-						     "INDEX01 not found on "
-						     "track %u",
-						     track.m_number));
-    }
-    /* move INDEX00 segment to previous track's end */
-    for (size_t i = 0; i < m_tracks.size(); ++i) {
-	if (m_tracks[i].m_segments[0].m_index == 0) {
-	    if (i > 0)
-		m_tracks[i-1].m_segments.push_back(m_tracks[i].m_segments[0]);
-	    m_tracks[i].m_segments.erase(m_tracks[i].m_segments.begin());
-	}
-    }
-    /* join continuous segments */
-    for (size_t i = 0; i < m_tracks.size(); ++i) {
-	std::vector<CueSegment> segments;
-	for (size_t j = 0; j < m_tracks[i].m_segments.size(); ++j) {
-	    CueSegment &seg = m_tracks[i].m_segments[j];
-	    if (!segments.size()) {
-		segments.push_back(seg);
-		continue;
-	    }
-	    CueSegment &last = segments.back();
-	    if (last.m_filename != seg.m_filename || last.m_end != seg.m_begin)
-		segments.push_back(seg);
-	    else
-		last.m_end = seg.m_end;
-	}
-	m_tracks[i].m_segments.swap(segments);
     }
 }
 
@@ -245,7 +313,7 @@ void CueSheet::parseTrack(const std::wstring *args)
 	unsigned no;
 	if (std::swscanf(args[1].c_str(), L"%d", &no) != 1)
 	    die("Invalid TRACK number");
-	m_tracks.push_back(CueTrack(no));
+	m_tracks.push_back(CueTrack(this, no));
     }
 }
 void CueSheet::parseIndex(const std::wstring *args)
@@ -270,7 +338,13 @@ void CueSheet::parseIndex(const std::wstring *args)
     }
     CueSegment segment(m_cur_file, no);
     segment.m_begin = nframes;
-    m_tracks.back().m_segments.push_back(segment);
+    if (no > 0)
+	m_tracks.back().addSegment(segment);
+    else if (m_tracks.size() > 1) {
+	/* add INDEX00 to previous track's end */
+	segment.m_index = 0x7fffffff;
+	m_tracks[m_tracks.size() - 2].addSegment(segment);
+    }
 }
 void CueSheet::parsePostgap(const std::wstring *args)
 {
@@ -279,9 +353,9 @@ void CueSheet::parsePostgap(const std::wstring *args)
     unsigned mm, ss, ff;
     if (std::swscanf(args[1].c_str(), L"%u:%u:%u", &mm, &ss, &ff) != 3)
 	die("Invalid POSTGAP time format");
-    CueSegment segment(std::wstring(L"__GAP__"), -1);
+    CueSegment segment(std::wstring(L"__GAP__"), 0x7ffffffe);
     segment.m_end = msf2frames(mm, ss, ff);
-    m_tracks.back().m_segments.push_back(segment);
+    m_tracks.back().addSegment(segment);
 }
 void CueSheet::parsePregap(const std::wstring *args)
 {
@@ -290,55 +364,20 @@ void CueSheet::parsePregap(const std::wstring *args)
     unsigned mm, ss, ff;
     if (std::swscanf(args[1].c_str(), L"%u:%u:%u", &mm, &ss, &ff) != 3)
 	die("Invalid PREGAP time format");
-    CueSegment segment(std::wstring(L"__GAP__"), 0);
+    CueSegment segment(std::wstring(L"__GAP__"), 0x7fffffff);
     segment.m_end = msf2frames(mm, ss, ff);
-    m_tracks.back().m_segments.push_back(segment);
+    if (m_tracks.size() > 1)
+	m_tracks[m_tracks.size() - 2].addSegment(segment);
 }
 void CueSheet::parseMeta(const std::wstring *args)
 {
     if (m_tracks.size())
-	m_tracks.back().m_meta[args[0]] = args[1];
+	m_tracks.back().setTag(args[0], args[1]);
     else
 	m_meta[args[0]] = args[1];
 }
 
 namespace Cue {
-    void ConvertToItunesTags(
-	    const std::map<std::wstring, std::wstring> &from,
-	    std::map<uint32_t, std::wstring> *to, bool album)
-    {
-	std::map<std::wstring, std::wstring>::const_iterator it;
-	std::map<uint32_t, std::wstring> result;
-	int discnumber = 0, totaldiscs = 0;
-	for (it = from.begin(); it != from.end(); ++it) {
-	    std::wstring key = strutil::wslower(it->first);
-	    uint32_t ikey = 0;
-	    if (key == L"title")
-		ikey = album ? Tag::kAlbum : Tag::kTitle;
-	    else if (key == L"performer")
-		ikey = album ? Tag::kAlbumArtist : Tag::kArtist;
-	    else if (key == L"genre")
-		ikey = Tag::kGenre;
-	    else if (key == L"date")
-		ikey = Tag::kDate;
-	    else if (key == L"songwriter")
-		ikey = Tag::kComposer;
-	    else if (key == L"discnumber")
-		discnumber = _wtoi(it->second.c_str());
-	    else if (key == L"totaldiscs")
-		totaldiscs = _wtoi(it->second.c_str());
-	    if (ikey) result[ikey] = it->second;
-	    if (ikey == Tag::kAlbumArtist)
-		result[Tag::kArtist] = it->second;
-	}
-	if (discnumber) {
-	    result[Tag::kDisk] =
-		totaldiscs ? strutil::format(L"%d/%d", discnumber, totaldiscs)
-			   : strutil::format(L"%d", discnumber);
-	}
-	to->swap(result);
-    }
-
     void CueSheetToChapters(const std::wstring &cuesheet,
 	    double duration,
 	    std::vector<chapters::entry_t> *chapters,
@@ -347,24 +386,9 @@ namespace Cue {
 	std::wstringbuf strbuf(cuesheet);
 	CueSheet parser;
 	parser.parse(&strbuf);
-	if (parser.has_multiple_files())
-	    throw std::runtime_error("Multiple FILE in embedded cuesheet");
-	ConvertToItunesTags(parser.meta(), meta, true);
-
-	std::vector<chapters::entry_t> chaps;
-	unsigned beg, end, last_end = 0;
-	for (CueSheet::iterator
-	     track = parser.begin(); track != parser.end(); ++track) {
-	    beg = track->begin()->m_begin;
-	    end = track->begin()->m_end;
-	    double track_duration;
-	    if (end != -1)
-		track_duration = (end - beg) / 75.0;
-	    else
-		track_duration = duration - (last_end / 75.0);
-	    chaps.push_back(std::make_pair(track->name(), track_duration));
-	    last_end = end;
-	}
-	chapters->swap(chaps);
+	parser.iTunesTags(meta);
+	if (meta->find(Tag::kAlbumArtist) != meta->end())
+	    (*meta)[Tag::kArtist] = (*meta)[Tag::kAlbumArtist];
+	parser.asChapters(duration, chapters);
     }
 }
