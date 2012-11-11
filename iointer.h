@@ -57,11 +57,17 @@ public:
     }
 };
 
-size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *rawBuffer,
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
 			  std::vector<float> *floatBuffer, size_t nsamples);
 
-size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
 			  float *floatBuffer, size_t nsamples);
+
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
+			  std::vector<double> *floatBuffer, size_t nsamples);
+
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
+			  double *floatBuffer, size_t nsamples);
 
 namespace chapters {
     struct Track {

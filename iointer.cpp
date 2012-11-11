@@ -1,15 +1,6 @@
 #include <cstdio>
 #include "iointer.h"
 
-size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
-			  std::vector<float> *floatBuffer, size_t nsamples)
-{
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
-    if (floatBuffer->size() < nsamples * sf.mChannelsPerFrame)
-	floatBuffer->resize(nsamples * sf.mChannelsPerFrame);
-    return readSamplesAsFloat(src, byteBuffer, &floatBuffer->at(0), nsamples);
-}
-
 inline float quantize(double v)
 {
     const float anti_denormal = 1.0e-30f;
@@ -19,63 +10,81 @@ inline float quantize(double v)
     return x;
 }
 
-size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *byteBuffer,
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
+			  std::vector<float> *floatBuffer, size_t nsamples)
+{
+    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    if (floatBuffer->size() < nsamples * sf.mChannelsPerFrame)
+	floatBuffer->resize(nsamples * sf.mChannelsPerFrame);
+    return readSamplesAsFloat(src, pivot, &(*floatBuffer)[0], nsamples);
+}
+
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
 			  float *floatBuffer, size_t nsamples)
 {
     const AudioStreamBasicDescription &sf = src->getSampleFormat();
-    if (byteBuffer->size() < nsamples * sf.mBytesPerFrame)
-	byteBuffer->resize(nsamples * sf.mBytesPerFrame);
 
-    uint8_t *bp = &(*byteBuffer)[0];
+    if ((sf.mFormatFlags & kAudioFormatFlagIsFloat) &&
+	sf.mBytesPerFrame / sf.mChannelsPerFrame == 4)
+    {
+	return src->readSamples(floatBuffer, nsamples);
+    }
+
+    if (pivot->size() < nsamples * sf.mBytesPerFrame)
+	pivot->resize(nsamples * sf.mBytesPerFrame);
+
+    uint8_t *bp = &(*pivot)[0];
     float *fp = floatBuffer;
     nsamples = src->readSamples(bp, nsamples);
     size_t blen = nsamples * sf.mBytesPerFrame;
 
     if (sf.mFormatFlags & kAudioFormatFlagIsFloat) {
-	switch (sf.mBytesPerFrame / sf.mChannelsPerFrame) {
-	case 4:
-	    std::memcpy(fp, bp, blen);
-	    break;
-	case 8:
-	    {
-		double *src = reinterpret_cast<double *>(bp);
-		std::transform(src, src + (blen >> 3), fp, quantize);
-	    }
-	    break;
-	}
+	double *src = reinterpret_cast<double *>(bp);
+	std::transform(src, src + (blen / 8), fp, quantize);
     } else {
-	switch (sf.mBytesPerFrame / sf.mChannelsPerFrame) {
-	case 1:
-	    {
-		if (!(sf.mFormatFlags & kAudioFormatFlagIsSignedInteger))
-		    for (size_t i = 0; i < blen; ++i)
-			bp[i] ^= 0x80;
-		char *src = reinterpret_cast<char *>(bp);
-		for (size_t i = 0; i < blen; ++i)
-		    *fp++ = static_cast<float>(src[i]) / 0x80;
-	    }
-	    break;
-	case 2:
-	    {
-		short *src = reinterpret_cast<short *>(bp);
-		for (size_t i = 0; i < blen >> 1; ++i)
-		    *fp++ = static_cast<float>(src[i]) / 0x8000;
-	    }
-	    break;
-	case 3:
-	    for (size_t i = 0; i < blen / 3; ++i) {
-		int32_t v = bp[i*3]<<8 | bp[i*3+1]<<16 | bp[i*3+2]<<24;
-		*fp++ = static_cast<float>(v) / 0x80000000U;
-	    }
-	    break;
-	case 4:
-	    {
-		int *src = reinterpret_cast<int *>(bp);
-		for (size_t i = 0; i < blen >> 2; ++i)
-		    *fp++ = static_cast<float>(src[i]) / 0x80000000U;
-	    }
-	    break;
-	}
+	int *src = reinterpret_cast<int *>(bp);
+	for (size_t i = 0; i < blen / 4; ++i)
+	    *fp++ = src[i] / 2147483648.0f;
     }
     return nsamples;
 }
+
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
+			  std::vector<double> *doubleBuffer, size_t nsamples)
+{
+    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    if (doubleBuffer->size() < nsamples * sf.mChannelsPerFrame)
+	doubleBuffer->resize(nsamples * sf.mChannelsPerFrame);
+    return readSamplesAsFloat(src, pivot, &(*doubleBuffer)[0], nsamples);
+}
+
+size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
+			  double *doubleBuffer, size_t nsamples)
+{
+    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+
+    if ((sf.mFormatFlags & kAudioFormatFlagIsFloat) &&
+	sf.mBytesPerFrame / sf.mChannelsPerFrame == 8)
+    {
+	return src->readSamples(doubleBuffer, nsamples);
+    }
+
+    if (pivot->size() < nsamples * sf.mBytesPerFrame)
+	pivot->resize(nsamples * sf.mBytesPerFrame);
+
+    uint8_t *bp = &(*pivot)[0];
+    double *fp = doubleBuffer;
+    nsamples = src->readSamples(bp, nsamples);
+    size_t blen = nsamples * sf.mBytesPerFrame;
+
+    if (sf.mFormatFlags & kAudioFormatFlagIsFloat) {
+	float *src = reinterpret_cast<float*>(bp);
+	std::copy(src, src + (blen / 4), fp);
+    } else {
+	int *src = reinterpret_cast<int *>(bp);
+	for (size_t i = 0; i < blen / 4; ++i)
+	    *fp++ = src[i] / 2147483648.0f;
+    }
+    return nsamples;
+}
+
