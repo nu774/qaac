@@ -26,7 +26,7 @@ WaveSink::WaveSink(FILE *fp,
     uint32_t hdrsize = header.size();
     uint32_t riffsize = ~0, datasize = ~0;
     m_rf64 = m_seekable;
-    if (duration != -1) {
+    if (duration != ~0ULL) {
 	uint64_t datasize64 = duration * m_bytes_per_frame;
 	uint64_t riffsize64 = hdrsize + datasize64 + 20;
 	if (riffsize64 >> 32 == 0) {

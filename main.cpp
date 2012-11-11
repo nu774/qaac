@@ -177,7 +177,7 @@ public:
 	  m_total(total), m_rate(rate)
     {
 	m_console_visible = IsWindowVisible(GetConsoleWindow());
-	if (total != -1)
+	if (total != ~0ULL)
 	    m_tstamp = formatSeconds(static_cast<double>(total) / rate);
     }
     void update(uint64_t current)
@@ -189,7 +189,7 @@ public:
 	double ellapsed = m_timer.ellapsed();
 	double eta = ellapsed * (m_total / fcurrent - 1);
 	double speed = ellapsed ? seconds/ellapsed : 0.0;
-	if (m_total == -1)
+	if (m_total == ~0ULL)
 	    m_disp.put(strutil::format(L"\r%s (%.1fx)   ",
 		formatSeconds(seconds).c_str(), speed));
 	else
@@ -553,7 +553,7 @@ delayed_source(const std::shared_ptr<ISeekableSource> &src,
 	int nsamples = lrint(-0.001 * opts.delay * rate);
 	if (opts.verbose > 1 || opts.logfilename)
 	    LOG(L"Delay of %dms: truncate %d samples\n", opts.delay, nsamples);
-	return std::make_shared<TrimmedSource>(src, nsamples, -1);
+	return std::make_shared<TrimmedSource>(src, nsamples, ~0ULL);
     }
     return src;
 }
@@ -674,10 +674,10 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 		opts.native_resampler_complexity >= 0 ||
 		opts.isLPCM())
 	    {
-		uint32_t quality = opts.native_resampler_quality;
+		int quality = opts.native_resampler_quality;
 		uint32_t complexity = opts.native_resampler_complexity;
 		if (quality == -1) quality = kAudioConverterQuality_Medium;
-		if (complexity == -1) complexity = 'norm';
+		if (!complexity) complexity = 'norm';
 		CoreAudioResampler *resampler =
 		    new CoreAudioResampler(chain.back(), oasbd.mSampleRate,
 					   bound_quality(quality), complexity);

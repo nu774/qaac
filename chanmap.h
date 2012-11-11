@@ -9,7 +9,7 @@ namespace chanmap {
     std::string getChannelNames(const std::vector<uint32_t> &channels);
     uint32_t getChannelMask(const std::vector<uint32_t>& chanmap);
     void getChannels(uint32_t bitmap, std::vector<uint32_t> *result,
-		     uint32_t limit=-1);
+		     uint32_t limit=~0U);
     void getChannels(const AudioChannelLayout *layout,
 		     std::vector<uint32_t> *result);
     void convertFromAppleLayout(const std::vector<uint32_t> &from,

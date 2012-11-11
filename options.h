@@ -39,7 +39,7 @@ struct Options {
 	gain(0.0),
 	is_console_visible(true),
 	native_resampler_quality(-1),
-	native_resampler_complexity(-1)
+	native_resampler_complexity(0)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -72,7 +72,7 @@ struct Options {
 
     uint32_t output_format;
     int32_t method;
-    uint32_t bitrate, quality;
+    int32_t bitrate, quality;
     uint32_t raw_channels, raw_sample_rate;
     int rate; /* -1: keep, 0: auto, others: literal value */
     int lowpass;
@@ -82,7 +82,7 @@ struct Options {
     uint32_t artwork_size;
     uint32_t bits_per_sample;
     int native_resampler_quality;
-    int native_resampler_complexity;
+    uint32_t native_resampler_complexity;
     wchar_t *ofilename, *outdir, *raw_format, *fname_format;
     wchar_t *chapter_file;
     wchar_t *logfilename;
