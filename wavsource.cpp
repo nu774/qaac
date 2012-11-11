@@ -95,11 +95,11 @@ int64_t WaveSource::parse()
 
     uint32_t size;
     while (nextChunk(&size) != FOURCCR('f','m','t',' '))
-	skip(size);
+	skip((size + 1) & ~1);
     fmt(size);
 
     while (nextChunk(&size) != FOURCCR('d','a','t','a'))
-	skip(size);
+	skip((size + 1) & ~1);
     if (fcc != FOURCCR('R','F','6','4'))
 	data_length = size;
 
@@ -184,7 +184,7 @@ void WaveSource::fmt(size_t size)
     read16le(&wBitsPerSample);
     wValidBitsPerSample = wBitsPerSample;
     if (wFormatTag != 0xfffe)
-	skip(size - 16);
+	skip((size - 15) & ~1);
 
     if (!nChannels || !nSamplesPerSec || !nAvgBytesPerSec || !nBlockAlign)
 	throw std::runtime_error("WaveSource: invalid wave fmt");
@@ -207,7 +207,7 @@ void WaveSource::fmt(size_t size)
 	    chanmap::getChannels(dwChannelMask, &m_chanmap, nChannels);
 
 	util::check_eof(read(fd(), &guid, sizeof guid) == sizeof guid);
-	skip(size - 40);
+	skip((size - 39) & ~1);
 
 	if (!std::memcmp(&guid, &wave::ksFormatSubTypeFloat, sizeof guid))
 	    isfloat = true;
