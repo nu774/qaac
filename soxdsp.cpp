@@ -115,11 +115,11 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
     m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
 				32, kAudioFormatFlagIsFloat);
     double Fn = asbd.mSampleRate / 2.0;
-    double Fc = Fp + asbd.mSampleRate * 0.025;
-    if (Fp == 0 || Fc > Fn)
+    double Fs = Fp + asbd.mSampleRate * 0.0125;
+    if (Fp == 0 || Fs > Fn)
 	throw std::runtime_error("SoxLowpassFilter: invalid target rate");
     int num_taps = 0;
-    double *coefs = m_module.design_lpf(Fp, Fc, Fn, 120.0, &num_taps, 0, -1);
+    double *coefs = m_module.design_lpf(Fp, Fs, Fn, 120.0, &num_taps, 0, -1);
     if (!coefs)
 	throw std::runtime_error("lsx_design_lpf()");
     std::shared_ptr<double> __delete_lator__(coefs, m_module.free);
