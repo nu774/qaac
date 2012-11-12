@@ -24,20 +24,13 @@ PipedReader::~PipedReader()
 
 size_t PipedReader::readSamples(void *buffer, size_t nsamples)
 {
-    uint32_t bpf = source()->getSampleFormat().mBytesPerFrame;
-    uint8_t *bp = static_cast<uint8_t*>(buffer);
-    size_t count = nsamples * bpf;
-    while (count > 0) {
-	DWORD nread = 0;
-	ReadFile(m_readPipe.get(), bp, count, &nread, 0);
-	count -= nread;
-	bp += nread;
-	if (nread == 0) {
+    DWORD nread = 0;
+    if (m_readPipe.get()) {
+	ReadFile(m_readPipe.get(), buffer, nsamples, &nread, 0);
+	if (nread == 0)
 	    m_readPipe.reset();
-	    break;
-	}
     }
-    nsamples = (bp - static_cast<uint8_t*>(buffer)) / bpf;
+    nsamples = nread / source()->getSampleFormat().mBytesPerFrame;
     m_position += nsamples;
     return nsamples;
 }
