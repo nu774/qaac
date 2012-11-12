@@ -19,7 +19,7 @@
 #include "soxdsp.h"
 #include "normalize.h"
 #include "mixer.h"
-#include "intsrc.h"
+#include "Quantizer.h"
 #include "scaler.h"
 #include "pipedreader.h"
 #include "TrimmedSource.h"
@@ -712,7 +712,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 	else if (chain.back()->getSampleFormat().mBitsPerChannel
 		 != opts.bits_per_sample) {
 	    std::shared_ptr<ISource>
-		isrc(new IntegerSource(chain.back(), opts.bits_per_sample));
+		isrc(new Quantizer(chain.back(), opts.bits_per_sample));
 	    chain.push_back(isrc);
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Convert to %d bit\n", opts.bits_per_sample);
@@ -721,7 +721,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 	if (chain.back()->getSampleFormat().mFormatFlags
 	    & kAudioFormatFlagIsFloat) {
 	    std::shared_ptr<ISource>
-		isrc(new IntegerSource(chain.back(), 16));
+		isrc(new Quantizer(chain.back(), 16));
 	    chain.push_back(isrc);
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Convert to 16 bit\n");

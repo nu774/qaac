@@ -145,7 +145,6 @@
     <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\flacmodule.cpp" />
     <ClCompile Include="..\..\flacsrc.cpp" />
-    <ClCompile Include="..\..\intsrc.cpp" />
     <ClCompile Include="..\..\iointer.cpp" />
     <ClCompile Include="..\..\itunetags.cpp" />
     <ClCompile Include="..\..\libsndfilesrc.cpp" />
@@ -154,6 +153,7 @@
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />
     <ClCompile Include="..\..\normalize.cpp" />
     <ClCompile Include="..\..\pipedreader.cpp" />
+    <ClCompile Include="..\..\Quantizer.cpp" />
     <ClCompile Include="..\..\rawsource.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
     <ClCompile Include="..\..\soxdsp.cpp" />

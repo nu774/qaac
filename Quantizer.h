@@ -6,21 +6,20 @@
 #include "iointer.h"
 #include "cautil.h"
 
-class IntegerSource: public FilterBase {
+class Quantizer: public FilterBase {
     AudioStreamBasicDescription m_asbd;
     std::mt19937 m_mt;
-    std::uniform_real_distribution<double> m_dist;
-    std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
+    std::vector<double> m_dbuffer;
 public:
-    IntegerSource(const std::shared_ptr<ISource> &source, uint32_t bitdepth)
-	: FilterBase(source), m_dist(-0.5, 0.5)
+    Quantizer(const std::shared_ptr<ISource> &source, uint32_t bitdepth)
+	: FilterBase(source)
     {
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
-	m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
-				    asbd.mChannelsPerFrame,
-				    bitdepth,
-				    kAudioFormatFlagIsSignedInteger);
+	m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
+					  asbd.mChannelsPerFrame,
+					  bitdepth, 32,
+					  kAudioFormatFlagIsSignedInteger);
     }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
@@ -28,7 +27,9 @@ public:
     }
     size_t readSamples(void *buffer, size_t nsamples);
 private:
-    double random() { return m_dist(m_mt); }
+    void ditherInt(int *data, size_t count, unsigned depth);
+    template <typename T>
+    void ditherFloat(T *src, int *dst, size_t count, unsigned depth);
 };
 
 #endif

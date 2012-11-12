@@ -73,9 +73,6 @@
     <ClCompile Include="..\..\mixer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\intsrc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\pipedreader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -95,6 +92,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\composite.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Quantizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
