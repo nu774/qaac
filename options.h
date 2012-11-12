@@ -3,43 +3,35 @@
 
 #include <vector>
 #include <map>
-#include "itunetags.h"
+#include <stdint.h>
 
 struct Options {
 //    enum { kABR, kTVBR, kCVBR, kCBR };
     enum { kCBR, kABR, kCVBR, kTVBR };
 
     Options() :
-	output_format(0),
-	method(-1),
-	bitrate(-1), quality(-1),
-	raw_channels(2), raw_sample_rate(44100),
-	rate(-1),
-	lowpass(0),
-	chanmask(-1),
-	artwork_size(0),
-	bits_per_sample(0),
-	ofilename(0),
-	outdir(0),
-	raw_format(L"S16LE"),
-	fname_format(0),
-	chapter_file(0),
-	logfilename(0),
-	remix_preset(0),
-	remix_file(0),
+	method(-1), bitrate(-1), quality(-1),
+
+	rate(-1), verbose(1), lowpass(0), native_resampler_quality(-1),
+	delay(0), chanmask(-1),
+
+	bits_per_sample(0), raw_channels(2), raw_sample_rate(44100),
+	artwork_size(0), native_resampler_complexity(0), textcp(0),
+
+	ofilename(0), outdir(0), raw_format(L"S16LE"), fname_format(0),
+	chapter_file(0), logfilename(0), remix_preset(0), remix_file(0),
 	tmpdir(0),
-	verbose(1), is_raw(false), is_adts(false), save_stat(false),
-       	nice(false), native_chanmapper(false), ignore_length(false),
-	no_optimize(false), native_resampler(false), check_only(false),
-	normalize(false), print_available_formats(false), alac_fast(false),
-	threading(false), concat(false),
-	no_matrix_normalize(false),
-	textcp(0),
-	delay(0),
+
+	is_raw(false), is_adts(false), save_stat(false), nice(false),
+	native_chanmapper(false), ignore_length(false), no_optimize(false),
+	native_resampler(false), check_only(false), normalize(false),
+	print_available_formats(false), alac_fast(false), threading(false),
+	concat(false), no_matrix_normalize(false), no_dither(false),
+
 	gain(0.0),
-	is_console_visible(true),
-	native_resampler_quality(-1),
-	native_resampler_complexity(0)
+
+	output_format(0),
+	is_console_visible(true)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -70,40 +62,29 @@ struct Options {
 	else return L"aac";
     }
 
-    uint32_t output_format;
-    int32_t method;
-    int32_t bitrate, quality;
-    uint32_t raw_channels, raw_sample_rate;
+    int32_t method, bitrate, quality;
     int rate; /* -1: keep, 0: auto, others: literal value */
-    int lowpass;
+    int verbose, lowpass, native_resampler_quality, delay;
     int chanmask; /*     -1: honor chanmask in the source(default)
                           0: ignore chanmask in the source
                      others: use the value as chanmask     */
-    uint32_t artwork_size;
-    uint32_t bits_per_sample;
-    int native_resampler_quality;
-    uint32_t native_resampler_complexity;
-    wchar_t *ofilename, *outdir, *raw_format, *fname_format;
-    wchar_t *chapter_file;
-    wchar_t *logfilename;
-    wchar_t *remix_preset;
-    wchar_t *remix_file;
-    wchar_t *tmpdir;
-    int verbose;
+    uint32_t bits_per_sample, raw_channels, raw_sample_rate,
+	     artwork_size, native_resampler_complexity, textcp;
+    wchar_t *ofilename, *outdir, *raw_format, *fname_format, *chapter_file,
+	    *logfilename, *remix_preset, *remix_file, *tmpdir;
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
 	 ignore_length, no_optimize, native_resampler, check_only,
 	 normalize, print_available_formats, alac_fast, threading,
-	 concat, no_matrix_normalize;
-    uint32_t textcp;
-    int delay;
+	 concat, no_matrix_normalize, no_dither;
     double gain;
+
+    uint32_t output_format;
+    bool is_console_visible;
     std::map<uint32_t, std::wstring> tagopts;
     std::map<std::string, std::wstring> longtags;
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;
     std::vector<uint32_t> chanmap;
-
-    bool is_console_visible;
 };
 
 #endif

@@ -22,6 +22,7 @@ static wide::option long_options[] = {
     { L"decode", no_argument, 0, 'D' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"bits-per-sample", required_argument, 0, 'b' },
+    { L"no-dither", no_argument, 0, 'ndit' },
     { L"rate", required_argument, 0, 'r' },
     { L"lowpass", required_argument, 0, 'lpf ' },
     { L"normalize", no_argument, 0, 'N' },
@@ -125,20 +126,21 @@ void usage()
 #else
 "--fast                 Fast stereo encoding mode.\n"
 #endif
-"--check                Show library versions and exit\n"
+"-d <dirname>           Output directory. Default is current working dir.\n"
+"--check                Show library versions and exit.\n"
 "-D, --decode           Wave output mode.\n"
-"--no-optimize          Don't optimize MP4 container file after encoding\n"
-"-b, --bits-per-sample <n>\n"
-"                       Bits per sample of output (for WAV/ALAC) [16/24]\n"
 "-r, --rate <keep|auto|n>\n"
 "                       keep: output sampling rate will be same as input\n"
 "                             if possible.\n"
 "                       auto: output sampling rate will be automatically\n"
 "                             chosen by encoder.\n"
-"                       n: desired output sampling rate in Hz\n"
-"--lowpass <number>     Specify lowpass filter cut-off frequency in Hz\n"
+"                       n: desired output sampling rate in Hz.\n"
+"--lowpass <number>     Specify lowpass filter cut-off frequency in Hz.\n"
 "                       Use this when you want lower cut-off than\n"
 "                       Apple default.\n"
+"-b, --bits-per-sample <n>\n"
+"                       Bits per sample of output (for WAV/ALAC) [16/24]\n"
+"--no-dither            Turn off dither when quantizing to 16bit with -b 16.\n" 
 "--gain <f>             Adjust gain by f dB.\n"
 "                       Use negative value to decrese gain, when you want to\n"
 "                       avoid clipping introduced by DSP.\n"
@@ -156,24 +158,23 @@ void usage()
 "                       For N-ch input, you take numbers 1,2..N, and\n"
 "                       arrange them with comma-seperated, to the order\n"
 "                       you want.\n"
-"                       For example, \"--chanmap 2,1\" swaps left and right\n"
+"                       For example, \"--chanmap 2,1\" swaps L and R.\n"
 "--chanmask <n>         Force specified value as input channel mask(bitmap).\n"
 "                       If --chanmask 0 is specified, qaac treats it as if\n"
 "                       no channel mask is present in the source, and pick\n"
 "                       default layout.\n"
-"-d <dirname>           Output directory. Default is current working dir\n"
+"--no-optimize          Don't optimize MP4 container file after encoding.\n"
 "--tmpdir <dirname>     Temporary directory. Default is %TMP%\n"
-"-s, --silent           Suppress console messages\n"
-"--verbose              More verbose console messages\n"
-"-i, --ignorelength     Assume WAV input and ignore the data chunk length\n"
-"-R, --raw              Raw PCM input\n"
-"--threading            Enable multi-threading\n"
-"-n, --nice             Give lower process priority\n"
+"-s, --silent           Suppress console messages.\n"
+"--verbose              More verbose console messages.\n"
+"-i, --ignorelength     Assume WAV input and ignore the data chunk length.\n"
+"--threading            Enable multi-threading.\n"
+"-n, --nice             Give lower process priority.\n"
 "--text-codepage <n>    Specify text code page of cuesheet/chapter/lyrics.\n"
 "                       1252 for Latin-1, 65001 for UTF-8.\n"
 "                       Use this when automatic encoding detection fails.\n"
-"-S, --stat             Save bitrate statistics into file\n"
-"--log <filename>       Output message to file\n"
+"-S, --stat             Save bitrate statistics into file.\n"
+"--log <filename>       Output message to file.\n"
 "\n"
 "Option for single output file:\n"
 "-o <filename>          Output filename\n"
@@ -181,17 +182,19 @@ void usage()
 "                       Requires output filename (with -o)\n"
 "\n"
 "Option for cue sheet input:\n"
-"--fname-format <string>   Format string for output filename\n"
+"--fname-format <string>   Format string for output filename.\n"
 "\n"
 "Options for Raw PCM input only:\n"
-"--raw-channels <n>     Number of channels, default 2\n"
-"--raw-rate     <n>     Sample rate, default 44100\n"
-"--raw-format   <str>   Sample format, default S16L\n"
+"-R, --raw              Raw PCM input.\n"
+"--raw-channels <n>     Number of channels, default 2.\n"
+"--raw-rate     <n>     Sample rate, default 44100.\n"
+"--raw-format   <str>   Sample format, default S16L.\n"
 "                       Sample format spec:\n"
 "                       1st char: S(igned) | U(nsigned) | F(loat)\n"
 "                       2nd part: Bitwidth\n"
 "                       Last part: L(ittle Endian) | B(ig Endian)\n"
-"                       Cases are ignored. u8b is OK.\n"
+"                       Last part can be omitted, L is assumed by default.\n"
+"                       Cases are ignored. u16b is OK.\n"
 "\n"
 #ifndef REFALAC
 "Options for CoreAudio sample rate converter:\n"
@@ -400,6 +403,24 @@ bool Options::parse(int &argc, wchar_t **&argv)
 		return false;
 	    }
 	}
+	else if (ch == 'lpf ') {
+	    if (std::swscanf(wide::optarg, L"%u", &this->lowpass) != 1) {
+		std::fputws(L"--lowpass requires an integer.\n", stderr);
+		return false;
+	    }
+	}
+	else if (ch == 'b') {
+	    uint32_t n;
+	    if (std::swscanf(wide::optarg, L"%u", &n) != 1
+		|| (n != 16 && n != 24)) {
+		std::fputws(L"Bits per sample shall be 16 or 24.\n", stderr);
+		return false;
+	    }
+	    this->bits_per_sample = n;
+	}
+	else if (ch == 'ndit') {
+	    this->no_dither = true;
+	}
 	else if (ch == 'mask') {
 	    if (std::swscanf(wide::optarg, L"%i", &this->chanmask) != 1) {
 		std::fputws(L"--chanmask requires an integer.\n", stderr);
@@ -425,15 +446,6 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    if (this->raw_sample_rate == 0)
 		std::fputws(L"Invalid --raw-rate value.\n", stderr);
 	}
-	else if (ch == 'b') {
-	    uint32_t n;
-	    if (std::swscanf(wide::optarg, L"%u", &n) != 1
-		|| (n != 16 && n != 24)) {
-		std::fputws(L"Bits per sample shall be 16 or 24.\n", stderr);
-		return false;
-	    }
-	    this->bits_per_sample = n;
-	}
 	else if (ch == 'Rfmt')
 	    this->raw_format = wide::optarg;
 	else if (ch == 'afst')
@@ -442,12 +454,6 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	    if (std::swscanf(wide::optarg, L"%lf", &this->gain) != 1) {
 		std::fputws(L"--gain requires an floating point number.\n",
 			    stderr);
-		return false;
-	    }
-	}
-	else if (ch == 'lpf ') {
-	    if (std::swscanf(wide::optarg, L"%u", &this->lowpass) != 1) {
-		std::fputws(L"--lowpass requires an integer.\n", stderr);
 		return false;
 	    }
 	}

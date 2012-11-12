@@ -11,9 +11,11 @@ class Quantizer: public FilterBase {
     std::mt19937 m_mt;
     std::vector<float> m_fbuffer;
     std::vector<double> m_dbuffer;
+    bool m_no_dither;
 public:
-    Quantizer(const std::shared_ptr<ISource> &source, uint32_t bitdepth)
-	: FilterBase(source)
+    Quantizer(const std::shared_ptr<ISource> &source, uint32_t bitdepth,
+	      bool no_dither)
+	: FilterBase(source), m_no_dither(no_dither)
     {
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
 	m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
