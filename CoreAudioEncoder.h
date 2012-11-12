@@ -21,7 +21,7 @@ public:
     CoreAudioEncoder(AudioConverterX &converter);
     void setSource(const std::shared_ptr<ISource> &source) { m_src = source; }
     void setSink(const std::shared_ptr<ISink> &sink) { m_sink = sink; }
-    bool encodeChunk(UInt32 npackets);
+    uint32_t encodeChunk(UInt32 npackets);
     AudioFilePacketTableInfo getGaplessInfo();
     AudioConverterX getConverter() { return m_converter; }
     ISource *src() { return m_src.get(); }

@@ -18,24 +18,36 @@ public:
 	: FilterBase(source), m_scale(scale)
     {
 	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
-	if (asbd.mBitsPerChannel == 64)
-	    throw std::runtime_error("Can't handle 64bit sample");
+	unsigned bits = 32;
+	if (asbd.mBitsPerChannel > 32
+	    || (asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
+	       asbd.mBitsPerChannel > 24)
+	    bits = 64;
+
 	m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
 					 asbd.mChannelsPerFrame,
-					 32, kAudioFormatFlagIsFloat);
+					 bits, kAudioFormatFlagIsFloat);
     }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
     }
-    size_t readSamples(void *buffer, size_t nsamples)
+    template <typename T>
+    size_t readSamplesT(void *buffer, size_t nsamples)
     {
-	float *fp = static_cast<float*>(buffer);
+	T *fp = static_cast<T*>(buffer);
 	size_t nc = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
 	size_t len = nc * source()->getSampleFormat().mChannelsPerFrame;
 	for (size_t i = 0; i < len; ++i)
 	    fp[i] *= m_scale;
 	return nc;
+    }
+    size_t readSamples(void *buffer, size_t nsamples)
+    {
+	if (m_asbd.mBitsPerChannel == 64)
+	    return readSamplesT<double>(buffer, nsamples);
+	else
+	    return readSamplesT<float>(buffer, nsamples);
     }
 };
 

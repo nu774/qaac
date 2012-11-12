@@ -25,7 +25,7 @@ CoreAudioEncoder::CoreAudioEncoder(AudioConverterX &converter)
     }
 }
 
-bool CoreAudioEncoder::encodeChunk(UInt32 npackets)
+uint32_t CoreAudioEncoder::encodeChunk(UInt32 npackets)
 {
     prepareOutputBuffer(npackets);
     AudioBufferList *abl = m_output_abl.get();
@@ -44,7 +44,7 @@ bool CoreAudioEncoder::encodeChunk(UInt32 npackets)
 	return false;
 
     if (npackets == 0 && abl->mBuffers[0].mDataByteSize == 0)
-	return false;
+	return 0;
 
     if (!m_requires_packet_desc) {
 	m_sink->writeSamples(abl->mBuffers[0].mData,
@@ -64,7 +64,7 @@ bool CoreAudioEncoder::encodeChunk(UInt32 npackets)
 	    }
 	}
     }
-    return true;
+    return npackets;
 }
 
 AudioFilePacketTableInfo CoreAudioEncoder::getGaplessInfo()

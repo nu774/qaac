@@ -40,17 +40,8 @@ void CoreAudioResampler::init()
 
 size_t CoreAudioResampler::readSamples(void *buffer, size_t nsamples)
 {
-    float *dst = static_cast<float*>(buffer);
-    if (!m_fbuffer.size() && !m_encoder->encodeChunk(4096))
-	return 0;
-    size_t count = 0;
-    if (m_fbuffer.size()) {
-	for (size_t i = 0; i < m_asbd.mChannelsPerFrame; ++i) {
-	    *dst++ = m_fbuffer.front();
-	    m_fbuffer.pop_front();
-	}
-	++count;
-    }
+    m_buffer = buffer;
+    uint32_t count = m_encoder->encodeChunk(nsamples);
     m_position += count;
     return count;
 }
@@ -58,7 +49,5 @@ size_t CoreAudioResampler::readSamples(void *buffer, size_t nsamples)
 void CoreAudioResampler::writeSamples(const void *data, size_t len,
 				      size_t nsamples)
 {
-    const float *fp = static_cast<const float*>(data);
-    for (size_t i = 0; i < len / sizeof(float); ++i)
-	m_fbuffer.push_back(fp[i]);
+    std::memcpy(m_buffer, data, len);
 }

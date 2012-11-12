@@ -6,13 +6,13 @@
 
 class CoreAudioResampler: public FilterBase, public ISink {
     uint32_t m_quality, m_complexity;
-    double m_rate;
+    void * m_buffer;
     int64_t m_position;
     int64_t m_length;
+    double m_rate;
     AudioConverterX m_converter;
     std::shared_ptr<CoreAudioEncoder> m_encoder;
     std::shared_ptr<ISource> m_source;
-    std::deque<float> m_fbuffer;
     AudioStreamBasicDescription m_asbd;
 public:
     CoreAudioResampler(const std::shared_ptr<ISource> src, int rate,

@@ -39,14 +39,15 @@ ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
     m_output_buffer.resize(pullbytes * 2);
 }
 
-bool ALACEncoderX::encodeChunk(UInt32 npackets)
+uint32_t ALACEncoderX::encodeChunk(UInt32 npackets)
 {
     const AudioStreamBasicDescription &asbd = getInputDescription();
-    for (UInt32 i = 0; i < npackets; ++i) {
+    uint32_t n = 0;
+    for (n = 0; n < npackets; ++n) {
 	size_t nsamples =
 	    m_src->readSamples(&m_input_buffer[0], kALACDefaultFramesPerPacket);
 	if (nsamples == 0)
-	    return false;
+	    break;
 	m_stat.updateRead(nsamples);
 
 	size_t nbytes = nsamples * asbd.mBytesPerFrame;
@@ -61,7 +62,7 @@ bool ALACEncoderX::encodeChunk(UInt32 npackets)
 	m_sink->writeSamples(&m_output_buffer[0], xbytes, nsamples);
 	m_stat.updateWritten(nsamples, xbytes);
     }
-    return true;
+    return n;
 }
 
 void ALACEncoderX::getMagicCookie(std::vector<uint8_t> *cookie)

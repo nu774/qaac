@@ -23,7 +23,7 @@ class ALACEncoderX: public IEncoder, public IEncoderStat {
 public:
     ALACEncoderX(const AudioStreamBasicDescription &desc);
     void setFastMode(bool fast) { m_encoder->SetFastMode(fast); }
-    bool encodeChunk(UInt32 npackets);
+    uint32_t encodeChunk(UInt32 npackets);
     void getMagicCookie(std::vector<uint8_t> *cookie);
     void setSource(const std::shared_ptr<ISource> &source) { m_src = source; }
     void setSink(const std::shared_ptr<ISink> &sink) { m_sink = sink; }
