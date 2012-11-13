@@ -93,62 +93,52 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
     if (normalize)
 	normalizeMatrix(m_matrix);
     m_asbd = cautil::buildASBDForPCM(fmt.mSampleRate, spec.size(),
-				     32, kAudioFormatFlagIsFloat);
-
-    if (m_shiftMask) {
-	size_t numtaps = fmt.mSampleRate / 12;
-	if (!(numtaps & 1)) ++numtaps;
-	m_coefs.resize(numtaps);
-	hilbert(&m_coefs[0], numtaps);
-	applyHamming(&m_coefs[0], numtaps);
-	m_filter_gain = calcGain(&m_coefs[0], numtaps);
-
-	for (size_t i = 0; i < fmt.mChannelsPerFrame; ++i)
-	    if (m_shiftMask & (1 << i))
-		m_shift_channels.push_back(i);
-	    else
-		m_pass_channels.push_back(i);
-    }
-    init();
+				     64, kAudioFormatFlagIsFloat);
+    m_buffer.units_per_packet = fmt.mChannelsPerFrame;
+    if (m_shiftMask)
+	initFilter();
 }
 
-void MatrixMixer::init()
+void MatrixMixer::initFilter()
 {
-    m_end_of_input = false;
-    m_input_frames = 0;
+    const AudioStreamBasicDescription &fmt = source()->getSampleFormat();
+    size_t numtaps = fmt.mSampleRate / 12;
+    if (!(numtaps & 1)) ++numtaps;
+    m_coefs.resize(numtaps);
+    hilbert(&m_coefs[0], numtaps);
+    applyHamming(&m_coefs[0], numtaps);
+    m_filter_gain = calcGain(&m_coefs[0], numtaps);
 
-    if (m_shiftMask) {
-	lsx_fir_t *filter =
-	    m_module.fir_create(util::bitcount(m_shiftMask), &m_coefs[0],
-				m_coefs.size(), m_coefs.size() / 2, m_mt);
-	if (!filter)
-	    throw std::runtime_error("failed to init hilbert transformer");
-	m_filter.reset(filter, m_module.fir_close);
-	if (m_module.fir_start(m_filter.get()) < 0)
-	    throw std::runtime_error("failed to init hilbert transformer");
-    }
+    lsx_fir_t *filter =
+	m_module.fir_create(util::bitcount(m_shiftMask), &m_coefs[0],
+			    m_coefs.size(), m_coefs.size() / 2, m_mt);
+    if (!filter)
+	throw std::runtime_error("failed to init hilbert transformer");
+    m_filter.reset(filter, m_module.fir_close);
+    if (m_module.fir_start(m_filter.get()) < 0)
+	throw std::runtime_error("failed to init hilbert transformer");
 }
 
 size_t MatrixMixer::readSamples(void *buffer, size_t nsamples)
 {
     uint32_t ichannels = source()->getSampleFormat().mChannelsPerFrame;
-    if (m_fbuffer[0].size() < nsamples * ichannels)
-	m_fbuffer[0].resize(nsamples * ichannels);
-    if (!m_shiftMask)
-	nsamples = readSamplesAsFloat(source(), &m_ibuffer, &m_fbuffer[0],
-				      nsamples);
-    else
-	nsamples = phaseShift(&m_fbuffer[0][0], nsamples);
+    if (m_fbuffer.size() < nsamples * ichannels)
+	m_fbuffer.resize(nsamples * ichannels);
 
-    float *ip = &m_fbuffer[0][0];
-    float *op = static_cast<float*>(buffer);
+    if (m_shiftMask)
+	nsamples = phaseShift(nsamples);
+    else
+	nsamples = readSamplesAsFloat(source(), &m_ibuffer,
+				      &m_fbuffer[0], nsamples);
+
+    double *op = static_cast<double*>(buffer);
     for (size_t i = 0; i < nsamples; ++i) {
-	for (size_t out = 0; out < m_matrix.size(); ++out) {
+	double *ip = &m_fbuffer[i * ichannels];
+	for (size_t out = 0; out < m_asbd.mChannelsPerFrame; ++out) {
 	    double value = 0.0;
-	    for (size_t in = 0; in < m_matrix[out].size(); ++in) {
+	    for (size_t in = 0; in < ichannels; ++in) {
 		complex_t factor = m_matrix[out][in];
-		float f = ip[i * ichannels + in];
-		value += f * (factor.real() + factor.imag());
+		value += ip[in] * (factor.real() + factor.imag());
 	    }
 	    *op++ = value;
 	}
@@ -157,62 +147,54 @@ size_t MatrixMixer::readSamples(void *buffer, size_t nsamples)
     return nsamples;
 }
 
-size_t MatrixMixer::phaseShift(void *buffer, size_t nsamples)
+size_t MatrixMixer::phaseShift(size_t nsamples)
 {
-    float *src = m_fbuffer[1].size() ? &m_fbuffer[1][0] : 0;
-    float *dst = static_cast<float*>(buffer);
-
+    const int IOSIZE = 4096;
     uint32_t ichannels = source()->getSampleFormat().mChannelsPerFrame;
     uint32_t nshifts = util::bitcount(m_shiftMask);
-    std::vector<float*> ivec(nshifts), ovec(nshifts);
 
-    while (nsamples > 0) {
-	if (m_input_frames == 0 && !m_end_of_input) {
-	    m_input_frames =
-		readSamplesAsFloat(source(), &m_ibuffer,
-				   &m_fbuffer[1], nsamples);
-	    if (!m_input_frames)
-		m_end_of_input = true;
-	    src = &m_fbuffer[1][0];
-	    for (size_t i = 0; i < m_input_frames; ++i) {
-		std::vector<uint32_t>::iterator it = m_pass_channels.begin();
-		for (; it != m_pass_channels.end(); ++it)
-		    m_syncque.push_back(src[i * ichannels + *it]);
-		it = m_shift_channels.begin();
-		for (; it != m_shift_channels.end(); ++it)
-		    src[i * ichannels + *it] /= m_filter_gain;
+    double **ivec = static_cast<double**>(_alloca(sizeof(double*) * nshifts));
+    double **ovec = static_cast<double**>(_alloca(sizeof(double*) * nshifts));
+
+    for (unsigned i = 0, n = 0; n < ichannels; ++n)
+	if (m_shiftMask & (1 << n))
+	    ovec[i++] = &m_fbuffer[n];
+
+    size_t ilen = 0, olen = 0;
+    m_buffer.resize(IOSIZE);
+    do {
+	if (m_buffer.count() == 0) {
+	    ilen = readSamplesAsFloat(source(), &m_ibuffer,
+				      m_buffer.write_ptr(), IOSIZE);
+	    m_buffer.commit(ilen);
+	    for (size_t i = 0; i < ilen; ++i) {
+		double *frame = m_buffer.read_ptr() + i * ichannels;
+		for (unsigned n = 0; n < ichannels; ++n)
+		    if (m_shiftMask & (1 << n))
+			frame[n] /= m_filter_gain;
+		    else
+			m_syncque.push_back(frame[n]);
 	    }
 	}
-	size_t ilen = m_input_frames;
-	size_t olen = nsamples;
-	for (size_t i = 0; i < m_shift_channels.size(); ++i) {
-	    ivec[i] = src + m_shift_channels[i];
-	    ovec[i] = dst + m_shift_channels[i];
-	}
-	m_module.fir_process(m_filter.get(), &ivec[0], &ovec[0],
-			     &ilen, &olen, ichannels, ichannels);
-	for (size_t i = 0; i < olen; ++i) {
-	    std::vector<uint32_t>::iterator it = m_pass_channels.begin();
-	    if (m_syncque.size()) {
-		for (; it != m_pass_channels.end(); ++it) {
-		    dst[i * ichannels + *it] = m_syncque.front();
-		    m_syncque.pop_front();
-		}
-	    } else {
-		for (; it != m_pass_channels.end(); ++it)
-		    dst[i * ichannels + *it] = 0.0;
+	double *bp = m_buffer.read_ptr();
+	for (unsigned i = 0, n = 0; n < ichannels; ++n)
+	    if (m_shiftMask & (1 << n))
+		ivec[i++] = bp + n;
+	ilen = m_buffer.count();
+	olen = nsamples;
+	m_module.fir_process_d(m_filter.get(), ivec, ovec, &ilen, &olen,
+			       ichannels, ichannels);
+	m_buffer.advance(ilen);
+    } while (ilen != 0 && olen == 0);
+
+    for (size_t i = 0; i < olen; ++i) {
+	double *frame = &m_fbuffer[i * ichannels];
+	for (unsigned n = 0; n < ichannels; ++n) {
+	    if (!(m_shiftMask & (1 << n))) {
+		frame[n] = m_syncque.front();
+		m_syncque.pop_front();
 	    }
 	}
-	nsamples -= olen;
-	m_input_frames -= ilen;
-	src += ilen * ichannels;
-	if (m_end_of_input && olen == 0)
-	    break;
-	dst += olen * ichannels;
     }
-    if (m_input_frames) {
-	std::memmove(&this->m_fbuffer[1][0], src,
-		     m_input_frames * ichannels * sizeof(float));
-    }
-    return (dst - static_cast<float*>(buffer)) / ichannels;
+    return olen;
 }
