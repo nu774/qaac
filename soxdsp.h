@@ -20,11 +20,15 @@ public:
     int (*rate_start)(lsx_rate_t *);
     size_t (*rate_process)(lsx_rate_t *, const float * const *, float **,
 			   size_t *, size_t *, size_t, size_t);
+    size_t (*rate_process_d)(lsx_rate_t *, const double * const *, double **,
+			     size_t *, size_t *, size_t, size_t);
     lsx_fir_t *(*fir_create)(unsigned, double *, unsigned, unsigned, int);
     int (*fir_close)(lsx_fir_t *);
     int (*fir_start)(lsx_fir_t *);
     int (*fir_process)(lsx_fir_t *, const float * const *, float **,
 		       size_t *, size_t *, size_t, size_t);
+    int (*fir_process_d)(lsx_fir_t *, const double * const *, double **,
+		         size_t *, size_t *, size_t, size_t);
     double *(*design_lpf)(double, double, double, double, int *, int, double);
     void (*free)(void*);
 };
@@ -32,20 +36,18 @@ public:
 struct ISoxDSPEngine {
     virtual ~ISoxDSPEngine() {}
     virtual const AudioStreamBasicDescription &getSampleFormat() const = 0;
-    virtual ssize_t process(const float * const *ibuf, float **obuf,
+    virtual ssize_t process(const double * const *ibuf, double **obuf,
 			    size_t *ilen, size_t *olen,
 			    size_t istride, size_t ostride) = 0;
 };
 
 class SoxDSPProcessor: public FilterBase {
-    AudioStreamBasicDescription m_asbd;
-    std::shared_ptr<ISoxDSPEngine> m_engine;
-    bool m_end_of_input;
-    size_t m_input_frames;
     int64_t m_position;
     uint64_t m_length;
+    std::shared_ptr<ISoxDSPEngine> m_engine;
     std::vector<uint8_t> m_ibuffer;
-    std::vector<float> m_fbuffer;
+    DecodeBuffer<double> m_buffer;
+    AudioStreamBasicDescription m_asbd;
 public:
     SoxDSPProcessor(const std::shared_ptr<ISoxDSPEngine> &engine,
 		    const std::shared_ptr<ISource> &src);
@@ -74,11 +76,11 @@ public:
     {
 	return m_asbd;
     }
-    ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
+    ssize_t process(const double * const *ibuf, double **obuf, size_t *ilen,
 		    size_t *olen, size_t istride, size_t ostride)
     {
-	return m_module.rate_process(m_processor.get(), ibuf, obuf,
-				     ilen, olen, istride, ostride);
+	return m_module.rate_process_d(m_processor.get(), ibuf, obuf,
+				       ilen, olen, istride, ostride);
     }
 };
 
@@ -94,11 +96,11 @@ public:
     {
 	return m_asbd;
     }
-    ssize_t process(const float * const *ibuf, float **obuf, size_t *ilen,
+    ssize_t process(const double * const *ibuf, double **obuf, size_t *ilen,
 		    size_t *olen, size_t istride, size_t ostride)
     {
-	return m_module.fir_process(m_processor.get(), ibuf, obuf,
-				    ilen, olen, istride, ostride);
+	return m_module.fir_process_d(m_processor.get(), ibuf, obuf,
+				      ilen, olen, istride, ostride);
     }
 };
 #endif

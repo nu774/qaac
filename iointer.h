@@ -57,6 +57,10 @@ public:
     }
 };
 
+/*
+ * Kind of a simple FIFO, but only applicable for iterations of
+ * put once -> get N times, where all items are consumed on each iteration.
+ */
 template <typename T>
 class DecodeBuffer {
     uint32_t npackets_;

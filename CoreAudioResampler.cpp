@@ -14,13 +14,14 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> src,
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
 				     32, kAudioFormatFlagIsFloat);
-    uint64_t len = src->length();
     /*
      * XXX:
      * Might be 1 sample off.
      * It seems that resultant length is inconsistent between line/norm/bats.
      */
-    m_length = (len == ~0ULL ? ~0ULL : len * m_rate / asbd.mSampleRate + .5);
+    m_length = src->length();
+    if (m_length != ~0ULL)
+	m_length = m_length * m_rate / asbd.mSampleRate + .5;
     init();
 }
 

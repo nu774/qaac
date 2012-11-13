@@ -19,10 +19,14 @@ SoxModule::SoxModule(const std::wstring &path)
 	CHECK(rate_config = m_dl.fetch("lsx_rate_config"));
 	CHECK(rate_start = m_dl.fetch("lsx_rate_start"));
 	CHECK(rate_process = m_dl.fetch("lsx_rate_process_noninterleaved"));
+	CHECK(rate_process_d =
+	      m_dl.fetch("lsx_rate_process_noninterleaved_double"));
 	CHECK(fir_create = m_dl.fetch("lsx_fir_create"));
 	CHECK(fir_close = m_dl.fetch("lsx_fir_close"));
 	CHECK(fir_start = m_dl.fetch("lsx_fir_start"));
 	CHECK(fir_process = m_dl.fetch("lsx_fir_process_noninterleaved")); 
+	CHECK(fir_process_d =
+	      m_dl.fetch("lsx_fir_process_noninterleaved_double")); 
 	CHECK(design_lpf = m_dl.fetch("lsx_design_lpf"));
 	CHECK(free = m_dl.fetch("lsx_free"));
     } catch (...) {
@@ -32,61 +36,54 @@ SoxModule::SoxModule(const std::wstring &path)
 
 SoxDSPProcessor::SoxDSPProcessor(const std::shared_ptr<ISoxDSPEngine> &engine,
 				 const std::shared_ptr<ISource> &src)
-    : FilterBase(src), m_engine(engine),
-      m_end_of_input(false), m_input_frames(0), m_position(0)
+    : FilterBase(src), m_position(0), m_engine(engine)
 {
     const AudioStreamBasicDescription &sfmt = source()->getSampleFormat();
-    if (sfmt.mBitsPerChannel == 64)
-	throw std::runtime_error("Can't handle 64bit sample");
-
     m_asbd = m_engine->getSampleFormat();
 
-    m_fbuffer.resize(4096 * m_asbd.mChannelsPerFrame);
-    m_ibuffer.resize(m_fbuffer.size() * m_asbd.mBytesPerFrame);
+    m_buffer.units_per_packet = m_asbd.mChannelsPerFrame;
 
     double factor = m_asbd.mSampleRate / sfmt.mSampleRate;
-    uint64_t len = source()->length();
-    m_length = (len == ~0ULL ? ~0ULL : len * factor + .5);
+    m_length = source()->length();
+    if (m_length != ~0ULL)
+	m_length = m_length * factor + .5;
 }
 
 size_t SoxDSPProcessor::readSamples(void *buffer, size_t nsamples)
 {
-    float *src = &m_fbuffer[0];
-    float *dst = static_cast<float*>(buffer);
-
     unsigned nchannels = m_asbd.mChannelsPerFrame;
-    std::vector<float*> ivec(nchannels), ovec(nchannels);
+    m_buffer.resize(4096);
 
-    while (nsamples > 0) {
-	if (m_input_frames == 0 && !m_end_of_input) {
-	    m_input_frames =
-		readSamplesAsFloat(source(), &m_ibuffer, &m_fbuffer, nsamples);
-	    if (!m_input_frames)
-		m_end_of_input = true;
-	    src = &m_fbuffer[0];
+    double **ivec, **ovec;
+    ivec = static_cast<double**>(_alloca(sizeof(double*) * nchannels));
+    ovec = static_cast<double**>(_alloca(sizeof(double*) * nchannels));
+    double *dst = static_cast<double*>(buffer);
+    for (size_t i = 0; i < nchannels; ++i)
+	ovec[i] = dst + i;
+
+    size_t ilen = 0, olen = 0;
+    /*
+     * We return 0 as EOF indicator, so necessary to loop while 
+     * DSP is consuming input but not producing output
+     */
+    do {
+	if (m_buffer.count() == 0) {
+	    size_t n = readSamplesAsFloat(source(), &m_ibuffer,
+					  m_buffer.write_ptr(), 4096);
+	    m_buffer.commit(n);
 	}
-	size_t ilen = m_input_frames;
-	size_t olen = nsamples;
-	for (size_t i = 0; i < nchannels; ++i) {
+	double *src = m_buffer.read_ptr();
+	for (size_t i = 0; i < nchannels; ++i)
 	    ivec[i] = src + i;
-	    ovec[i] = dst + i;
-	}
-	m_engine->process(&ivec[0], &ovec[0],
-			  &ilen, &olen, nchannels, nchannels);
-	nsamples -= olen;
-	m_input_frames -= ilen;
-	src += ilen * nchannels;
-	if (m_end_of_input && olen == 0)
-	    break;
-	dst += olen * nchannels;
-    }
-    if (m_input_frames) {
-	std::memmove(&this->m_fbuffer[0], src,
-		     m_input_frames * nchannels * sizeof(float));
-    }
-    nsamples = (dst - static_cast<float*>(buffer)) / nchannels;
-    m_position += nsamples;
-    return nsamples;
+
+	ilen = m_buffer.count();
+	olen = nsamples;
+	m_engine->process(ivec, ovec, &ilen, &olen, nchannels, nchannels);
+	m_buffer.advance(ilen);
+    } while (ilen != 0 && olen == 0);
+
+    m_position += olen;
+    return olen;
 }
 
 SoxResampler::SoxResampler(const SoxModule &module,
@@ -95,10 +92,10 @@ SoxResampler::SoxResampler(const SoxModule &module,
     : m_module(module)
 {
     m_factor = rate / asbd.mSampleRate;
-    m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame, 32,
-				kAudioFormatFlagIsFloat);
-    lsx_rate_t *converter = m_module.rate_create(
-	    asbd.mChannelsPerFrame, asbd.mSampleRate, rate);
+    m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame, 64,
+				     kAudioFormatFlagIsFloat);
+    lsx_rate_t *converter =
+	m_module.rate_create(asbd.mChannelsPerFrame, asbd.mSampleRate, rate);
     if (!converter)
 	throw std::runtime_error("lsx_rate_create()");
     m_processor = std::shared_ptr<lsx_rate_t>(converter, m_module.rate_close);
@@ -113,7 +110,7 @@ SoxLowpassFilter::SoxLowpassFilter(const SoxModule &module,
     : m_module(module)
 {
     m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
-				32, kAudioFormatFlagIsFloat);
+				     64, kAudioFormatFlagIsFloat);
     double Fn = asbd.mSampleRate / 2.0;
     double Fs = Fp + asbd.mSampleRate * 0.0125;
     if (Fp == 0 || Fs > Fn)
