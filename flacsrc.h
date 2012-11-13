@@ -8,28 +8,6 @@
 
 class FLACSource: public ISeekableSource, public ITagParser
 {
-    struct DecodeBuffer {
-	uint32_t nsamples;
-	uint32_t done;
-	uint32_t channels;
-	std::vector<int32_t> v;
-
-	DecodeBuffer(): nsamples(0), done(0), channels(0) {}
-	void resize(uint32_t nsamples) { v.resize(nsamples * channels); }
-	int32_t *read_ptr() { return &v[done * channels]; }
-	int32_t *write_ptr() { return &v[0]; }
-	void reset() { nsamples = done = 0; }
-	uint32_t count() { return nsamples - done; }
-	void advance(uint32_t n) {
-	    done += n;
-	    if (done >= nsamples) done = nsamples = 0;
-	}
-	void commit(uint32_t count)
-	{
-	    nsamples = count;
-	    done = 0;
-	}
-    };
     typedef std::shared_ptr<FLAC__StreamDecoder> decoder_t;
     bool m_eof;
     bool m_giveup;
@@ -40,7 +18,7 @@ class FLACSource: public ISeekableSource, public ITagParser
     std::shared_ptr<FILE> m_fp;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<chapters::entry_t> m_chapters;
-    DecodeBuffer m_buffer;
+    DecodeBuffer<int32_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
     FLACModule m_module;
 public:

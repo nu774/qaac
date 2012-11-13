@@ -75,7 +75,7 @@ FLACSource::FLACSource(const FLACModule &module,
 		m_decoder.get()));
     if (m_giveup || m_asbd.mBitsPerChannel == 0)
 	flac::want(false);
-    m_buffer.channels = m_asbd.mChannelsPerFrame;
+    m_buffer.units_per_packet = m_asbd.mChannelsPerFrame;
     m_initialize_done = true;
 }
 
