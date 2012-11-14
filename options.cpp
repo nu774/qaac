@@ -139,7 +139,7 @@ void usage()
 "                       Use this when you want lower cut-off than\n"
 "                       Apple default.\n"
 "-b, --bits-per-sample <n>\n"
-"                       Bits per sample of output (for WAV/ALAC) [16/24]\n"
+"                       Bits per sample of output (for WAV/ALAC only)\n"
 "--no-dither            Turn off dither when quantizing to 16bit with -b 16.\n" 
 "--gain <f>             Adjust gain by f dB.\n"
 "                       Use negative value to decrese gain, when you want to\n"
@@ -411,9 +411,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
 	}
 	else if (ch == 'b') {
 	    uint32_t n;
-	    if (std::swscanf(wide::optarg, L"%u", &n) != 1
-		|| (n != 16 && n != 24)) {
-		std::fputws(L"Bits per sample shall be 16 or 24.\n", stderr);
+	    if (std::swscanf(wide::optarg, L"%u", &n) != 1) {
+		std::fputws(L"-b requires an integer.\n", stderr);
+		return false;
+	    }
+	    if (n <= 1 || n > 32) {
+		std::fputws(L"Bits per sample is too low or too high.\n",
+			    stderr);
 		return false;
 	    }
 	    this->bits_per_sample = n;

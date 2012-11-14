@@ -22,10 +22,26 @@ public:
     int operator()() { return e_() / div_ + off_; }
 };
 
+Quantizer::Quantizer(const std::shared_ptr<ISource> &source,
+		     uint32_t bitdepth, bool no_dither, bool is_float)
+    : FilterBase(source), m_no_dither(no_dither)
+{
+    const AudioStreamBasicDescription &asbd = source->getSampleFormat();
+    m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
+				      asbd.mChannelsPerFrame,
+				      bitdepth, 32,
+				      is_float ? kAudioFormatFlagIsFloat
+				      	: kAudioFormatFlagIsSignedInteger);
+}
+
 size_t Quantizer::readSamples(void *buffer, size_t nsamples)
 {
     const AudioStreamBasicDescription &iasbd = source()->getSampleFormat();
-    if (iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
+
+    if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
+	float *fp = static_cast<float*>(buffer);
+	nsamples = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
+    } else if (iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
 	nsamples = source()->readSamples(buffer, nsamples);
 	if (m_asbd.mBitsPerChannel < iasbd.mBitsPerChannel) {
 	    ditherInt(static_cast<int*>(buffer),

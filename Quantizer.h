@@ -9,20 +9,13 @@
 class Quantizer: public FilterBase {
     AudioStreamBasicDescription m_asbd;
     std::mt19937 m_mt;
+    std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
     std::vector<double> m_dbuffer;
     bool m_no_dither;
 public:
     Quantizer(const std::shared_ptr<ISource> &source, uint32_t bitdepth,
-	      bool no_dither)
-	: FilterBase(source), m_no_dither(no_dither)
-    {
-	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
-	m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
-					  asbd.mChannelsPerFrame,
-					  bitdepth, 32,
-					  kAudioFormatFlagIsSignedInteger);
-    }
+	      bool no_dither, bool is_float);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;

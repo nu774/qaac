@@ -711,9 +711,11 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 	    LOG(L"WARNING: --bits-per-sample has no effect for AAC\n");
 	else if (chain.back()->getSampleFormat().mBitsPerChannel
 		 != opts.bits_per_sample) {
+	    bool is_float = (opts.bits_per_sample == 32 &&
+			     opts.output_format == 'lpcm');
 	    std::shared_ptr<ISource>
 		isrc(new Quantizer(chain.back(), opts.bits_per_sample,
-				   opts.no_dither));
+				   opts.no_dither, is_float));
 	    chain.push_back(isrc);
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Convert to %d bit\n", opts.bits_per_sample);
@@ -722,10 +724,17 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 	if (chain.back()->getSampleFormat().mFormatFlags
 	    & kAudioFormatFlagIsFloat) {
 	    std::shared_ptr<ISource>
-		isrc(new Quantizer(chain.back(), 16, opts.no_dither));
+		isrc(new Quantizer(chain.back(), 16, opts.no_dither, false));
 	    chain.push_back(isrc);
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Convert to 16 bit\n");
+	}
+    } else if (opts.output_format == 'lpcm') {
+	if (src->getSampleFormat().mBitsPerChannel <= 32 &&
+	    chain.back()->getSampleFormat().mBitsPerChannel > 32)
+	{
+	    chain.push_back(std::make_shared<Quantizer>(chain.back(), 32,
+							opts.no_dither, true));
 	}
     }
     if (threading && !opts.isLPCM()) {
