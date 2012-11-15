@@ -581,12 +581,13 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     GetSystemInfo(&si);
     bool threading = opts.threading && si.dwNumberOfProcessors > 1;
 
+    AudioStreamBasicDescription sasbd = src->getSampleFormat();
+
 #ifndef REFALAC
     std::shared_ptr<AudioCodecX> codec;
     if (!opts.isLPCM())
 	codec.reset(new AudioCodecX(opts.output_format));
 #endif
-    //chain.push_back(delayed_source(src, opts));
     mapped_source(chain, opts, wChanmask, aacLayout, threading);
 
     if (!opts.isLPCM()) {
@@ -711,8 +712,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 	    LOG(L"WARNING: --bits-per-sample has no effect for AAC\n");
 	else if (chain.back()->getSampleFormat().mBitsPerChannel
 		 != opts.bits_per_sample) {
-	    bool is_float = (opts.bits_per_sample == 32 &&
-			     opts.output_format == 'lpcm');
+	    bool is_float = (opts.bits_per_sample == 32 && opts.isLPCM());
 	    std::shared_ptr<ISource>
 		isrc(new Quantizer(chain.back(), opts.bits_per_sample,
 				   opts.no_dither, is_float));
@@ -720,17 +720,24 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 	    if (opts.verbose > 1 || opts.logfilename)
 		LOG(L"Convert to %d bit\n", opts.bits_per_sample);
 	}
-    } else if (opts.output_format == 'alac') {
-	if (chain.back()->getSampleFormat().mFormatFlags
-	    & kAudioFormatFlagIsFloat) {
-	    std::shared_ptr<ISource>
-		isrc(new Quantizer(chain.back(), 16, opts.no_dither, false));
-	    chain.push_back(isrc);
-	    if (opts.verbose > 1 || opts.logfilename)
-		LOG(L"Convert to 16 bit\n");
+    } else if (opts.isALAC()) {
+	bool isfloat = (chain.back()->getSampleFormat().mFormatFlags
+			& kAudioFormatFlagIsFloat);
+	/* 
+	 * When converted to float by DSP, automatically quantize to integer.
+	 */
+	if ((sasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) && isfloat) {
+	    unsigned bits = ((sasbd.mBitsPerChannel + 3) & ~3);
+	    if (bits > 24) bits = 32;
+	    chain.push_back(std::make_shared<Quantizer>(chain.back(), bits,
+						        opts.no_dither));
+	} else if (isfloat) {
+	    // Don't automatically quantize float input
+	    throw std::runtime_error("ALAC: input format is not supported");
 	}
-    } else if (opts.output_format == 'lpcm') {
-	if (src->getSampleFormat().mBitsPerChannel <= 32 &&
+    } else if (opts.isLPCM()) {
+	/* output f64 sample only when input was already f64 */
+	if (sasbd.mBitsPerChannel <= 32 &&
 	    chain.back()->getSampleFormat().mBitsPerChannel > 32)
 	{
 	    chain.push_back(std::make_shared<Quantizer>(chain.back(), 32,

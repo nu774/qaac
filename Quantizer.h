@@ -15,7 +15,7 @@ class Quantizer: public FilterBase {
     bool m_no_dither;
 public:
     Quantizer(const std::shared_ptr<ISource> &source, uint32_t bitdepth,
-	      bool no_dither, bool is_float);
+	      bool no_dither, bool is_float=false);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
 	return m_asbd;
