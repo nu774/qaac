@@ -40,8 +40,8 @@ void CompositeSource::addSource(const std::shared_ptr<ISeekableSource> &src)
     if (!count())
 	m_asbd = src->getSampleFormat();
     else if (std::memcmp(&m_asbd, &src->getSampleFormat(), sizeof m_asbd))
-	throw std::runtime_error(
-		"CompositeSource: can't compose different sample format");
+	throw std::runtime_error("Concatenation of multiple inputs with "
+				 "different sample format is not supported");
     m_sources.push_back(src);
     uint64_t len = src->length();
     if (len != ~0ULL && m_length != ~0ULL)
