@@ -42,7 +42,11 @@ class ADTSSink: public ISink {
     bool m_seekable;
 public:
     ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie);
+    ADTSSink(const std::shared_ptr<FILE> &fp,
+	     const std::vector<uint8_t> &cookie);
     void writeSamples(const void *data, size_t length, size_t nsamples);
+private:
+    void init(const std::vector<uint8_t> &cookie);
 };
 
 #endif

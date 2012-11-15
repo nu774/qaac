@@ -176,14 +176,16 @@ MP4Sink::MP4Sink(const std::wstring &path,
 }
 
 ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
+    : m_fp(win32::fopen(path, L"wb"))
 {
-    m_fp = win32::fopen(path, L"wb");
-    m_seekable = util::is_seekable(fileno(m_fp.get()));
-    std::vector<uint8_t> config;
-    parseMagicCookieAAC(cookie, &config);
-    unsigned rate;
-    parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
-			   &m_channel_config);
+    init(cookie);
+}
+
+ADTSSink::ADTSSink(const std::shared_ptr<FILE> &fp,
+		   const std::vector<uint8_t> &cookie)
+    : m_fp(fp)
+{
+    init(cookie);
 }
 
 void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
@@ -208,9 +210,16 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
     bs.put(0, 2); // number_of_raw_data_blocks_in_frame
     bs.byteAlign();
 
-    std::fwrite(bs.data(), 1, 7, m_fp.get());
-    std::fwrite(data, 1, length, m_fp.get());
-    if (ferror(m_fp.get()))
-	util::throw_crt_error("fwrite()");
-    if (!m_seekable) std::fflush(m_fp.get());
+    CHECKCRT(write(fileno(m_fp.get()), bs.data(), 7) < 0);
+    CHECKCRT(write(fileno(m_fp.get()), data, length) < 0);
+}
+
+void ADTSSink::init(const std::vector<uint8_t> &cookie)
+{
+    m_seekable = util::is_seekable(fileno(m_fp.get()));
+    std::vector<uint8_t> config;
+    parseMagicCookieAAC(cookie, &config);
+    unsigned rate;
+    parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
+			   &m_channel_config);
 }
