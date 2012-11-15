@@ -140,7 +140,7 @@ void usage()
 "                       Apple default.\n"
 "-b, --bits-per-sample <n>\n"
 "                       Bits per sample of output (for WAV/ALAC only)\n"
-"--no-dither            Turn off dither when quantizing to 16bit with -b 16.\n" 
+"--no-dither            Turn off dither when quantizing to lower bit depth.\n" 
 "--gain <f>             Adjust gain by f dB.\n"
 "                       Use negative value to decrese gain, when you want to\n"
 "                       avoid clipping introduced by DSP.\n"

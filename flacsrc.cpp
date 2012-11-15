@@ -98,7 +98,8 @@ size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 	    return 0;
 	TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
     }
-    uint32_t count = std::min(m_buffer.count(), nsamples);
+    uint32_t count = std::min(static_cast<size_t>(m_buffer.count()),
+			      nsamples);
     if (count) {
 	uint32_t bytes = count * m_asbd.mChannelsPerFrame * 4;
 	std::memcpy(buffer, m_buffer.read_ptr(), bytes);

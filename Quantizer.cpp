@@ -87,7 +87,7 @@ void Quantizer::ditherInt(int *data, size_t count, unsigned depth)
     RandomIntSpan<std::mt19937> nrand(m_mt, -half, half);
     for (size_t i = 0; i < count; ++i) {
 	int value = data[i] >> 1;
-	if (depth <= 16 && !m_no_dither) {
+	if (depth <= 18 && !m_no_dither) {
 	    // int noise = dist(m_mt) + dist(m_mt);
 	    int noise = nrand() + nrand();
 	    value += noise;
@@ -100,13 +100,13 @@ template <typename T>
 void Quantizer::ditherFloat(T *src, int *dst, size_t count, unsigned depth)
 {
     int shifts = 32 - depth;
-    double half = 1 << (depth - 1);
+    double half = 1U << (depth - 1);
     double min_value = -half;
     double max_value = half - 1;
     std::uniform_real_distribution<double> dist(-0.5, 0.5);
     for (size_t i = 0; i < count; ++i) {
 	double value = src[i] * half;
-	if (depth <= 16 && !m_no_dither) {
+	if (depth <= 18 && !m_no_dither) {
 	    double noise = dist(m_mt) + dist(m_mt);
 	    value += noise;
 	}
