@@ -59,8 +59,8 @@ public:
     void addSource(const std::shared_ptr<ISeekableSource> &src);
     void addSourceWithChapter(const std::shared_ptr<ISeekableSource> &src,
 			      const std::wstring &title);
-private:
     size_t count() const { return m_sources.size(); }
+private:
     std::shared_ptr<ISeekableSource> first() const { return m_sources[0]; }
     void addChapter(std::wstring title, double length)
     {

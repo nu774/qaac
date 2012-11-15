@@ -855,17 +855,18 @@ std::wstring get_encoder_config(AudioConverterX &converter)
 
 static
 std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
-	const Options &opts, const std::vector<uint8_t> &cookie)
+				 const Options &opts,
+				 const std::vector<uint8_t> &cookie)
 {
-    ISink *sink;
     if (opts.is_adts)
-	sink = new ADTSSink(ofilename, cookie);
+	return std::make_shared<ADTSSink>(ofilename, cookie);
     else if (opts.isALAC())
-	sink = new ALACSink(ofilename, cookie, !opts.no_optimize);
+	return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     else if (opts.isAAC())
-	sink = new MP4Sink(ofilename, cookie, opts.output_format,
-			   !opts.no_optimize);
-    return std::shared_ptr<ISink>(sink);
+	return std::make_shared<MP4Sink>(ofilename, cookie,
+					 opts.output_format,
+					 !opts.no_optimize);
+    throw std::runtime_error("XXX");
 }
 
 static
@@ -1031,7 +1032,8 @@ void config_aac_codec(AudioConverterX &converter, const Options &opts)
 
 static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
-	const std::wstring &ofilename, const Options &opts)
+		 const std::wstring &ofilename, const Options &opts,
+		 const std::shared_ptr<FILE> *adts_fp=0)
 {
     uint32_t wavChanmask;
     uint32_t aacLayout;
@@ -1057,7 +1059,11 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     converter.getCompressionMagicCookie(&cookie);
     CoreAudioEncoder encoder(converter);
     encoder.setSource(chain.back());
-    std::shared_ptr<ISink> sink = open_sink(ofilename, opts, cookie);
+    std::shared_ptr<ISink> sink;
+    if (adts_fp && adts_fp->get())
+	sink = std::make_shared<ADTSSink>(*adts_fp, cookie);
+    else
+	sink = open_sink(ofilename, opts, cookie);
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, chain, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
@@ -1178,6 +1184,32 @@ void load_track(const wchar_t *ifilename, const Options &opts,
     new_track.source = src;
     new_track.ofilename = name;
     tracks.push_back(new_track);
+}
+
+static
+void group_tracks_with_formats(const std::vector<chapters::Track> &tracks,
+			       std::vector<std::vector<chapters::Track> > *res)
+{
+    if (!tracks.size())
+	return;
+    std::vector<std::vector<chapters::Track> > vec;
+    std::vector<chapters::Track>::const_iterator track = tracks.begin();
+    do {
+	std::vector<chapters::Track> group;
+	group.push_back(*track);
+	const AudioStreamBasicDescription &fmt
+	    = track->source->getSampleFormat();
+	while (++track != tracks.end()) {
+	    const AudioStreamBasicDescription &afmt
+		= track->source->getSampleFormat();
+	    if (std::memcmp(&fmt, &afmt, sizeof fmt))
+		break;
+	    else
+		group.push_back(*track);
+	}
+	vec.push_back(group);
+    } while (track != tracks.end());
+    res->swap(vec);
 }
 
 struct ConsoleTitleSaver {
@@ -1341,15 +1373,31 @@ int wmain1(int argc, wchar_t **argv)
 	} else {
 	    std::wstring ofilename = get_output_filename(ifilename, opts);
 	    LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
-	    std::shared_ptr<CompositeSource> cs
-		= std::make_shared<CompositeSource>();
-	    for (size_t i = 0; i < tracks.size(); ++i) {
-		chapters::Track &track = tracks[i];
-		cs->addSourceWithChapter(track.source, track.name);
+	    std::shared_ptr<FILE> adts_fp;
+	    if (opts.is_adts)
+		adts_fp = win32::fopen(ofilename, L"wb+");
+	    std::vector<std::vector<chapters::Track> > groups;
+	    group_tracks_with_formats(tracks, &groups);
+	    if (!opts.is_adts && groups.size() > 1)
+		throw std::runtime_error("Concatenation of multiple inputs "
+					 "with different sample format is "
+					 "only supported for ADTS output");
+	    std::vector<std::vector<chapters::Track> >::const_iterator
+		group;
+	    std::vector<chapters::Track>::const_iterator track;
+	    for (group = groups.begin(); group != groups.end(); ++group) { 
+		std::shared_ptr<CompositeSource> cs
+		    = std::make_shared<CompositeSource>();
+		for (track = group->begin(); track != group->end(); ++track)
+		    cs->addSourceWithChapter(track->source, track->name);
+		std::shared_ptr<ISeekableSource> src(delayed_source(cs, opts));
+		src->seekTo(0);
+#ifdef REFALAC
+		encode_file(src, ofilename, opts);
+#else
+		encode_file(src, ofilename, opts, &adts_fp);
+#endif
 	    }
-	    std::shared_ptr<ISeekableSource> src(delayed_source(cs, opts));
-	    src->seekTo(0);
-	    encode_file(src, ofilename, opts);
 	}
     } catch (const std::exception &e) {
 	if (opts.print_available_formats)
