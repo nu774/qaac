@@ -1,6 +1,6 @@
 #include "CoreAudioResampler.h"
 
-CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> src,
+CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
 				       int rate,
 				       uint32_t quality,
 				       uint32_t complexity)
@@ -8,8 +8,7 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> src,
       m_quality(quality),
       m_complexity(complexity),
       m_rate(rate),
-      m_position(0),
-      m_source(src)
+      m_position(0)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
@@ -35,7 +34,7 @@ void CoreAudioResampler::init()
 
     struct Dispose { static void call(ISink *x) {} };
     std::shared_ptr<ISink> sink(this, Dispose::call);
-    m_encoder->setSource(m_source);
+    m_encoder->setSource(sourcePtr());
     m_encoder->setSink(sink);
 }
 

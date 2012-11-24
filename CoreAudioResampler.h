@@ -12,10 +12,9 @@ class CoreAudioResampler: public FilterBase, public ISink {
     double m_rate;
     AudioConverterX m_converter;
     std::shared_ptr<CoreAudioEncoder> m_encoder;
-    std::shared_ptr<ISource> m_source;
     AudioStreamBasicDescription m_asbd;
 public:
-    CoreAudioResampler(const std::shared_ptr<ISource> src, int rate,
+    CoreAudioResampler(const std::shared_ptr<ISource> &src, int rate,
 		       uint32_t quality, uint32_t complexity);
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const

@@ -1097,17 +1097,17 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::vector<uint8_t> cookie;
     encoder.getMagicCookie(&cookie);
 
-    std::shared_ptr<ISink> sink(new ALACSink(ofilename, cookie,
-					     !opts.no_optimize));
+    std::shared_ptr<ALACSink> sink =
+	std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     encoder.setSource(chain.back());
     encoder.setSink(sink);
     do_encode(&encoder, ofilename, chain, opts);
-    ALACSink *asink = dynamic_cast<ALACSink*>(sink.get());
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
-    write_tags(asink->getFile(), opts, src.get(), &encoder,
+    write_tags(sink->getFile(), opts, src.get(), &encoder,
 	       L"Apple Lossless Encoder");
     if (!opts.no_optimize)
-	do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
+	do_optimize(sink->getFile(), ofilename, opts.verbose > 1);
+    sink->close();
 }
 #endif
 
