@@ -127,7 +127,7 @@ struct MP4FDReadProvider: public MP4FileProvider
 		    int64_t maxChunkSize)
     {
 	int fd = reinterpret_cast<int>(handle) - 1;
-	*nin = ::read(fd, buffer, size);
+	*nin = util::nread(fd, buffer, size);
 	return *nin < 0;
     }
     static int close(void *handle)

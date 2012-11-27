@@ -16,7 +16,7 @@ namespace caf {
     uint64_t next_chunk(int fd, char *name)
     {
 	uint64_t size;
-	if (read(fd, name, 4) != 4 || read(fd, &size, 8) != 8)
+	if (util::nread(fd, name, 4) != 4 || util::nread(fd, &size, 8) != 8)
 	    return 0;
 	return util::b2host64(size);
     }
@@ -33,7 +33,7 @@ namespace caf {
 		    break;
 	    } else {
 		std::vector<char> buf(chunk_size);
-		if (read(fd, &buf[0], buf.size()) != buf.size())
+		if (util::nread(fd, &buf[0], buf.size()) != buf.size())
 		    break;
 		info->swap(buf);
 		return true;
@@ -78,7 +78,7 @@ namespace audiofile {
 	int fd = reinterpret_cast<int>(cookie);
 	if (_lseeki64(fd, pos, SEEK_SET) != pos)
 	    return ioErr;
-	ssize_t n = ::read(fd, data, count);
+	ssize_t n = util::nread(fd, data, count);
 	if (n < 0)
 	    return ioErr;
 	*nread = n;

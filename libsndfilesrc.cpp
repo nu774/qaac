@@ -81,7 +81,7 @@ struct SFVirtualIOImpl: public SF_VIRTUAL_IO
     static sf_count_t read(void *data, sf_count_t count, void *cookie)
     {
 	int fd = reinterpret_cast<int>(cookie);
-	return ::read(fd, data, count);
+	return util::nread(fd, data, count);
     }
     static sf_count_t tell(void *cookie)
     {

@@ -22,7 +22,7 @@ namespace TagLibX {
 	ByteVector readBlock(ulong length)
 	{
 	    ByteVector v(static_cast<uint>(length));
-	    int n = read(m_fd, v.data(), length);
+	    int n = util::nread(m_fd, v.data(), length);
 	    v.resize(std::max(0, n));
 	    return v;
 	}

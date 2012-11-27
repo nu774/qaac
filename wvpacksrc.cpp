@@ -50,7 +50,7 @@ struct WavpackStreamReaderImpl: public WavpackStreamReader
     static int32_t read(void *cookie, void *data, int32_t count)
     {
 	int fd = reinterpret_cast<int>(cookie);
-	return ::read(fd, data, count);
+	return util::nread(fd, data, count);
     }
     static uint32_t tell(void *cookie)
     {

@@ -22,7 +22,7 @@ size_t RawSource::readSamples(void *buffer, size_t nsamples)
     ssize_t nbytes = nsamples * m_asbd.mBytesPerFrame;
     if (m_buffer.size() < nbytes)
 	m_buffer.resize(nbytes);
-    nbytes = read(fileno(m_fp.get()), &m_buffer[0], nbytes);
+    nbytes = util::nread(fileno(m_fp.get()), &m_buffer[0], nbytes);
     nsamples = nbytes > 0 ? nbytes / m_asbd.mBytesPerFrame : 0;
     if (nsamples) {
 	size_t size = nsamples * m_asbd.mBytesPerFrame;
@@ -61,7 +61,7 @@ void RawSource::seekTo(int64_t count)
 	int64_t nread = 0;
 	char buf[0x1000];
 	while (nread < bytes) {
-	    int n = read(fd, buf, std::min(bytes - nread, 0x1000LL));
+	    int n = util::nread(fd, buf, std::min(bytes - nread, 0x1000LL));
 	    if (n <= 0) break;
 	    nread += n;
 	}

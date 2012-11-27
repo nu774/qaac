@@ -122,4 +122,18 @@ namespace util {
 	    *size = count * new_width;
 	}
     }
+
+    ssize_t nread(int fd, void *buffer, size_t size)
+    {
+	char *bp = static_cast<char*>(buffer);
+	size_t total = 0;
+	ssize_t n = 0;
+	while (total < size) {
+	    n = read(fd, bp, size - total);
+	    if (n <= 0)
+		break;
+	    total += n;
+	}
+	return total > 0 ? total : n;
+    }
 }

@@ -38,7 +38,7 @@ size_t WaveSource::readSamples(void *buffer, size_t nsamples)
 {
     ssize_t nbytes = nsamples * m_block_align;
     m_buffer.resize(nbytes);
-    nbytes = read(fd(), &m_buffer[0], nbytes);
+    nbytes = util::nread(fd(), &m_buffer[0], nbytes);
     nsamples = nbytes > 0 ? nbytes / m_block_align: 0;
     if (nsamples) {
 	size_t size = nsamples * m_block_align;
@@ -69,7 +69,7 @@ void WaveSource::seekTo(int64_t count)
 	int64_t nread = 0;
 	int64_t bytes = (count - m_position) * m_block_align;
 	while (nread < bytes) {
-	    int n = read(fd(), buf, std::min(bytes - nread, 0x1000LL));
+	    int n = util::nread(fd(), buf, std::min(bytes - nread, 0x1000LL));
 	    if (n < 0) break;
 	    nread += n;
 	}
@@ -108,17 +108,17 @@ int64_t WaveSource::parse()
 
 inline void WaveSource::read16le(void *n)
 {
-    util::check_eof(read(fd(), n, 2) == 2);
+    util::check_eof(util::nread(fd(), n, 2) == 2);
 }
 
 inline void WaveSource::read32le(void *n)
 {
-    util::check_eof(read(fd(), n, 4) == 4);
+    util::check_eof(util::nread(fd(), n, 4) == 4);
 }
 
 inline void WaveSource::read64le(void *n)
 {
-    util::check_eof(read(fd(), n, 8) == 8);
+    util::check_eof(util::nread(fd(), n, 8) == 8);
 }
 
 void WaveSource::skip(int64_t n)
@@ -129,7 +129,7 @@ void WaveSource::skip(int64_t n)
 	char buf[8192];
 	while (n > 0) {
 	    int nn = static_cast<int>(std::min(n, 8192LL));
-	    util::check_eof(read(fd(), buf, nn) == nn);
+	    util::check_eof(util::nread(fd(), buf, nn) == nn);
 	    n -= nn;
 	}
     }
@@ -206,7 +206,7 @@ void WaveSource::fmt(size_t size)
 	if (dwChannelMask > 0 && util::bitcount(dwChannelMask) >= nChannels)
 	    chanmap::getChannels(dwChannelMask, &m_chanmap, nChannels);
 
-	util::check_eof(read(fd(), &guid, sizeof guid) == sizeof guid);
+	util::check_eof(util::nread(fd(), &guid, sizeof guid) == sizeof guid);
 	skip((size - 39) & ~1);
 
 	if (!std::memcmp(&guid, &wave::ksFormatSubTypeFloat, sizeof guid))

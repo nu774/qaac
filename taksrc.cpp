@@ -71,7 +71,7 @@ struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
     static TtakBool read(void *cookie, void *buf, TtakInt32 n, TtakInt32 *nr)
     {
 	int fd = reinterpret_cast<int>(cookie);
-	*nr = ::read(fd, buf, n);
+	*nr = util::nread(fd, buf, n);
 	return *nr >= 0;
     }
     static TtakBool seek(void *cookie, TtakInt64 pos)

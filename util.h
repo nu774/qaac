@@ -173,6 +173,8 @@ namespace util {
 
     void unpack(const void *input, void *output, size_t *size, unsigned width,
 		unsigned new_width);
+
+    ssize_t nread(int fd, void *buffer, size_t size);
 }
 
 #define CHECKCRT(expr) \

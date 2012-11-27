@@ -70,7 +70,7 @@ size_t Normalizer::readSamplesT(void *buffer, size_t nsamples)
 {
     if (!m_tmpfile.get())
 	return 0;
-    int nc = read(fd(), buffer, nsamples * m_asbd.mBytesPerFrame);
+    int nc = util::nread(fd(), buffer, nsamples * m_asbd.mBytesPerFrame);
     T *fp = static_cast<T*>(buffer);
     if (m_peak > FLT_MIN) {
 	for (size_t i = 0; i < nc / sizeof(T); ++i)

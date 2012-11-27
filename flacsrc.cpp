@@ -37,7 +37,7 @@ FLACSource::FLACSource(const FLACModule &module,
     m_module(module)
 {
     char buffer[33];
-    util::check_eof(read(fileno(m_fp.get()), buffer, 33) == 33);
+    util::check_eof(util::nread(fileno(m_fp.get()), buffer, 33) == 33);
     if (std::memcmp(buffer, "ID3", 3) == 0) {
 	uint32_t size = 0;
 	for (int i = 6; i < 10; ++i) {
@@ -45,7 +45,7 @@ FLACSource::FLACSource(const FLACModule &module,
 	    size |= buffer[i];
 	}
 	CHECKCRT(_lseeki64(fileno(m_fp.get()), 10 + size, SEEK_SET) < 0);
-	util::check_eof(read(fileno(m_fp.get()), buffer, 33) == 33);
+	util::check_eof(util::nread(fileno(m_fp.get()), buffer, 33) == 33);
     }
     uint32_t fcc = util::fourcc(buffer);
     if ((fcc != 'fLaC' && fcc != 'OggS')
@@ -112,7 +112,7 @@ size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 FLAC__StreamDecoderReadStatus
 FLACSource::readCallback(FLAC__byte *buffer, size_t *bytes)
 {
-    ssize_t n = read(fileno(m_fp.get()), buffer, *bytes);
+    ssize_t n = util::nread(fileno(m_fp.get()), buffer, *bytes);
     if (n <= 0) {
 	m_eof = true;
 	return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
