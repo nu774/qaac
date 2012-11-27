@@ -338,13 +338,13 @@ bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
 	MP4Atom *pTagAtom = AddDescendantAtoms("moov", tagname.c_str() + 5);
 	if (!pTagAtom) return false;
 
-	MP4NameAtom *pNameAtom = AddChildAtomT(pTagAtom, "name");
-	pNameAtom->value.SetValue(
-		reinterpret_cast<const uint8_t*>(name), std::strlen(name));
-
 	MP4MeanAtom *pMeanAtom = AddChildAtomT(pTagAtom, "mean");
 	pMeanAtom->value.SetValue(
 		reinterpret_cast<const uint8_t*>(mean), std::strlen(mean));
+
+	MP4NameAtom *pNameAtom = AddChildAtomT(pTagAtom, "name");
+	pNameAtom->value.SetValue(
+		reinterpret_cast<const uint8_t*>(name), std::strlen(name));
 
 	pDataAtom = AddChildAtomT(pTagAtom, "data");
     }
