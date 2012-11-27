@@ -132,6 +132,7 @@ namespace util {
 	    n = read(fd, bp, size - total);
 	    if (n <= 0)
 		break;
+	    bp += n;
 	    total += n;
 	}
 	return total > 0 ? total : n;
