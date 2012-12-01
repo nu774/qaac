@@ -18,8 +18,6 @@ size_t CompositeSource::readSamples(void *buffer, size_t nsamples)
 
 void CompositeSource::seekTo(int64_t pos)
 {
-    if (pos == m_position)
-	return;
     uint64_t acc = 0;
     for (m_cur_file = 0; m_cur_file < m_sources.size(); ++m_cur_file) {
 	uint64_t len = m_sources[m_cur_file]->length();
