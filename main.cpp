@@ -73,32 +73,42 @@ void load_lyrics_file(Options *opts)
 static
 std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 {
-    if (opts.ofilename) {
-	if (!std::wcscmp(opts.ofilename, L"-"))
-	    return opts.ofilename;
-	else
-	    return win32::GetFullPathNameX(opts.ofilename);
-    }
+    if (opts.ofilename)
+	return opts.ofilename;
+
     const wchar_t *ext = opts.extension();
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
     if (!std::wcscmp(ifilename, L"-"))
 	return std::wstring(L"stdin.") + ext;
-    else {
-	std::wstring obasename =
-	    win32::PathReplaceExtension(PathFindFileNameW(ifilename), ext);
-	std::wstring ofilename = 
-	    win32::GetFullPathNameX(strutil::format(L"%s/%s", outdir,
-						    obasename.c_str()));
-	if (win32::GetFullPathNameX(ifilename) == ofilename) {
-	    std::string codec_name(util::fourcc(opts.output_format));
-	    while (codec_name.size() && codec_name.back() == ' ')
-		codec_name.pop_back();
-	    std::wstring tl =
-		strutil::format(L"%hs.%s", codec_name.c_str(), ext);
-	    ofilename = win32::PathReplaceExtension(ofilename, tl.c_str());
-	}
+
+    std::wstring obasename =
+	win32::PathReplaceExtension(PathFindFileNameW(ifilename), ext);
+    std::wstring ofilename =
+	strutil::format(L"%s/%s", outdir, obasename.c_str());
+
+    /* test if ifilename and ofilename refer to the same file */
+    std::shared_ptr<FILE> ifp, ofp;
+    try {
+	ifp = win32::fopen(ifilename, L"rb");
+	ofp = win32::fopen(ofilename, L"rb");
+    } catch (...) {
 	return ofilename;
     }
+    BY_HANDLE_FILE_INFORMATION ibhi = { 0 }, obhi = { 0 };
+    HANDLE ih = reinterpret_cast<HANDLE>(_get_osfhandle(fileno(ifp.get())));
+    HANDLE oh = reinterpret_cast<HANDLE>(_get_osfhandle(fileno(ofp.get())));
+    GetFileInformationByHandle(ih, &ibhi);
+    GetFileInformationByHandle(oh, &obhi);
+    if (ibhi.dwVolumeSerialNumber != obhi.dwVolumeSerialNumber ||
+	ibhi.nFileIndexHigh != obhi.nFileIndexHigh ||
+	ibhi.nFileIndexLow != obhi.nFileIndexLow)
+	return ofilename;
+
+    std::string codec_name(util::fourcc(opts.output_format));
+    while (codec_name.size() && codec_name.back() == ' ')
+	codec_name.pop_back();
+    std::wstring tl = strutil::format(L".%hs.%s", codec_name.c_str(), ext);
+    return win32::PathReplaceExtension(ofilename, tl.c_str());
 }
 
 static
