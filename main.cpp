@@ -79,12 +79,19 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
     const wchar_t *ext = opts.extension();
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
     if (!std::wcscmp(ifilename, L"-"))
-	return std::wstring(L"stdin.") + ext;
+	return std::wstring(L"stdin") + ext;
 
     std::wstring obasename =
 	win32::PathReplaceExtension(PathFindFileNameW(ifilename), ext);
+    /*
+     * Prefixed pathname starting with \\?\ is required to be canonical
+     * full pathname.
+     * Since libmp4v2 simply prepends \\?\ if it looks like a full pathname,
+     * we have to normalize pathname beforehand (by GetFullPathName()).
+     */
     std::wstring ofilename =
-	strutil::format(L"%s/%s", outdir, obasename.c_str());
+	win32::GetFullPathNameX(strutil::format(L"%s/%s", outdir,
+						obasename.c_str()));
 
     /* test if ifilename and ofilename refer to the same file */
     std::shared_ptr<FILE> ifp, ofp;
@@ -104,10 +111,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 	ibhi.nFileIndexLow != obhi.nFileIndexLow)
 	return ofilename;
 
-    std::string codec_name(util::fourcc(opts.output_format));
-    while (codec_name.size() && codec_name.back() == ' ')
-	codec_name.pop_back();
-    std::wstring tl = strutil::format(L".%hs.%s", codec_name.c_str(), ext);
+    std::wstring tl = strutil::format(L"_%s", ext);
     return win32::PathReplaceExtension(ofilename, tl.c_str());
 }
 
@@ -1374,7 +1378,9 @@ int wmain1(int argc, wchar_t **argv)
 		chapters::Track &track = tracks[i];
 		std::wstring ofilename =
 		    get_output_filename(track.ofilename.c_str(), opts);
-		LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
+		LOG(L"\n%s\n",
+		    ofilename == L"-" ? L"<stdout>"
+				      : PathFindFileNameW(ofilename.c_str()));
 		std::shared_ptr<ISeekableSource> src =
 		    delayed_source(track.source, opts);
 		src->seekTo(0);
@@ -1382,7 +1388,9 @@ int wmain1(int argc, wchar_t **argv)
 	    }
 	} else {
 	    std::wstring ofilename = get_output_filename(ifilename, opts);
-	    LOG(L"\n%s\n", PathFindFileNameW(ofilename.c_str()));
+	    LOG(L"\n%s\n",
+		ofilename == L"-" ? L"<stdout>"
+				  : PathFindFileNameW(ofilename.c_str()));
 	    std::shared_ptr<FILE> adts_fp;
 	    if (opts.is_adts)
 		adts_fp = win32::fopen(ofilename, L"wb+");

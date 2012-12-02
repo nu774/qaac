@@ -57,9 +57,9 @@ struct Options {
     }
     const wchar_t *extension() const
     {
-	if (isMP4()) return L"m4a";
-	else if (isLPCM()) return L"wav";
-	else return L"aac";
+	if (isMP4()) return L".m4a";
+	else if (isLPCM()) return L".wav";
+	else return L".aac";
     }
 
     int32_t method, bitrate, quality;
