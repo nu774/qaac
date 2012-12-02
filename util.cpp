@@ -73,16 +73,20 @@ namespace util {
 	    packXtoY<uint32_t, uint8_t>(data, size);
 	else if (width == 4 && new_width == 2)
 	    packXtoY<uint32_t, uint16_t>(data, size);
-	else {
-	    unsigned diff = width - new_width;
-	    uint8_t *dst = static_cast<uint8_t*>(data), *src = dst + diff;
-	    const size_t count = *size / width;
+	else if (width == 4 && new_width == 3) {
+	    const uint8_t *src = static_cast<uint8_t*>(data);
+	    uint8_t *dst = static_cast<uint8_t*>(data);
+	    const size_t count = *size / 4;
 	    for (size_t i = 0; i < count; ++i) {
-		std::memmove(dst, src, new_width);
-		dst += new_width;
-		src += width;
+		dst[0] = src[1];
+		dst[1] = src[2];
+		dst[2] = src[3];
+		src += 4;
+		dst += 3;
 	    }
-	    *size -= count * diff;
+	    *size = count * 3;
+	} else {
+	    throw std::runtime_error("util::pack(): BUG");
 	}
     }
 
@@ -108,18 +112,21 @@ namespace util {
 	    unpackXtoY<uint8_t, uint32_t>(input, output, size);
 	else if (width == 2 && new_width == 4)
 	    unpackXtoY<uint16_t, uint32_t>(input, output, size);
-	else {
-	    unsigned diff = new_width - width;
+	else if (width == 3 && new_width == 4) {
 	    const uint8_t *src = static_cast<const uint8_t*>(input);
-	    uint8_t *dst = static_cast<uint8_t*>(output) + diff;
-	    const size_t count = *size / width;
-	    std::memset(output, 0, count * new_width);
+	    uint8_t *dst = static_cast<uint8_t*>(output);
+	    const size_t count = *size / 3;
 	    for (size_t i = 0; i < count; ++i) {
-		std::memcpy(dst, src, width);
-		dst += new_width;
-		src += width;
+		dst[0] = '\0';
+		dst[1] = src[0];
+		dst[2] = src[1];
+		dst[3] = src[2];
+		src += 3;
+		dst += 4;
 	    }
-	    *size = count * new_width;
+	    *size = count * 4;
+	} else {
+	    throw std::runtime_error("util::unpack(): BUG");
 	}
     }
 
