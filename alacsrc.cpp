@@ -11,6 +11,13 @@ ALACSource::ALACSource(const std::shared_ptr<FILE> &fp)
 {
     try {
 	int fd = fileno(m_fp.get());
+	{
+	    util::FilePositionSaver _(fd);
+	    _lseeki64(fd, 0, SEEK_SET);
+	    char buf[8];
+	    if (read(fd, buf, 8) != 8 || std::memcmp(&buf[4], "ftyp", 4))
+		throw std::runtime_error("Not an MP4 file");
+	}
 	static MP4FDReadProvider provider;
 	std::string name = strutil::format("%d", fd);
 	m_file.Read(name.c_str(), &provider);
