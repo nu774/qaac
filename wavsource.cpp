@@ -36,6 +36,10 @@ WaveSource::WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength)
 
 size_t WaveSource::readSamples(void *buffer, size_t nsamples)
 {
+    if (m_length != ~0ULL) {
+	nsamples = static_cast<size_t>(std::min(static_cast<uint64_t>(nsamples),
+						m_length - m_position));
+    }
     ssize_t nbytes = nsamples * m_block_align;
     m_buffer.resize(nbytes);
     nbytes = util::nread(fd(), &m_buffer[0], nbytes);
