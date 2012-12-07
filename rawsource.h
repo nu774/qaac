@@ -11,11 +11,11 @@ class RawSource: public ISeekableSource {
     AudioStreamBasicDescription m_asbd, m_oasbd;
 public:
     RawSource(const std::shared_ptr<FILE> &fp,
-	      const AudioStreamBasicDescription &asbd);
+              const AudioStreamBasicDescription &asbd);
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_oasbd;
+        return m_oasbd;
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
     size_t readSamples(void *buffer, size_t nsamples);

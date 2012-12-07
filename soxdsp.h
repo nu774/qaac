@@ -19,16 +19,16 @@ public:
     int (*rate_config)(lsx_rate_t *, lsx_rate_config_e, ...);
     int (*rate_start)(lsx_rate_t *);
     size_t (*rate_process)(lsx_rate_t *, const float * const *, float **,
-			   size_t *, size_t *, size_t, size_t);
+                           size_t *, size_t *, size_t, size_t);
     size_t (*rate_process_d)(lsx_rate_t *, const double * const *, double **,
-			     size_t *, size_t *, size_t, size_t);
+                             size_t *, size_t *, size_t, size_t);
     lsx_fir_t *(*fir_create)(unsigned, double *, unsigned, unsigned, int);
     int (*fir_close)(lsx_fir_t *);
     int (*fir_start)(lsx_fir_t *);
     int (*fir_process)(lsx_fir_t *, const float * const *, float **,
-		       size_t *, size_t *, size_t, size_t);
+                       size_t *, size_t *, size_t, size_t);
     int (*fir_process_d)(lsx_fir_t *, const double * const *, double **,
-		         size_t *, size_t *, size_t, size_t);
+                         size_t *, size_t *, size_t, size_t);
     double *(*design_lpf)(double, double, double, double, int *, int, double);
     void (*free)(void*);
 };
@@ -37,8 +37,8 @@ struct ISoxDSPEngine {
     virtual ~ISoxDSPEngine() {}
     virtual const AudioStreamBasicDescription &getSampleFormat() const = 0;
     virtual ssize_t process(const double * const *ibuf, double **obuf,
-			    size_t *ilen, size_t *olen,
-			    size_t istride, size_t ostride) = 0;
+                            size_t *ilen, size_t *olen,
+                            size_t istride, size_t ostride) = 0;
 };
 
 class SoxDSPProcessor: public FilterBase {
@@ -50,14 +50,14 @@ class SoxDSPProcessor: public FilterBase {
     AudioStreamBasicDescription m_asbd;
 public:
     SoxDSPProcessor(const std::shared_ptr<ISoxDSPEngine> &engine,
-		    const std::shared_ptr<ISource> &src);
+                    const std::shared_ptr<ISource> &src);
     uint64_t length() const
     {
-	return m_length;
+        return m_length;
     }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     size_t readSamples(void *buffer, size_t nsamples);
     int64_t getPosition() { return m_position; }
@@ -70,17 +70,17 @@ class SoxResampler: public ISoxDSPEngine {
     double m_factor;
 public:
     SoxResampler(const SoxModule &module,
-		 const AudioStreamBasicDescription &asbd,
-		 uint32_t Fp, bool mt);
+                 const AudioStreamBasicDescription &asbd,
+                 uint32_t Fp, bool mt);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     ssize_t process(const double * const *ibuf, double **obuf, size_t *ilen,
-		    size_t *olen, size_t istride, size_t ostride)
+                    size_t *olen, size_t istride, size_t ostride)
     {
-	return m_module.rate_process_d(m_processor.get(), ibuf, obuf,
-				       ilen, olen, istride, ostride);
+        return m_module.rate_process_d(m_processor.get(), ibuf, obuf,
+                                       ilen, olen, istride, ostride);
     }
 };
 
@@ -90,17 +90,17 @@ class SoxLowpassFilter: public ISoxDSPEngine {
     AudioStreamBasicDescription m_asbd;
 public:
     SoxLowpassFilter(const SoxModule &module,
-		     const AudioStreamBasicDescription &asbd,
-		     uint32_t rate, bool mt);
+                     const AudioStreamBasicDescription &asbd,
+                     uint32_t rate, bool mt);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     ssize_t process(const double * const *ibuf, double **obuf, size_t *ilen,
-		    size_t *olen, size_t istride, size_t ostride)
+                    size_t *olen, size_t istride, size_t ostride)
     {
-	return m_module.fir_process_d(m_processor.get(), ibuf, obuf,
-				      ilen, olen, istride, ostride);
+        return m_module.fir_process_d(m_processor.get(), ibuf, obuf,
+                                      ilen, olen, istride, ostride);
     }
 };
 #endif

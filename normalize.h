@@ -14,7 +14,7 @@ public:
     Normalizer(const std::shared_ptr<ISource> &src, bool seekable);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     size_t readSamples(void *buffer, size_t nsamples);
     double getPeak() const { return m_peak; }

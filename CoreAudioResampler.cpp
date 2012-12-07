@@ -1,9 +1,9 @@
 #include "CoreAudioResampler.h"
 
 CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
-				       int rate,
-				       uint32_t quality,
-				       uint32_t complexity)
+                                       int rate,
+                                       uint32_t quality,
+                                       uint32_t complexity)
     : FilterBase(src),
       m_quality(quality),
       m_complexity(complexity),
@@ -12,7 +12,7 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
-				     32, kAudioFormatFlagIsFloat);
+                                     32, kAudioFormatFlagIsFloat);
     /*
      * XXX:
      * Might be 1 sample off.
@@ -20,7 +20,7 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
      */
     m_length = src->length();
     if (m_length != ~0ULL)
-	m_length = m_length * m_rate / asbd.mSampleRate + .5;
+        m_length = m_length * m_rate / asbd.mSampleRate + .5;
     init();
 }
 
@@ -47,7 +47,7 @@ size_t CoreAudioResampler::readSamples(void *buffer, size_t nsamples)
 }
 
 void CoreAudioResampler::writeSamples(const void *data, size_t len,
-				      size_t nsamples)
+                                      size_t nsamples)
 {
     std::memcpy(m_buffer, data, len);
 }

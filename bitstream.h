@@ -12,7 +12,7 @@ public:
     BitStream(): m_cur(0), m_pos(0)
     {}
     BitStream(uint8_t *data, size_t size):
-	m_buffer(data, data + size), m_cur(0), m_pos(0)
+        m_buffer(data, data + size), m_cur(0), m_pos(0)
     {}
     size_t position() const { return (m_cur << 3) + m_pos; }
     const uint8_t *data() const { return &m_buffer[0]; }

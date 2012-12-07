@@ -22,15 +22,15 @@ public:
 class MP4Sink: public ISink, public MP4SinkBase {
 public:
     MP4Sink(const std::wstring &path, const std::vector<uint8_t> &cookie,
-	    uint32_t fcc, bool temp=false);
+            uint32_t fcc, bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
-	try {
-	    m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
-		length, MP4_INVALID_DURATION);
-	} catch (mp4v2::impl::Exception *e) {
-	    handle_mp4error(e);
-	}
+        try {
+            m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
+                length, MP4_INVALID_DURATION);
+        } catch (mp4v2::impl::Exception *e) {
+            handle_mp4error(e);
+        }
     }
 };
 
@@ -43,7 +43,7 @@ class ADTSSink: public ISink {
 public:
     ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie);
     ADTSSink(const std::shared_ptr<FILE> &fp,
-	     const std::vector<uint8_t> &cookie);
+             const std::vector<uint8_t> &cookie);
     void writeSamples(const void *data, size_t length, size_t nsamples);
 private:
     void init(const std::vector<uint8_t> &cookie);

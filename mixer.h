@@ -24,11 +24,11 @@ class MatrixMixer: public FilterBase {
     SoxModule m_module;
 public:
     MatrixMixer(const std::shared_ptr<ISource> &source, const SoxModule &module,
-		const std::vector<std::vector<complex_t> > &spec, bool mt,
-		bool normalize=true);
+                const std::vector<std::vector<complex_t> > &spec, bool mt,
+                bool normalize=true);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
     int64_t getPosition() { return m_position; }

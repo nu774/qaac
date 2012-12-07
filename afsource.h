@@ -19,17 +19,17 @@ public:
     ExtAFSource(const std::shared_ptr<FILE> &fp);
     ~ExtAFSource()
     {
-	m_af.attach(0, false);
-	m_eaf.attach(0, false);
+        m_af.attach(0, false);
+        m_eaf.attach(0, false);
     }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const
     {
-	return m_chanmap.size() ? &m_chanmap: 0;
+        return m_chanmap.size() ? &m_chanmap: 0;
     }
     int64_t getPosition();
     size_t readSamples(void *buffer, size_t nsamples);

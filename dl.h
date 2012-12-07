@@ -26,22 +26,22 @@ public:
     DL() {}
     DL(HMODULE handle, bool takeOwn=true)
     {
-	struct noop { static void call(HMODULE x) {} };
-	if (takeOwn)
-	    m_module.reset(handle, FreeLibrary);
-	else
-	    m_module.reset(handle, noop::call);
+        struct noop { static void call(HMODULE x) {} };
+        if (takeOwn)
+            m_module.reset(handle, FreeLibrary);
+        else
+            m_module.reset(handle, noop::call);
     }
     DL(const std::wstring &path)
     {
-	HMODULE handle = LoadLibraryW(path.c_str());
-	if (handle) m_module.reset(handle, FreeLibrary);
+        HMODULE handle = LoadLibraryW(path.c_str());
+        if (handle) m_module.reset(handle, FreeLibrary);
     }
     bool loaded() const { return m_module.get() != 0; }
     void reset() { m_module.reset(); }
     AutoCast<void> fetch(const char *name)
     {
-	return AutoCast<void>(GetProcAddress(m_module.get(), name));
+        return AutoCast<void>(GetProcAddress(m_module.get(), name));
     }
 };
 #else
@@ -51,19 +51,19 @@ public:
     DL() {}
     DL(const std::string &path)
     {
-	void *handle = dlopen(path.c_str(), RTLD_NOW);
-	if (handle) m_module.reset(handle, dlclose);
+        void *handle = dlopen(path.c_str(), RTLD_NOW);
+        if (handle) m_module.reset(handle, dlclose);
     }
     DL(const std::wstring &path)
     {
-	void *handle = dlopen(strutil::w2m(path).c_str(), RTLD_NOW);
-	if (handle) m_module.reset(handle, dlclose);
+        void *handle = dlopen(strutil::w2m(path).c_str(), RTLD_NOW);
+        if (handle) m_module.reset(handle, dlclose);
     }
     bool loaded() const { return m_module.get() != 0; }
     void reset() { m_module.reset(); }
     AutoCast<void> fetch(const char *name)
     {
-	return AutoCast<void>(dlsym(m_module.get(), name));
+        return AutoCast<void>(dlsym(m_module.get(), name));
     }
 };
 #endif

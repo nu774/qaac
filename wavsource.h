@@ -6,10 +6,10 @@
 
 namespace wave {
     struct GUID {
-	uint32_t Data1;
-	uint16_t Data2;
-	uint16_t Data3;
-	uint8_t  Data4[8];
+        uint32_t Data1;
+        uint16_t Data2;
+        uint16_t Data3;
+        uint8_t  Data4[8];
     };
     extern const GUID ksFormatSubTypePCM;
     extern const GUID ksFormatSubTypeFloat;
@@ -30,11 +30,11 @@ public:
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const
     {
-	return m_chanmap.size() ? &m_chanmap : 0;
+        return m_chanmap.size() ? &m_chanmap : 0;
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);

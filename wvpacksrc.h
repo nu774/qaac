@@ -20,7 +20,7 @@ public:
 
     const char *(*GetLibraryVersionString)();
     WavpackContext *(*OpenFileInputEx)(void *,
-	    void *, void *, char *, int, int);
+            void *, void *, char *, int, int);
     WavpackContext *(*CloseFile)(WavpackContext *);
     int (*GetBitsPerSample)(WavpackContext *);
     int (*GetChannelMask)(WavpackContext *);
@@ -51,7 +51,7 @@ public:
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return &m_chanmap; }
     int64_t getPosition();
@@ -61,7 +61,7 @@ public:
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {
-	return m_chapters.size() ? &m_chapters : 0;
+        return m_chapters.size() ? &m_chapters : 0;
     }
 private:
     void fetchTags();

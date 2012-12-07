@@ -16,21 +16,21 @@ public:
 
     TtakResult (*GetLibraryVersion)(TtakInt32 *, TtakInt32 *);
     TtakSeekableStreamDecoder (*SSD_Create_FromStream)(
-	    const TtakStreamIoInterface *, void *, const TtakSSDOptions *,
-	    TSSDDamageCallback, void *);
+            const TtakStreamIoInterface *, void *, const TtakSSDOptions *,
+            TSSDDamageCallback, void *);
     void (*SSD_Destroy)(TtakSeekableStreamDecoder);
     TtakResult (*SSD_GetStreamInfo)(TtakSeekableStreamDecoder,
-	    Ttak_str_StreamInfo *);
+            Ttak_str_StreamInfo *);
     TtakResult (*SSD_Seek)(TtakSeekableStreamDecoder, TtakInt64);
     TtakResult (*SSD_ReadAudio)(TtakSeekableStreamDecoder, void *,
-	    TtakInt32, TtakInt32 *);
+            TtakInt32, TtakInt32 *);
     TtakInt64 (*SSD_GetReadPos)(TtakSeekableStreamDecoder);
     TtakAPEv2Tag (*SSD_GetAPEv2Tag)(TtakSeekableStreamDecoder);
     TtakInt32 (*APE_GetItemNum)(TtakAPEv2Tag);
     TtakResult (*APE_GetItemKey)(TtakAPEv2Tag, TtakInt32, char *,
-	    TtakInt32, TtakInt32 *);
+            TtakInt32, TtakInt32 *);
     TtakResult (*APE_GetItemValue)(TtakAPEv2Tag, TtakInt32, void *,
-	    TtakInt32, TtakInt32 *);
+            TtakInt32, TtakInt32 *);
 };
 
 class TakSource: public ISeekableSource, public ITagParser
@@ -50,7 +50,7 @@ public:
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
     int64_t getPosition();
@@ -60,13 +60,13 @@ public:
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {
-	return m_chapters.size() ? &m_chapters : 0;
+        return m_chapters.size() ? &m_chapters : 0;
     }
 private:
     void fetchTags();
     static void staticDamageCallback(void *ctx, PtakSSDDamageItem info)
     {
-	throw std::runtime_error("TAK: damaged frame found");
+        throw std::runtime_error("TAK: damaged frame found");
     }
 };
 

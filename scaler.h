@@ -15,39 +15,39 @@ class Scaler: public FilterBase {
     AudioStreamBasicDescription m_asbd;
 public:
     Scaler(const std::shared_ptr<ISource> &source, double scale)
-	: FilterBase(source), m_scale(scale)
+        : FilterBase(source), m_scale(scale)
     {
-	const AudioStreamBasicDescription &asbd = source->getSampleFormat();
-	unsigned bits = 32;
-	if (asbd.mBitsPerChannel > 32
-	    || (asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
-	       asbd.mBitsPerChannel > 24)
-	    bits = 64;
+        const AudioStreamBasicDescription &asbd = source->getSampleFormat();
+        unsigned bits = 32;
+        if (asbd.mBitsPerChannel > 32
+            || (asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
+               asbd.mBitsPerChannel > 24)
+            bits = 64;
 
-	m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
-					 asbd.mChannelsPerFrame,
-					 bits, kAudioFormatFlagIsFloat);
+        m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
+                                         asbd.mChannelsPerFrame,
+                                         bits, kAudioFormatFlagIsFloat);
     }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     template <typename T>
     size_t readSamplesT(void *buffer, size_t nsamples)
     {
-	T *fp = static_cast<T*>(buffer);
-	size_t nc = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
-	size_t len = nc * source()->getSampleFormat().mChannelsPerFrame;
-	for (size_t i = 0; i < len; ++i)
-	    fp[i] *= m_scale;
-	return nc;
+        T *fp = static_cast<T*>(buffer);
+        size_t nc = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
+        size_t len = nc * source()->getSampleFormat().mChannelsPerFrame;
+        for (size_t i = 0; i < len; ++i)
+            fp[i] *= m_scale;
+        return nc;
     }
     size_t readSamples(void *buffer, size_t nsamples)
     {
-	if (m_asbd.mBitsPerChannel == 64)
-	    return readSamplesT<double>(buffer, nsamples);
-	else
-	    return readSamplesT<float>(buffer, nsamples);
+        if (m_asbd.mBitsPerChannel == 64)
+            return readSamplesT<double>(buffer, nsamples);
+        else
+            return readSamplesT<float>(buffer, nsamples);
     }
 };
 

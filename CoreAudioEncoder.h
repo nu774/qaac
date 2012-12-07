@@ -27,11 +27,11 @@ public:
     ISource *src() { return m_src.get(); }
     const AudioStreamBasicDescription &getInputDescription() const
     {
-	return m_input_desc;
+        return m_input_desc;
     }
     const AudioStreamBasicDescription &getOutputDescription() const
     {
-	return m_output_desc;
+        return m_output_desc;
     }
     uint64_t samplesRead() const { return m_stat.samplesRead(); }
     uint64_t samplesWritten() const { return m_stat.samplesWritten(); }
@@ -40,15 +40,15 @@ public:
     double overallBitrate() const { return m_stat.overallBitrate(); }
 private:
     static OSStatus staticInputDataProc(
-	    AudioConverterRef inAudioConverter,
-	    UInt32 *ioNumberDataPackets,
-	    AudioBufferList *ioData,
-	    AudioStreamPacketDescription **outDataPacketDescription,
-	    void *inUserData)
+            AudioConverterRef inAudioConverter,
+            UInt32 *ioNumberDataPackets,
+            AudioBufferList *ioData,
+            AudioStreamPacketDescription **outDataPacketDescription,
+            void *inUserData)
     {
-	CoreAudioEncoder* self =
-	    reinterpret_cast<CoreAudioEncoder*>(inUserData);
-	return self->inputDataProc(ioNumberDataPackets, ioData);
+        CoreAudioEncoder* self =
+            reinterpret_cast<CoreAudioEncoder*>(inUserData);
+        return self->inputDataProc(ioNumberDataPackets, ioData);
     }
     long inputDataProc(UInt32 *npackets, AudioBufferList *abl);
     void prepareInputBuffer(AudioBufferList *abl, size_t npackets);

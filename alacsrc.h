@@ -19,19 +19,19 @@ public:
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_oasbd;
+        return m_oasbd;
     }
     const std::vector<uint32_t> *getChannels() const
     {
-	return m_chanmap.size() ? &m_chanmap: 0;
+        return m_chanmap.size() ? &m_chanmap: 0;
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
     bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count)
     {
-	m_position = count;
-	m_buffer.reset();
+        m_position = count;
+        m_buffer.reset();
     }
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const { return 0; }

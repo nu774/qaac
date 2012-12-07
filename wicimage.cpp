@@ -3,7 +3,7 @@
 #include "wicimage.h"
 
 bool WICConvertArtwork(const void *data, size_t size, unsigned maxSize,
-	std::vector<char> *outImage)
+        std::vector<char> *outImage)
 {
     throw std::runtime_error("Not supported");
 }
@@ -36,7 +36,7 @@ inline
 void throwIfError(HRESULT expr, const char *msg)
 {
     if (FAILED(expr))
-	win32::throw_error(msg, expr);
+        win32::throw_error(msg, expr);
 }
 #define HR(expr) (void)(throwIfError((expr), #expr))
 
@@ -46,11 +46,11 @@ OpenSource(IWICImagingFactory *factory, const void *data, size_t size)
     IWICStreamPtr stream;
     HR(factory->CreateStream(&stream));
     HR(stream->InitializeFromMemory(
-		static_cast<BYTE*>(const_cast<void*>(data)), size));
+                static_cast<BYTE*>(const_cast<void*>(data)), size));
 
     IWICBitmapDecoderPtr decoder;
     HR(factory->CreateDecoderFromStream(stream, 0,
-		WICDecodeMetadataCacheOnDemand, &decoder));
+                WICDecodeMetadataCacheOnDemand, &decoder));
 
     IWICBitmapFrameDecodePtr source;
     HR(decoder->GetFrame(0, &source));
@@ -70,7 +70,7 @@ void SetJpegEncodingQuality(IPropertyBag2 *props, float quality)
 }
 
 bool WICConvertArtwork(const void *data, size_t size, unsigned maxSize,
-	std::vector<char> *outImage)
+        std::vector<char> *outImage)
 {
     IWICImagingFactoryPtr factory;
     HR(factory.CreateInstance(CLSID_WICImagingFactory));
@@ -80,16 +80,16 @@ bool WICConvertArtwork(const void *data, size_t size, unsigned maxSize,
     UINT width, height;
     HR(source->GetSize(&width, &height));
     if (maxSize >= width || maxSize >= height)
-	return false;
+        return false;
 
     double scale = static_cast<double>(maxSize) / std::min(width, height);
     UINT newWidth = static_cast<UINT>(width * scale),
-	 newHeight = static_cast<UINT>(height * scale);
+         newHeight = static_cast<UINT>(height * scale);
 
     IWICBitmapScalerPtr scaler;
     HR(factory->CreateBitmapScaler(&scaler));
     HR(scaler->Initialize(source, newWidth, newHeight,
-		WICBitmapInterpolationModeFant));
+                WICBitmapInterpolationModeFant));
 
     IStreamPtr ostream;
     HR(CreateStreamOnHGlobal(0, TRUE, &ostream));

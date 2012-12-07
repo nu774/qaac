@@ -12,7 +12,7 @@ struct CueTokenizer {
     typedef typename traits_type::int_type int_type;
 
     explicit CueTokenizer(std::basic_streambuf<CharT> *sb)
-	: m_sb(sb), m_lineno(0)
+        : m_sb(sb), m_lineno(0)
     {}
     bool isWS(int_type c) { return c == ' ' || c == '\t' || c == '\r'; }
     bool nextline();
@@ -24,7 +24,7 @@ struct CueTokenizer {
 
 struct CueSegment {
     CueSegment(const std::wstring &filename, unsigned index)
-	: m_filename(filename), m_index(index), m_begin(0), m_end(~0U)
+        : m_filename(filename), m_index(index), m_begin(0), m_end(~0U)
     {}
     std::wstring m_filename;
     unsigned m_index;
@@ -44,22 +44,22 @@ public:
     typedef std::vector<CueSegment>::const_iterator const_iterator;
 
     CueTrack(CueSheet *cuesheet, unsigned number)
-	: m_cuesheet(cuesheet), m_number(number) {}
+        : m_cuesheet(cuesheet), m_number(number) {}
     std::wstring name() const
     {
-	std::map<std::wstring, std::wstring>::const_iterator
-	    it = m_meta.find(L"TITLE");
-	return it == m_meta.end() ? L"" : it->second;
+        std::map<std::wstring, std::wstring>::const_iterator
+            it = m_meta.find(L"TITLE");
+        return it == m_meta.end() ? L"" : it->second;
     }
     unsigned number() const { return m_number; }
     void addSegment(const CueSegment &seg);
     void setTag(const std::wstring &key, const std::wstring &value)
     {
-	m_meta[key] = value;
+        m_meta[key] = value;
     }
     const std::map<std::wstring, std::wstring> &getTags() const
     {
-	return m_meta;
+        return m_meta;
     }
     void iTunesTags(std::map<uint32_t, std::wstring> *tags) const;
 
@@ -69,7 +69,7 @@ public:
     const_iterator end() const { return m_segments.end(); }
     CueSegment *lastSegment()
     {
-	return m_segments.size() ? &m_segments.back() : 0;
+        return m_segments.size() ? &m_segments.back() : 0;
     }
 };
 
@@ -86,13 +86,13 @@ public:
     CueSheet(): m_has_multiple_files(false) {}
     void parse(std::wstreambuf *src);
     void loadTracks(std::vector<chapters::Track> &tracks,
-		    const std::wstring &cuedir,
-		    const std::wstring &fname_format);
+                    const std::wstring &cuedir,
+                    const std::wstring &fname_format);
     void asChapters(double duration, /* total duration in sec. */
-		    std::vector<chapters::entry_t> *chapters) const;
+                    std::vector<chapters::entry_t> *chapters) const;
     const std::map<std::wstring, std::wstring> &getTags() const
     {
-	return m_meta;
+        return m_meta;
     }
     void iTunesTags(std::map<uint32_t, std::wstring> *tags) const;
 
@@ -112,25 +112,25 @@ private:
     void parseRem(const std::wstring *args) { parseMeta(args + 1); }
     void die(const std::string &msg)
     {
-	throw std::runtime_error(strutil::format("cuesheet: %s at line %d",
-						 msg.c_str(), m_lineno));
+        throw std::runtime_error(strutil::format("cuesheet: %s at line %d",
+                                                 msg.c_str(), m_lineno));
     }
     CueSegment *lastSegment()
     {
-	CueSegment *seg;
-	for (ssize_t i = m_tracks.size() - 1; i >= 0; --i)
-	    if ((seg = m_tracks[i].lastSegment()) != 0)
-		return seg;
-	return 0;
+        CueSegment *seg;
+        for (ssize_t i = m_tracks.size() - 1; i >= 0; --i)
+            if ((seg = m_tracks[i].lastSegment()) != 0)
+                return seg;
+        return 0;
     }
 };
 
 namespace Cue {
     void ConvertToItunesTags(const std::map<std::wstring, std::wstring> &from,
-	std::map<uint32_t, std::wstring> *to, bool album=false);
+        std::map<uint32_t, std::wstring> *to, bool album=false);
 
     void CueSheetToChapters(const std::wstring &cuesheet,
-	double duration,
-	std::vector<chapters::entry_t> *chapters,
-	std::map<uint32_t, std::wstring> *meta);
+        double duration,
+        std::vector<chapters::entry_t> *chapters,
+        std::map<uint32_t, std::wstring> *meta);
 }

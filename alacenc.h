@@ -8,8 +8,8 @@
 
 class ALACEncoderX: public IEncoder, public IEncoderStat {
     union ASBD {
-	AudioStreamBasicDescription asbd;
-	AudioFormatDescription afd;
+        AudioStreamBasicDescription asbd;
+        AudioFormatDescription afd;
     };
     std::shared_ptr<ISource> m_src;
     std::shared_ptr<ISink> m_sink;
@@ -30,11 +30,11 @@ public:
     ISource *src() { return m_src.get(); }
     const AudioStreamBasicDescription &getInputDescription() const
     {
-	return m_iasbd;
+        return m_iasbd;
     }
     const AudioStreamBasicDescription &getOutputDescription() const
     {
-	return m_odesc.asbd;
+        return m_odesc.asbd;
     }
     uint64_t samplesRead() const { return m_stat.samplesRead(); }
     uint64_t samplesWritten() const { return m_stat.samplesWritten(); }

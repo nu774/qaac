@@ -15,23 +15,23 @@ class RandomIntSpan {
     int div_, off_;
 public:
     RandomIntSpan(Engine &e, int min, int max)
-	: e_(e), off_(min)
+        : e_(e), off_(min)
     {
-	div_ = e.max() / (max - min);
+        div_ = e.max() / (max - min);
     }
     int operator()() { return e_() / div_ + off_; }
 };
 
 Quantizer::Quantizer(const std::shared_ptr<ISource> &source,
-		     uint32_t bitdepth, bool no_dither, bool is_float)
+                     uint32_t bitdepth, bool no_dither, bool is_float)
     : FilterBase(source), m_no_dither(no_dither)
 {
     const AudioStreamBasicDescription &asbd = source->getSampleFormat();
     m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
-				      asbd.mChannelsPerFrame,
-				      bitdepth, 32,
-				      is_float ? kAudioFormatFlagIsFloat
-				      	: kAudioFormatFlagIsSignedInteger);
+                                      asbd.mChannelsPerFrame,
+                                      bitdepth, 32,
+                                      is_float ? kAudioFormatFlagIsFloat
+                                        : kAudioFormatFlagIsSignedInteger);
 }
 
 size_t Quantizer::readSamples(void *buffer, size_t nsamples)
@@ -39,27 +39,27 @@ size_t Quantizer::readSamples(void *buffer, size_t nsamples)
     const AudioStreamBasicDescription &iasbd = source()->getSampleFormat();
 
     if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
-	float *fp = static_cast<float*>(buffer);
-	nsamples = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
+        float *fp = static_cast<float*>(buffer);
+        nsamples = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
     } else if (iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
-	nsamples = source()->readSamples(buffer, nsamples);
-	if (m_asbd.mBitsPerChannel < iasbd.mBitsPerChannel) {
-	    ditherInt(static_cast<int*>(buffer),
-		      nsamples * m_asbd.mChannelsPerFrame,
-		      m_asbd.mBitsPerChannel);
-	}
+        nsamples = source()->readSamples(buffer, nsamples);
+        if (m_asbd.mBitsPerChannel < iasbd.mBitsPerChannel) {
+            ditherInt(static_cast<int*>(buffer),
+                      nsamples * m_asbd.mChannelsPerFrame,
+                      m_asbd.mBitsPerChannel);
+        }
     } else if (iasbd.mBitsPerChannel <= 32) {
-	nsamples = readSamplesAsFloat(source(), 0, &m_fbuffer,
-				      nsamples);
-	ditherFloat(&m_fbuffer[0], static_cast<int*>(buffer),
-		    nsamples * m_asbd.mChannelsPerFrame,
-		    m_asbd.mBitsPerChannel);
+        nsamples = readSamplesAsFloat(source(), 0, &m_fbuffer,
+                                      nsamples);
+        ditherFloat(&m_fbuffer[0], static_cast<int*>(buffer),
+                    nsamples * m_asbd.mChannelsPerFrame,
+                    m_asbd.mBitsPerChannel);
     } else {
-	nsamples = readSamplesAsFloat(source(), 0, &m_dbuffer,
-				      nsamples);
-	ditherFloat(&m_dbuffer[0], static_cast<int*>(buffer),
-		    nsamples * m_asbd.mChannelsPerFrame,
-		    m_asbd.mBitsPerChannel);
+        nsamples = readSamplesAsFloat(source(), 0, &m_dbuffer,
+                                      nsamples);
+        ditherFloat(&m_dbuffer[0], static_cast<int*>(buffer),
+                    nsamples * m_asbd.mChannelsPerFrame,
+                    m_asbd.mBitsPerChannel);
     }
     return nsamples;
 }
@@ -86,13 +86,13 @@ void Quantizer::ditherInt(int *data, size_t count, unsigned depth)
     // std::uniform_int_distribution<int> dist(-half, half);
     RandomIntSpan<std::mt19937> nrand(m_mt, -half, half);
     for (size_t i = 0; i < count; ++i) {
-	int value = data[i] >> 1;
-	if (depth <= 18 && !m_no_dither) {
-	    // int noise = dist(m_mt) + dist(m_mt);
-	    int noise = nrand() + nrand();
-	    value += noise;
-	}
-	data[i] = (clip(value + half, INT_MIN >> 1, INT_MAX >> 1) & mask)<< 1;
+        int value = data[i] >> 1;
+        if (depth <= 18 && !m_no_dither) {
+            // int noise = dist(m_mt) + dist(m_mt);
+            int noise = nrand() + nrand();
+            value += noise;
+        }
+        data[i] = (clip(value + half, INT_MIN >> 1, INT_MAX >> 1) & mask)<< 1;
     }
 }
 
@@ -105,12 +105,12 @@ void Quantizer::ditherFloat(T *src, int *dst, size_t count, unsigned depth)
     double max_value = half - 1;
     std::uniform_real_distribution<double> dist(-0.5, 0.5);
     for (size_t i = 0; i < count; ++i) {
-	double value = src[i] * half;
-	if (depth <= 18 && !m_no_dither) {
-	    double noise = dist(m_mt) + dist(m_mt);
-	    value += noise;
-	}
-	dst[i] = lrint(clip(value, min_value, max_value)) << shifts;
+        double value = src[i] * half;
+        if (depth <= 18 && !m_no_dither) {
+            double noise = dist(m_mt) + dist(m_mt);
+            value += noise;
+        }
+        dst[i] = lrint(clip(value, min_value, max_value)) << shifts;
     }
 }
 

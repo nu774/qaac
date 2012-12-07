@@ -24,7 +24,7 @@ struct ISeekableSource: public ISource {
 struct ISink {
     virtual ~ISink() {}
     virtual void writeSamples(
-	    const void *data, size_t len, size_t nsamples) = 0;
+            const void *data, size_t len, size_t nsamples) = 0;
 };
 
 struct ITagParser {
@@ -45,15 +45,15 @@ public:
     int64_t getPosition() { return m_src->getPosition(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_src->getSampleFormat();
+        return m_src->getSampleFormat();
     }
     const std::vector<uint32_t> *getChannels() const
     {
-	return m_src->getChannels();
+        return m_src->getChannels();
     }
     size_t readSamples(void *buffer, size_t nsamples)
     {
-	return m_src->readSamples(buffer, nsamples);
+        return m_src->readSamples(buffer, nsamples);
     }
 };
 
@@ -72,42 +72,42 @@ public:
     DecodeBuffer(): npackets_(0), position_(0), units_per_packet(0) {}
     void resize(uint32_t npackets)
     {
-	size_t n = npackets * units_per_packet;
-	if (n > v_.size()) v_.resize(n);
+        size_t n = npackets * units_per_packet;
+        if (n > v_.size()) v_.resize(n);
     }
     T *read_ptr() { return &v_[position_ * units_per_packet]; }
     T *write_ptr() { return &v_[0]; }
     void reset() { npackets_ = position_ = 0; }
     uint32_t count() { return npackets_ - position_; }
     void advance(uint32_t n) {
-	position_ += n;
-	if (position_ >= npackets_)
-	    reset();
+        position_ += n;
+        if (position_ >= npackets_)
+            reset();
     }
     void commit(uint32_t count)
     {
-	position_ = 0;
-	npackets_ = count;
+        position_ = 0;
+        npackets_ = count;
     }
 };
 
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
-			  std::vector<float> *floatBuffer, size_t nsamples);
+                          std::vector<float> *floatBuffer, size_t nsamples);
 
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
-			  float *floatBuffer, size_t nsamples);
+                          float *floatBuffer, size_t nsamples);
 
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
-			  std::vector<double> *floatBuffer, size_t nsamples);
+                          std::vector<double> *floatBuffer, size_t nsamples);
 
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
-			  double *floatBuffer, size_t nsamples);
+                          double *floatBuffer, size_t nsamples);
 
 namespace chapters {
     struct Track {
-	std::wstring name;
-	std::shared_ptr<ISeekableSource> source;
-	std::wstring ofilename;
+        std::wstring name;
+        std::shared_ptr<ISeekableSource> source;
+        std::wstring ofilename;
     };
 };
 

@@ -15,20 +15,20 @@ class CoreAudioResampler: public FilterBase, public ISink {
     AudioStreamBasicDescription m_asbd;
 public:
     CoreAudioResampler(const std::shared_ptr<ISource> &src, int rate,
-		       uint32_t quality, uint32_t complexity);
+                       uint32_t quality, uint32_t complexity);
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     int64_t getPosition() { return m_position; }
     uint32_t getComplexity()
     {
-	return m_converter.getSampleRateConverterComplexity();
+        return m_converter.getSampleRateConverterComplexity();
     }
     uint32_t getQuality()
     {
-	return m_converter.getSampleRateConverterQuality();
+        return m_converter.getSampleRateConverterQuality();
     }
     size_t readSamples(void *buffer, size_t nsamples);
     void writeSamples(const void *data, size_t len, size_t nsamples);

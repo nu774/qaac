@@ -26,7 +26,7 @@ public:
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
-	return m_asbd;
+        return m_asbd;
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
     int64_t getPosition() { return m_position; }
@@ -36,86 +36,86 @@ public:
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {
-	return m_chapters.size() ? &m_chapters : 0;
+        return m_chapters.size() ? &m_chapters : 0;
     }
 private:
     void close(FLAC__StreamDecoder *decoder)
     {
-	m_module.stream_decoder_finish(decoder);
-	m_module.stream_decoder_delete(decoder);
+        m_module.stream_decoder_finish(decoder);
+        m_module.stream_decoder_delete(decoder);
     }
     static FLAC__StreamDecoderReadStatus staticReadCallback(
-	    const FLAC__StreamDecoder *decoder,
-	    FLAC__byte *buffer,
-	    size_t *bytes,
-	    void *client_data)
+            const FLAC__StreamDecoder *decoder,
+            FLAC__byte *buffer,
+            size_t *bytes,
+            void *client_data)
     {
-	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
-	return self->readCallback(buffer, bytes);
+        FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
+        return self->readCallback(buffer, bytes);
     }
     static FLAC__StreamDecoderSeekStatus staticSeekCallback(
-	    const FLAC__StreamDecoder *decoder,
-	    FLAC__uint64 offset,
-	    void *client_data)
+            const FLAC__StreamDecoder *decoder,
+            FLAC__uint64 offset,
+            void *client_data)
     {
-	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
-	return self->seekCallback(offset);
+        FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
+        return self->seekCallback(offset);
     }
     static FLAC__StreamDecoderTellStatus staticTellCallback(
-	    const FLAC__StreamDecoder *decoder,
-	    FLAC__uint64 *offset,
-	    void *client_data)
+            const FLAC__StreamDecoder *decoder,
+            FLAC__uint64 *offset,
+            void *client_data)
     {
-	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
-	return self->tellCallback(offset);
+        FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
+        return self->tellCallback(offset);
     }
     static FLAC__StreamDecoderLengthStatus staticLengthCallback(
-	    const FLAC__StreamDecoder *decoder,
-	    FLAC__uint64 *length,
-	    void *client_data)
+            const FLAC__StreamDecoder *decoder,
+            FLAC__uint64 *length,
+            void *client_data)
     {
-	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
-	return self->lengthCallback(length);
+        FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
+        return self->lengthCallback(length);
     }
     static FLAC__bool staticEofCallback(
-	    const FLAC__StreamDecoder *decoder, void *client_data)
+            const FLAC__StreamDecoder *decoder, void *client_data)
     {
-	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
-	return self->eofCallback();
+        FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
+        return self->eofCallback();
     }
     static FLAC__StreamDecoderWriteStatus staticWriteCallback(
-	    const FLAC__StreamDecoder *decoder,
-	    const FLAC__Frame *frame,
-	    const FLAC__int32 * const *buffer,
-	    void *client_data)
+            const FLAC__StreamDecoder *decoder,
+            const FLAC__Frame *frame,
+            const FLAC__int32 * const *buffer,
+            void *client_data)
     {
-	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
-	return self->writeCallback(frame, buffer);
+        FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
+        return self->writeCallback(frame, buffer);
     }
     static void staticMetadataCallback(
-	    const FLAC__StreamDecoder *decoder,
-	    const FLAC__StreamMetadata *metadata,
-	    void *client_data)
+            const FLAC__StreamDecoder *decoder,
+            const FLAC__StreamMetadata *metadata,
+            void *client_data)
     {
-	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
-	self->metadataCallback(metadata);
+        FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
+        self->metadataCallback(metadata);
     }
     static void staticErrorCallback(
-	    const FLAC__StreamDecoder *decoder,
-	    FLAC__StreamDecoderErrorStatus status,
-	    void *client_data)
+            const FLAC__StreamDecoder *decoder,
+            FLAC__StreamDecoderErrorStatus status,
+            void *client_data)
     {
-	FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
-	self->errorCallback(status);
+        FLACSource *self = reinterpret_cast<FLACSource*>(client_data);
+        self->errorCallback(status);
     }
     FLAC__StreamDecoderReadStatus
-	readCallback(FLAC__byte *buffer, size_t *bytes);
+        readCallback(FLAC__byte *buffer, size_t *bytes);
     FLAC__StreamDecoderSeekStatus seekCallback(uint64_t offset);
     FLAC__StreamDecoderTellStatus tellCallback(uint64_t *offset);
     FLAC__StreamDecoderLengthStatus lengthCallback(uint64_t *length);
     FLAC__bool eofCallback();
     FLAC__StreamDecoderWriteStatus writeCallback(const FLAC__Frame *frame,
-		const FLAC__int32 *const * buffer);
+                const FLAC__int32 *const * buffer);
     void metadataCallback(const FLAC__StreamMetadata *metadata);
     void errorCallback(FLAC__StreamDecoderErrorStatus status);
     void handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si);
