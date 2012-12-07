@@ -31,7 +31,7 @@ class LibSndfileSource: public ISeekableSource, public ITagParser
 {
     typedef std::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
-    uint8_t m_length;
+    uint64_t m_length;
     std::string m_format_name;
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
