@@ -14,8 +14,10 @@ using mp4v2::impl::MP4MeanAtom;
 using mp4v2::impl::MP4Property;
 using mp4v2::impl::MP4Integer16Property;
 using mp4v2::impl::MP4Integer32Property;
+using mp4v2::impl::MP4Integer64Property;
 using mp4v2::impl::MP4StringProperty;
 using mp4v2::impl::MP4BytesProperty;
+using mp4v2::impl::MP4TableProperty;
 using mp4v2::platform::io::File;
 namespace itmf = mp4v2::impl::itmf;
 
@@ -440,4 +442,77 @@ bool MP4FileCopy::copyNextChunk()
     m_state[nextTrack].time = MP4_INVALID_TIMESTAMP;
     return true;
 }
+ 
+bool MP4FileX::GetQTChapters(std::vector<chapters::entry_t> *chapterList)
+{
+    MP4TrackId trackId = FindChapterTrack();
+    if (trackId == MP4_INVALID_TRACK_ID)
+        return false;
 
+    std::vector<chapters::entry_t> chapters;
+    MP4Track *track = GetTrack(trackId);
+    uint32_t nsamples = track->GetNumberOfSamples();
+    double timescale = track->GetTimeScale();
+    MP4Timestamp start = 0;
+    MP4Duration duration = 0;
+    std::vector<uint8_t> sample;
+    for (uint32_t i = 0; i < nsamples; ++i) {
+        MP4SampleId sid =
+            track->GetSampleIdFromTime(start + duration, true);
+        uint32_t size = GetSampleSize(trackId, sid);
+        if (size > sample.size()) sample.resize(size);
+        uint8_t *sp = &sample[0];
+        track->ReadSample(sid, &sp, &size, &start, &duration);
+        const char * title = reinterpret_cast<const char *>(sp + 2);
+        int titleLen = std::min((sp[0]<<8)|sp[1], MP4V2_CHAPTER_TITLE_MAX);
+        std::string stitle(title, title + titleLen);
+        chapters.push_back(std::make_pair(strutil::us2w(stitle),
+                                          duration / timescale));
+    }
+    chapterList->swap(chapters);
+    return chapterList->size() > 0;
+}
+
+bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapterList)
+{
+    MP4Atom *chpl = FindAtom("moov.udta.chpl");
+    if (!chpl)
+        return false;
+    MP4Property *prop;
+    if (!chpl->FindProperty("chpl.chaptercount", &prop))
+        return false;
+    uint32_t count = dynamic_cast<MP4Integer32Property*>(prop)->GetValue();
+    if (!count || !chpl->FindProperty("chpl.chapters", &prop))
+        return false;
+    MP4TableProperty *pTable = dynamic_cast<MP4TableProperty*>(prop);
+    MP4Integer64Property *pStartTime =
+        dynamic_cast<MP4Integer64Property*>(pTable->GetProperty(0));
+    MP4StringProperty *pName =
+        dynamic_cast<MP4StringProperty*>(pTable->GetProperty(1));
+    if (!pStartTime || !pName)
+        return false;
+    std::vector<chapters::entry_t> chapters;
+    int64_t prev = pStartTime->GetValue(0);
+    double scale = 10000000.0;
+    if (prev > 0)
+        chapters.push_back(std::make_pair(std::wstring(L""), prev / scale));
+    const char *name = pName->GetValue(0);
+    for (uint32_t i = 1; i < count; ++i) {
+        int64_t start = pStartTime->GetValue(i);
+        chapters.push_back(std::make_pair(strutil::us2w(name),
+                                          (start - prev) / scale));
+        name = pName->GetValue(i);
+        prev = start;
+    }
+    int64_t end =
+        static_cast<double>(GetDuration()) / GetTimeScale() * scale + 0.5;
+    chapters.push_back(std::make_pair(strutil::us2w(name),
+                                      (end - prev) / scale));
+    chapterList->swap(chapters);
+    return chapterList->size() > 0;
+}
+
+bool MP4FileX::GetChapters(std::vector<chapters::entry_t> *chapterList)
+{
+    return GetQTChapters(chapterList) || GetNeroChapters(chapterList);
+}

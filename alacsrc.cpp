@@ -76,6 +76,7 @@ ALACSource::ALACSource(const std::shared_ptr<FILE> &fp)
         m_length = m_file.GetTrackDuration(m_track_id);
 
         mp4a::fetchTags(m_file, &m_tags);
+        m_file.GetChapters(&m_chapters);
     } catch (mp4v2::impl::Exception *e) {
         handle_mp4error(e);
     }

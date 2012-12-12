@@ -188,28 +188,62 @@ public:
 void TagEditor::save(MP4FileX &file)
 {
     try {
-        if (m_nsamples) {
+        if (m_encoder_delay && m_nsamples) {
             std::wstring value = strutil::format(iTunSMPB_template,
                                         m_encoder_delay,
                                         m_padding,
                                         uint32_t(m_nsamples >> 32),
                                         uint32_t(m_nsamples & 0xffffffff));
             m_long_tags["iTunSMPB"] = value;
+            /*
+             * The following edts configuration is mainly for QuickTime.
+             *
+             * We don't set encoder delay as edts media start time,
+             * since QuickTime treats 2112 samples from media start time
+             * as encoder delay and discards it after decoding
+             * (implicit handlng of AAC audio priming).
+             *
+             * On the other hand, we have to set edts duration
+             * to let QuickTime know the actual duration and to get 
+             * trailing zeroes trimmed.
+             *
+             * QuickTime File Format Specification Appendix G. specifies
+             * the way to explicitly signal audio priming (encoder delay),
+             * but apparently we cannot apply it for M4A.
+             * (And QuickTime 7 doesn't seem to support it anyway).
+             */
+            MP4TrackId tid = file.FindTrackId(0);
+            MP4EditId eid = file.AddTrackEdit(tid);
+            file.SetTrackEditMediaStart(tid, eid, 0);
+            file.SetTrackEditDuration(tid, eid, m_nsamples);
         }
         if (m_chapters.size()) {
             uint64_t timeScale = file.GetIntegerProperty("moov.mvhd.timeScale");
             MP4TrackId track = file.AddChapterTextTrack(1);
-            double off = 0;
-            for (size_t i = 0; i < m_chapters.size(); ++i) {
-                std::string name = strutil::w2us(m_chapters[i].first);
-                if (name.empty())
-                    name = strutil::format("Track %02u",
-                                           static_cast<uint32_t>(i + 1));
-                file.AddChapter(track, m_chapters[i].second * timeScale + 0.5,
-                                name.c_str());
-                int64_t stamp = off * 10000000 + 0.5;
-                file.AddNeroChapter(stamp, name.c_str());
-                off += m_chapters[i].second;
+            /*
+             * Historically, Nero AAC encoder was using chapter marker to
+             * signal encoder delay, and fb2k seems to be in honor of it.
+             * Therefore we delay the first chapter position of 
+             * Nero style chapter.
+             *
+             * QuickTime chapter is duration based, therefore first chapter
+             * always starts at beginning of the track, but last chapter can
+             * end at arbitrary point.
+             *
+             * On the other hand, Nero chapter is offset(start time) based,
+             * therefore first chapter can start at arbitrary point (and 
+             * this is used to signal encoder delay).
+             * However, last chapter always ends at track end.
+             */
+            double off = static_cast<double>(m_encoder_delay) / timeScale;
+            std::vector<chapters::entry_t>::const_iterator chap;
+            for (chap = m_chapters.begin(); chap != m_chapters.end(); ++chap) {
+                std::string name = strutil::w2us(chap->first);
+                const char *namep = name.c_str();
+                file.AddChapter(track, chap->second * timeScale + 0.5, namep);
+                int64_t stamp = off * 10000000.0 + 0.5;
+                file.AddNeroChapter(stamp, namep);
+                off += chap->second;
             }
         }
         std::for_each(m_tags.begin(), m_tags.end(), ShortTagWriter(file));

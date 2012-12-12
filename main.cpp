@@ -304,9 +304,8 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     if (parser) {
         editor.setTag(parser->getTags());
         const std::vector<chapters::entry_t> *chapters = parser->getChapters();
-        if (chapters) {
+        if (chapters)
             editor.setChapters(*chapters);
-        }
     }
     editor.setTag(opts.tagopts);
     editor.setLongTag(opts.longtags);

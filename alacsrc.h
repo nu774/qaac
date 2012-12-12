@@ -9,6 +9,7 @@ class ALACSource: public ISeekableSource, public ITagParser
     int64_t m_position;
     std::shared_ptr<ALACDecoder> m_decoder;
     std::map<uint32_t, std::wstring> m_tags;
+    std::vector<chapters::entry_t> m_chapters;
     std::vector<uint32_t> m_chanmap;
     std::shared_ptr<FILE> m_fp;
     MP4FileX m_file;
@@ -34,5 +35,8 @@ public:
         m_buffer.reset();
     }
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> *getChapters() const { return 0; }
+    const std::vector<chapters::entry_t> *getChapters() const
+    {
+        return m_chapters.size() ? &m_chapters : 0;
+    }
 };

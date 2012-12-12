@@ -216,6 +216,7 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
             std::string name = strutil::format("%d", fd);
             file.Read(name.c_str(), &provider);
             mp4a::fetchTags(file, &m_tags);
+            file.GetChapters(&m_chapters);
         } catch (...) {}
     } else {
         try {

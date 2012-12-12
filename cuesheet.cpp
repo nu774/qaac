@@ -246,7 +246,10 @@ void CueSheet::asChapters(double duration,
             track_duration = (tend - tbeg) / 75.0;
         else
             track_duration = duration - (last_end / 75.0);
-        chaps.push_back(std::make_pair(track->name(), track_duration));
+        std::wstring title = track->name();
+        if (title == L"")
+            title = strutil::format(L"Track %02d", track->number()); 
+        chaps.push_back(std::make_pair(title, track_duration));
         last_end = tend;
     }
     chapters->swap(chaps);
