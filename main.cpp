@@ -1155,7 +1155,7 @@ void setup_input_factory(const Options &opts)
 
 static
 void load_cue_sheet(const wchar_t *ifilename, const Options &opts,
-                      std::vector<chapters::Track> &tracks)
+                    playlist::Playlist &tracks)
 {
     const wchar_t *base_p = PathFindFileNameW(ifilename);
     std::wstring cuedir =
@@ -1173,7 +1173,7 @@ void load_cue_sheet(const wchar_t *ifilename, const Options &opts,
 
 static
 void load_track(const wchar_t *ifilename, const Options &opts,
-                std::vector<chapters::Track> &tracks)
+                playlist::Playlist &tracks)
 {
     const wchar_t *name = L"stdin";
     if (std::wcscmp(ifilename, L"-"))
@@ -1192,7 +1192,7 @@ void load_track(const wchar_t *ifilename, const Options &opts,
         if (it != meta.end())
             title = it->second;
     }
-    chapters::Track new_track;
+    playlist::Track new_track;
     new_track.name = title;
     new_track.source = src;
     new_track.ofilename = name;
@@ -1200,15 +1200,15 @@ void load_track(const wchar_t *ifilename, const Options &opts,
 }
 
 static
-void group_tracks_with_formats(const std::vector<chapters::Track> &tracks,
-                               std::vector<std::vector<chapters::Track> > *res)
+void group_tracks_with_formats(const playlist::Playlist &tracks,
+                               std::vector<playlist::Playlist> *res)
 {
     if (!tracks.size())
         return;
-    std::vector<std::vector<chapters::Track> > vec;
-    std::vector<chapters::Track>::const_iterator track = tracks.begin();
+    std::vector<playlist::Playlist> vec;
+    playlist::Playlist::const_iterator track = tracks.begin();
     do {
-        std::vector<chapters::Track> group;
+        playlist::Playlist group;
         group.push_back(*track);
         const AudioStreamBasicDescription &fmt
             = track->source->getSampleFormat();
@@ -1362,7 +1362,7 @@ int wmain1(int argc, wchar_t **argv)
             }
         }
 
-        std::vector<chapters::Track> tracks;
+        playlist::Playlist tracks;
         const wchar_t *ifilename = 0;
 
         for (int i = 0; i < argc; ++i) {
@@ -1374,7 +1374,7 @@ int wmain1(int argc, wchar_t **argv)
         }
         if (!opts.concat) {
             for (size_t i = 0; i < tracks.size(); ++i) {
-                chapters::Track &track = tracks[i];
+                playlist::Track &track = tracks[i];
                 std::wstring ofilename =
                     get_output_filename(track.ofilename.c_str(), opts);
                 LOG(L"\n%s\n",
@@ -1393,15 +1393,14 @@ int wmain1(int argc, wchar_t **argv)
             std::shared_ptr<FILE> adts_fp;
             if (opts.is_adts)
                 adts_fp = win32::fopen(ofilename, L"wb+");
-            std::vector<std::vector<chapters::Track> > groups;
+            std::vector<playlist::Playlist> groups;
             group_tracks_with_formats(tracks, &groups);
             if (!opts.is_adts && groups.size() > 1)
                 throw std::runtime_error("Concatenation of multiple inputs "
                                          "with different sample format is "
                                          "only supported for ADTS output");
-            std::vector<std::vector<chapters::Track> >::const_iterator
-                group;
-            std::vector<chapters::Track>::const_iterator track;
+            std::vector<playlist::Playlist>::const_iterator group;
+            playlist::Playlist::const_iterator track;
             for (group = groups.begin(); group != groups.end(); ++group) { 
                 std::shared_ptr<CompositeSource> cs
                     = std::make_shared<CompositeSource>();

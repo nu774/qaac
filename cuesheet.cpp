@@ -183,7 +183,7 @@ struct TagLookup {
     }
 };
 
-void CueSheet::loadTracks(std::vector<chapters::Track> &tracks,
+void CueSheet::loadTracks(playlist::Playlist &tracks,
                           const std::wstring &cuedir,
                           const std::wstring &fname_format)
 {
@@ -222,7 +222,7 @@ void CueSheet::loadTracks(std::vector<chapters::Track> &tracks,
         };
         ofilename = strutil::strtransform(ofilename, ToSafe::call) + L".stub";
 
-        chapters::Track new_track;
+        playlist::Track new_track;
         new_track.name = track->name();
         new_track.source = track_source;
         new_track.ofilename = ofilename;

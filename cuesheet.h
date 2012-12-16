@@ -5,6 +5,7 @@
 #include <map>
 #include "util.h"
 #include "iointer.h"
+#include "playlist.h"
 
 template <typename CharT>
 struct CueTokenizer {
@@ -85,7 +86,7 @@ public:
 
     CueSheet(): m_has_multiple_files(false) {}
     void parse(std::wstreambuf *src);
-    void loadTracks(std::vector<chapters::Track> &tracks,
+    void loadTracks(playlist::Playlist &tracks,
                     const std::wstring &cuedir,
                     const std::wstring &fname_format);
     void asChapters(double duration, /* total duration in sec. */

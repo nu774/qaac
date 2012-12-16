@@ -103,13 +103,5 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
                           double *floatBuffer, size_t nsamples);
 
-namespace chapters {
-    struct Track {
-        std::wstring name;
-        std::shared_ptr<ISeekableSource> source;
-        std::wstring ofilename;
-    };
-};
-
 #endif
 
