@@ -47,6 +47,7 @@ static wide::option long_options[] = {
     { L"raw-format", required_argument, 0,  'Rfmt' },
     { L"ignorelength", no_argument, 0, 'i' },
     { L"concat", no_argument, 0, 'cat ' },
+    { L"fname-from-tag", no_argument, 0, 'fftg' },
     { L"fname-format", required_argument, 0, 'nfmt' },
     { L"log", required_argument, 0, 'log ' },
     { L"title", required_argument, 0, Tag::kTitle },
@@ -176,13 +177,17 @@ void usage()
 "-S, --stat             Save bitrate statistics into file.\n"
 "--log <filename>       Output message to file.\n"
 "\n"
-"Option for single output file:\n"
+"Option for output filename generation:\n"
+"--fname-from-tag       Generate filename based on metadata of input.\n"
+"                       By default (without this option), output filename is\n"
+"                       same as input (except for file extension).\n"
+"                       Name generation can be tweaked by --fname-format.\n"
+"--fname-format <string>   Format string for output filename.\n"
+"\n"
+"Option for single output:\n"
 "-o <filename>          Output filename\n"
 "--concat               Encode whole inputs into single file. \n"
 "                       Requires output filename (with -o)\n"
-"\n"
-"Option for cue sheet input:\n"
-"--fname-format <string>   Format string for output filename.\n"
 "\n"
 "Options for Raw PCM input only:\n"
 "-R, --raw              Raw PCM input.\n"
@@ -533,6 +538,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->remix_preset = wide::optarg;
         else if (ch == 'mixm')
             this->remix_file = wide::optarg;
+        else if (ch == 'fftg')
+            this->filename_from_tag = true;
         else
             return false;
     }

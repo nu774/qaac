@@ -1178,6 +1178,7 @@ void load_track(const wchar_t *ifilename, const Options &opts,
     const wchar_t *name = L"stdin";
     if (std::wcscmp(ifilename, L"-"))
         name = PathFindFileNameW(ifilename);
+    std::wstring ofilename(name);
     std::wstring title(name, PathFindExtensionW(name));
 
     std::shared_ptr<ISeekableSource>
@@ -1191,11 +1192,16 @@ void load_track(const wchar_t *ifilename, const Options &opts,
             = meta.find(Tag::kTitle);
         if (it != meta.end())
             title = it->second;
+        if (opts.filename_from_tag) {
+            std::wstring fn =
+                playlist::generateFileName(opts.fname_format, meta);
+            if (fn.size()) ofilename = fn + L".stub";
+        }
     }
     playlist::Track new_track;
     new_track.name = title;
     new_track.source = src;
-    new_track.ofilename = name;
+    new_track.ofilename = ofilename;
     tracks.push_back(new_track);
 }
 

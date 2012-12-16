@@ -18,7 +18,8 @@ struct Options {
         bits_per_sample(0), raw_channels(2), raw_sample_rate(44100),
         artwork_size(0), native_resampler_complexity(0), textcp(0),
 
-        ofilename(0), outdir(0), raw_format(L"S16LE"), fname_format(0),
+        ofilename(0), outdir(0), raw_format(L"S16LE"),
+        fname_format(L"${tracknumber}${title& }${title}"),
         chapter_file(0), logfilename(0), remix_preset(0), remix_file(0),
         tmpdir(0),
 
@@ -27,6 +28,7 @@ struct Options {
         native_resampler(false), check_only(false), normalize(false),
         print_available_formats(false), alac_fast(false), threading(false),
         concat(false), no_matrix_normalize(false), no_dither(false),
+        filename_from_tag(false),
 
         gain(0.0),
 
@@ -75,7 +77,7 @@ struct Options {
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
          ignore_length, no_optimize, native_resampler, check_only,
          normalize, print_available_formats, alac_fast, threading,
-         concat, no_matrix_normalize, no_dither;
+         concat, no_matrix_normalize, no_dither, filename_from_tag;
     double gain;
 
     uint32_t output_format;
