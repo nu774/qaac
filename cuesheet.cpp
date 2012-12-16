@@ -8,6 +8,7 @@
 #include "TrimmedSource.h"
 #include "expand.h"
 #include "inputfactory.h"
+#include "playlist.h"
 
 static inline
 unsigned msf2frames(unsigned mm, unsigned ss, unsigned ff)
@@ -163,26 +164,6 @@ void CueSheet::parse(std::wstreambuf *src)
     validate();
 }
 
-struct TagLookup {
-    typedef std::map<uint32_t, std::wstring> meta_t;
-    const CueTrack &track;
-    const meta_t &tracktags;
-
-    TagLookup(const CueTrack &track_, const meta_t &tags)
-        : track(track_), tracktags(tags) {}
-
-    std::wstring operator()(const std::wstring &name) {
-        std::wstring namex = strutil::wslower(name);
-        if (namex == L"tracknumber")
-            return strutil::format(L"%02d", track.number());
-        std::string skey = strutil::w2us(namex);
-        uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
-        if (id == 0) return L"";
-        meta_t::const_iterator iter = tracktags.find(id);
-        return iter == tracktags.end() ? L"" : iter->second;
-    }
-};
-
 void CueSheet::loadTracks(playlist::Playlist &tracks,
                           const std::wstring &cuedir,
                           const std::wstring &fname_format)
@@ -212,15 +193,8 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
             src.reset(new TrimmedSource(src, begin, duration));
             track_source->addSource(src);
         }
-
         std::wstring ofilename =
-            process_template(fname_format, TagLookup(*track, track_tags));
-        struct ToSafe {
-            static wchar_t call(wchar_t ch) {
-                return std::wcschr(L":/\\?|<>*\"", ch) ? L'_' : ch;
-            }
-        };
-        ofilename = strutil::strtransform(ofilename, ToSafe::call) + L".stub";
+            playlist::generateFileName(fname_format, track_tags) + L".stub";
 
         playlist::Track new_track;
         new_track.name = track->name();
