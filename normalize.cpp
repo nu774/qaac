@@ -49,7 +49,8 @@ size_t Normalizer::readSamples(void *buffer, size_t nsamples)
 template <typename T>
 size_t Normalizer::processT(size_t nsamples)
 {
-    m_fbuffer.resize(nsamples * m_asbd.mBytesPerFrame);
+    if (m_fbuffer.size() < nsamples * m_asbd.mBytesPerFrame)
+        m_fbuffer.resize(nsamples * m_asbd.mBytesPerFrame);
     T *bp = reinterpret_cast<T*>(&m_fbuffer[0]);
     size_t nc = readSamplesAsFloat(source(), &m_ibuffer, bp, nsamples);
     if (nc > 0) {

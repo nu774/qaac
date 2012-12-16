@@ -41,7 +41,8 @@ size_t WaveSource::readSamples(void *buffer, size_t nsamples)
                                                 m_length - m_position));
     }
     ssize_t nbytes = nsamples * m_block_align;
-    m_buffer.resize(nbytes);
+    if (m_buffer.size() < nbytes)
+        m_buffer.resize(nbytes);
     nbytes = util::nread(fd(), &m_buffer[0], nbytes);
     nsamples = nbytes > 0 ? nbytes / m_block_align: 0;
     if (nsamples) {
