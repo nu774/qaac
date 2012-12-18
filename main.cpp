@@ -74,7 +74,8 @@ static
 std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 {
     if (opts.ofilename)
-        return opts.ofilename;
+        return !std::wcscmp(opts.ofilename, L"-") ? L"-"
+                : win32::GetFullPathNameX(opts.ofilename);
 
     const wchar_t *ext = opts.extension();
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
