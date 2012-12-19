@@ -29,7 +29,7 @@ inline
 FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
 {
     std::string spath = w2m(path);
-    std::string smode = nallow(mode);
+    std::string smode = narrow(mode);
     FILE *fp = std::fopen(spath.c_str(), smode.c_str());
     if (!fp)
         throw_crt_error(path);

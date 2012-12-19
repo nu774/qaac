@@ -258,7 +258,7 @@ x::shared_ptr<ISource> open_source(const wchar_t *ifilename,
     } while (0) 
 
     if (opts.is_raw) {
-        SampleFormat sf(nallow(opts.raw_format).c_str(),
+        SampleFormat sf(narrow(opts.raw_format).c_str(),
                         opts.raw_channels, opts.raw_sample_rate);
         return MAKE_SHARED(RawSource(stream, sf));
     }
@@ -1236,7 +1236,7 @@ struct TagLookup {
         std::wstring namex = wslower(name);
         if (namex == L"tracknumber")
             return widen(format("%02d", track.m_number));
-        std::string skey = nallow(namex);
+        std::string skey = narrow(namex);
         uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
         if (id == 0) return L"";
         meta_t::const_iterator iter = tracktags.find(id);

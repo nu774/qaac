@@ -73,13 +73,13 @@ inline void squeeze(T *str, const T *charset)
 }
 
 /* string conversion for ASCII only characters */
-struct nallow_ {
+struct narrow_ {
     char operator()(wchar_t ch) { return static_cast<char>(ch); }
 };
-inline std::string nallow(const std::wstring& s)
+inline std::string narrow(const std::wstring& s)
 {
     std::string result;
-    std::transform(s.begin(), s.end(), std::back_inserter(result), nallow_());
+    std::transform(s.begin(), s.end(), std::back_inserter(result), narrow_());
     return result;
 }
 inline std::wstring widen(const std::string& s)

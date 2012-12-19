@@ -159,7 +159,7 @@ void TakSource::fetchTags()
         if (it->second.type() != TagLib::APE::Item::Text)
             continue;
         std::wstring key = it->first.toWString();
-        std::string skey = nallow(key);
+        std::string skey = narrow(key);
         std::wstring value = it->second.toString().toWString();
         uint32_t id = Vorbis::GetIDFromTagName(skey.c_str());
         if (id)

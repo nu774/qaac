@@ -332,7 +332,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                         this->native_resampler_quality = n;
                     else if (std::wcslen(tok) == 4)
                         this->native_resampler_complexity =
-                            fourcc(nallow(tok).c_str());
+                            fourcc(narrow(tok).c_str());
                     else {
                         std::fputws(L"Invalid arg for --native-resampler.\n",
                                     stderr);
