@@ -323,11 +323,11 @@ bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
 	MP4Atom *pTagAtom = FindAtom(tagname.c_str());
 	if (!pTagAtom)	
 	    break;
-	MP4NameAtom *pNameAtom = FindChildAtomT(pTagAtom, "name");
-	if (!pNameAtom || pNameAtom->value.CompareToString(name))
-	    continue;
 	MP4MeanAtom *pMeanAtom = FindChildAtomT(pTagAtom, "mean");
 	if (!pMeanAtom || pMeanAtom->value.CompareToString(mean))
+	    continue;
+	MP4NameAtom *pNameAtom = FindChildAtomT(pTagAtom, "name");
+	if (!pNameAtom || pNameAtom->value.CompareToString(name))
 	    continue;
 	MP4DataAtom *pDataAtom = FindChildAtomT(pTagAtom, "data");
 	if (!pDataAtom)
@@ -338,13 +338,13 @@ bool MP4FileX::SetMetadataFreeForm(const char *name, const char *mean,
 	MP4Atom *pTagAtom = AddDescendantAtoms("moov", tagname.c_str() + 5);
 	if (!pTagAtom) return false;
 
-	MP4NameAtom *pNameAtom = AddChildAtomT(pTagAtom, "name");
-	pNameAtom->value.SetValue(
-		reinterpret_cast<const uint8_t*>(name), std::strlen(name));
-
 	MP4MeanAtom *pMeanAtom = AddChildAtomT(pTagAtom, "mean");
 	pMeanAtom->value.SetValue(
 		reinterpret_cast<const uint8_t*>(mean), std::strlen(mean));
+
+	MP4NameAtom *pNameAtom = AddChildAtomT(pTagAtom, "name");
+	pNameAtom->value.SetValue(
+		reinterpret_cast<const uint8_t*>(name), std::strlen(name));
 
 	pDataAtom = AddChildAtomT(pTagAtom, "data");
     }
