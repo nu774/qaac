@@ -156,6 +156,8 @@ void TakSource::fetchTags()
     const TagLib::APE::ItemListMap &itemListMap = tag->itemListMap();
     TagLib::APE::ItemListMap::ConstIterator it;
     for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
+        if (it->second.type() != TagLib::APE::Item::Text)
+            continue;
 	std::wstring key = it->first.toWString();
 	std::string skey = nallow(key);
 	std::wstring value = it->second.toString().toWString();
