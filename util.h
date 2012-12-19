@@ -29,8 +29,8 @@ inline int lrint(double x)
 {
     int n;
     _asm {
-	fld x
-	fistp n
+        fld x
+        fistp n
     }
     return n;
 }
@@ -67,8 +67,8 @@ inline void squeeze(T *str, const T *charset)
 {
     T *q = str;
     for (T *p = str; *p; ++p)
-	if (strindex(charset, *p) == -1)
-	    *q++ = *p;
+        if (strindex(charset, *p) == -1)
+            *q++ = *p;
     *q = 0;
 }
 
@@ -96,17 +96,17 @@ std::basic_string<T> normalize_crlf(const T *s, const T *delim)
     const T *p;
     T c;
     while ((c = *s++)) {
-	if (c == '\r') {
-	    for (p = delim; *p; ++p)
-		result.push_back(*p);
-	    if (*s == '\n')
-		++s;
-	}
-	else if (c == '\n')
-	    for (p = delim; *p; ++p)
-		result.push_back(*p);
-	else
-	    result.push_back(c);
+        if (c == '\r') {
+            for (p = delim; *p; ++p)
+                result.push_back(*p);
+            if (*s == '\n')
+                ++s;
+        }
+        else if (c == '\n')
+            for (p = delim; *p; ++p)
+                result.push_back(*p);
+        else
+            result.push_back(c);
     }
     return result;
 }
@@ -116,16 +116,16 @@ struct fourcc {
     char svalue[5];
     explicit fourcc(uint32_t v) : nvalue(v)
     {
-	for (int i = 3; i >= 0; --i, v >>= 8)
-	    svalue[i] = v & 0xff;
-	svalue[4] = 0;
+        for (int i = 3; i >= 0; --i, v >>= 8)
+            svalue[i] = v & 0xff;
+        svalue[4] = 0;
     }
     explicit fourcc(const char *s) : nvalue(0)
     {
-	std::memcpy(svalue, s, 4);
-	svalue[4] = 0;
-	const unsigned char *p = reinterpret_cast<const unsigned char *>(s);
-	nvalue = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+        std::memcpy(svalue, s, 4);
+        svalue[4] = 0;
+        const unsigned char *p = reinterpret_cast<const unsigned char *>(s);
+        nvalue = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
     }
     operator const char *() const { return svalue; }
     operator uint32_t() const { return nvalue; }
@@ -194,10 +194,10 @@ template <typename ForwardIterator>
 bool is_strict_ordered(ForwardIterator begin, ForwardIterator end)
 {
     if (begin == end)
-	return true;
+        return true;
     for (ForwardIterator it; it = begin, ++begin != end; )
-	if (*it >= *begin)
-	    return false;
+        if (*it >= *begin)
+            return false;
     return true;
 }
 
@@ -228,8 +228,8 @@ public:
     MemorySink16LE(void *ptr): m_ptr(reinterpret_cast<char*>(ptr)) {}
     void put(uint32_t value)
     {
-	*m_ptr++ = value;
-	*m_ptr++ = value >> 8;
+        *m_ptr++ = value;
+        *m_ptr++ = value >> 8;
     }
 };
 
@@ -239,9 +239,9 @@ public:
     MemorySink24LE(void *ptr): m_ptr(reinterpret_cast<char*>(ptr)) {}
     void put(uint32_t value)
     {
-	*m_ptr++ = value;
-	*m_ptr++ = value >> 8;
-	*m_ptr++ = value >> 16;
+        *m_ptr++ = value;
+        *m_ptr++ = value >> 8;
+        *m_ptr++ = value >> 16;
     }
 };
 
@@ -251,10 +251,10 @@ public:
     MemorySink32LE(void *ptr): m_ptr(reinterpret_cast<char*>(ptr)) {}
     void put(uint32_t value)
     {
-	*m_ptr++ = value;
-	*m_ptr++ = value >> 8;
-	*m_ptr++ = value >> 16;
-	*m_ptr++ = value >> 24;
+        *m_ptr++ = value;
+        *m_ptr++ = value >> 8;
+        *m_ptr++ = value >> 16;
+        *m_ptr++ = value >> 24;
     }
 };
 
@@ -283,7 +283,7 @@ inline uint32_t b2host32(uint32_t n)
 inline uint64_t b2host64(uint64_t n)
 {
     return (static_cast<uint64_t>(b2host32(n & 0xffffffff)) << 32) |
-	    b2host32(n >> 32);
+            b2host32(n >> 32);
 }
 
 void bswap16buffer(uint8_t *buffer, size_t size);
@@ -299,18 +299,18 @@ void bswap64buffer(uint8_t *buffer, size_t size);
 inline void throw_crt_error(const std::wstring &message)
 {
     std::wstring s = format(L"%s: %s", message.c_str(),
-			    widen(std::strerror(errno)).c_str());
+                            widen(std::strerror(errno)).c_str());
     throw std::runtime_error(w2m(s, utf8_codecvt_facet()));
 }
 inline void throw_crt_error(const std::string &message)
 {
     throw std::runtime_error(format("%s: %s", message.c_str(),
-				    std::strerror(errno)));
+                                    std::strerror(errno)));
 }
 #define CHECKCRT(expr) \
     do { \
-	if (expr) { \
-	    throw_crt_error(#expr); \
-	} \
+        if (expr) { \
+            throw_crt_error(#expr); \
+        } \
     } while (0)
 #endif

@@ -43,33 +43,33 @@ public:
 private:
     int get()
     {
-	int c = std::getwc(m_fp.get());
-	if (c == '\n') ++m_lineno;
-	return c;
+        int c = std::getwc(m_fp.get());
+        if (c == '\n') ++m_lineno;
+        return c;
     }
     void put(int c)
     {
-	m_token.push_back(c);
+        m_token.push_back(c);
     }
     void error(const std::string &msg)
     {
-	std::string s = format("RegParser: %s at line %d",
-		msg.c_str(), m_lineno);
-	throw std::runtime_error(s);
+        std::string s = format("RegParser: %s at line %d",
+                msg.c_str(), m_lineno);
+        throw std::runtime_error(s);
     }
     int expect(int c)
     {
-	int cc;
-	if ((cc = get()) != c)
-	    error(format("%c is expected", c));
-	return cc;
+        int cc;
+        if ((cc = get()) != c)
+            error(format("%c is expected", c));
+        return cc;
     }
     int skipws();
     int newline(int c)
     {
-	if (c == '\r') c = get();
-	if (c != '\n') error("New line expected");
-	return '\n';
+        if (c == '\r') c = get();
+        if (c != '\n') error("New line expected");
+        return '\n';
     }
     int hexDigits(int c, int width=0);
     std::vector<BYTE> getRawValue();
@@ -86,42 +86,42 @@ private:
 
     void onKey()
     {
-	m_action->onKey(m_token);
-	m_token.clear();
+        m_action->onKey(m_token);
+        m_token.clear();
     }
     void onValueName()
     {
-	m_action->onValueName(m_token);
-	m_token.clear();
+        m_action->onValueName(m_token);
+        m_token.clear();
     }
     void onHexType()
     {
-	DWORD type;
-	std::swscanf(m_token.c_str(), L"%x", &type);
-	m_action->onType(type);
-	m_token.clear();
+        DWORD type;
+        std::swscanf(m_token.c_str(), L"%x", &type);
+        m_action->onType(type);
+        m_token.clear();
     }
     void onStringValue()
     {
-	m_action->onStringValue(m_token);
-	m_token.clear();
+        m_action->onStringValue(m_token);
+        m_token.clear();
     }
     void onDwordValue()
     {
-	DWORD value;
-	std::swscanf(m_token.c_str(), L"%x", &value);
-	m_action->onDwordValue(value);
-	m_token.clear();
+        DWORD value;
+        std::swscanf(m_token.c_str(), L"%x", &value);
+        m_action->onDwordValue(value);
+        m_token.clear();
     }
     void onHexValue()
     {
-	m_action->onHexValue(getRawValue());
-	m_token.clear();
+        m_action->onHexValue(getRawValue());
+        m_token.clear();
     }
     void onEvalValue()
     {
-	m_action->onEvalValue(m_token);
-	m_token.clear();
+        m_action->onEvalValue(m_token);
+        m_token.clear();
     }
 };
 
@@ -133,17 +133,17 @@ struct RegEntry {
     RegEntry(): type(REG_NONE) {}
     RegEntry(const std::wstring &s): type(REG_SZ)
     {
-	size_t len = (s.size() + 1) * sizeof(wchar_t);
-	value.resize(len);
-	std::memcpy(&value[0], s.c_str(), len);
+        size_t len = (s.size() + 1) * sizeof(wchar_t);
+        value.resize(len);
+        std::memcpy(&value[0], s.c_str(), len);
     }
     RegEntry(DWORD v): type(REG_DWORD)
     {
-	value.resize(sizeof(DWORD));
-	std::memcpy(&value[0], &v, sizeof(DWORD));
+        value.resize(sizeof(DWORD));
+        std::memcpy(&value[0], &v, sizeof(DWORD));
     }
     RegEntry(DWORD t, const std::vector<BYTE> &d)
-	: type(t), value(d) {}
+        : type(t), value(d) {}
 };
 
 class RegAction: public IRegAction {
@@ -158,43 +158,43 @@ class RegAction: public IRegAction {
 public:
     RegAction()
     {
-	std::wstring selfpath = GetModuleFileNameX(0);
-	const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
-	m_selfdir = selfpath.substr(0, fpos - selfpath.c_str());
+        std::wstring selfpath = GetModuleFileNameX(0);
+        const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
+        m_selfdir = selfpath.substr(0, fpos - selfpath.c_str());
     }
 
     void onKey(const std::wstring &key)
     {
-	m_key = key;
+        m_key = key;
     }
     void onValueName(const std::wstring &name)
     {
-	m_valueName = name;
+        m_valueName = name;
     }
     void onType(DWORD type)
     {
-	m_type = type;
+        m_type = type;
     }
     void onStringValue(const std::wstring &data)
     {
-	m_entries[m_key][m_valueName] = RegEntry(data);
+        m_entries[m_key][m_valueName] = RegEntry(data);
     }
     void onHexValue(const std::vector<BYTE> &data)
     {
-	m_entries[m_key][m_valueName] = RegEntry(m_type, data);
+        m_entries[m_key][m_valueName] = RegEntry(m_type, data);
     }
     void onDwordValue(DWORD data)
     {
-	m_entries[m_key][m_valueName] = RegEntry(data);
+        m_entries[m_key][m_valueName] = RegEntry(data);
     }
     void onEvalValue(const std::wstring &data)
     {
-	m_entries[m_key][m_valueName] =
-	    RegEntry(process_template(data, *this));
+        m_entries[m_key][m_valueName] =
+            RegEntry(process_template(data, *this));
     }
     std::wstring operator()(const std::wstring &name)
     {
-	return name == L"qaacdir" ? m_selfdir : L"";
+        return name == L"qaacdir" ? m_selfdir : L"";
     }
     void realize();
     void show();

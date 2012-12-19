@@ -19,109 +19,109 @@ public:
     x::shared_ptr<ISource> first() const { return m_sources[0]; }
     const std::vector<uint32_t> *getChannels() const
     {
-	return first()->getChannels();
+        return first()->getChannels();
     }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::map<uint32_t, std::wstring> &getTags() const
     {
-	if (m_tags.size()) return m_tags;
-	x::shared_ptr<ISource> src = first();
-	ITagParser *tp = dynamic_cast<ITagParser*>(src.get());
-	return tp ? tp->getTags() : m_tags;
+        if (m_tags.size()) return m_tags;
+        x::shared_ptr<ISource> src = first();
+        ITagParser *tp = dynamic_cast<ITagParser*>(src.get());
+        return tp ? tp->getTags() : m_tags;
     }
     const std::vector<std::pair<std::wstring, int64_t> > *getChapters() const
     {
-	if (m_chapters.size())
-	    return &m_chapters;
-	else
-	    return 0;
+        if (m_chapters.size())
+            return &m_chapters;
+        else
+            return 0;
     }
     void setTags(const std::map<uint32_t, std::wstring> &tags)
     {
-	m_tags = tags;
+        m_tags = tags;
     }
     void setChapters(const std::vector<std::pair<std::wstring, int64_t> > &x)
     {
-	m_chapters = x;
+        m_chapters = x;
     }
     void addChapter(std::wstring title, int64_t length)
     {
-	m_chapters.push_back(std::make_pair(title, length));
+        m_chapters.push_back(std::make_pair(title, length));
     }
     void addSource(const x::shared_ptr<ISource> &src)
     {
-	if (!count())
-	    m_format = src->getSampleFormat();
-	else if (m_format != src->getSampleFormat())
-	    throw std::runtime_error(
-		    "CompositeSource: can't compose different sample format");
-	m_sources.push_back(src);
+        if (!count())
+            m_format = src->getSampleFormat();
+        else if (m_format != src->getSampleFormat())
+            throw std::runtime_error(
+                    "CompositeSource: can't compose different sample format");
+        m_sources.push_back(src);
     }
     void addSourceWithChapter(const x::shared_ptr<ISource> &src)
     {
-	addSource(src);
-	ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
-	if (parser) {
-	    const std::map<uint32_t, std::wstring> &tags
-		= parser->getTags();
-	    std::map<uint32_t, std::wstring>::const_iterator tagit;
-	    if (count() == 1) {
-		for (tagit = tags.begin(); tagit != tags.end(); ++tagit) {
-		    if (Tag::isAlbumTag(tagit->first))
-			m_tags[tagit->first] = tagit->second;
-		    if (tagit->first == Tag::kAlbumArtist)
-			m_tags[Tag::kArtist] = tagit->second;
-		    else if (tagit->first == Tag::kArtist) {
-			std::map<uint32_t, std::wstring>::const_iterator it
-			    = m_tags.find(Tag::kArtist);
-			if (it == m_tags.end())
-			    m_tags[Tag::kArtist] = tagit->second;
-		    }
-		}
-	    }
-	    const std::vector<std::pair<std::wstring, int64_t> > *chaps;
-	    chaps = parser->getChapters();
-	    if (chaps) {
-		for (size_t i = 0; i < chaps->size(); ++i)
-		    m_chapters.push_back(chaps->at(i));
-		return;
-	    }
-	    tagit = tags.find(Tag::kTitle);
-	    if (tagit != tags.end()) {
-		addChapter(tagit->second, src->length());
-		return;
-	    }
-	}
-	std::wstring title = format(L"",
-				    static_cast<int>(m_chapters.size() + 1));
-	addChapter(title, src->length());
+        addSource(src);
+        ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
+        if (parser) {
+            const std::map<uint32_t, std::wstring> &tags
+                = parser->getTags();
+            std::map<uint32_t, std::wstring>::const_iterator tagit;
+            if (count() == 1) {
+                for (tagit = tags.begin(); tagit != tags.end(); ++tagit) {
+                    if (Tag::isAlbumTag(tagit->first))
+                        m_tags[tagit->first] = tagit->second;
+                    if (tagit->first == Tag::kAlbumArtist)
+                        m_tags[Tag::kArtist] = tagit->second;
+                    else if (tagit->first == Tag::kArtist) {
+                        std::map<uint32_t, std::wstring>::const_iterator it
+                            = m_tags.find(Tag::kArtist);
+                        if (it == m_tags.end())
+                            m_tags[Tag::kArtist] = tagit->second;
+                    }
+                }
+            }
+            const std::vector<std::pair<std::wstring, int64_t> > *chaps;
+            chaps = parser->getChapters();
+            if (chaps) {
+                for (size_t i = 0; i < chaps->size(); ++i)
+                    m_chapters.push_back(chaps->at(i));
+                return;
+            }
+            tagit = tags.find(Tag::kTitle);
+            if (tagit != tags.end()) {
+                addChapter(tagit->second, src->length());
+                return;
+            }
+        }
+        std::wstring title = format(L"",
+                                    static_cast<int>(m_chapters.size() + 1));
+        addChapter(title, src->length());
     }
     uint64_t length() const
     {
-	uint64_t len = 0;
-	for (size_t i = 0; i < m_sources.size(); ++i)
-	    len += m_sources[i]->length();
-	return len;
+        uint64_t len = 0;
+        for (size_t i = 0; i < m_sources.size(); ++i)
+            len += m_sources[i]->length();
+        return len;
     }
     size_t readSamples(void *buffer, size_t nsamples)
     {
-	if (m_curpos == m_sources.size())
-	    return 0;
-	size_t rc = m_sources[m_curpos]->readSamples(buffer, nsamples);
-	m_samples_read += rc;
-	if (rc == nsamples)
-	    return rc;
-	if (rc == 0) {
-	    ++m_curpos;
-	    return readSamples(buffer, nsamples);
-	}
-	return rc + readSamples(
-	    reinterpret_cast<char*>(buffer) + rc * m_format.bytesPerFrame(),
-	    nsamples - rc);
+        if (m_curpos == m_sources.size())
+            return 0;
+        size_t rc = m_sources[m_curpos]->readSamples(buffer, nsamples);
+        m_samples_read += rc;
+        if (rc == nsamples)
+            return rc;
+        if (rc == 0) {
+            ++m_curpos;
+            return readSamples(buffer, nsamples);
+        }
+        return rc + readSamples(
+            reinterpret_cast<char*>(buffer) + rc * m_format.bytesPerFrame(),
+            nsamples - rc);
     }
     void setRange(int64_t start=0, int64_t length=-1)
     {
-	throw std::runtime_error("CompositeSource::setRange: not implemented");
+        throw std::runtime_error("CompositeSource::setRange: not implemented");
     }
     uint64_t getSamplesRead() const { return m_samples_read; }
 };

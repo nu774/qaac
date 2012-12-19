@@ -40,22 +40,22 @@ class EncoderStat: public IEncoderStat {
     AudioStreamBasicDescription m_desc;
 public:
     EncoderStat()
-	: m_samples_read(0),
-	  m_samples_written(0),
-	  m_frames_written(0),
-	  m_bytes_written(0)
+        : m_samples_read(0),
+          m_samples_written(0),
+          m_frames_written(0),
+          m_bytes_written(0)
     {}
     void setBasicDescription(const AudioStreamBasicDescription &desc)
     {
-	m_desc = desc;
+        m_desc = desc;
     }
     void updateRead(uint32_t n) { m_samples_read += n; }
     void updateWritten(uint32_t samples, uint32_t bytes)
     {
-	m_frames_written += 1;
-	m_samples_written += samples;
-	m_bytes_written += bytes;
-	m_current_bitrate = calcBitrate(bytes, samples);
+        m_frames_written += 1;
+        m_samples_written += samples;
+        m_bytes_written += bytes;
+        m_current_bitrate = calcBitrate(bytes, samples);
     }
     uint64_t samplesRead() const { return m_samples_read; }
     uint64_t samplesWritten() const { return m_samples_written; }
@@ -63,12 +63,12 @@ public:
     double currentBitrate() const { return m_current_bitrate; }
     double overallBitrate() const
     {
-	return calcBitrate(m_bytes_written, m_samples_written);
+        return calcBitrate(m_bytes_written, m_samples_written);
     }
     double calcBitrate(uint64_t bytes, uint64_t samples) const
     {
-	return samples ? (bytes * m_desc.mSampleRate * 8) / (1000.0 * samples)
-		       : 0.0;
+        return samples ? (bytes * m_desc.mSampleRate * 8) / (1000.0 * samples)
+                       : 0.0;
     }
 };
 

@@ -12,7 +12,7 @@ public:
     virtual ~RIFFParser() {}
     virtual void parse();
     virtual bool is_container(uint32_t id) { 
-	return id == 'RIFF' || id == 'RF64' || id == 'LIST';
+        return id == 'RIFF' || id == 'RF64' || id == 'LIST';
     }
 protected:
     virtual bool get_chunkinfo(uint32_t *fcc, uint64_t *size);

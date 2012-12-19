@@ -18,8 +18,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	  This product includes software developed by the NetBSD
- *	  Foundation, Inc. and its contributors.
+ *        This product includes software developed by the NetBSD
+ *        Foundation, Inc. and its contributors.
  * 4. Neither the name of The NetBSD Foundation nor the names of its
  *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
@@ -46,7 +46,7 @@ namespace wide {
  * GNU-like getopt_long()/getopt_long_only() with 4.4BSD optreset extension.
  * getopt() is declared here too for GNU programs.
  */
-#define no_argument	   0
+#define no_argument        0
 #define required_argument  1
 #define optional_argument  2
 
@@ -72,12 +72,12 @@ int getopt_long_only(int, wchar_t * const *, const wchar_t *,
 #define _GETOPT_DECLARED
 int  getopt(int, wchar_t * const [], const wchar_t *);
 
-extern wchar_t *optarg;		/* getopt(3) external variables */
+extern wchar_t *optarg;         /* getopt(3) external variables */
 extern int optind, opterr, optopt;
 #endif
 #ifndef _OPTRESET_DECLARED
 #define _OPTRESET_DECLARED
-extern int optreset;		/* getopt(3) external variable */
+extern int optreset;            /* getopt(3) external variable */
 #endif
  
 }

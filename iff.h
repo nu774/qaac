@@ -15,8 +15,8 @@ class IFFParser: public BinaryRead<IFFParser> {
 public:
     enum { kContainerEnd = 'CenD' };
     explicit IFFParser(InputStream &stream):
-	m_stream(stream), m_format_id(0), m_chunk_id(0),
-	m_chunk_size(0), m_chunk_off(0), m_is_odd_chunk(0)
+        m_stream(stream), m_format_id(0), m_chunk_id(0),
+        m_chunk_size(0), m_chunk_off(0), m_is_odd_chunk(0)
     {}
     virtual ~IFFParser() {}
     virtual void parse();
@@ -32,7 +32,7 @@ public:
     size_t read(void *buffer, size_t count);
     int64_t seek_forward(int64_t count);
     virtual bool is_container(uint32_t id) { 
-	return id == 'FORM' || id == 'CAT ' || id == 'LIST';
+        return id == 'FORM' || id == 'CAT ' || id == 'LIST';
     }
     /*
      * go down into the container chunk, and returns container's fcc.

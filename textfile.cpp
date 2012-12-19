@@ -13,20 +13,20 @@ static inline
 void throwIfError(HRESULT expr, const char *msg)
 {
     if (FAILED(expr))
-	throw_win32_error(msg, expr);
+        throw_win32_error(msg, expr);
 }
 #define HR(expr) (void)(throwIfError((expr), #expr))
 
 std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 {
     struct F {
-	static void release(IUnknown *x) {  x->Release(); }
+        static void release(IUnknown *x) {  x->Release(); }
     };
 
     IStream *stream;
     HRESULT hr = SHCreateStreamOnFileW(path.c_str(),
-				       STGM_READ | STGM_SHARE_DENY_WRITE,
-				       &stream);
+                                       STGM_READ | STGM_SHARE_DENY_WRITE,
+                                       &stream);
     if (FAILED(hr)) throw_win32_error(path, hr);
     x::shared_ptr<IStream> streamPtr(stream, F::release);
 
@@ -34,35 +34,35 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     ULARGE_INTEGER ui;
     HR(stream->Seek(li, STREAM_SEEK_END, &ui));
     if (ui.QuadPart > 0x100000) {
-	throw std::runtime_error(w2m(path + L": file too big",
-				     utf8_codecvt_facet()));
+        throw std::runtime_error(w2m(path + L": file too big",
+                                     utf8_codecvt_facet()));
     }
     size_t fileSize = ui.LowPart;
     HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
 
     IMultiLanguage2 *mlang;
     HR(CoCreateInstance(CLSID_CMultiLanguage, 0, CLSCTX_INPROC_SERVER,
-		IID_IMultiLanguage2, (void**)(&mlang)));
+                IID_IMultiLanguage2, (void**)(&mlang)));
     x::shared_ptr<IMultiLanguage2> mlangPtr(mlang, F::release);
 
     if (!codepage) {
-	DetectEncodingInfo encoding[5];
-	INT nscores = 5;
-	HR(mlang->DetectCodepageInIStream(0, GetACP(),
-					  stream, encoding, &nscores));
-	/*
-	 * Usually DetectCodepageInIStream() puts the most appropriate choice
-	 * in the first place.
-	 * However, it tends to pick 8bit locale charset for the first place,
-	 * even if it is really an UTF-8 encoded file.
-	 */
-	codepage = encoding[0].nCodePage;
-	for (size_t i = 0; i < nscores; ++i)
-	    if (encoding[i].nCodePage == 65001) {
-		codepage = 65001;
-		break;
-	    }
-	HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
+        DetectEncodingInfo encoding[5];
+        INT nscores = 5;
+        HR(mlang->DetectCodepageInIStream(0, GetACP(),
+                                          stream, encoding, &nscores));
+        /*
+         * Usually DetectCodepageInIStream() puts the most appropriate choice
+         * in the first place.
+         * However, it tends to pick 8bit locale charset for the first place,
+         * even if it is really an UTF-8 encoded file.
+         */
+        codepage = encoding[0].nCodePage;
+        for (size_t i = 0; i < nscores; ++i)
+            if (encoding[i].nCodePage == 65001) {
+                codepage = 65001;
+                break;
+            }
+        HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
     }
     std::vector<char> ibuf(fileSize);
     ULONG nread;
@@ -71,11 +71,11 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     DWORD ctx = 0;
     UINT size = ibuf.size(), cnt;
     HR(mlang->ConvertStringToUnicode(&ctx, codepage,
-				     &ibuf[0], &size, 0, &cnt));
+                                     &ibuf[0], &size, 0, &cnt));
     std::vector<wchar_t> obuf(cnt);
     size = ibuf.size();
     HR(mlang->ConvertStringToUnicode(&ctx, codepage,
-				     &ibuf[0], &size, &obuf[0], &cnt));
+                                     &ibuf[0], &size, &obuf[0], &cnt));
     obuf.push_back(0);
     // chop off BOM
     size_t bom = obuf.size() && obuf[0] == 0xfeff;

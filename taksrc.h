@@ -17,20 +17,20 @@ public:
 
     TtakResult (*GetLibraryVersion)(TtakInt32 *, TtakInt32 *);
     TtakSeekableStreamDecoder (*SSD_Create_FromStream)(
-	    const TtakStreamIoInterface *, void *, const TtakSSDOptions *,
-	    TSSDDamageCallback, void *);
+            const TtakStreamIoInterface *, void *, const TtakSSDOptions *,
+            TSSDDamageCallback, void *);
     void (*SSD_Destroy)(TtakSeekableStreamDecoder);
     TtakResult (*SSD_GetStreamInfo)(TtakSeekableStreamDecoder,
-	    Ttak_str_StreamInfo *);
+            Ttak_str_StreamInfo *);
     TtakResult (*SSD_Seek)(TtakSeekableStreamDecoder, TtakInt64);
     TtakResult (*SSD_ReadAudio)(TtakSeekableStreamDecoder, void *,
-	    TtakInt32, TtakInt32 *);
+            TtakInt32, TtakInt32 *);
     TtakAPEv2Tag (*SSD_GetAPEv2Tag)(TtakSeekableStreamDecoder);
     TtakInt32 (*APE_GetItemNum)(TtakAPEv2Tag);
     TtakResult (*APE_GetItemKey)(TtakAPEv2Tag, TtakInt32, char *,
-	    TtakInt32, TtakInt32 *);
+            TtakInt32, TtakInt32 *);
     TtakResult (*APE_GetItemValue)(TtakAPEv2Tag, TtakInt32, void *,
-	    TtakInt32, TtakInt32 *);
+            TtakInt32, TtakInt32 *);
 };
 
 class TakSource:
@@ -52,18 +52,18 @@ public:
     void skipSamples(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const
+        *getChapters() const
     {
-	if (m_chapters.size())
-	    return &m_chapters;
-	else
-	    return 0;
+        if (m_chapters.size())
+            return &m_chapters;
+        else
+            return 0;
     }
 private:
     void fetchTags();
     static void staticDamageCallback(void *ctx, PtakSSDDamageItem info)
     {
-	throw std::runtime_error("TAK: damaged frame found");
+        throw std::runtime_error("TAK: damaged frame found");
     }
 };
 

@@ -11,7 +11,7 @@ struct CueTokenizer {
     typedef typename traits_type::int_type int_type;
 
     explicit CueTokenizer(std::basic_streambuf<CharT> *sb)
-	: m_sb(sb), m_lineno(0)
+        : m_sb(sb), m_lineno(0)
     {}
     bool isWS(int_type c) { return c == ' ' || c == '\t' || c == '\r'; }
     bool nextline();
@@ -23,7 +23,7 @@ struct CueTokenizer {
 
 struct CueSegment {
     CueSegment(const std::wstring &filename, unsigned index)
-	: m_filename(filename), m_index(index), m_begin(0), m_end(-1)
+        : m_filename(filename), m_index(index), m_begin(0), m_end(-1)
     {}
     std::wstring m_filename;
     unsigned m_index;
@@ -39,11 +39,11 @@ struct CueTrack {
     CueTrack(unsigned number) : m_number(number) {}
     std::wstring getName()
     {
-	std::map<std::wstring, std::wstring>::iterator
-	    it = m_meta.find(L"TITLE");
-	if (it != m_meta.end())
-	    return it->second;
-	return L"";
+        std::map<std::wstring, std::wstring>::iterator
+            it = m_meta.find(L"TITLE");
+        if (it != m_meta.end())
+            return it->second;
+        return L"";
     }
 };
 
@@ -66,15 +66,15 @@ private:
     void parseRem(const std::wstring *args) { parseMeta(args + 1); }
     void die(const std::string &msg)
     {
-	throw std::runtime_error(
-		format("cuesheet: %s at line %d", msg.c_str(), m_lineno));
+        throw std::runtime_error(
+                format("cuesheet: %s at line %d", msg.c_str(), m_lineno));
     }
     CueSegment *lastSegment()
     {
-	for (ssize_t i = m_tracks.size() - 1; i >= 0; --i)
-	    if (m_tracks[i].m_segments.size())
-		return &m_tracks[i].m_segments.back();
-	return 0;
+        for (ssize_t i = m_tracks.size() - 1; i >= 0; --i)
+            if (m_tracks[i].m_segments.size())
+                return &m_tracks[i].m_segments.back();
+        return 0;
     }
     std::wstring m_cur_file;
     size_t m_lineno;
@@ -82,10 +82,10 @@ private:
 
 namespace Cue {
     void ConvertToItunesTags(const std::map<std::wstring, std::wstring> &from,
-	std::map<uint32_t, std::wstring> *to, bool album=false);
+        std::map<uint32_t, std::wstring> *to, bool album=false);
 
     void CueSheetToChapters(const std::wstring &cuesheet,
-	unsigned sample_rate, uint64_t duration,
-	std::vector<std::pair<std::wstring, int64_t> > *chapters,
-	std::map<uint32_t, std::wstring> *meta);
+        unsigned sample_rate, uint64_t duration,
+        std::vector<std::pair<std::wstring, int64_t> > *chapters,
+        std::map<uint32_t, std::wstring> *meta);
 }

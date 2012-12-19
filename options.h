@@ -17,68 +17,68 @@ struct Options {
     enum { kCBR, kABR, kCVBR, kTVBR };
 
     Options() :
-	output_format(0),
-	method(-1),
-	bitrate(-1), quality(-1),
-	raw_channels(2), raw_sample_rate(44100),
-	rate(-1),
-	lowpass(0),
-	chanmask(-1),
-	artwork_size(0),
-	bits_per_sample(0),
-	ofilename(0),
-	outdir(0),
-	raw_format(L"S16LE"),
-	fname_format(0),
-	chapter_file(0),
-	logfilename(0),
-	remix_preset(0),
-	remix_file(0),
-	tmpdir(0),
-	verbose(1), is_raw(false), is_adts(false), save_stat(false),
-       	nice(false), native_chanmapper(false), ignore_length(false),
-	no_optimize(false), native_resampler(false), check_only(false),
-	normalize(false), print_available_formats(false), alac_fast(false),
-	threading(false), concat_cue(false), concat(false),
-	no_matrix_normalize(false),
-	textcp(0),
-	delay(0),
-	gain(0.0),
-	is_console_visible(true),
-	native_resampler_quality(-1),
-	native_resampler_complexity(-1)
+        output_format(0),
+        method(-1),
+        bitrate(-1), quality(-1),
+        raw_channels(2), raw_sample_rate(44100),
+        rate(-1),
+        lowpass(0),
+        chanmask(-1),
+        artwork_size(0),
+        bits_per_sample(0),
+        ofilename(0),
+        outdir(0),
+        raw_format(L"S16LE"),
+        fname_format(0),
+        chapter_file(0),
+        logfilename(0),
+        remix_preset(0),
+        remix_file(0),
+        tmpdir(0),
+        verbose(1), is_raw(false), is_adts(false), save_stat(false),
+        nice(false), native_chanmapper(false), ignore_length(false),
+        no_optimize(false), native_resampler(false), check_only(false),
+        normalize(false), print_available_formats(false), alac_fast(false),
+        threading(false), concat_cue(false), concat(false),
+        no_matrix_normalize(false),
+        textcp(0),
+        delay(0),
+        gain(0.0),
+        is_console_visible(true),
+        native_resampler_quality(-1),
+        native_resampler_complexity(-1)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
     bool isMP4() const
     {
-	return (isAAC() && !is_adts) || isALAC();
+        return (isAAC() && !is_adts) || isALAC();
     }
     bool isAAC() const
     {
-	return output_format == 'aac ' || output_format == 'aach';
+        return output_format == 'aac ' || output_format == 'aach';
     }
     bool isSBR() const
     {
-	return output_format == 'aach';
+        return output_format == 'aach';
     }
     bool isALAC() const
     {
-	return output_format == 'alac';
+        return output_format == 'alac';
     }
     bool isLPCM() const
     {
-	return output_format == 'lpcm';
+        return output_format == 'lpcm';
     }
     bool isNativeResampler() const
     {
-	return !libsoxrate.loaded() || native_resampler;
+        return !libsoxrate.loaded() || native_resampler;
     }
     const wchar_t *extension() const
     {
-	if (isMP4()) return L"m4a";
-	else if (isLPCM()) return L"wav";
-	else return L"aac";
+        if (isMP4()) return L"m4a";
+        else if (isLPCM()) return L"wav";
+        else return L"aac";
     }
 
     uint32_t output_format;
@@ -102,9 +102,9 @@ struct Options {
     wchar_t *tmpdir;
     int verbose;
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
-	 ignore_length, no_optimize, native_resampler, check_only,
-	 normalize, print_available_formats, alac_fast, threading,
-	 concat_cue, concat, no_matrix_normalize;
+         ignore_length, no_optimize, native_resampler, check_only,
+         normalize, print_available_formats, alac_fast, threading,
+         concat_cue, concat, no_matrix_normalize;
     uint32_t textcp;
     int delay;
     double gain;

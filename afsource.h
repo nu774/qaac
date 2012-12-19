@@ -27,13 +27,13 @@ public:
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannels() const
     {
-	return m_chanmap.size() ? &m_chanmap: 0;
+        return m_chanmap.size() ? &m_chanmap: 0;
     }
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count) { m_offset += count; }
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const { return 0; }
+        *getChapters() const { return 0; }
 };
 
 class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
@@ -47,22 +47,22 @@ class ExtAFSource: public ITagParser, public PartialSource<ExtAFSource>
     SampleFormat m_format;
 public:
     ExtAFSource(AudioFileX &af, x::shared_ptr<InputStream> &stream,
-		const std::wstring &path);
+                const std::wstring &path);
     ~ExtAFSource()
     {
-	m_af.attach(0, false);
-	m_eaf.attach(0, false);
+        m_af.attach(0, false);
+        m_eaf.attach(0, false);
     }
     uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannels() const
     {
-	return m_chanmap.size() ? &m_chanmap: 0;
+        return m_chanmap.size() ? &m_chanmap: 0;
     }
     size_t readSamples(void *buffer, size_t nsamples);
     void skipSamples(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const { return 0; }
+        *getChapters() const { return 0; }
 };
 #endif

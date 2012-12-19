@@ -12,7 +12,7 @@ Normalizer::Normalizer(const x::shared_ptr<ISource> &src)
 {
     const SampleFormat &srcFormat = source()->getSampleFormat();
     if (srcFormat.m_bitsPerSample == 64)
-	throw std::runtime_error("Can't handle 64bit sample");
+        throw std::runtime_error("Can't handle 64bit sample");
 
     m_format = SampleFormat("F32LE", srcFormat.m_nchannels, srcFormat.m_rate);
 
@@ -28,30 +28,30 @@ size_t Normalizer::process(size_t nsamples)
 {
     size_t nc = readSamplesAsFloat(source(), &m_ibuffer, &m_fbuffer, nsamples);
     if (nc > 0) {
-	m_processed += nc;
-	std::fwrite(&m_fbuffer[0], sizeof(float), nc * m_format.m_nchannels,
-		    m_tmpfile.get());
-	if (std::ferror(m_tmpfile.get()))
-	    throw_crt_error("fwrite()");
-	for (size_t i = 0; i < m_fbuffer.size(); ++i) {
-	    float x = std::abs(m_fbuffer[i]);
-	    if (x > m_peak) m_peak = x;
-	}
+        m_processed += nc;
+        std::fwrite(&m_fbuffer[0], sizeof(float), nc * m_format.m_nchannels,
+                    m_tmpfile.get());
+        if (std::ferror(m_tmpfile.get()))
+            throw_crt_error("fwrite()");
+        for (size_t i = 0; i < m_fbuffer.size(); ++i) {
+            float x = std::abs(m_fbuffer[i]);
+            if (x > m_peak) m_peak = x;
+        }
     } else
-	std::fseek(m_tmpfile.get(), 0, SEEK_SET);
+        std::fseek(m_tmpfile.get(), 0, SEEK_SET);
     return nc;
 }
 
 size_t Normalizer::readSamples(void *buffer, size_t nsamples)
 {
     size_t nc = std::fread(buffer, sizeof(float),
-			   nsamples * m_format.m_nchannels, m_tmpfile.get());
+                           nsamples * m_format.m_nchannels, m_tmpfile.get());
     float *fp = reinterpret_cast<float*>(buffer);
     if (m_peak > 1.0 || (m_peak > FLT_EPSILON && m_peak < 1.0 - FLT_EPSILON)) {
-	for (size_t i = 0; i < nc; ++i) {
-	    float nfp = static_cast<float>(*fp / m_peak);
-	    *fp++ = nfp;
-	}
+        for (size_t i = 0; i < nc; ++i) {
+            float nfp = static_cast<float>(*fp / m_peak);
+            *fp++ = nfp;
+        }
     }
     nsamples = nc / m_format.m_nchannels;
     m_samples_read += nsamples;

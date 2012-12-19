@@ -7,20 +7,20 @@
 namespace flac {
     template <typename T> void try__(T expr, const char *msg)
     {
-	if (!expr) throw std::runtime_error(msg);
+        if (!expr) throw std::runtime_error(msg);
     }
 
     inline void want(bool expr)
     {
-	if (!expr)
-	    throw std::runtime_error("Sorry, unacceptable FLAC format");
+        if (!expr)
+            throw std::runtime_error("Sorry, unacceptable FLAC format");
     }
 
     void validate(const FLAC__StreamMetadata_StreamInfo &si)
     {
-	want(si.sample_rate > 0);
-	want(si.channels > 0 && si.channels < 9);
-	want(si.bits_per_sample >= 8 && si.bits_per_sample <= 32);
+        want(si.sample_rate > 0);
+        want(si.channels > 0 && si.channels < 9);
+        want(si.bits_per_sample >= 8 && si.bits_per_sample <= 32);
     }
 }
 #define TRYFL(expr) (void)(flac::try__((expr), #expr))
@@ -36,46 +36,46 @@ FLACSource::FLACSource(const FLACModule &module, InputStream &stream):
     m_stream.pushback(buffer, 33);
     if ((fcc != 'fLaC' && fcc != 'OggS')
      || (fcc == 'OggS' && std::memcmp(&buffer[28], "\177FLAC", 5)))
-	throw std::runtime_error("Not a FLAC file");
+        throw std::runtime_error("Not a FLAC file");
 
     m_decoder = decoder_t(m_module.stream_decoder_new(),
-		std::bind1st(std::mem_fun(&FLACSource::close_decoder), this));
+                std::bind1st(std::mem_fun(&FLACSource::close_decoder), this));
     TRYFL(m_module.stream_decoder_set_metadata_respond(
-		m_decoder.get(), FLAC__METADATA_TYPE_VORBIS_COMMENT));
+                m_decoder.get(), FLAC__METADATA_TYPE_VORBIS_COMMENT));
 
     TRYFL((fcc == 'OggS' ? m_module.stream_decoder_init_ogg_stream
-			 : m_module.stream_decoder_init_stream)
-	    (m_decoder.get(),
-	     staticReadCallback,
-	     staticSeekCallback,
-	     staticTellCallback,
-	     staticLengthCallback,
-	     staticEofCallback,
-	     staticWriteCallback,
-	     staticMetadataCallback,
-	     staticErrorCallback,
-	     this) == FLAC__STREAM_DECODER_INIT_STATUS_OK);
+                         : m_module.stream_decoder_init_stream)
+            (m_decoder.get(),
+             staticReadCallback,
+             staticSeekCallback,
+             staticTellCallback,
+             staticLengthCallback,
+             staticEofCallback,
+             staticWriteCallback,
+             staticMetadataCallback,
+             staticErrorCallback,
+             this) == FLAC__STREAM_DECODER_INIT_STATUS_OK);
     TRYFL(m_module.stream_decoder_process_until_end_of_metadata(
-		m_decoder.get()));
+                m_decoder.get()));
     if (m_giveup || m_format.m_bitsPerSample == 0)
-	flac::want(false);
+        flac::want(false);
     m_buffer.resize(m_format.m_nchannels);
     if (m_cuesheet.size()) {
-	try {
-	    std::map<uint32_t, std::wstring> tags;
-	    Cue::CueSheetToChapters(m_cuesheet, m_format.m_rate,
-		    getDuration(), &m_chapters, &tags);
-	    std::map<uint32_t, std::wstring>::const_iterator it;
-	    for (it = tags.begin(); it != tags.end(); ++it)
-		m_tags[it->first] = it->second;
-	} catch (...) {}
+        try {
+            std::map<uint32_t, std::wstring> tags;
+            Cue::CueSheetToChapters(m_cuesheet, m_format.m_rate,
+                    getDuration(), &m_chapters, &tags);
+            std::map<uint32_t, std::wstring>::const_iterator it;
+            for (it = tags.begin(); it != tags.end(); ++it)
+                m_tags[it->first] = it->second;
+        } catch (...) {}
     }
 }
 
 void FLACSource::skipSamples(int64_t count)
 {
     TRYFL(m_module.stream_decoder_seek_absolute(m_decoder.get(),
-		PartialSource::getSamplesRead() + count));
+                PartialSource::getSamplesRead() + count));
 }
 
 template <class MemorySink>
@@ -87,25 +87,25 @@ size_t FLACSource::readSamplesT(void *buffer, size_t nsamples)
     size_t processed = 0;
     uint32_t shifts = (8 - m_format.m_bitsPerSample) % 8;
     while (processed < nsamples) {
-	while (m_buffer[0].size() && processed < nsamples) {
-	    for (size_t i = 0; i < m_buffer.size(); ++i) {
-		int value = m_buffer[i].front();
-		m_buffer[i].pop_front();
-		// FLAC samples are aligned to low.
-		if (shifts)
-		    value <<= shifts;
-		sink.put(value);
-	    }
-	    ++processed;
-	}
-	if (processed < nsamples) {
-	    if (m_giveup)
-		throw std::runtime_error("FLAC decoder error");
-	    if (m_module.stream_decoder_get_state(m_decoder.get()) ==
-		    FLAC__STREAM_DECODER_END_OF_STREAM)
-		break;
-	    TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
-	}
+        while (m_buffer[0].size() && processed < nsamples) {
+            for (size_t i = 0; i < m_buffer.size(); ++i) {
+                int value = m_buffer[i].front();
+                m_buffer[i].pop_front();
+                // FLAC samples are aligned to low.
+                if (shifts)
+                    value <<= shifts;
+                sink.put(value);
+            }
+            ++processed;
+        }
+        if (processed < nsamples) {
+            if (m_giveup)
+                throw std::runtime_error("FLAC decoder error");
+            if (m_module.stream_decoder_get_state(m_decoder.get()) ==
+                    FLAC__STREAM_DECODER_END_OF_STREAM)
+                break;
+            TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
+        }
     }
     addSamplesRead(processed);
     return processed;
@@ -115,13 +115,13 @@ size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 {
     uint32_t bytesPerChannel = m_format.bytesPerChannel();
     if (bytesPerChannel == 1)
-	return readSamplesT<MemorySink8>(buffer, nsamples);
+        return readSamplesT<MemorySink8>(buffer, nsamples);
     else if (bytesPerChannel == 2)
-	return readSamplesT<MemorySink16LE>(buffer, nsamples);
+        return readSamplesT<MemorySink16LE>(buffer, nsamples);
     else if (bytesPerChannel == 3)
-	return readSamplesT<MemorySink24LE>(buffer, nsamples);
+        return readSamplesT<MemorySink24LE>(buffer, nsamples);
     else
-	return readSamplesT<MemorySink32LE>(buffer, nsamples);
+        return readSamplesT<MemorySink32LE>(buffer, nsamples);
 }
 
 FLAC__StreamDecoderReadStatus
@@ -130,19 +130,19 @@ FLACSource::readCallback(FLAC__byte *buffer, size_t *bytes)
     uint32_t nb = *bytes;
     *bytes = m_stream.read(buffer, nb);
     return *bytes == 0 ? FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM
-		       : FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
+                       : FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
 }
 
 FLAC__StreamDecoderSeekStatus
 FLACSource::seekCallback(uint64_t offset)
 {
     if (!m_stream.seekable())
-	return FLAC__STREAM_DECODER_SEEK_STATUS_UNSUPPORTED; 
+        return FLAC__STREAM_DECODER_SEEK_STATUS_UNSUPPORTED; 
     int64_t rc = m_stream.seek(offset, ISeekable::kBegin);
     if (rc == offset)
-	return FLAC__STREAM_DECODER_SEEK_STATUS_OK; 
+        return FLAC__STREAM_DECODER_SEEK_STATUS_OK; 
     else
-	return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR; 
+        return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR; 
 }
 
 FLAC__StreamDecoderTellStatus
@@ -150,41 +150,41 @@ FLACSource::tellCallback(uint64_t *offset)
 {
     *offset = m_stream.tell();
     return *offset == -1 ? FLAC__STREAM_DECODER_TELL_STATUS_ERROR
-			 : FLAC__STREAM_DECODER_TELL_STATUS_OK; 
+                         : FLAC__STREAM_DECODER_TELL_STATUS_OK; 
 }
 
 FLAC__StreamDecoderLengthStatus
 FLACSource::lengthCallback(uint64_t *length)
 {
     if (!m_stream.seekable())
-	return FLAC__STREAM_DECODER_LENGTH_STATUS_UNSUPPORTED;
+        return FLAC__STREAM_DECODER_LENGTH_STATUS_UNSUPPORTED;
     *length = m_stream.size();
     return *length == -1 ? FLAC__STREAM_DECODER_LENGTH_STATUS_ERROR
-			 : FLAC__STREAM_DECODER_LENGTH_STATUS_OK; 
+                         : FLAC__STREAM_DECODER_LENGTH_STATUS_OK; 
 }
 
 FLAC__bool FLACSource::eofCallback()
 {
     char ch;
     if (m_stream.read(&ch, 1) != 1)
-	return true;
+        return true;
     m_stream.pushback(ch);
     return false;
 }
 
 FLAC__StreamDecoderWriteStatus
 FLACSource::writeCallback(
-	const FLAC__Frame *frame, const FLAC__int32 *const * buffer)
+        const FLAC__Frame *frame, const FLAC__int32 *const * buffer)
 {
     const FLAC__FrameHeader &h = frame->header;
     if (h.channels != m_format.m_nchannels
      || h.sample_rate != m_format.m_rate
      || h.bits_per_sample != m_format.m_bitsPerSample)
-	return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
+        return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
     for (size_t i = 0; i < h.channels; ++i)
-	std::copy(buffer[i], buffer[i] + h.blocksize,
-		std::back_inserter(m_buffer[i]));
+        std::copy(buffer[i], buffer[i] + h.blocksize,
+                std::back_inserter(m_buffer[i]));
 
     return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 }
@@ -192,9 +192,9 @@ FLACSource::writeCallback(
 void FLACSource::metadataCallback(const FLAC__StreamMetadata *metadata)
 {
     if (metadata->type == FLAC__METADATA_TYPE_STREAMINFO)
-	handleStreamInfo(metadata->data.stream_info);
+        handleStreamInfo(metadata->data.stream_info);
     else if (metadata->type == FLAC__METADATA_TYPE_VORBIS_COMMENT)
-	handleVorbisComment(metadata->data.vorbis_comment);
+        handleVorbisComment(metadata->data.vorbis_comment);
 }
 
 void FLACSource::errorCallback(FLAC__StreamDecoderErrorStatus status)
@@ -205,10 +205,10 @@ void FLACSource::errorCallback(FLAC__StreamDecoderErrorStatus status)
 void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 {
     try {
-	flac::validate(si);
+        flac::validate(si);
     } catch (const std::runtime_error) {
-	m_giveup = true;
-	return;
+        m_giveup = true;
+        return;
     }
     setRange(0, si.total_samples);
     m_format.m_type = SampleFormat::kIsSignedInteger;
@@ -219,20 +219,20 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 }
 
 void FLACSource::handleVorbisComment(
-	const FLAC__StreamMetadata_VorbisComment &vc)
+        const FLAC__StreamMetadata_VorbisComment &vc)
 {
     std::map<std::string, std::string> vorbisComments;
     for (size_t i = 0; i < vc.num_comments; ++i) {
-	const char *cs = reinterpret_cast<const char *>(vc.comments[i].entry);
-	std::vector<char> kv(std::strlen(cs) + 1);
-	std::strcpy(&kv[0], cs);
-	char *key, *value = &kv[0]; 
-	key = strsep(&value, "=");
-	vorbisComments[key] = value;
-	if (!strcasecmp(key, "cuesheet"))
-	    m_cuesheet = m2w(value, utf8_codecvt_facet());
-	else
-	    vorbisComments[key] = value;
+        const char *cs = reinterpret_cast<const char *>(vc.comments[i].entry);
+        std::vector<char> kv(std::strlen(cs) + 1);
+        std::strcpy(&kv[0], cs);
+        char *key, *value = &kv[0]; 
+        key = strsep(&value, "=");
+        vorbisComments[key] = value;
+        if (!strcasecmp(key, "cuesheet"))
+            m_cuesheet = m2w(value, utf8_codecvt_facet());
+        else
+            vorbisComments[key] = value;
     }
     Vorbis::ConvertToItunesTags(vorbisComments, &m_tags);
 }

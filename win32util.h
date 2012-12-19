@@ -29,7 +29,7 @@ std::wstring GetFullPathNameX(const std::wstring &path)
     DWORD length = GetFullPathNameW(path.c_str(), 0, 0, 0);
     std::vector<wchar_t> buffer(length);
     length = GetFullPathNameW(path.c_str(), static_cast<DWORD>(buffer.size()),
-			      &buffer[0], 0);
+                              &buffer[0], 0);
     return std::wstring(&buffer[0], &buffer[length]);
 }
 
@@ -52,7 +52,7 @@ std::wstring PathFindFileNameX(const std::wstring &path)
 
 inline
 std::wstring PathCombineX(const std::wstring &basedir,
-	const std::wstring &filename)
+        const std::wstring &filename)
 {
     wchar_t buffer[MAX_PATH];
     PathCombineW(buffer, basedir.c_str(), filename.c_str());
@@ -73,11 +73,11 @@ std::wstring GetModuleFileNameX(HMODULE module)
 {
     std::vector<wchar_t> buffer(32);
     DWORD cclen = GetModuleFileNameW(module, &buffer[0],
-				     static_cast<DWORD>(buffer.size()));
+                                     static_cast<DWORD>(buffer.size()));
     while (cclen >= buffer.size() - 1) {
-	buffer.resize(buffer.size() * 2);
-	cclen = GetModuleFileNameW(module, &buffer[0],
-				   static_cast<DWORD>(buffer.size()));
+        buffer.resize(buffer.size() * 2);
+        cclen = GetModuleFileNameW(module, &buffer[0],
+                                   static_cast<DWORD>(buffer.size()));
     }
     return std::wstring(&buffer[0], &buffer[cclen]);
 }
@@ -87,11 +87,11 @@ std::wstring get_prefixed_fullpath(const wchar_t *path)
 {
     std::wstring fullpath = GetFullPathNameX(path);
     if (fullpath.size() < 256)
-	return fullpath;
+        return fullpath;
     if (fullpath.size() > 2 && fullpath.substr(0, 2) == L"\\\\")
-	fullpath.insert(2, L"?\\UNC\\");
+        fullpath.insert(2, L"?\\UNC\\");
     else
-	fullpath.insert(0, L"\\\\?\\");
+        fullpath.insert(0, L"\\\\?\\");
     return fullpath;
 }
 
@@ -111,6 +111,6 @@ typedef struct
 #endif  /* _STARTUP_INFO_DEFINED */
 extern "C"
 _CRTIMP int __wgetmainargs(int *, wchar_t ***, wchar_t ***,
-	int, _startupinfo *);
+        int, _startupinfo *);
 #endif /* __MINGW32__ */
 #endif

@@ -14,19 +14,19 @@ public:
     size_t readSamples(void *buffer, size_t nsamples);
     void start()
     {
-	intptr_t h = _beginthreadex(0, 0, staticInputThreadProc, this, 0, 0);
-	if (h == -1)
-	    throw std::runtime_error(std::strerror(errno));
-	m_thread.reset(reinterpret_cast<HANDLE>(h), CloseHandle);
+        intptr_t h = _beginthreadex(0, 0, staticInputThreadProc, this, 0, 0);
+        if (h == -1)
+            throw std::runtime_error(std::strerror(errno));
+        m_thread.reset(reinterpret_cast<HANDLE>(h), CloseHandle);
     }
     uint64_t getSamplesRead() const { return m_samples_read; }
 private:
     void inputThreadProc();
     static unsigned __stdcall staticInputThreadProc(void *arg)
     {
-	PipedReader *self = static_cast<PipedReader*>(arg);
-	self->inputThreadProc();
-	return 0;
+        PipedReader *self = static_cast<PipedReader*>(arg);
+        self->inputThreadProc();
+        return 0;
     }
 };
 

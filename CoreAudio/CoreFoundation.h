@@ -49,20 +49,20 @@ typedef CFHashCode (*CFDictionaryHashCallBack)(const void *value);
 typedef void (*CFDictionaryApplierFunction)(const void *key, const void *value, void *context);
 
 typedef struct {
-    CFIndex				version;
-    CFDictionaryRetainCallBack		retain;
-    CFDictionaryReleaseCallBack		release;
-    CFDictionaryCopyDescriptionCallBack	copyDescription;
-    CFDictionaryEqualCallBack		equal;
-    CFDictionaryHashCallBack		hash;
+    CFIndex                             version;
+    CFDictionaryRetainCallBack          retain;
+    CFDictionaryReleaseCallBack         release;
+    CFDictionaryCopyDescriptionCallBack copyDescription;
+    CFDictionaryEqualCallBack           equal;
+    CFDictionaryHashCallBack            hash;
 } CFDictionaryKeyCallBacks;
 
 typedef struct {
-    CFIndex				version;
-    CFDictionaryRetainCallBack		retain;
-    CFDictionaryReleaseCallBack		release;
-    CFDictionaryCopyDescriptionCallBack	copyDescription;
-    CFDictionaryEqualCallBack		equal;
+    CFIndex                             version;
+    CFDictionaryRetainCallBack          retain;
+    CFDictionaryReleaseCallBack         release;
+    CFDictionaryCopyDescriptionCallBack copyDescription;
+    CFDictionaryEqualCallBack           equal;
 } CFDictionaryValueCallBacks;
 
 CFTypeID CFDictionaryGetTypeID(void);

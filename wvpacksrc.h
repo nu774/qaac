@@ -21,7 +21,7 @@ public:
 
     const char *(*GetLibraryVersionString)();
     WavpackContext *(*OpenFileInputEx)(void *,
-	    void *, void *, char *, int, int);
+            void *, void *, char *, int, int);
     WavpackContext *(*CloseFile)(WavpackContext *);
     int (*GetMode)(WavpackContext *);
     int (*GetNumChannels)(WavpackContext *);
@@ -49,7 +49,7 @@ class WavpackSource:
     std::vector<std::pair<std::wstring, int64_t> > m_chapters;
 public:
     WavpackSource(const WavpackModule &module, InputStream &stream,
-		  const std::wstring &path);
+                  const std::wstring &path);
     uint64_t length() const { return getDuration(); }
     const SampleFormat &getSampleFormat() const { return m_format; }
     const std::vector<uint32_t> *getChannels() const { return &m_chanmap; }
@@ -57,12 +57,12 @@ public:
     void skipSamples(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
     const std::vector<std::pair<std::wstring, int64_t> >
-	*getChapters() const
+        *getChapters() const
     {
-	if (m_chapters.size())
-	    return &m_chapters;
-	else
-	    return 0;
+        if (m_chapters.size())
+            return &m_chapters;
+        else
+            return 0;
     }
 private:
     template <class MemorySink>

@@ -13,16 +13,16 @@ class WaveSink : public ISink {
     SampleFormat m_format;
 public:
     WaveSink(FILE *fp, uint64_t duration, const SampleFormat &format,
-	    uint32_t chanmask=0);
+            uint32_t chanmask=0);
     ~WaveSink() { try { finishWrite(); } catch (...) {} }
     void writeSamples(const void *data, size_t length, size_t nsamples);
     void finishWrite();
 private:
     void write(const void *data, size_t length)
     {
-	std::fwrite(data, 1, length, m_file);
-	if (ferror(m_file))
-	    throw_crt_error("fwrite()");
+        std::fwrite(data, 1, length, m_file);
+        if (ferror(m_file))
+            throw_crt_error("fwrite()");
     }
 };
 

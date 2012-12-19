@@ -46,43 +46,43 @@ namespace Tag {
     const uint32_t kcomposerID = 'cmID';
 
     struct NameIDMap {
-	const char *name;
-	uint32_t id;
+        const char *name;
+        uint32_t id;
     };
 
     inline bool isAlbumTag(uint32_t tag)
     {
-	if (tag == kAlbumArtist || tag == kAlbum || tag == kGenre ||
-	    tag == kGenreID3 || tag == kDate || tag == kDisk ||
-	    tag == kCopyright || tag == kCompilation || tag == kTool ||
-	    tag == kArtwork)
-	    return true;
-	else
-	    return false;
+        if (tag == kAlbumArtist || tag == kAlbum || tag == kGenre ||
+            tag == kGenreID3 || tag == kDate || tag == kDisk ||
+            tag == kCopyright || tag == kCompilation || tag == kTool ||
+            tag == kArtwork)
+            return true;
+        else
+            return false;
     }
 }
 
 namespace ID3 {
     uint32_t GetIDFromTagName(const char *name);
     void fetchAiffID3Tags(const wchar_t *filename,
-			  std::map<uint32_t, std::wstring> *result);
+                          std::map<uint32_t, std::wstring> *result);
 }
 
 namespace Vorbis {
     uint32_t GetIDFromTagName(const char *name);
     const char *GetNameFromTagID(uint32_t fcc);
     void ConvertToItunesTags(
-	    const std::map<std::string, std::string> &vorbisComments,
-	    std::map<uint32_t, std::wstring> *itunesTags);
+            const std::map<std::string, std::string> &vorbisComments,
+            std::map<uint32_t, std::wstring> *itunesTags);
     void ConvertFromItunesTags(
-	    const std::map<uint32_t, std::wstring> &itunesTags,
-	    std::map<std::string, std::string> *vorbisComments);
+            const std::map<uint32_t, std::wstring> &itunesTags,
+            std::map<std::string, std::string> *vorbisComments);
 }
 
 namespace mp4a {
     void fetchTags(MP4FileX &file,
-		   std::map<uint32_t, std::wstring> *shortTags,
-		   std::map<std::string, std::wstring> *longTags=0);
+                   std::map<uint32_t, std::wstring> *shortTags,
+                   std::map<std::string, std::wstring> *longTags=0);
 }
 
 const char * const iTunSMPB_template = " 00000000 %08X %08X %08X%08X "
@@ -99,49 +99,49 @@ class TagEditor {
     uint64_t m_nsamples;
 public:
     TagEditor()
-	: m_encoder_delay(0),
-	  m_padding(0),
-	  m_artwork_size(0),
-	  m_nsamples(0)
+        : m_encoder_delay(0),
+          m_padding(0),
+          m_artwork_size(0),
+          m_nsamples(0)
     {}
     void setGaplessInfo(const GaplessInfo &info)
     {
-	m_encoder_delay = info.delay;
-	m_padding = info.padding;
-	m_nsamples = info.samples;
+        m_encoder_delay = info.delay;
+        m_padding = info.padding;
+        m_nsamples = info.samples;
     }
     void setTag(uint32_t key, const std::wstring &value)
     {
-	m_tags[key] = value;
+        m_tags[key] = value;
     }
     void setTag(const std::map<uint32_t, std::wstring> &tags)
     {
-	std::map<uint32_t, std::wstring>::const_iterator ii;
-	for (ii = tags.begin(); ii != tags.end(); ++ii)
-	    m_tags[ii->first] = ii->second;
+        std::map<uint32_t, std::wstring>::const_iterator ii;
+        for (ii = tags.begin(); ii != tags.end(); ++ii)
+            m_tags[ii->first] = ii->second;
     }
     void setLongTag(const std::string &key, const std::wstring &value)
     {
-	m_long_tags[key] = value;
+        m_long_tags[key] = value;
     }
     void setLongTag(const std::map<std::string, std::wstring> &tags)
     {
-	std::map<std::string, std::wstring>::const_iterator ii;
-	for (ii = tags.begin(); ii != tags.end(); ++ii)
-	    m_long_tags[ii->first] = ii->second;
+        std::map<std::string, std::wstring>::const_iterator ii;
+        for (ii = tags.begin(); ii != tags.end(); ++ii)
+            m_long_tags[ii->first] = ii->second;
     }
     void setChapters(const std::vector<std::pair<std::wstring, int64_t> >
-	    &chapters)
+            &chapters)
     {
-	m_chapters = chapters;
+        m_chapters = chapters;
     }
     void addArtwork(const wchar_t *filename)
     {
-	m_artworks.push_back(filename);
+        m_artworks.push_back(filename);
     }
     void setArtworkSize(uint32_t size)
     {
-	m_artwork_size = size;
+        m_artwork_size = size;
     }
     void save(MP4FileX &mp4file);
     void saveArtworks(MP4FileX &mp4file);

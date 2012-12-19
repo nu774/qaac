@@ -15,22 +15,22 @@ class Scaler: public DelegatingSource {
     SampleFormat m_format;
 public:
     Scaler(const x::shared_ptr<ISource> &source, double scale)
-	: DelegatingSource(source), m_scale(scale)
+        : DelegatingSource(source), m_scale(scale)
     {
-	const SampleFormat &fmt = source->getSampleFormat();
-	if (fmt.m_bitsPerSample == 64)
-	    throw std::runtime_error("Can't handle 64bit sample");
-	m_format = SampleFormat("F32LE", fmt.m_nchannels, fmt.m_rate);
+        const SampleFormat &fmt = source->getSampleFormat();
+        if (fmt.m_bitsPerSample == 64)
+            throw std::runtime_error("Can't handle 64bit sample");
+        m_format = SampleFormat("F32LE", fmt.m_nchannels, fmt.m_rate);
     }
     const SampleFormat &getSampleFormat() const { return m_format; }
     size_t readSamples(void *buffer, size_t nsamples)
     {
-	float *fp = static_cast<float*>(buffer);
-	size_t nc = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
-	size_t len = nc * source()->getSampleFormat().m_nchannels;
-	for (size_t i = 0; i < len; ++i)
-	    fp[i] *= m_scale;
-	return nc;
+        float *fp = static_cast<float*>(buffer);
+        size_t nc = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
+        size_t len = nc * source()->getSampleFormat().m_nchannels;
+        for (size_t i = 0; i < len; ++i)
+            fp[i] *= m_scale;
+        return nc;
     }
 };
 
