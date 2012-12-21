@@ -62,7 +62,7 @@ bool CueTokenizer<CharT>::nextline()
             field.push_back(c);
     }
     if (field.size()) m_fields.push_back(field);
-    return field.size() > 0 || c == '\n';
+    return m_fields.size() > 0 || c == '\n';
 }
 
 template struct CueTokenizer<char>;
