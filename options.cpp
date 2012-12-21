@@ -4,9 +4,7 @@
 #include "itunetags.h"
 
 static wide::option long_options[] = {
-#ifdef REFALAC
-    { L"fast", no_argument, 0, 'afst' },
-#else
+#ifdef QAAC
     { L"formats", no_argument, 0, 'fmts' },
     { L"abr", required_argument, 0, 'a' },
     { L"tvbr", required_argument, 0, 'V' },
@@ -17,6 +15,9 @@ static wide::option long_options[] = {
     { L"adts", no_argument, 0, 'ADTS' },
     { L"alac", no_argument, 0, 'A' },
     { L"native-resampler", optional_argument, 0, 'nsrc' },
+#endif
+#ifdef REFALAC
+    { L"fast", no_argument, 0, 'afst' },
 #endif
     { L"check", no_argument, 0, 'chck' },
     { L"decode", no_argument, 0, 'D' },
@@ -94,7 +95,7 @@ const char *get_qaac_version();
 
 #ifdef REFALAC
 #define PROGNAME "refalac"
-#else
+#elif defined QAAC
 #define PROGNAME "qaac"
 #endif
 
@@ -110,7 +111,7 @@ void usage()
 #endif
 "\n"
 "Main options:\n"
-#ifndef REFALAC
+#ifdef QAAC
 "--formats              Show available AAC formats and exit\n"
 "-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
 "-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
@@ -124,7 +125,8 @@ void usage()
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
 "-A, --alac             ALAC encoding mode\n"
-#else
+#endif
+#ifdef REFALAC
 "--fast                 Fast stereo encoding mode.\n"
 #endif
 "-d <dirname>           Output directory. Default is current working dir.\n"
@@ -201,7 +203,7 @@ void usage()
 "                       Last part can be omitted, L is assumed by default.\n"
 "                       Cases are ignored. u16b is OK.\n"
 "\n"
-#ifndef REFALAC
+#ifdef QAAC
 "Options for CoreAudio sample rate converter:\n"
 "--native-resampler[=line|norm|bats,n]\n"
 "                       Arguments are optional.\n"
@@ -264,9 +266,10 @@ void usage()
     );
 }
 
-#ifndef REFALAC
+#ifdef QAAC
 static const wchar_t * const short_opts = L"hDo:d:b:r:insRSNAa:V:v:c:q:";
-#else
+#endif
+#ifdef REFALAC
 static const wchar_t * const short_opts = L"hDo:d:b:r:insRSN";
 #endif
 

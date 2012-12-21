@@ -24,7 +24,7 @@ namespace cautil {
         return ss.str();
     }
 
-#ifndef REFALAC
+#ifndef NO_COREAUDIO
     CFMutableDictionaryRef CreateDictionary(CFIndex capacity)
     {
         static CFDictionaryKeyCallBacks *keyCB;

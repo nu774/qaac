@@ -29,7 +29,8 @@
 #include "expand.h"
 #ifdef REFALAC
 #include "alacenc.h"
-#else
+#endif
+#ifdef QAAC
 #include <delayimp.h>
 #include "AudioCodecX.h"
 #include "CoreAudioEncoder.h"
@@ -40,7 +41,7 @@
 
 #ifdef REFALAC
 #define PROGNAME "refalac"
-#else
+#elif defined QAAC
 #define PROGNAME "qaac"
 #endif
 
@@ -311,7 +312,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     editor.setTag(opts.tagopts);
     editor.setLongTag(opts.longtags);
     editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
-#ifndef REFALAC
+#ifdef QAAC
     if (opts.isAAC() && stat->samplesWritten()) {
         CoreAudioEncoder *caencoder =
             dynamic_cast<CoreAudioEncoder*>(encoder);
@@ -572,7 +573,7 @@ delayed_source(const std::shared_ptr<ISeekableSource> &src,
     return src;
 }
 
-#ifndef REFALAC
+#ifdef QAAC
 static
 void config_aac_codec(AudioConverterX &converter, const Options &opts);
 
@@ -597,7 +598,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
     AudioStreamBasicDescription sasbd = src->getSampleFormat();
 
-#ifndef REFALAC
+#ifdef QAAC
     std::shared_ptr<AudioCodecX> codec;
     if (!opts.isLPCM())
         codec.reset(new AudioCodecX(opts.output_format));
@@ -605,10 +606,11 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     mapped_source(chain, opts, wChanmask, aacLayout, threading);
 
     if (!opts.isLPCM()) {
-#ifndef REFALAC
+#ifdef QAAC
         if (!codec->isAvailableOutputChannelLayout(*aacLayout))
             throw std::runtime_error("Channel layout not supported");
-#else
+#endif
+#ifdef REFALAC
         switch (*aacLayout) {
         case kAudioChannelLayoutTag_Mono:
         case kAudioChannelLayoutTag_Stereo:
@@ -651,7 +653,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     if (!opts.isAAC()) {
         oasbd.mSampleRate = rate > 0 ? rate : iasbd.mSampleRate;
     }
-#ifndef REFALAC
+#ifdef QAAC
     else {
         if (rate > 0)
             oasbd.mSampleRate =
@@ -681,7 +683,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 processor(new SoxDSPProcessor(engine, chain.back()));
             chain.push_back(processor);
         } else {
-#ifdef REFALAC
+#ifndef QAAC
             oasbd.mSampleRate = iasbd.mSampleRate;
             LOG(L"WARNING: --rate requires libsoxrate\n");
 #else
@@ -836,7 +838,23 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
     sink.finishWrite();
 }
 
-#ifndef REFALAC
+#ifdef QAAC
+static
+std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
+                                 const Options &opts,
+                                 const std::vector<uint8_t> &cookie)
+{
+    if (opts.is_adts)
+        return std::make_shared<ADTSSink>(ofilename, cookie);
+    else if (opts.isALAC())
+        return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
+    else if (opts.isAAC())
+        return std::make_shared<MP4Sink>(ofilename, cookie,
+                                         opts.output_format,
+                                         !opts.no_optimize);
+    throw std::runtime_error("XXX");
+}
+
 static
 std::wstring get_encoder_config(AudioConverterX &converter)
 {
@@ -865,22 +883,6 @@ std::wstring get_encoder_config(AudioConverterX &converter)
     value = converter.getCodecQuality();
     s += strutil::format(L", Quality %d", value);
     return s;
-}
-
-static
-std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
-                                 const Options &opts,
-                                 const std::vector<uint8_t> &cookie)
-{
-    if (opts.is_adts)
-        return std::make_shared<ADTSSink>(ofilename, cookie);
-    else if (opts.isALAC())
-        return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
-    else if (opts.isAAC())
-        return std::make_shared<MP4Sink>(ofilename, cookie,
-                                         opts.output_format,
-                                         !opts.no_optimize);
-    throw std::runtime_error("XXX");
 }
 
 static
@@ -1090,7 +1092,8 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
         asink->close();
     }
 }
-#else // REFALAC
+#endif // QAAC
+#ifdef REFALAC
 
 static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
@@ -1297,7 +1300,7 @@ int wmain1(int argc, wchar_t **argv)
 
         std::string encoder_name;
         encoder_name = strutil::format(PROGNAME " %s", get_qaac_version());
-#ifndef REFALAC
+#ifdef QAAC
         __pfnDliFailureHook2 = DllImportHook;
         set_dll_directories(opts.verbose);
         HMODULE hDll = LoadLibraryW(L"CoreAudioToolbox.dll");
@@ -1339,7 +1342,7 @@ int wmain1(int argc, wchar_t **argv)
             }
             return 0;
         }
-#ifndef REFALAC
+#ifdef QAAC
         if (opts.print_available_formats) {
             show_available_aac_settings();
             return 0;

@@ -1,6 +1,6 @@
 #include "inputfactory.h"
 #include "win32util.h"
-#ifndef REFALAC
+#ifdef QAAC
 #include "afsource.h"
 #else
 #include "alacsrc.h"
@@ -51,13 +51,13 @@ namespace input {
 
         if (libtak.loaded() && libtak.compatible())
             TRY_MAKE_SHARED(TakSource, libtak, fp);
-#ifndef REFALAC
+#ifdef QAAC
         TRY_MAKE_SHARED(ExtAFSource, fp);
 #endif
         if (libsndfile.loaded())
             TRY_MAKE_SHARED(LibSndfileSource, libsndfile, fp);
 
-#ifdef REFALAC
+#ifndef QAAC
         TRY_MAKE_SHARED(ALACSource, fp);
 #endif
         throw std::runtime_error("Not available input file format");

@@ -86,7 +86,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;REFALAC;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;REFALAC;NO_COREAUDIO;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -106,7 +106,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;REFALAC;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;REFALAC;NO_COREAUDIO;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -128,7 +128,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;REFALAC;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;REFALAC;NO_COREAUDIO;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <StringPooling>true</StringPooling>
@@ -154,7 +154,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;REFALAC;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;REFALAC;NO_COREAUDIO;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <StringPooling>true</StringPooling>
