@@ -114,8 +114,9 @@ void CueTrack::iTunesTags(std::map<uint32_t, std::wstring> *tags) const
             ikey = Tag::kComposer;
         if (ikey) result[ikey] = it->second;
     }
-    result[Tag::kTrack] = strutil::format(L"%d/%d", number(),
-                                          m_cuesheet->count());
+    CueSheet::const_iterator last = m_cuesheet->end() - 1;
+    result[Tag::kTrack] =
+        strutil::format(L"%d/%d", number(), last->number());
     std::map<uint32_t, std::wstring>::iterator iaa
         = result.find(Tag::kAlbumArtist);
     if (result.find(Tag::kArtist) == result.end() && iaa != result.end())
@@ -317,9 +318,14 @@ void CueSheet::parseIndex(const std::wstring *args)
     segment.m_begin = nframes;
     if (no > 0)
         m_tracks.back().addSegment(segment);
-    else if (m_tracks.size() > 1) {
-        /* add INDEX00 to previous track's end */
-        segment.m_index = 0x7fffffff;
+    else {
+        if (m_tracks.size() == 1) {
+            /* HTOA */
+            m_tracks.insert(m_tracks.begin(), CueTrack(this, 0));
+            m_tracks[0].setTag(L"title", L"(HTOA)");
+            segment.m_index = 1;
+        } else
+            segment.m_index = 0x7fffffff;
         m_tracks[m_tracks.size() - 2].addSegment(segment);
     }
 }
