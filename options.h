@@ -13,7 +13,7 @@ struct Options {
         method(-1), bitrate(-1), quality(-1),
 
         rate(-1), verbose(1), lowpass(0), native_resampler_quality(-1),
-        delay(0), chanmask(-1),
+        chanmask(-1),
 
         bits_per_sample(0), raw_channels(2), raw_sample_rate(44100),
         artwork_size(0), native_resampler_complexity(0), textcp(0),
@@ -21,7 +21,7 @@ struct Options {
         ofilename(0), outdir(0), raw_format(L"S16LE"),
         fname_format(L"${tracknumber}${title& }${title}"),
         chapter_file(0), logfilename(0), remix_preset(0), remix_file(0),
-        tmpdir(0),
+        tmpdir(0), delay(0),
 
         is_raw(false), is_adts(false), save_stat(false), nice(false),
         native_chanmapper(false), ignore_length(false), no_optimize(false),
@@ -66,14 +66,14 @@ struct Options {
 
     int32_t method, bitrate, quality;
     int rate; /* -1: keep, 0: auto, others: literal value */
-    int verbose, lowpass, native_resampler_quality, delay;
+    int verbose, lowpass, native_resampler_quality;
     int chanmask; /*     -1: honor chanmask in the source(default)
                           0: ignore chanmask in the source
                      others: use the value as chanmask     */
     uint32_t bits_per_sample, raw_channels, raw_sample_rate,
              artwork_size, native_resampler_complexity, textcp;
     wchar_t *ofilename, *outdir, *raw_format, *fname_format, *chapter_file,
-            *logfilename, *remix_preset, *remix_file, *tmpdir;
+            *logfilename, *remix_preset, *remix_file, *tmpdir, *delay;
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,
          ignore_length, no_optimize, native_resampler, check_only,
          normalize, print_available_formats, alac_fast, threading,

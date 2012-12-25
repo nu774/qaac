@@ -549,26 +549,57 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
 }
 
 static
+bool parse_timespec(const wchar_t *spec, double sample_rate, int64_t *result)
+{
+    int hh, mm, sign = 1;
+    wchar_t a, b;
+    double ss;
+    if (!spec || !*spec)
+        return false;
+    if (std::swscanf(spec, L"%lld%c%c", result, &a, &b) == 2 && a == L's')
+        return true;
+    if (spec[0] == L'-') {
+        sign = -1;
+        ++spec;
+    }
+    if (std::swscanf(spec, L"%d:%d:%lf%c", &hh, &mm, &ss, &a) == 3)
+        ss = ss + ((hh * 60.0) + mm) * 60.0;
+    else if (std::swscanf(spec, L"%d:%lf%c", &mm, &ss, &a) == 2)
+        ss = ss + mm * 60.0;
+    else if (std::swscanf(spec, L"%lf%c", &ss, &a) != 1)
+        return false;
+
+    *result = sign * static_cast<int64_t>(sample_rate * ss + .5);
+    return true;
+}
+
+static
 std::shared_ptr<ISeekableSource>
 delayed_source(const std::shared_ptr<ISeekableSource> &src,
                const Options & opts)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     double rate = asbd.mSampleRate;
-    if (opts.delay > 0) {
-        int nsamples = lrint(0.001 * opts.delay * rate);
+    int64_t delay;
+    if (!opts.delay)
+        return src;
+    if (!parse_timespec(opts.delay, rate, &delay))
+        throw std::runtime_error("Invalid time spec for --delay");
+    if (delay > 0) {
         if (opts.verbose > 1 || opts.logfilename)
-            LOG(L"Delay of %dms: pad %d samples\n", opts.delay, nsamples);
+            LOG(L"Prepend %lld samples (%g seconds)\n", delay,
+                static_cast<double>(delay) / rate);
         std::shared_ptr<CompositeSource> cp(new CompositeSource());
         std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
-        cp->addSource(std::make_shared<TrimmedSource>(ns, 0, nsamples));
+        cp->addSource(std::make_shared<TrimmedSource>(ns, 0, delay));
         cp->addSource(src);
         return cp;
-    } else if (opts.delay < 0) {
-        int nsamples = lrint(-0.001 * opts.delay * rate);
+    } else if (delay < 0) {
+        delay *= -1;
         if (opts.verbose > 1 || opts.logfilename)
-            LOG(L"Delay of %dms: truncate %d samples\n", opts.delay, nsamples);
-        return std::make_shared<TrimmedSource>(src, nsamples, ~0ULL);
+            LOG(L"Trim %lld samples (%g seconds)\n", delay,
+                static_cast<double>(delay) / rate);
+        return std::make_shared<TrimmedSource>(src, delay, ~0ULL);
     }
     return src;
 }

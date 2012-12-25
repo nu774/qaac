@@ -149,10 +149,15 @@ void usage()
 "                       avoid clipping introduced by DSP.\n"
 "-N, --normalize        Normalize (works in two pass. generates HUGE tempfile\n"
 "                       for large input)\n"
-"--delay <millisecs>    When positive value is given, prepend silence at the\n"
+"--delay <[[hh:]mm:]ss[.ss..]|ns>\n"
+"                       Specify delay either by time or number of samples.\n"
+"                       When positive value is given, prepend silence at the\n"
 "                       begining to achieve delay of specified amount.\n"
 "                       When negative value is given, specified length is\n"
 "                       dropped from the beginning.\n"
+"                       Example:\n"
+"                         --delay -2112s : trim 2112 samples at beginning\n"
+"                         --delay 1.234  : prepend 1.234 seconds silence\n"
 "--matrix-preset <name> Specify preset remixing matrix name.\n"
 "--matrix-file <file>   Specify file containing remixing matrix.\n"
 "--no-matrix-normalize  Don't automatically normalize(scale) matrix\n"
@@ -469,13 +474,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 return false;
             }
         }
-        else if (ch == 'dlay') {
-            if (std::swscanf(wide::optarg, L"%d", &this->delay) != 1) {
-                std::fputws(L"--delay requires an integer in millis.\n",
-                            stderr);
-                return false;
-            }
-        }
+        else if (ch == 'dlay')
+            this->delay = wide::optarg;
         else if (ch == 'txcp') {
             if (std::swscanf(wide::optarg, L"%u", &this->textcp) != 1) {
                 std::fputws(L"--text-codepage requires code page number.\n",
