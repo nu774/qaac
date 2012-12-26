@@ -460,14 +460,15 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
 {
     uint32_t nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
     const std::vector<uint32_t> *channels = chain.back()->getChannels();
+    std::vector<uint32_t> work;
     if (channels) {
         if (opts.verbose > 1) {
             LOG(L"Input layout: %hs\n",
                 chanmap::getChannelNames(*channels).c_str());
         }
         // reorder to Microsoft (USB) order
-        std::vector<uint32_t> work;
         chanmap::convertFromAppleLayout(*channels, &work);
+        channels = &work;
         std::vector<uint32_t> mapping;
         chanmap::getMappingToUSBOrder(work, &mapping);
         if (!util::is_increasing(mapping.begin(), mapping.end())) {
