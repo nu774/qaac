@@ -4,6 +4,7 @@
 #include "cuesheet.h"
 #include "cautil.h"
 #include "win32util.h"
+#include "chanmap.h"
 
 namespace flac {
     template <typename T> void try__(T expr, const char *msg)
@@ -220,7 +221,11 @@ void FLACSource::handleVorbisComment(
         strutil::Tokenizer<char> tokens(cs, "=");
         char *key = tokens.next();
         char *value = tokens.rest();
-        if (value) {
+        if (strcasecmp(key, "waveformatextensible_channel_mask") == 0) {
+            unsigned mask = 0;
+            if (sscanf(value, "%i", &mask) == 1)
+                chanmap::getChannels(mask, &m_chanmap);
+        } else if (value) {
             vorbisComments[key] = value;
             if (!strcasecmp(key, "cuesheet"))
                 cuesheet = strutil::us2w(value);

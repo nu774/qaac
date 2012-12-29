@@ -16,6 +16,7 @@ class FLACSource: public ISeekableSource, public ITagParser
     uint64_t m_length;
     int64_t m_position;
     std::shared_ptr<FILE> m_fp;
+    std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<chapters::entry_t> m_chapters;
     DecodeBuffer<int32_t> m_buffer;
@@ -28,7 +29,10 @@ public:
     {
         return m_asbd;
     }
-    const std::vector<uint32_t> *getChannels() const { return 0; }
+    const std::vector<uint32_t> *getChannels() const
+    {
+        return m_chanmap.size() ? &m_chanmap : 0;
+    }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
     bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
