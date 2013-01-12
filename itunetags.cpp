@@ -43,28 +43,58 @@ public:
             uint32_t fcc;
             void (ShortTagWriter::*mf)(const char *, const char *);
         } handlers[] = {
-            { Tag::kTrack,              &ShortTagWriter::setTrack       },
-            { Tag::kDisk,               &ShortTagWriter::setDisk        },
-            { Tag::kGenre,              &ShortTagWriter::setGenre       },
-            { Tag::kGenreID3,           &ShortTagWriter::setGenre       },
-            { Tag::kCompilation,        &ShortTagWriter::setInt8        },
-            { Tag::kTempo,              &ShortTagWriter::setInt16       },
-            { Tag::kArtwork,            &ShortTagWriter::ignore         },
-            { Tag::kTvSeason,           &ShortTagWriter::setInt32       },
-            { Tag::kTvEpisode,          &ShortTagWriter::setInt32       },
-            { Tag::kPodcast,            &ShortTagWriter::setInt8        },
-            { Tag::kHDVideo,            &ShortTagWriter::setInt8        },
-            { Tag::kMediaType,          &ShortTagWriter::setMediaType   },
-            { Tag::kContentRating,      &ShortTagWriter::setRating      },
-            { Tag::kGapless,            &ShortTagWriter::setInt8        },
-            { Tag::kiTunesAccountType,  &ShortTagWriter::setAccountType },
-            { Tag::kiTunesCountry,      &ShortTagWriter::setCountryCode },
-            { Tag::kcontentID,          &ShortTagWriter::setInt32       },
-            { Tag::kartistID,           &ShortTagWriter::setInt32       },
-            { Tag::kplaylistID,         &ShortTagWriter::setInt64       },
-            { Tag::kgenreID,            &ShortTagWriter::setInt32       },
-            { Tag::kcomposerID,         &ShortTagWriter::setInt32       },
-            { 0,                        0                               }
+            { Tag::kAlbum,                &ShortTagWriter::setString      },
+            { Tag::kAlbumArtist,          &ShortTagWriter::setString      },
+            { Tag::kArtist,               &ShortTagWriter::setString      },
+            { Tag::kComment,              &ShortTagWriter::setString      },
+            { Tag::kComposer,             &ShortTagWriter::setString      },
+            { Tag::kCopyright,            &ShortTagWriter::setString      },
+            { Tag::kDate,                 &ShortTagWriter::setString      },
+            { Tag::kDescription,          &ShortTagWriter::setString      },
+            { Tag::kGrouping,             &ShortTagWriter::setString      },
+            { Tag::kLongDescription,      &ShortTagWriter::setString      },
+            { Tag::kLyrics,               &ShortTagWriter::setString      },
+            { Tag::kSubTitle,             &ShortTagWriter::setString      },
+            { Tag::kTitle,                &ShortTagWriter::setString      },
+            { Tag::kTool,                 &ShortTagWriter::setString      },
+            { Tag::kTrack,                &ShortTagWriter::setTrack       },
+            { Tag::kDisk,                 &ShortTagWriter::setDisk        },
+            { Tag::kGenre,                &ShortTagWriter::setGenre       },
+            { Tag::kGenreID3,             &ShortTagWriter::setGenre       },
+            { Tag::kCompilation,          &ShortTagWriter::setInt8        },
+            { Tag::kTempo,                &ShortTagWriter::setInt16       },
+            { Tag::kArtwork,              &ShortTagWriter::ignore         },
+            { Tag::kTvSeason,             &ShortTagWriter::setInt32       },
+            { Tag::kTvEpisode,            &ShortTagWriter::setInt32       },
+            { Tag::kPodcast,              &ShortTagWriter::setInt8        },
+            { Tag::kHDVideo,              &ShortTagWriter::setInt8        },
+            { Tag::kMediaType,            &ShortTagWriter::setMediaType   },
+            { Tag::kContentRating,        &ShortTagWriter::setRating      },
+            { Tag::kGapless,              &ShortTagWriter::setInt8        },
+            { Tag::kiTunesAccountType,    &ShortTagWriter::setAccountType },
+            { Tag::kiTunesCountry,        &ShortTagWriter::setCountryCode },
+            { Tag::kcontentID,            &ShortTagWriter::setInt32       },
+            { Tag::kartistID,             &ShortTagWriter::setInt32       },
+            { Tag::kplaylistID,           &ShortTagWriter::setInt64       },
+            { Tag::kgenreID,              &ShortTagWriter::setInt32       },
+            { Tag::kcomposerID,           &ShortTagWriter::setInt32       },
+            { 'apID',                     &ShortTagWriter::setString      },
+            { 'catg',                     &ShortTagWriter::setString      },
+            { 'keyw',                     &ShortTagWriter::setString      },
+            { 'purd',                     &ShortTagWriter::setString      },
+            { 'purl',                     &ShortTagWriter::setString      },
+            { 'soaa',                     &ShortTagWriter::setString      },
+            { 'soal',                     &ShortTagWriter::setString      },
+            { 'soar',                     &ShortTagWriter::setString      },
+            { 'soco',                     &ShortTagWriter::setString      },
+            { 'sonm',                     &ShortTagWriter::setString      },
+            { 'sosn',                     &ShortTagWriter::setString      },
+            { 'tven',                     &ShortTagWriter::setString      },
+            { 'tvnn',                     &ShortTagWriter::setString      },
+            { 'tvsh',                     &ShortTagWriter::setString      },
+            { 'xid ',                     &ShortTagWriter::setString      },
+            { FOURCC('\xa9','e','n','c'), &ShortTagWriter::setString      },
+            { 0,                          0                               }
         };
         for (handler_t *p = handlers; p->fcc; ++p) {
             if (fcc == p->fcc) {
@@ -72,7 +102,6 @@ public:
                 return;
             }
         }
-        setString(fcc.svalue, sv.c_str());
     }
 private:
     void setTrack(const char *fcc, const char *value)
