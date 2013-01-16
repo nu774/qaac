@@ -143,8 +143,9 @@ void MP4SinkBase::close()
 }
 
 MP4Sink::MP4Sink(const std::wstring &path,
-        const std::vector<uint8_t> &cookie, uint32_t fcc, bool temp)
-        : MP4SinkBase(path, temp)
+        const std::vector<uint8_t> &cookie, uint32_t fcc, uint32_t trim,
+        bool temp)
+        : MP4SinkBase(path, temp), m_sample_id(0), m_trim(trim)
 {
     std::vector<uint8_t> config;
     parseMagicCookieAAC(cookie, &config);

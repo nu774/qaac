@@ -316,7 +316,12 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
     if (opts.isAAC() && stat->samplesWritten()) {
         CoreAudioEncoder *caencoder =
             dynamic_cast<CoreAudioEncoder*>(encoder);
-        editor.setGaplessInfo(caencoder->getGaplessInfo());
+        AudioFilePacketTableInfo pti = caencoder->getGaplessInfo();
+        if (opts.no_delay) {
+            pti.mPrimingFrames = 0;
+            pti.mNumberValidFrames -= (1024*3 - 2112);
+        }
+        editor.setGaplessInfo(pti);
     }
 #endif
     editor.setArtworkSize(opts.artwork_size);
@@ -581,11 +586,21 @@ delayed_source(const std::shared_ptr<ISeekableSource> &src,
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     double rate = asbd.mSampleRate;
-    int64_t delay;
-    if (!opts.delay)
+    int64_t delay = 0;
+    if (!opts.delay && !opts.no_delay)
         return src;
-    if (!parse_timespec(opts.delay, rate, &delay))
+    if (opts.delay && !parse_timespec(opts.delay, rate, &delay))
         throw std::runtime_error("Invalid time spec for --delay");
+    if (opts.no_delay) {
+        /*
+         * We prepend silence here so that
+         * (total amount of delay) = 3 * 1024
+         * Then chop off first 3 AAC frames later, and tweak iTunSMPB to
+         * reflect it.
+         */
+        int shift = opts.isSBR() ? 1 : 0;
+        delay += (1024*3 - 2112) << shift;
+    }
     if (delay > 0) {
         if (opts.verbose > 1 || opts.logfilename)
             LOG(L"Prepend %lld samples (%g seconds)\n", delay,
@@ -883,6 +898,7 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     else if (opts.isAAC())
         return std::make_shared<MP4Sink>(ofilename, cookie,
                                          opts.output_format,
+                                         opts.no_delay ? 3 : 0,
                                          !opts.no_optimize);
     throw std::runtime_error("XXX");
 }

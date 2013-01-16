@@ -29,6 +29,7 @@ static wide::option long_options[] = {
     { L"normalize", no_argument, 0, 'N' },
     { L"gain", required_argument, 0, 'gain' },
     { L"delay", required_argument, 0, 'dlay' },
+    { L"no-delay", no_argument, 0, 'ndly' },
     { L"matrix-preset", required_argument, 0, 'mixp' },
     { L"matrix-file", required_argument, 0, 'mixm' },
     { L"no-matrix-normalize", no_argument, 0, 'nmxn' },
@@ -158,6 +159,11 @@ void usage()
 "                       Example:\n"
 "                         --delay -2112s : trim 2112 samples at beginning\n"
 "                         --delay 1.234  : prepend 1.234 seconds silence\n"
+"--no-delay             Compensate encoder delay by prepending 960 samples \n"
+"                       of scilence, then trimming 3 AAC frames from \n"
+"                       the beginning (and also tweak iTunSMPB).\n"
+"                       This option is mainly intended for resolving\n"
+"                       resolving A/V sync issue of video. \n"
 "--matrix-preset <name> Specify preset remixing matrix name.\n"
 "--matrix-file <file>   Specify file containing remixing matrix.\n"
 "--no-matrix-normalize  Don't automatically normalize(scale) matrix\n"
@@ -476,6 +482,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
         }
         else if (ch == 'dlay')
             this->delay = wide::optarg;
+        else if (ch == 'ndly')
+            this->no_delay = true;
         else if (ch == 'txcp') {
             if (std::swscanf(wide::optarg, L"%u", &this->textcp) != 1) {
                 std::fputws(L"--text-codepage requires code page number.\n",

@@ -217,7 +217,7 @@ public:
 void TagEditor::save(MP4FileX &file)
 {
     try {
-        if (m_encoder_delay && m_nsamples) {
+        if ((m_encoder_delay || m_padding) && m_nsamples) {
             std::wstring value = strutil::format(iTunSMPB_template,
                                         m_encoder_delay,
                                         m_padding,
