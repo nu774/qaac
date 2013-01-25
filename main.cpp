@@ -45,6 +45,14 @@
 #define PROGNAME "qaac"
 #endif
 
+bool g_interrupted = false;
+
+BOOL WINAPI console_interrupt_handler(DWORD type)
+{
+    g_interrupted = true;
+    return TRUE;
+}
+
 inline
 std::wstring errormsg(const std::exception &ex)
 {
@@ -242,7 +250,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
                       src->getSampleFormat().mSampleRate);
     try {
         FILE *statfp = statPtr.get();
-        while (encoder->encodeChunk(1)) {
+        while (!g_interrupted && encoder->encodeChunk(1)) {
             progress.update(src->getPosition());
             if (statfp)
                 std::fwprintf(statfp, L"%g\n", stat->currentBitrate());
@@ -379,7 +387,7 @@ static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
     uint64_t n = 0, rc;
     Progress progress(opts.verbose, src->length(),
                       src->getSampleFormat().mSampleRate);
-    while ((rc = normalizer->process(4096)) > 0) {
+    while (!g_interrupted && (rc = normalizer->process(4096)) > 0) {
         n += rc;
         progress.update(src->getPosition());
     }
@@ -874,7 +882,8 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
     std::vector<uint8_t> buffer(4096 * bpf);
     try {
         size_t nread;
-        while ((nread = src->readSamples(&buffer[0], 4096)) > 0) {
+        while (!g_interrupted &&
+               (nread = src->readSamples(&buffer[0], 4096)) > 0) {
             progress.update(src->getPosition());
             sink.writeSamples(&buffer[0], nread * bpf, nread);
         }
@@ -1430,8 +1439,9 @@ int wmain1(int argc, wchar_t **argv)
             else
                 load_track(ifilename, opts, tracks);
         }
+        SetConsoleCtrlHandler(console_interrupt_handler, TRUE);
         if (!opts.concat) {
-            for (size_t i = 0; i < tracks.size(); ++i) {
+            for (size_t i = 0; i < tracks.size() && !g_interrupted; ++i) {
                 playlist::Track &track = tracks[i];
                 std::wstring ofilename =
                     get_output_filename(track.ofilename.c_str(), opts);
@@ -1459,7 +1469,8 @@ int wmain1(int argc, wchar_t **argv)
                                          "only supported for ADTS output");
             std::vector<playlist::Playlist>::const_iterator group;
             playlist::Playlist::const_iterator track;
-            for (group = groups.begin(); group != groups.end(); ++group) { 
+            for (group = groups.begin();
+                 group != groups.end() && !g_interrupted; ++group) { 
                 std::shared_ptr<CompositeSource> cs
                     = std::make_shared<CompositeSource>();
                 for (track = group->begin(); track != group->end(); ++track)
