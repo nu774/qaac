@@ -1424,7 +1424,10 @@ int wmain1(int argc, wchar_t **argv)
                 if (opts.isMP4())
                     throw std::runtime_error("MP4 piping is not supported");
                 opts.ofilename = L"-";
-                _dup2(win32::create_named_pipe(ws), 1);
+                int pipe = win32::create_named_pipe(ws);
+                _close(1);
+                _dup2(pipe, 1);
+                _close(pipe);
                 _setmode(1, _O_BINARY);
             }
         }
