@@ -45,8 +45,9 @@
 #define PROGNAME "qaac"
 #endif
 
-bool g_interrupted = false;
+static volatile bool g_interrupted = false;
 
+static
 BOOL WINAPI console_interrupt_handler(DWORD type)
 {
     g_interrupted = true;
