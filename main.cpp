@@ -60,13 +60,6 @@ std::wstring errormsg(const std::exception &ex)
     return strutil::us2w(ex.what());
 }
 
-std::wstring get_module_directory()
-{
-    std::wstring selfpath = win32::GetModuleFileNameX(0);
-    const wchar_t *fpos = PathFindFileNameW(selfpath.c_str());
-    return selfpath.substr(0, fpos - selfpath.c_str());
-}
-
 static
 void load_lyrics_file(Options *opts)
 {
@@ -407,7 +400,7 @@ std::shared_ptr<FILE> open_config_file(const wchar_t *file)
     wchar_t path[MAX_PATH];
     if (SUCCEEDED(SHGetFolderPathW(0, CSIDL_APPDATA, 0, 0, path)))
         search_paths.push_back(strutil::format(L"%s\\%s", path, L"qaac"));
-    search_paths.push_back(get_module_directory());
+    search_paths.push_back(win32::get_module_directory());
     for (size_t i = 0; i < search_paths.size(); ++i) {
         try {
             std::wstring pathtry =
@@ -1085,7 +1078,7 @@ void set_dll_directories(int verbose)
                     reinterpret_cast<LPBYTE>(&vec[0]), &size));
         searchPaths = strutil::format(L"%s;%s", &vec[0], searchPaths.c_str());
     } catch (const std::exception &) {}
-    std::wstring dir = get_module_directory() + L"QTfiles";
+    std::wstring dir = win32::get_module_directory() + L"QTfiles";
     searchPaths = strutil::format(L"%s;%s", dir.c_str(), searchPaths.c_str());
     SetEnvironmentVariableW(L"PATH", searchPaths.c_str());
 }
