@@ -152,6 +152,9 @@ namespace strutil {
             return m_tok;
         }
     };
+
+    bool parse_numeric_ranges(const wchar_t *s, std::vector<int> *nums,
+                              int vmin=0, int vmax=99);
 }
 
 #endif

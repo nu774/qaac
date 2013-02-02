@@ -49,6 +49,7 @@ static wide::option long_options[] = {
     { L"raw-format", required_argument, 0,  'Rfmt' },
     { L"ignorelength", no_argument, 0, 'i' },
     { L"concat", no_argument, 0, 'cat ' },
+    { L"cue-tracks", required_argument, 0, 'ctrk' },
     { L"fname-from-tag", no_argument, 0, 'fftg' },
     { L"fname-format", required_argument, 0, 'nfmt' },
     { L"log", required_argument, 0, 'log ' },
@@ -201,6 +202,19 @@ void usage()
 "-o <filename>          Output filename\n"
 "--concat               Encode whole inputs into single file. \n"
 "                       Requires output filename (with -o)\n"
+"\n"
+"Option for cuesheet input only:\n"
+"--cue-tracks <n[-n][,n[-n]]*>\n"
+"                       Limit extraction to specified tracks.\n"
+"                       Tracks can be specified with comma separated numbers.\n"
+"                       Hyphen can be used to denote range of numbers.\n"
+"                       Tracks non-existent in the cue are just ignored.\n"
+"                       Numbers must be in the range 0-99.\n"
+"                       Example:\n"
+"                         --cue-tracks 1-3,6-9,11\n"
+"                           -> equivalent to --cue-tracks 1,2,3,6,7,8,9,11\n"
+"                         --cue-tracks 2-99\n"
+"                           -> can be used to skip first track (and HTOA)\n"
 "\n"
 "Options for Raw PCM input only:\n"
 "-R, --raw              Raw PCM input.\n"
@@ -495,6 +509,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
             if (std::swscanf(wide::optarg, L"%u", &this->textcp) != 1) {
                 std::fputws(L"--text-codepage requires code page number.\n",
                             stderr);
+                return false;
+            }
+        }
+        else if (ch == 'ctrk') {
+            if (!strutil::parse_numeric_ranges(wide::optarg,
+                                               &this->cue_tracks)) {
+                std::fputws(L"Invalid arg for --cue-tracks.\n", stderr);
                 return false;
             }
         }

@@ -122,4 +122,45 @@ namespace strutil {
         return std::wstring(&buffer[0], &buffer[rc]);
     }
 #endif
+
+    /*
+     * NUMBER ::= [0-9]+
+     * TERM ::= NUMBER | NUMBER"-"NUMBER
+     * RANGES ::= TERM | RANGES","TERM
+     */
+    bool parse_numeric_ranges(const wchar_t *s, std::vector<int> *nums,
+                              int vmin, int vmax)
+    {
+        enum { NUMBER, TERM };
+        wchar_t *end;
+        std::vector<int> result;
+        int n, state = NUMBER;
+
+        do {
+            n = wcstoul(s, &end, 10);
+            if (end == s || n < vmin || n > vmax)
+                return false;
+            if (state == NUMBER)
+                result.push_back(n);
+            else if (result.back() > n)
+                return false;
+            else {
+                /* XXX: can consume HUGE memory depending on vmin and vmax */
+                for (int k = result.back() + 1; k <= n; ++k)
+                    result.push_back(k);
+            }
+            if (*end == L',')
+                state = NUMBER;
+            else if (*end == L'-') {
+                if (state == TERM)
+                    return false;
+                else
+                    state = TERM;
+            } else if (*end)
+                return false;
+        } while (*end && (s = end + 1));
+
+        nums->swap(result);
+        return true;
+    }
 }

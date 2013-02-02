@@ -198,6 +198,7 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
             playlist::generateFileName(fname_format, track_tags) + L".stub";
 
         playlist::Track new_track;
+        new_track.number = track->number();
         new_track.name = track->name();
         new_track.source = track_source;
         new_track.ofilename = ofilename;

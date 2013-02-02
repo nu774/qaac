@@ -1440,6 +1440,12 @@ int wmain1(int argc, wchar_t **argv)
         if (!opts.concat) {
             for (size_t i = 0; i < tracks.size() && !g_interrupted; ++i) {
                 playlist::Track &track = tracks[i];
+                if (opts.cue_tracks.size()) {
+                    if (std::find(opts.cue_tracks.begin(),
+                                  opts.cue_tracks.end(), track.number)
+                        == opts.cue_tracks.end())
+                        continue;
+                }
                 std::wstring ofilename =
                     get_output_filename(track.ofilename.c_str(), opts);
                 LOG(L"\n%s\n",
@@ -1470,8 +1476,15 @@ int wmain1(int argc, wchar_t **argv)
                  group != groups.end() && !g_interrupted; ++group) { 
                 std::shared_ptr<CompositeSource> cs
                     = std::make_shared<CompositeSource>();
-                for (track = group->begin(); track != group->end(); ++track)
+                for (track = group->begin(); track != group->end(); ++track) {
+                    if (opts.cue_tracks.size()) {
+                        if (std::find(opts.cue_tracks.begin(),
+                                      opts.cue_tracks.end(), track->number)
+                            == opts.cue_tracks.end())
+                            continue;
+                    }
                     cs->addSourceWithChapter(track->source, track->name);
+                }
                 std::shared_ptr<ISeekableSource> src(delayed_source(cs, opts));
                 src->seekTo(0);
 #ifdef REFALAC

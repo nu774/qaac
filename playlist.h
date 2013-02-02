@@ -10,6 +10,7 @@
 
 namespace playlist {
     struct Track {
+        unsigned number;
         std::wstring name;
         std::shared_ptr<ISeekableSource> source;
         std::wstring ofilename;

@@ -87,6 +87,7 @@ struct Options {
     std::vector<std::wstring> artworks;
     std::wstring encoder_name;
     std::vector<uint32_t> chanmap;
+    std::vector<int> cue_tracks;
 };
 
 #endif
