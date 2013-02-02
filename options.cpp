@@ -303,6 +303,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch < 0xff && (pos = strutil::strindex("cavV", ch)) >= 0) {
             if ((this->output_format && !isAAC()) || this->method != -1) {
                 std::fputws(L"Encoding mode options are exclusive.\n", stderr);
+                return false;
             }
             this->method = pos;
             if (std::swscanf(wide::optarg, L"%u", &this->bitrate) != 1) {
@@ -455,10 +456,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 std::fputws(L"--raw-channels requires an integer.\n", stderr);
                 return false;
             }
-            if (this->raw_channels == 0)
+            if (this->raw_channels == 0) {
                 std::fputws(L"Invalid --raw-channels value.\n", stderr);
-            if (this->raw_channels > 8)
+                return false;
+            }
+            if (this->raw_channels > 8) {
                 std::fputws(L"--raw-channels too large.\n", stderr);
+                return false;
+            }
         }
         else if (ch == 'Rrat') {
             if (std::swscanf(wide::optarg, L"%u",
@@ -466,8 +471,10 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 std::fputws(L"--raw-rate requires an integer.\n", stderr);
                 return false;
             }
-            if (this->raw_sample_rate == 0)
+            if (this->raw_sample_rate == 0) {
                 std::fputws(L"Invalid --raw-rate value.\n", stderr);
+                return false;
+            }
         }
         else if (ch == 'Rfmt')
             this->raw_format = wide::optarg;
