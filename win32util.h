@@ -7,6 +7,7 @@
 #include <vector>
 #include <io.h>
 #include <fcntl.h>
+#include <share.h>
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -89,7 +90,10 @@ namespace win32 {
     inline FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
     {
         std::wstring fullpath = win32::prefixed_path(path);
-        FILE *fp = _wfopen(fullpath.c_str(), mode);
+        int share = _SH_DENYRW;
+        if (std::wcschr(mode, L'r') && !std::wcschr(mode, L'+'))
+            share = _SH_DENYWR;
+        FILE *fp = _wfsopen(fullpath.c_str(), mode, share);
         if (!fp)
             util::throw_crt_error(fullpath.c_str());
         return fp;
