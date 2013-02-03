@@ -82,13 +82,11 @@ StandardFileProvider::open( std::string name, Mode mode )
 
         case MODE_MODIFY:
             access |= GENERIC_READ | GENERIC_WRITE;
-            share  |= FILE_SHARE_READ;
             crdisp |= OPEN_EXISTING;
             break;
 
         case MODE_CREATE:
             access |= GENERIC_READ | GENERIC_WRITE;
-            share  |= FILE_SHARE_READ;
             crdisp |= CREATE_ALWAYS;
             break;
     }

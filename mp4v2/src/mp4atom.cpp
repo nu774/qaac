@@ -658,8 +658,7 @@ void MP4Atom::Dump(uint8_t indent, bool dumpImplicits)
         if( can.length() )
             can.resize( can.length() - 1 );
 
-        log.dump(indent, MP4_LOG_VERBOSE1, "\"%s\": type %s (%s)",
-                 GetFile().GetFilename().c_str(),
+        log.dump(indent, MP4_LOG_VERBOSE1, "type %s (%s)",
                  m_type, can.c_str() );
     }
 
@@ -673,8 +672,7 @@ void MP4Atom::Dump(uint8_t indent, bool dumpImplicits)
         /* skip details of tables unless we're told to be verbose */
         if (m_pProperties[i]->GetType() == TableProperty
                 && (log.verbosity < MP4_LOG_VERBOSE2)) {
-            log.dump(indent + 1, MP4_LOG_VERBOSE1, "\"%s\": <table entries suppressed>",
-                     GetFile().GetFilename().c_str() );
+            log.dump(indent + 1, MP4_LOG_VERBOSE1, "<table entries suppressed>" );
             continue;
         }
 
