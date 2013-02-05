@@ -42,10 +42,18 @@ ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
 uint32_t ALACEncoderX::encodeChunk(UInt32 npackets)
 {
     const AudioStreamBasicDescription &asbd = getInputDescription();
-    uint32_t n = 0;
+    uint32_t n = 0, nread = 0;
+    size_t nsamples = 0;
     for (n = 0; n < npackets; ++n) {
-        size_t nsamples =
-            m_src->readSamples(&m_input_buffer[0], kALACDefaultFramesPerPacket);
+        uint8_t *bp = &m_input_buffer[0];
+        while (nsamples < kALACDefaultFramesPerPacket) {
+            nread = kALACDefaultFramesPerPacket - nsamples;
+            nread = m_src->readSamples(bp, nread);
+            if (nread == 0)
+                break;
+            bp += nread * asbd.mBytesPerFrame;
+            nsamples += nread;
+        }
         if (nsamples == 0)
             break;
         m_stat.updateRead(nsamples);
