@@ -6,8 +6,8 @@
 /* non-thread safe */
 class Log {
     std::vector<std::shared_ptr<FILE> > m_streams;
+    DWORD m_stderr_type;
     static Log *m_instance;
-    Log() {}
 public:
     static Log *instance()
     {
@@ -17,7 +17,9 @@ public:
     bool is_enabled() { return m_streams.size() != 0; }
     void enable_stderr()
     {
-        m_streams.push_back(std::shared_ptr<FILE>(stderr, std::fclose));
+        struct Lambda { static void call(FILE*) {} };
+        if (m_stderr_type != FILE_TYPE_UNKNOWN)
+            m_streams.push_back(std::shared_ptr<FILE>(stderr, Lambda::call));
     }
     void enable_file(const wchar_t *filename)
     {
@@ -32,6 +34,12 @@ public:
     {
         for (size_t i = 0; i < m_streams.size(); ++i)
             std::vfwprintf(m_streams[i].get(), fmt, args);
+    }
+private:
+    Log()
+    {
+        long h = _get_osfhandle(_fileno(stderr));
+        m_stderr_type = GetFileType(reinterpret_cast<HANDLE>(h));
     }
 };
 

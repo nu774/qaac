@@ -176,7 +176,8 @@ public:
             std::vector<wchar_t> s(m_message.size() + 1);
             std::wcscpy(&s[0], m_message.c_str());
             strutil::squeeze(&s[0], L"\r");
-            SetConsoleTitleW(strutil::format(L"%hs %s", PROGNAME, &s[0]).c_str());
+            std::wstring msg = strutil::format(L"%hs %s", PROGNAME, &s[0]);
+            SetConsoleTitleW(msg.c_str());
         }
     }
 };
@@ -189,18 +190,21 @@ class Progress {
     std::wstring m_tstamp;
     Timer m_timer;
     bool m_console_visible;
+    DWORD m_stderr_type;
 public:
     Progress(bool verbosity, uint64_t total, uint32_t rate)
         : m_disp(100, verbosity), m_verbose(verbosity),
           m_total(total), m_rate(rate)
     {
+        long h = _get_osfhandle(_fileno(stderr));
+        m_stderr_type = GetFileType(reinterpret_cast<HANDLE>(h));
         m_console_visible = IsWindowVisible(GetConsoleWindow());
         if (total != ~0ULL)
             m_tstamp = formatSeconds(static_cast<double>(total) / rate);
     }
     void update(uint64_t current)
     {
-        if (!m_verbose && !m_console_visible) return;
+        if ((!m_verbose || !m_stderr_type) && !m_console_visible) return;
         double fcurrent = current;
         double percent = 100.0 * fcurrent / m_total;
         double seconds = fcurrent / m_rate;
@@ -1335,7 +1339,6 @@ int wmain1(int argc, wchar_t **argv)
     int result = 0;
     if (!opts.parse(argc, argv))
         return 1;
-    opts.is_console_visible = IsWindowVisible(GetConsoleWindow());
 
     COMInitializer __com__;
     try {

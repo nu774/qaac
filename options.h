@@ -32,8 +32,7 @@ struct Options {
 
         gain(0.0),
 
-        output_format(0),
-        is_console_visible(true)
+        output_format(0)
     {}
     bool parse(int &argc, wchar_t **&argv);
 
@@ -81,7 +80,6 @@ struct Options {
     double gain;
 
     uint32_t output_format;
-    bool is_console_visible;
     std::map<uint32_t, std::wstring> tagopts;
     std::map<std::string, std::wstring> longtags;
     std::vector<std::wstring> artworks;
