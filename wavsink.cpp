@@ -10,6 +10,15 @@
 #include "wavsource.h"
 #include "wavsink.h"
 
+namespace {
+    inline uint16_t get_wave_format(const AudioStreamBasicDescription &asbd)
+    {
+        return (asbd.mChannelsPerFrame > 2
+                || asbd.mBitsPerChannel > 16
+                || (asbd.mBitsPerChannel & 7)) ? 0xfffe : 1;
+    }
+}
+
 WaveSink::WaveSink(FILE *fp,
                    uint64_t duration,
                    const AudioStreamBasicDescription &asbd,
@@ -46,9 +55,13 @@ WaveSink::WaveSink(FILE *fp,
     write("fmt ", 4);
     write(&hdrsize, 4);
     write(header.c_str(), hdrsize);
+    if (m_seekable && get_wave_format(m_asbd) == 0xfffe) {
+        m_fact = true;
+        write("JUNK\004\0\0\0\0\0\0\0", 12);
+    }
     write("data", 4);
     write(&datasize, 4);
-    m_data_pos = 28 + hdrsize + (m_rf64 ? 36 : 0);
+    m_data_pos = 28 + hdrsize + (m_fact ? 12 : 0) + (m_rf64 ? 36 : 0);
     if (!m_seekable) std::fflush(fp);
 }
 
@@ -61,10 +74,7 @@ std::string WaveSink::buildHeader()
     m_bytes_per_frame = bpc * m_asbd.mChannelsPerFrame;
     
     // wFormatTag
-    uint16_t fmt = (m_asbd.mChannelsPerFrame > 2
-                    || m_asbd.mBitsPerChannel > 16
-                    || (m_asbd.mBitsPerChannel & 7))
-                 ? 0xfffe : 1;
+    uint16_t fmt = get_wave_format(m_asbd);
     put(os, fmt);
     // nChannels
     put(os, static_cast<uint16_t>(m_asbd.mChannelsPerFrame));
@@ -125,6 +135,7 @@ void WaveSink::finishWrite()
     if (!m_seekable) return;
     uint64_t datasize64 = m_bytes_written;
     uint64_t riffsize64 = datasize64 + m_data_pos - 8;
+    uint64_t nsamples = m_bytes_written / m_bytes_per_frame;
     if (riffsize64 >> 32 == 0) {
         if (std::fseek(m_file, m_data_pos - 4, SEEK_SET) == 0) {
             uint32_t size32 = static_cast<uint32_t>(datasize64);
@@ -132,6 +143,13 @@ void WaveSink::finishWrite()
             if (std::fseek(m_file, 4, SEEK_SET) == 0) {
                 size32 = static_cast<uint32_t>(riffsize64);
                 write(&size32, 4);
+            }
+        }
+        if (m_fact) {
+            uint32_t samples32 = static_cast<uint32_t>(nsamples);
+            if (std::fseek(m_file, m_data_pos - 20, SEEK_SET) == 0) {
+                write("fact\004\0\0\0", 8);
+                write(&samples32, 4);
             }
         }
     } else if (m_rf64) {
@@ -142,7 +160,6 @@ void WaveSink::finishWrite()
         std::fseek(m_file, 4, SEEK_CUR);
         write(&riffsize64, 8);
         write(&datasize64, 8);
-        uint64_t nsamples = m_bytes_written / m_bytes_per_frame;
         write(&nsamples, 8);
     }
 }

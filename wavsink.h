@@ -8,6 +8,7 @@ class WaveSink : public ISink {
     bool m_closed;
     bool m_seekable;
     bool m_rf64;
+    bool m_fact;
     uint16_t m_bytes_per_frame;
     uint32_t m_chanmask;
     uint32_t m_data_pos;
