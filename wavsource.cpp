@@ -30,8 +30,11 @@ WaveSource::WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength)
         m_length = ~0ULL;
     else
         m_length = data_length / m_block_align;
-    if (m_seekable)
+    if (m_seekable) {
         m_data_pos = _lseeki64(fd(), 0, SEEK_CUR);
+        if (m_length == ~0ULL)
+            m_length = (_filelengthi64(fd()) - m_data_pos) / m_block_align;
+    }
 }
 
 size_t WaveSource::readSamples(void *buffer, size_t nsamples)
