@@ -23,13 +23,10 @@ TakModule::TakModule(const std::wstring &path)
         CHECK(SSD_Create_FromStream = m_dl.fetch("tak_SSD_Create_FromStream"));
         CHECK(SSD_Destroy = m_dl.fetch("tak_SSD_Destroy"));
         CHECK(SSD_GetStreamInfo = m_dl.fetch("tak_SSD_GetStreamInfo"));
+        SSD_GetStreamInfo_V22 = m_dl.fetch("tak_SSD_GetStreamInfo_V22");
         CHECK(SSD_Seek = m_dl.fetch("tak_SSD_Seek"));
         CHECK(SSD_ReadAudio = m_dl.fetch("tak_SSD_ReadAudio"));
         CHECK(SSD_GetReadPos = m_dl.fetch("tak_SSD_GetReadPos"));
-        CHECK(SSD_GetAPEv2Tag = m_dl.fetch("tak_SSD_GetAPEv2Tag"));
-        CHECK(APE_GetItemNum = m_dl.fetch("tak_APE_GetItemNum"));
-        CHECK(APE_GetItemKey = m_dl.fetch("tak_APE_GetItemKey"));
-        CHECK(APE_GetItemValue = m_dl.fetch("tak_APE_GetItemValue"));
     } catch (...) {
         m_dl.reset();
     }
@@ -99,16 +96,30 @@ TakSource::TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp)
     if (!ssd)
         throw std::runtime_error("tak_SSD_Create_FromStream");
     m_decoder = std::shared_ptr<void>(ssd, m_module.SSD_Destroy);
-    Ttak_str_StreamInfo info;
-    TRYTAK(m_module.SSD_GetStreamInfo(ssd, &info));
+
+    Ttak_str_StreamInfo_V22 info = { 0 };
+    if (m_module.SSD_GetStreamInfo_V22)
+        TRYTAK(m_module.SSD_GetStreamInfo_V22(ssd, &info));
+    else {
+        Ttak_str_StreamInfo_V10 *p =
+            reinterpret_cast<Ttak_str_StreamInfo_V10*>(&info);
+        TRYTAK(m_module.SSD_GetStreamInfo(ssd, p));
+    }
     uint32_t type =
         info.Audio.SampleBits == 8 ? 0 : kAudioFormatFlagIsSignedInteger;
+    uint32_t bits = info.Audio.HasExtension ? info.Audio.ValidBitsPerSample
+                                            : info.Audio.SampleBits;
     m_asbd = cautil::buildASBDForPCM2(info.Audio.SampleRate,
                                       info.Audio.ChannelNum,
-                                      info.Audio.SampleBits, 32,
+                                      bits, 32,
                                       kAudioFormatFlagIsSignedInteger);
     m_block_align = info.Audio.BlockSize;
     m_length = info.Sizes.SampleNum;
+    if (info.Audio.HasExtension && info.Audio.HasSpeakerAssignment) {
+        char *a = info.Audio.SpeakerAssignment;
+        for (unsigned i = 0; i < 16 && a[i]; ++i)
+            m_chanmap.push_back(a[i]);
+    }
     try {
         fetchTags();
     } catch (...) {}

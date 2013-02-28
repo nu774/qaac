@@ -5,6 +5,25 @@
 #include "iointer.h"
 #include "dl.h"
 
+struct TtakAudioFormatEx: public TtakAudioFormat {
+    TtakBool  HasExtension;
+    TtakInt32 ValidBitsPerSample;
+    TtakBool  HasSpeakerAssignment;
+    char SpeakerAssignment[16];
+};
+
+struct Ttak_str_StreamInfo_V10 {
+    Ttak_str_EncoderInfo Encoder;
+    Ttak_str_SizeInfo    Sizes;
+    TtakAudioFormat      Audio;
+};
+
+struct Ttak_str_StreamInfo_V22 {
+    Ttak_str_EncoderInfo Encoder;
+    Ttak_str_SizeInfo    Sizes;
+    TtakAudioFormatEx    Audio;
+};
+
 class TakModule {
     DL m_dl;
     bool m_compatible;
@@ -15,22 +34,19 @@ public:
     bool compatible() const { return m_compatible; }
 
     TtakResult (*GetLibraryVersion)(TtakInt32 *, TtakInt32 *);
-    TtakSeekableStreamDecoder (*SSD_Create_FromStream)(
-            const TtakStreamIoInterface *, void *, const TtakSSDOptions *,
-            TSSDDamageCallback, void *);
+    TtakSeekableStreamDecoder
+        (*SSD_Create_FromStream)(const TtakStreamIoInterface *, void *,
+                                 const TtakSSDOptions *, TSSDDamageCallback,
+                                 void *);
     void (*SSD_Destroy)(TtakSeekableStreamDecoder);
     TtakResult (*SSD_GetStreamInfo)(TtakSeekableStreamDecoder,
-            Ttak_str_StreamInfo *);
+                                    Ttak_str_StreamInfo_V10 *);
+    TtakResult (*SSD_GetStreamInfo_V22)(TtakSeekableStreamDecoder,
+                                        Ttak_str_StreamInfo_V22 *);
     TtakResult (*SSD_Seek)(TtakSeekableStreamDecoder, TtakInt64);
     TtakResult (*SSD_ReadAudio)(TtakSeekableStreamDecoder, void *,
-            TtakInt32, TtakInt32 *);
+                                TtakInt32, TtakInt32 *);
     TtakInt64 (*SSD_GetReadPos)(TtakSeekableStreamDecoder);
-    TtakAPEv2Tag (*SSD_GetAPEv2Tag)(TtakSeekableStreamDecoder);
-    TtakInt32 (*APE_GetItemNum)(TtakAPEv2Tag);
-    TtakResult (*APE_GetItemKey)(TtakAPEv2Tag, TtakInt32, char *,
-            TtakInt32, TtakInt32 *);
-    TtakResult (*APE_GetItemValue)(TtakAPEv2Tag, TtakInt32, void *,
-            TtakInt32, TtakInt32 *);
 };
 
 class TakSource: public ISeekableSource, public ITagParser
@@ -52,7 +68,7 @@ public:
     {
         return m_asbd;
     }
-    const std::vector<uint32_t> *getChannels() const { return 0; }
+    const std::vector<uint32_t> *getChannels() const { return &m_chanmap; }
     int64_t getPosition();
     size_t readSamples(void *buffer, size_t nsamples);
     bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
