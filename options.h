@@ -17,6 +17,7 @@ struct Options {
 
         bits_per_sample(0), raw_channels(2), raw_sample_rate(44100),
         artwork_size(0), native_resampler_complexity(0), textcp(0),
+        gapless_mode(0),
 
         ofilename(0), outdir(0), raw_format(L"S16LE"),
         fname_format(L"${tracknumber}${title& }${title}"),
@@ -70,7 +71,8 @@ struct Options {
                           0: ignore chanmask in the source
                      others: use the value as chanmask     */
     uint32_t bits_per_sample, raw_channels, raw_sample_rate,
-             artwork_size, native_resampler_complexity, textcp;
+             artwork_size, native_resampler_complexity, textcp,
+             gapless_mode;
     wchar_t *ofilename, *outdir, *raw_format, *fname_format, *chapter_file,
             *logfilename, *remix_preset, *remix_file, *tmpdir, *delay;
     bool is_raw, is_adts, save_stat, nice, native_chanmapper,

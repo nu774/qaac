@@ -30,6 +30,7 @@ static wide::option long_options[] = {
     { L"gain", required_argument, 0, 'gain' },
     { L"delay", required_argument, 0, 'dlay' },
     { L"no-delay", no_argument, 0, 'ndly' },
+    { L"gapless-mode", required_argument, 0, 'gapm' },
     { L"matrix-preset", required_argument, 0, 'mixp' },
     { L"matrix-file", required_argument, 0, 'mixm' },
     { L"no-matrix-normalize", no_argument, 0, 'nmxn' },
@@ -165,6 +166,10 @@ void usage()
 "                       the beginning (and also tweak iTunSMPB).\n"
 "                       This option is mainly intended for resolving\n"
 "                       resolving A/V sync issue of video. \n"
+"--gapless-mode <n>     Encoder delay signaling for gapless playback.\n"
+"                         0: iTunSMPB (default)\n"
+"                         1: ISO standard (elst + sbgp + sgpd)\n"
+"                         2: Both\n"
 "--matrix-preset <name> Specify preset remixing matrix name.\n"
 "--matrix-file <file>   Specify file containing remixing matrix.\n"
 "--no-matrix-normalize  Don't automatically normalize(scale) matrix\n"
@@ -505,6 +510,12 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->delay = wide::optarg;
         else if (ch == 'ndly')
             this->no_delay = true;
+        else if (ch == 'gapm') {
+            if (std::swscanf(wide::optarg, L"%u", &this->gapless_mode) != 1) {
+                std::fputws(L"Invalid arg for --gapless-mode.\n", stderr);
+                return false;
+            }
+        }
         else if (ch == 'txcp') {
             if (std::swscanf(wide::optarg, L"%u", &this->textcp) != 1) {
                 std::fputws(L"--text-codepage requires code page number.\n",

@@ -90,12 +90,19 @@ class TagEditor {
     std::vector<std::wstring> m_artworks;
     int m_encoder_delay;
     int m_padding;
+    int m_gapless_mode;
     uint32_t m_artwork_size;
     uint64_t m_nsamples;
 public:
+    enum {
+        MODE_ITUNSMPB = 1,
+        MODE_EDTS = 2,
+        MODE_BOTH = 3,
+    };
     TagEditor()
         : m_encoder_delay(0),
           m_padding(0),
+          m_gapless_mode(MODE_ITUNSMPB),
           m_artwork_size(0),
           m_nsamples(0)
     {}
@@ -104,6 +111,10 @@ public:
         m_encoder_delay = info.mPrimingFrames;
         m_padding = info.mRemainderFrames;
         m_nsamples = info.mNumberValidFrames;
+    }
+    void setGaplessMode(int mode)
+    {
+        m_gapless_mode = mode;
     }
     void setTag(uint32_t key, const std::wstring &value)
     {

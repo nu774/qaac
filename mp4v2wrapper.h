@@ -54,6 +54,8 @@ public:
         return AddChildAtom(parent, name);
     }
     MP4TrackId AddAlacAudioTrack(const uint8_t *alac, const uint8_t *chan);
+    void CreateAudioSampleGroupDescription(MP4TrackId trackId,
+                                           uint32_t sampleCount);
     bool SetMetadataString(const char *atom, const char *value);
     bool SetMetadataTrack(uint16_t track, uint16_t totalTracks);
     bool SetMetadataDisk(uint16_t disk, uint16_t totalDisks);

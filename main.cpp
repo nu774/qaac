@@ -328,6 +328,7 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
             pti.mNumberValidFrames -= (1024*3 - 2112);
         }
         editor.setGaplessInfo(pti);
+        editor.setGaplessMode(opts.gapless_mode + 1);
     }
 #endif
     editor.setArtworkSize(opts.artwork_size);

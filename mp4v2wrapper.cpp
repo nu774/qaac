@@ -44,6 +44,50 @@ public:
     }
 };
 
+class MP4SbgpAtom: public MP4Atom {
+public:
+    MP4SbgpAtom(MP4File &file, const char *id): MP4Atom(file, id)
+    {
+        AddVersionAndFlags();
+        AddProperty(new MP4Integer32Property(*this, "groupingType"));
+        MP4Integer32Property *count =
+            new MP4Integer32Property(*this, "entryCount");
+        AddProperty(count);
+        MP4TableProperty *table = new MP4TableProperty(*this, "entries", count);
+        AddProperty(table);
+        table->AddProperty(new MP4Integer32Property(table->GetParentAtom(),
+                                                    "sampleCount"));
+        table->AddProperty(new MP4Integer32Property(table->GetParentAtom(),
+                                                    "groupDescriptionIndex"));
+    }
+};
+
+class MP4SgpdAtom: public MP4Atom {
+public:
+    MP4SgpdAtom(MP4File &file, const char *id): MP4Atom(file, id)
+    {
+        AddVersionAndFlags();
+        AddProperty(new MP4Integer32Property(*this, "groupingType"));
+        AddProperty(new MP4Integer32Property(*this, "defaultLength"));
+        MP4Integer32Property *count =
+            new MP4Integer32Property(*this, "entryCount");
+        AddProperty(count);
+        MP4TableProperty *table = new MP4TableProperty(*this, "entries", count);
+        AddProperty(table);
+        table->AddProperty(new MP4Integer16Property(table->GetParentAtom(),
+                                                    "rollDistance"));
+    }
+    void Generate()
+    {
+        SetVersion(1);
+        MP4Atom::Generate();
+
+        MP4Property *prop;
+        FindProperty("sgpd.defaultLength", &prop);
+        dynamic_cast<MP4Integer32Property*>(prop)->SetValue(2);
+    }
+};
+
 namespace myprovider {
 
 static
@@ -165,6 +209,34 @@ MP4FileX::AddAlacAudioTrack(const uint8_t *alac, const uint8_t *chan)
         atom->AddChildAtom(chanAtom);
     }
     return track;
+}
+
+void
+MP4FileX::CreateAudioSampleGroupDescription(MP4TrackId trackId,
+                                            uint32_t sampleCount)
+{
+    MP4Atom *stbl = FindTrackAtom(trackId, "mdia.minf.stbl");
+    MP4Property *prop;
+
+    MP4SbgpAtom * sbgp = new MP4SbgpAtom(*this, "sbgp");
+    stbl->AddChildAtom(sbgp);
+    sbgp->FindProperty("sbgp.groupingType", &prop);
+    dynamic_cast<MP4Integer32Property*>(prop)->SetValue('roll');
+    sbgp->FindProperty("sbgp.entries.sampleCount", &prop);
+    dynamic_cast<MP4Integer32Property*>(prop)->AddValue(sampleCount);
+    sbgp->FindProperty("sbgp.entries.groupDescriptionIndex", &prop);
+    dynamic_cast<MP4Integer32Property*>(prop)->AddValue(1);
+    sbgp->FindProperty("sbgp.entryCount", &prop);
+    dynamic_cast<MP4Integer32Property*>(prop)->IncrementValue();
+
+    MP4SgpdAtom * sgpd = new MP4SgpdAtom(*this, "sgpd");
+    stbl->AddChildAtom(sgpd);
+    sgpd->FindProperty("sgpd.groupingType", &prop);
+    dynamic_cast<MP4Integer32Property*>(prop)->SetValue('roll');
+    sgpd->FindProperty("sgpd.entries.rollDistance", &prop);
+    dynamic_cast<MP4Integer16Property*>(prop)->AddValue(-1);
+    sgpd->FindProperty("sgpd.entryCount", &prop);
+    dynamic_cast<MP4Integer32Property*>(prop)->IncrementValue();
 }
 
 MP4DataAtom *

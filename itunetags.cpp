@@ -218,33 +218,22 @@ void TagEditor::save(MP4FileX &file)
 {
     try {
         if ((m_encoder_delay || m_padding) && m_nsamples) {
-            std::wstring value = strutil::format(iTunSMPB_template,
-                                        m_encoder_delay,
-                                        m_padding,
-                                        uint32_t(m_nsamples >> 32),
-                                        uint32_t(m_nsamples & 0xffffffff));
-            m_long_tags["iTunSMPB"] = value;
-            /*
-             * The following edts configuration is mainly for QuickTime.
-             *
-             * We don't set encoder delay as edts media start time,
-             * since QuickTime treats 2112 samples from media start time
-             * as encoder delay and discards it after decoding
-             * (implicit handlng of AAC audio priming).
-             *
-             * On the other hand, we have to set edts duration
-             * to let QuickTime know the actual duration and to get 
-             * trailing zeroes trimmed.
-             *
-             * QuickTime File Format Specification Appendix G. specifies
-             * the way to explicitly signal audio priming (encoder delay),
-             * but apparently we cannot apply it for M4A.
-             * (And QuickTime 7 doesn't seem to support it anyway).
-             */
-            MP4TrackId tid = file.FindTrackId(0);
-            MP4EditId eid = file.AddTrackEdit(tid);
-            file.SetTrackEditMediaStart(tid, eid, 0);
-            file.SetTrackEditDuration(tid, eid, m_nsamples);
+            if (m_gapless_mode & MODE_ITUNSMPB) {
+                std::wstring value = strutil::format(iTunSMPB_template,
+                                            m_encoder_delay,
+                                            m_padding,
+                                            uint32_t(m_nsamples >> 32),
+                                            uint32_t(m_nsamples & 0xffffffff));
+                m_long_tags["iTunSMPB"] = value;
+            }
+            if (m_gapless_mode & MODE_EDTS) {
+                MP4TrackId tid = file.FindTrackId(0);
+                MP4EditId eid = file.AddTrackEdit(tid);
+                file.SetTrackEditMediaStart(tid, eid, m_encoder_delay);
+                file.SetTrackEditDuration(tid, eid, m_nsamples);
+                MP4SampleId count = file.GetTrackNumberOfSamples(tid);
+                file.CreateAudioSampleGroupDescription(tid, count);
+            }
         }
         if (m_chapters.size()) {
             uint64_t timeScale = file.GetIntegerProperty("moov.mvhd.timeScale");
