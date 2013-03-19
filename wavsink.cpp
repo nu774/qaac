@@ -23,7 +23,7 @@ WaveSink::WaveSink(FILE *fp,
                    uint64_t duration,
                    const AudioStreamBasicDescription &asbd,
                    uint32_t chanmask)
-        : m_file(fp), m_bytes_written(0), m_closed(false),
+        : m_file(fp), m_bytes_written(0), m_closed(false), m_fact(false),
           m_seekable(false), m_chanmask(chanmask), m_asbd(asbd)
 {
     struct stat stb = { 0 };
