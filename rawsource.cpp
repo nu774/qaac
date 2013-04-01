@@ -6,8 +6,11 @@ RawSource::RawSource(const std::shared_ptr<FILE> &fp,
                      const AudioStreamBasicDescription &asbd)
     : m_position(0), m_fp(fp), m_asbd(asbd)
 {
-    int64_t len = _filelengthi64(fileno(m_fp.get()));
-    m_length = (len == -1 ? -1 : len / asbd.mBytesPerFrame);
+    int fd = fileno(m_fp.get());
+    if (util::is_seekable(fd))
+        m_length = _filelengthi64(fd) / asbd.mBytesPerFrame;
+    else
+        m_length = ~0ULL;
     bool isfloat = asbd.mFormatFlags & kAudioFormatFlagIsFloat;
     m_oasbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
                                        asbd.mChannelsPerFrame,
