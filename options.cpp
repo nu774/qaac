@@ -42,6 +42,7 @@ static wide::option long_options[] = {
     { L"stat", no_argument, 0, 'S' },
     { L"threading", no_argument, 0, 'thrd' },
     { L"nice", no_argument, 0, 'n' },
+    { L"sort-args", no_argument, 0, 'soar' },
     { L"tmpdir", required_argument, 0, 'tmpd' },
     { L"text-codepage", required_argument, 0, 'txcp' },
     { L"raw", no_argument, 0, 'R' },
@@ -190,6 +191,7 @@ void usage()
 "-i, --ignorelength     Assume WAV input and ignore the data chunk length.\n"
 "--threading            Enable multi-threading.\n"
 "-n, --nice             Give lower process priority.\n"
+"--sort-args            Sort filenames given by command line arguments.\n"
 "--text-codepage <n>    Specify text code page of cuesheet/chapter/lyrics.\n"
 "                       1252 for Latin-1, 65001 for UTF-8.\n"
 "                       Use this when automatic encoding detection fails.\n"
@@ -510,6 +512,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->delay = wide::optarg;
         else if (ch == 'ndly')
             this->no_delay = true;
+        else if (ch == 'soar')
+            this->sort_args = true;
         else if (ch == 'gapm') {
             if (std::swscanf(wide::optarg, L"%u", &this->gapless_mode) != 1) {
                 std::fputws(L"Invalid arg for --gapless-mode.\n", stderr);

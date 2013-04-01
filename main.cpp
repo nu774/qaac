@@ -1433,6 +1433,15 @@ int wmain1(int argc, wchar_t **argv)
         playlist::Playlist tracks;
         const wchar_t *ifilename = 0;
 
+        if (opts.sort_args) {
+            struct Sorter {
+                static bool cmp(const wchar_t *a, const wchar_t *b)
+                {
+                    return std::wcscmp(a, b) < 0;
+                }
+            };
+            std::sort(&argv[0], &argv[argc], Sorter::cmp);
+        }
         for (int i = 0; i < argc; ++i) {
             ifilename = argv[i];
             if (strutil::wslower(PathFindExtensionW(ifilename)) == L".cue")
