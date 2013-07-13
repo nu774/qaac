@@ -133,29 +133,29 @@ private:
     void setMediaType(const char *fcc, const char *value)
     {
         unsigned n;
-        if (std::scanf("%u", &n) != 1)
+        if (std::sscanf(value, "%u", &n) != 1)
             n = static_cast<uint8_t>(enumStikType.toType(value));
         m_file.SetMetadataUint8(fcc, n);
     }
     void setRating(const char *fcc, const char *value)
     {
         unsigned n;
-        if (std::scanf("%u", &n) != 1)
+        if (std::sscanf(value, "%u", &n) != 1)
             n = static_cast<uint8_t>(enumContentRating.toType(value));
         m_file.SetMetadataUint8(fcc, n);
     }
     void setAccountType(const char *fcc, const char *value)
     {
         unsigned n;
-        if (std::scanf("%u", &n) != 1)
+        if (std::sscanf(value, "%u", &n) != 1)
             n = static_cast<uint8_t>(enumAccountType.toType(value));
         m_file.SetMetadataUint8(fcc, n);
     }
     void setCountryCode(const char *fcc, const char *value)
     {
         unsigned n;
-        if (std::scanf("%u", &n) != 1)
-            n = static_cast<uint8_t>(enumCountryCode.toType(value));
+        if (std::sscanf(value, "%u", &n) != 1)
+            n = static_cast<uint32_t>(enumCountryCode.toType(value));
         m_file.SetMetadataUint32(fcc, n);
     }
     void setInt8(const char *fcc, const char *value)
