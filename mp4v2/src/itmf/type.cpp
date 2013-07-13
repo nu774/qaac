@@ -221,7 +221,7 @@ const itmf::EnumAccountType::Entry itmf::EnumAccountType::data[] = {
 template <>
 const itmf::EnumCountryCode::Entry itmf::EnumCountryCode::data[] = {
     { mp4v2::impl::itmf::CC_USA,  "usa",   "United States" },
-    { mp4v2::impl::itmf::CC_USA,  "fra",   "France" },
+    { mp4v2::impl::itmf::CC_FRA,  "fra",   "France" },
     { mp4v2::impl::itmf::CC_DEU,  "ger",   "Germany" },
     { mp4v2::impl::itmf::CC_GBR,  "gbr",   "United Kingdom" },
     { mp4v2::impl::itmf::CC_AUT,  "aut",   "Austria" },
