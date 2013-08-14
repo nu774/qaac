@@ -150,34 +150,38 @@ public:
 
 class PeriodicDisplay {
     uint32_t m_interval;
-    uint32_t m_last_tick;
+    uint32_t m_last_tick_title;
+    uint32_t m_last_tick_stderr;
     std::wstring m_message;
     bool m_verbose;
     bool m_console_visible;
 public:
     PeriodicDisplay(uint32_t interval, bool verbose=true)
         : m_interval(interval),
-          m_verbose(verbose),
-          m_last_tick(GetTickCount())
+          m_verbose(verbose)
     {
         m_console_visible = IsWindowVisible(GetConsoleWindow());
+        m_last_tick_title = m_last_tick_stderr = GetTickCount();
     }
     void put(const std::wstring &message) {
         m_message = message;
         uint32_t tick = GetTickCount();
-        if (tick - m_last_tick > m_interval) {
+        if (tick - m_last_tick_stderr > m_interval) {
+            m_last_tick_stderr = tick;
             flush();
-            m_last_tick = tick;
         }
     }
     void flush() {
         if (m_verbose) std::fputws(m_message.c_str(), stderr);
-        if (m_console_visible) {
+        if (m_console_visible &&
+            m_last_tick_stderr - m_last_tick_title > m_interval * 4)
+        {
             std::vector<wchar_t> s(m_message.size() + 1);
             std::wcscpy(&s[0], m_message.c_str());
             strutil::squeeze(&s[0], L"\r");
             std::wstring msg = strutil::format(L"%hs %s", PROGNAME, &s[0]);
             SetConsoleTitleW(msg.c_str());
+            m_last_tick_title = m_last_tick_stderr;
         }
     }
 };
@@ -191,10 +195,11 @@ class Progress {
     Timer m_timer;
     bool m_console_visible;
     DWORD m_stderr_type;
+    int m_last_percent;
 public:
     Progress(bool verbosity, uint64_t total, uint32_t rate)
         : m_disp(100, verbosity), m_verbose(verbosity),
-          m_total(total), m_rate(rate)
+          m_total(total), m_rate(rate), m_last_percent(0)
     {
         long h = _get_osfhandle(_fileno(stderr));
         m_stderr_type = GetFileType(reinterpret_cast<HANDLE>(h));
@@ -214,10 +219,14 @@ public:
         if (m_total == ~0ULL)
             m_disp.put(strutil::format(L"\r%s (%.1fx)   ",
                 formatSeconds(seconds).c_str(), speed));
-        else
-            m_disp.put(strutil::format(L"\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
-                percent, formatSeconds(seconds).c_str(), m_tstamp.c_str(),
-                speed, formatSeconds(eta).c_str()));
+        else {
+            std::wstring msg =
+                strutil::format(L"\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
+                                percent, formatSeconds(seconds).c_str(),
+                                m_tstamp.c_str(), speed,
+                                formatSeconds(eta).c_str());
+            m_disp.put(msg);
+        }
     }
     void finish(uint64_t current)
     {
