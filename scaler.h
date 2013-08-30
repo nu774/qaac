@@ -33,21 +33,20 @@ public:
         return m_asbd;
     }
     template <typename T>
-    size_t readSamplesT(void *buffer, size_t nsamples)
+    size_t readSamplesT(T *buffer, size_t nsamples)
     {
-        T *fp = static_cast<T*>(buffer);
-        size_t nc = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
+        size_t nc = readSamplesAsFloat(source(), &m_ibuffer, buffer, nsamples);
         size_t len = nc * source()->getSampleFormat().mChannelsPerFrame;
         for (size_t i = 0; i < len; ++i)
-            fp[i] *= m_scale;
+            buffer[i] *= m_scale;
         return nc;
     }
     size_t readSamples(void *buffer, size_t nsamples)
     {
         if (m_asbd.mBitsPerChannel == 64)
-            return readSamplesT<double>(buffer, nsamples);
+            return readSamplesT(static_cast<double*>(buffer), nsamples);
         else
-            return readSamplesT<float>(buffer, nsamples);
+            return readSamplesT(static_cast<float*>(buffer), nsamples);
     }
 };
 

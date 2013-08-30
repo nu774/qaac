@@ -83,7 +83,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
     } else {
         int *src = reinterpret_cast<int *>(bp);
         for (size_t i = 0; i < blen / 4; ++i)
-            *fp++ = src[i] / 2147483648.0f;
+            *fp++ = src[i] / 2147483648.0;
     }
     return nsamples;
 }
