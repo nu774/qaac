@@ -65,6 +65,12 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     std::vector<char> ibuf(fileSize);
     ULONG nread;
     HR(stream->Read(&ibuf[0], ibuf.size(), &nread));
+    if (fileSize >= 3 && std::memcmp(&ibuf[0], "\xef\xbb\xbf", 3) == 0)
+        codepage = 65001; // UTF-8
+    else if (fileSize >= 2 && std::memcmp(&ibuf[0], "\xff\xfe", 2) == 0)
+        codepage = 1200;  // UTF-16LE
+    else if (fileSize >= 2 && std::memcmp(&ibuf[0], "\xfe\xff", 2) == 0)
+        codepage = 1201;  // UTF-16BE
 
     DWORD ctx = 0;
     UINT size = ibuf.size(), cnt;
