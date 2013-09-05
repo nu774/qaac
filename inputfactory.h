@@ -7,6 +7,7 @@
 #include "taksrc.h"
 #include "libsndfilesrc.h"
 #include "soxdsp.h"
+#include "soxrmodule.h"
 
 namespace input {
     class InputFactory {
@@ -37,6 +38,7 @@ namespace input {
         TakModule libtak;
         LibSndfileModule libsndfile;
         SoxModule libsoxrate;
+        SOXRModule libsoxr;
     };
 
     inline InputFactory *factory() { return InputFactory::getInstance(); }

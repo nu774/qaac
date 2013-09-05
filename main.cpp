@@ -17,6 +17,8 @@
 #include "composite.h"
 #include "nullsource.h"
 #include "soxdsp.h"
+#include "soxrmodule.h"
+#include "soxresampler.h"
 #include "normalize.h"
 #include "mixer.h"
 #include "Quantizer.h"
@@ -734,17 +736,27 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 #endif
     if (oasbd.mSampleRate != iasbd.mSampleRate) {
         LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
-        if (!opts.native_resampler && input::factory()->libsoxrate.loaded()) {
-            if (opts.verbose > 1 || opts.logfilename)
-                LOG(L"Using libsoxrate SRC\n");
-            std::shared_ptr<ISoxDSPEngine>
-                engine(new SoxResampler(input::factory()->libsoxrate,
-                                        chain.back()->getSampleFormat(),
-                                        oasbd.mSampleRate,
-                                        threading));
-            std::shared_ptr<ISource>
-                processor(new SoxDSPProcessor(engine, chain.back()));
-            chain.push_back(processor);
+        if (!opts.native_resampler) {
+            if (input::factory()->libsoxr.loaded()) {
+                std::shared_ptr<SoxrResampler>
+                    resampler(new SoxrResampler(input::factory()->libsoxr,
+                                                chain.back(),
+                                                oasbd.mSampleRate));
+                if (opts.verbose > 1 || opts.logfilename)
+                    LOG(L"Using libsoxr SRC: %hs\n", resampler->engine());
+                chain.push_back(resampler);
+            } else if (input::factory()->libsoxrate.loaded()) {
+                if (opts.verbose > 1 || opts.logfilename)
+                    LOG(L"Using libsoxrate SRC\n");
+                std::shared_ptr<ISoxDSPEngine>
+                    engine(new SoxResampler(input::factory()->libsoxrate,
+                                            chain.back()->getSampleFormat(),
+                                            oasbd.mSampleRate,
+                                            threading));
+                std::shared_ptr<ISource>
+                    processor(new SoxDSPProcessor(engine, chain.back()));
+                chain.push_back(processor);
+            }
         } else {
 #ifndef QAAC
             oasbd.mSampleRate = iasbd.mSampleRate;
@@ -1213,6 +1225,7 @@ void setup_input_factory(const Options &opts)
 #else
     factory->libsoxrate = SoxModule(L"libsoxrate.dll");
 #endif
+    factory->libsoxr = SOXRModule(L"libsoxr.dll");
 
     if (opts.is_raw) {
         AudioStreamBasicDescription asbd;
@@ -1389,6 +1402,8 @@ int wmain1(int argc, wchar_t **argv)
             if (factory->libsoxrate.loaded())
                 LOG(L"libsoxrate %hs\n",
                     factory->libsoxrate.version_string());
+            if (factory->libsoxr.loaded())
+                LOG(L"%hs\n", factory->libsoxr.version());
             if (factory->libsndfile.loaded())
                 LOG(L"%hs\n", factory->libsndfile.version_string());
             if (factory->libflac.loaded())

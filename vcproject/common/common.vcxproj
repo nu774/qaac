@@ -158,6 +158,8 @@
     <ClCompile Include="..\..\rawsource.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
     <ClCompile Include="..\..\soxdsp.cpp" />
+    <ClCompile Include="..\..\soxresampler.cpp" />
+    <ClCompile Include="..\..\soxrmodule.cpp" />
     <ClCompile Include="..\..\strutil.cpp" />
     <ClCompile Include="..\..\taksrc.cpp" />
     <ClCompile Include="..\..\textfile.cpp" />
