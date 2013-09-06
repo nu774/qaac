@@ -38,3 +38,6 @@ version 2.2.0
 include/libsoxrate.h:
 This is a header file of libsoxrate.
 Minimized DLL version made out of sox 14.3.2 (rate effect only).
+
+include/soxr.h:
+This is a header file of libsoxr (https://sourceforge.net/projects/soxr/).
