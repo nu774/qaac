@@ -6,7 +6,8 @@
 #include <process.h>
 
 class PipedReader: public FilterBase {
-    std::shared_ptr<void> m_readPipe, m_writePipe, m_thread;
+    std::shared_ptr<FILE> m_readPipe;
+    std::shared_ptr<void> m_writePipe, m_thread;
     int64_t m_position;
 public:
     PipedReader(std::shared_ptr<ISource> &src);
