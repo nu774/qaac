@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <memory>
 #include "CoreAudio/CoreAudioTypes.h"
 #include "util.h"
 #include "chapters.h"

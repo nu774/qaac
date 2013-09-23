@@ -1,3 +1,4 @@
+#include <functional>
 #include "flacsrc.h"
 #include "strutil.h"
 #include "itunetags.h"

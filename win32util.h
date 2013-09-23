@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <memory>
 #include <io.h>
 #include <fcntl.h>
 #include <share.h>
