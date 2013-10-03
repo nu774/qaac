@@ -1213,7 +1213,9 @@ void setup_input_factory(const Options &opts)
     input::InputFactory *factory = input::factory();
 
     factory->libsndfile = LibSndfileModule(L"libsndfile-1.dll");
-    factory->libflac = FLACModule(L"libFLAC.dll");
+    factory->libflac = FLACModule(L"libFLAC_dynamic.dll");
+    if (!factory->libflac.loaded())
+        factory->libflac = FLACModule(L"libFLAC.dll");
     if (!factory->libflac.loaded())
         factory->libflac = FLACModule(L"libFLAC-8.dll");
     factory->libwavpack = WavpackModule(L"wavpackdll.dll");
