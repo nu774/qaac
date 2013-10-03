@@ -1,6 +1,6 @@
 /***************************************************************************
-    copyright            : (C) 2002 - 2008 by Scott Wheeler
-    email                : wheeler@kde.org
+    copyright            : (C) 2013 by Tsuda Kageyu
+    email                : tsuda.kageyu@gmail.com
  ***************************************************************************/
 
 /***************************************************************************
@@ -23,62 +23,52 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#include <iostream>
+#ifndef TAGLIB_DEBUGLISTENER_H
+#define TAGLIB_DEBUGLISTENER_H
 
-#include "id3v2synchdata.h"
+#include "taglib_export.h"
+#include "tstring.h"
 
-using namespace TagLib;
-using namespace ID3v2;
-
-TagLib::uint SynchData::toUInt(const ByteVector &data)
+namespace TagLib 
 {
-  uint sum = 0;
-  bool notSynchSafe = false;
-  int last = data.size() > 4 ? 3 : data.size() - 1;
+  //! An abstraction for the listener to the debug messages.
 
-  for(int i = 0; i <= last; i++) {
-    if(data[i] & 0x80) {
-      notSynchSafe = true;
-      break;
-    }
+  /*!
+   * This class enables you to handle the debug messages in your preferred 
+   * way by subclassing this class, reimplementing printMessage() and setting 
+   * your reimplementation as the default with setDebugListener().
+   *
+   * \see setDebugListener()
+   */  
+  class TAGLIB_EXPORT DebugListener
+  {
+  public:
+    DebugListener();
+    virtual ~DebugListener();
 
-    sum |= (data[i] & 0x7f) << ((last - i) * 7);
-  }
+    /*!
+     * When overridden in a derived class, redirects \a msg to your preferred
+     * channel such as stderr, Windows debugger or so forth.
+     */
+    virtual void printMessage(const String &msg) = 0;
 
-  if(notSynchSafe) {
-    // Invalid data; assume this was created by some buggy software that just
-    // put normal integers here rather than syncsafe ones, and try it that
-    // way.
-    if(data.size() >= 4) {
-      sum = data.toUInt(0, true);
-    }
-    else {
-      ByteVector tmp(data);
-      tmp.resize(4);
-      sum = tmp.toUInt(0, true);
-    }
-  }
+  private:
+    // Noncopyable
+    DebugListener(const DebugListener &);
+    DebugListener &operator=(const DebugListener &);
+  };
 
-  return sum;
+  /*!
+   * Sets the listener that decides how the debug messages are redirected.
+   * If the parameter \a listener is null, the previous listener is released 
+   * and default stderr listener is restored.   
+   *
+   * \note The caller is responsible for deleting the previous listener
+   * as needed after it is released.
+   *
+   * \see DebugListener
+   */
+  TAGLIB_EXPORT void setDebugListener(DebugListener *listener);
 }
 
-ByteVector SynchData::fromUInt(uint value)
-{
-  ByteVector v(4, 0);
-
-  for(int i = 0; i < 4; i++)
-    v[i] = uchar(value >> ((3 - i) * 7) & 0x7f);
-
-  return v;
-}
-
-ByteVector SynchData::decode(const ByteVector &data)
-{
-  ByteVector result = data;
-
-  ByteVector pattern(2, char(0));
-  pattern[0] = '\xFF';
-  pattern[1] = '\x00';
-
-  return result.replace(pattern, '\xFF');
-}
+#endif

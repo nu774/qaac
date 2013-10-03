@@ -9,9 +9,8 @@ These are part of mp4v2 (http://code.google.com/p/mp4v2/),
 svn-r485
 
 Files under taglib:
-These are part of TagLib (http://developer.kde.org/~wheeler/taglib.html),
-(tfile.cpp is modified to remove unwanted dependencies)
-version 1.8.0
+These are part of TagLib (https://github.com/taglib/taglib/),
+(tfile.cpp is modified to remove undesired dependencies)
 
 getopt.[ch]:
 These are from FreeBSD CVS repositry

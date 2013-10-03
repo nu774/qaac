@@ -1,6 +1,6 @@
 /***************************************************************************
-    copyright            : (C) 2002 - 2008 by Scott Wheeler
-    email                : wheeler@kde.org
+    copyright            : (C) 2013 by Tsuda Kageyu
+    email                : tsuda.kageyu@gmail.com
  ***************************************************************************/
 
 /***************************************************************************
@@ -23,62 +23,63 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#include <iostream>
+#include "tdebuglistener.h"
 
-#include "id3v2synchdata.h"
+#include <iostream>
+#include <bitset>
+
+#ifdef _WIN32
+# include <windows.h>
+#endif
 
 using namespace TagLib;
-using namespace ID3v2;
 
-TagLib::uint SynchData::toUInt(const ByteVector &data)
+namespace
 {
-  uint sum = 0;
-  bool notSynchSafe = false;
-  int last = data.size() > 4 ? 3 : data.size() - 1;
+  class DefaultListener : public DebugListener
+  {
+  public:
+    virtual void printMessage(const String &msg)
+    {
+#ifdef _WIN32
 
-  for(int i = 0; i <= last; i++) {
-    if(data[i] & 0x80) {
-      notSynchSafe = true;
-      break;
+      const wstring wstr = msg.toWString();
+      const int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, NULL, 0, NULL, NULL);
+      if(len != 0) {
+        std::vector<char> buf(len);
+        WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, &buf[0], len, NULL, NULL);
+
+        std::cerr << std::string(&buf[0]);
+      }
+
+#else
+
+      std::cerr << msg;
+
+#endif 
     }
+  };
 
-    sum |= (data[i] & 0x7f) << ((last - i) * 7);
-  }
-
-  if(notSynchSafe) {
-    // Invalid data; assume this was created by some buggy software that just
-    // put normal integers here rather than syncsafe ones, and try it that
-    // way.
-    if(data.size() >= 4) {
-      sum = data.toUInt(0, true);
-    }
-    else {
-      ByteVector tmp(data);
-      tmp.resize(4);
-      sum = tmp.toUInt(0, true);
-    }
-  }
-
-  return sum;
+  DefaultListener defaultListener;
 }
 
-ByteVector SynchData::fromUInt(uint value)
+namespace TagLib
 {
-  ByteVector v(4, 0);
+  DebugListener *debugListener = &defaultListener;
 
-  for(int i = 0; i < 4; i++)
-    v[i] = uchar(value >> ((3 - i) * 7) & 0x7f);
+  DebugListener::DebugListener()
+  {
+  }
 
-  return v;
-}
+  DebugListener::~DebugListener()
+  {
+  }
 
-ByteVector SynchData::decode(const ByteVector &data)
-{
-  ByteVector result = data;
-
-  ByteVector pattern(2, char(0));
-  pattern[0] = '\xFF';
-  pattern[1] = '\x00';
-
-  return result.replace(pattern, '\xFF');
+  void setDebugListener(DebugListener *listener)
+  {
+    if(listener)
+      debugListener = listener;
+    else
+      debugListener = &defaultListener;
+  }
 }

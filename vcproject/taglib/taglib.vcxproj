@@ -58,10 +58,12 @@
     <ClCompile Include="..\..\taglib\toolkit\tbytevector.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tbytevectorlist.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tdebug.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tdebuglistener.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tfile.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tfilestream.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tiostream.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tpropertymap.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\trefcounter.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tstring.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tstringlist.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\unicode.cpp" />
