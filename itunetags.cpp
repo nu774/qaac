@@ -32,7 +32,8 @@ public:
     ShortTagWriter(MP4FileX &f) : m_file(f) {}
     void operator()(const std::pair<uint32_t, std::wstring> &kv)
     {
-        writeTag(kv.first, kv.second);
+        if (!kv.second.empty())
+            writeTag(kv.first, kv.second);
     }
     void writeTag(uint32_t key, const std::wstring &value)
     {
@@ -198,7 +199,8 @@ public:
     LongTagWriter(MP4FileX &f): m_file(f) {}
     void operator()(const std::pair<std::string, std::wstring> &kv)
     {
-        writeTag(kv.first, kv.second);
+        if (!kv.second.empty())
+            writeTag(kv.first, kv.second);
     }
     void writeTag(const std::string &key, const std::wstring &value)
     {
