@@ -326,9 +326,9 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
         if (chapters)
             editor.setChapters(*chapters);
     }
+    editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
     editor.setTag(opts.tagopts);
     editor.setLongTag(opts.longtags);
-    editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
 #ifdef QAAC
     if (opts.isAAC() && stat->samplesWritten()) {
         CoreAudioEncoder *caencoder =
