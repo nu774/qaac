@@ -50,15 +50,16 @@ size_t WaveSource::readSamples(void *buffer, size_t nsamples)
     nsamples = nbytes > 0 ? nbytes / m_block_align: 0;
     if (nsamples) {
         size_t size = nsamples * m_block_align;
-        uint8_t *bp = &m_buffer[0];
-        /* convert to signed */
-        if (m_asbd.mBitsPerChannel <= 8) {
-            for (size_t i = 0; i < size; ++i)
-                bp[i] ^= 0x80;
-        }
-        util::unpack(bp, buffer, &size,
+        util::unpack(&m_buffer[0], buffer, &size,
                      m_block_align / m_asbd.mChannelsPerFrame,
                      m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame);
+        /* convert to signed */
+        if (m_asbd.mBitsPerChannel <= 8) {
+            size_t count = nsamples * m_asbd.mChannelsPerFrame;
+            uint32_t *bp = static_cast<uint32_t *>(buffer);
+            for (size_t i = 0; i < count; ++i)
+                bp[i] ^= 0x80000000U;
+        }
         m_position += nsamples;
     }
     return nsamples;

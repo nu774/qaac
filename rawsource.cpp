@@ -29,23 +29,24 @@ size_t RawSource::readSamples(void *buffer, size_t nsamples)
     nsamples = nbytes > 0 ? nbytes / m_asbd.mBytesPerFrame : 0;
     if (nsamples) {
         size_t size = nsamples * m_asbd.mBytesPerFrame;
-        uint8_t *bp = &m_buffer[0];
+
         /* bswap */
         if (m_asbd.mFormatFlags & kAudioFormatFlagIsBigEndian)
-            util::bswapbuffer(bp, size, (m_asbd.mBitsPerChannel + 7) &~7);
+            util::bswapbuffer(&m_buffer[0], size,
+                              (m_asbd.mBitsPerChannel + 7) & ~7);
+
+        util::unpack(&m_buffer[0], buffer, &size,
+                     m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame,
+                     m_oasbd.mBytesPerFrame / m_oasbd.mChannelsPerFrame);
         /* convert to signed */
         if (!(m_asbd.mFormatFlags & kAudioFormatFlagIsFloat) &&
             !(m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
         {
             size_t count = nsamples * m_asbd.mChannelsPerFrame;
-            uint32_t width = ((m_asbd.mBitsPerChannel + 7) & ~7) / 8;
-            for (size_t i = 1; i <= count; ++i)
-                bp[i * width - 1] ^= 0x80;
-
+            uint32_t *bp = static_cast<uint32_t*>(buffer);
+            for (size_t i = 0; i < count; ++i)
+                bp[i] ^= 0x80000000U;
         }
-        util::unpack(bp, buffer, &size,
-                     m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame,
-                     m_oasbd.mBytesPerFrame / m_oasbd.mChannelsPerFrame);
     }
     m_position += nsamples;
     return nsamples;
