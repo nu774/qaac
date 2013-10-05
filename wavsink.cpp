@@ -62,7 +62,6 @@ WaveSink::WaveSink(FILE *fp,
     write("data", 4);
     write(&datasize, 4);
     m_data_pos = 28 + hdrsize + (m_fact ? 12 : 0) + (m_rf64 ? 36 : 0);
-    if (!m_seekable) std::fflush(fp);
 }
 
 std::string WaveSink::buildHeader()
