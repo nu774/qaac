@@ -4,10 +4,9 @@
 #include "util.h"
 
 namespace util {
-    void bswap16buffer(uint8_t *buffer, size_t size)
+    void bswap16buffer(uint16_t *bp, size_t size)
     {
-        uint16_t *bp = reinterpret_cast<uint16_t*>(buffer);
-        for (uint16_t *endp = bp + size / 2; bp != endp; ++bp)
+        for (uint16_t *endp = bp + size; bp != endp; ++bp)
             *bp = _byteswap_ushort(*bp);
     }
 
@@ -20,34 +19,32 @@ namespace util {
         }
     }
 
-    void bswap32buffer(uint8_t *buffer, size_t size)
+    void bswap32buffer(uint32_t *bp, size_t size)
     {
-        uint32_t *bp = reinterpret_cast<uint32_t*>(buffer);
-        for (uint32_t *endp = bp + size / 4; bp != endp; ++bp)
+        for (uint32_t *endp = bp + size; bp != endp; ++bp)
             *bp = _byteswap_ulong(*bp);
     }
 
-    void bswap64buffer(uint8_t *buffer, size_t size)
+    void bswap64buffer(uint64_t *bp, size_t size)
     {
-        uint64_t *bp = reinterpret_cast<uint64_t*>(buffer);
-        for (uint64_t *endp = bp + size / 8; bp != endp; ++bp)
+        for (uint64_t *endp = bp + size; bp != endp; ++bp)
             *bp = _byteswap_uint64(*bp);
     }
 
-    void bswapbuffer(uint8_t *buffer, size_t size, uint32_t width)
+    void bswapbuffer(void *buffer, size_t size, uint32_t width)
     {
         switch (width) {
         case 16:
-            bswap16buffer(buffer, size);
+            bswap16buffer(static_cast<uint16_t*>(buffer), size / 2);
             break;
         case 24:
-            bswap24buffer(buffer, size);
+            bswap24buffer(static_cast<uint8_t*>(buffer), size);
             break;
         case 32:
-            bswap32buffer(buffer, size);
+            bswap32buffer(static_cast<uint32_t*>(buffer), size / 4);
             break;
         case 64:
-            bswap64buffer(buffer, size);
+            bswap64buffer(static_cast<uint64_t*>(buffer), size / 8);
             break;
         }
     }

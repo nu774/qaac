@@ -137,7 +137,7 @@ namespace util {
         return _byteswap_ulong(n);
     }
 
-    void bswapbuffer(uint8_t *buffer, size_t size, uint32_t width);
+    void bswapbuffer(void *buffer, size_t size, uint32_t width);
 
     inline void throw_crt_error(const std::string &message)
     {
