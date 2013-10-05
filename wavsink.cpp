@@ -104,10 +104,12 @@ std::string WaveSink::buildHeader()
     return oss.str();
 }
 
+/*
+ * XXX: This method rewrites const data arg
+ */
 void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 {
     uint8_t *bp = static_cast<uint8_t *>(const_cast<void*>(data));
-    std::vector<uint8_t> buf;
     if (m_bytes_per_frame < m_asbd.mBytesPerFrame) {
         unsigned obpc = m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
         unsigned nbpc = m_bytes_per_frame / m_asbd.mChannelsPerFrame;
@@ -115,9 +117,6 @@ void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
     }
     if (m_asbd.mBitsPerChannel <= 8 &&
         m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
-        buf.resize(length);
-        bp = &buf[0];
-        std::memcpy(bp, data, length);
         for (size_t i = 0; i < length; ++i)
             bp[i] ^= 0x80;
     }
