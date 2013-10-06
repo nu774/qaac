@@ -26,6 +26,7 @@ static wide::option long_options[] = {
     { L"no-dither", no_argument, 0, 'ndit' },
     { L"rate", required_argument, 0, 'r' },
     { L"lowpass", required_argument, 0, 'lpf ' },
+    { L"peak", no_argument, 0, 'peak' },
     { L"normalize", no_argument, 0, 'N' },
     { L"gain", required_argument, 0, 'gain' },
     { L"delay", required_argument, 0, 'dlay' },
@@ -148,6 +149,10 @@ void usage()
 "-b, --bits-per-sample <n>\n"
 "                       Bits per sample of output (for WAV/ALAC only)\n"
 "--no-dither            Turn off dither when quantizing to lower bit depth.\n" 
+"--peak                 Scan + print peak (don't generate output file).\n"
+"                       Cannot be used with encoding mode or -D.\n"
+"                       When DSP options are set, peak is computed \n"
+"                       after all DSP filters have been applied.\n"
 "--gain <f>             Adjust gain by f dB.\n"
 "                       Use negative value to decrese gain, when you want to\n"
 "                       avoid clipping introduced by DSP.\n"
@@ -354,6 +359,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 return false;
             }
             this->output_format = 'aach';
+        }
+        else if (ch == 'peak') {
+            if (this->output_format && !isPeak()) {
+                std::fputws(L"--peak cannot be specified with encoding mode.\n",
+                            stderr);
+                return false;
+            }
+            this->output_format = 'peak';
         }
         else if (ch == 'q') {
             if (std::swscanf(wide::optarg, L"%u", &this->quality) != 1) {

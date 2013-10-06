@@ -4,11 +4,6 @@
 #include <cmath>
 #include "iointer.h"
 
-inline double dB_to_scale(double dB)
-{
-    return std::pow(10, 0.05 * dB);
-}
-
 class Scaler: public FilterBase {
     double m_scale;
     std::vector<uint8_t> m_ibuffer;

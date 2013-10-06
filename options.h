@@ -57,10 +57,15 @@ struct Options {
     {
         return output_format == 'lpcm';
     }
+    bool isPeak() const
+    {
+        return output_format == 'peak';
+    }
     const wchar_t *extension() const
     {
         if (isMP4()) return L".m4a";
         else if (isLPCM()) return L".wav";
+        else if (isPeak()) return L"";
         else return L".aac";
     }
 

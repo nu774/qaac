@@ -177,6 +177,17 @@ namespace util {
     void convert_sign(uint32_t *data, size_t size);
 
     ssize_t nread(int fd, void *buffer, size_t size);
+
+    inline double dB_to_scale(double dB)
+    {
+        return std::pow(10, 0.05 * dB);
+    }
+
+    inline double scale_to_dB(double scale)
+    {
+        return 20 * std::log10(scale);
+    }
+
 }
 
 #define CHECKCRT(expr) \

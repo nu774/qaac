@@ -13,6 +13,7 @@
 #include "sink.h"
 #include "alacsink.h"
 #include "wavsink.h"
+#include "peaksink.h"
 #include "cuesheet.h"
 #include "composite.h"
 #include "nullsource.h"
@@ -552,7 +553,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
                 chanmap::getChannelNames(vec).c_str());
         }
     }
-    if (!opts.isLPCM()) {
+    if (opts.isAAC() || opts.isALAC()) {
         // construct mapped channel layout to AAC/ALAC order
         *aac_layout = chanmap::AACLayoutFromBitmap(chanmask);
         std::vector<uint32_t> aacmap;
@@ -665,12 +666,12 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
 #ifdef QAAC
     std::shared_ptr<AudioCodecX> codec;
-    if (!opts.isLPCM())
+    if (opts.isAAC() || opts.isALAC())
         codec.reset(new AudioCodecX(opts.output_format));
 #endif
     mapped_source(chain, opts, wChanmask, aacLayout, threading);
 
-    if (!opts.isLPCM()) {
+    if (opts.isAAC() || opts.isALAC()) {
 #ifdef QAAC
         if (!codec->isAvailableOutputChannelLayout(*aacLayout))
             throw std::runtime_error("Channel layout not supported");
@@ -764,7 +765,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 #else
             if (opts.native_resampler_quality >= 0 ||
                 opts.native_resampler_complexity >= 0 ||
-                opts.isLPCM())
+                (!opts.isAAC() && !opts.isALAC()))
             {
                 int quality = opts.native_resampler_quality;
                 uint32_t complexity = opts.native_resampler_complexity;
@@ -791,7 +792,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     }
 
     if (opts.gain) {
-        double scale = dB_to_scale(opts.gain);
+        double scale = util::dB_to_scale(opts.gain);
         if (opts.verbose > 1 || opts.logfilename)
             LOG(L"Gain adjustment: %gdB, scale factor %g\n",
                 opts.gain, scale);
@@ -803,7 +804,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             LOG(L"WARNING: --bits-per-sample has no effect for AAC\n");
         else if (chain.back()->getSampleFormat().mBitsPerChannel
                  != opts.bits_per_sample) {
-            bool is_float = (opts.bits_per_sample == 32 && opts.isLPCM());
+            bool is_float = (opts.bits_per_sample == 32 && !opts.isALAC());
             std::shared_ptr<ISource>
                 isrc(new Quantizer(chain.back(), opts.bits_per_sample,
                                    opts.no_dither, is_float));
@@ -835,7 +836,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                                                         opts.no_dither, true));
         }
     }
-    if (threading && !opts.isLPCM()) {
+    if (threading && (opts.isAAC() || opts.isALAC())) {
         PipedReader *reader = new PipedReader(chain.back());
         reader->start();
         chain.push_back(std::shared_ptr<ISource>(reader));
@@ -889,15 +890,19 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
                  const std::wstring &ofilename, const Options &opts,
                  uint32_t chanmask)
 {
-    std::shared_ptr<FILE> fileptr = win32::fopen(ofilename, L"wb");
-
     const std::shared_ptr<ISource> src = chain.back();
     const AudioStreamBasicDescription &sf = src->getSampleFormat();
-    WaveSink sink(fileptr.get(), src->length(), sf, chanmask);
 
-    Progress progress(opts.verbose, src->length(),
-                      src->getSampleFormat().mSampleRate);
+    std::shared_ptr<FILE> fileptr;
+    std::shared_ptr<ISink> sink;
+    if (opts.isLPCM()) {
+        fileptr = win32::fopen(ofilename, L"wb");
+        sink = std::make_shared<WaveSink>(fileptr.get(), src->length(),
+                                          sf, chanmask);
+    } else if (opts.isPeak())
+        sink = std::make_shared<PeakSink>(sf);
 
+    Progress progress(opts.verbose, src->length(), sf.mSampleRate);
     uint32_t bpf = sf.mBytesPerFrame;
     std::vector<uint8_t> buffer(4096 * bpf);
     try {
@@ -905,13 +910,20 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
         while (!g_interrupted &&
                (nread = src->readSamples(&buffer[0], 4096)) > 0) {
             progress.update(src->getPosition());
-            sink.writeSamples(&buffer[0], nread * bpf, nread);
+            sink->writeSamples(&buffer[0], nread * bpf, nread);
         }
         progress.finish(src->getPosition());
     } catch (const std::exception &e) {
         LOG(L"\nERROR: %s\n", errormsg(e).c_str());
     }
-    sink.finishWrite();
+
+    if (opts.isLPCM()) {
+        WaveSink *p = dynamic_cast<WaveSink *>(sink.get());
+        p->finishWrite();
+    } else if (opts.isPeak()) {
+        PeakSink *p = dynamic_cast<PeakSink *>(sink.get());
+        LOG(L"peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
+    }
 }
 
 #ifdef QAAC
@@ -1135,7 +1147,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::vector<std::shared_ptr<ISource> > chain;
     build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout,
                        &iasbd, &oasbd);
-    if (opts.isLPCM()) {
+    if (opts.isLPCM() || opts.isPeak()) {
         decode_file(chain, ofilename, opts, wavChanmask);
         return;
     }
@@ -1182,7 +1194,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::vector<std::shared_ptr<ISource> > chain;
     build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout, &iasbd, 0);
 
-    if (opts.isLPCM()) {
+    if (opts.isLPCM() || opts.isPeak()) {
         decode_file(chain, ofilename, opts, wavChanmask);
         return;
     }
@@ -1487,9 +1499,10 @@ int wmain1(int argc, wchar_t **argv)
                 }
                 std::wstring ofilename =
                     get_output_filename(track.ofilename.c_str(), opts);
-                LOG(L"\n%s\n",
-                    ofilename == L"-" ? L"<stdout>"
-                                      : PathFindFileNameW(ofilename.c_str()));
+                const wchar_t *ofn = L"<stdout>";
+                if (ofilename != L"-")
+                    ofn = PathFindFileNameW(ofilename.c_str());
+                LOG(L"\n%s\n", ofn);
                 std::shared_ptr<ISeekableSource> src =
                     delayed_source(track.source, opts);
                 src->seekTo(0);
