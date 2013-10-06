@@ -22,6 +22,20 @@ public:
     int operator()() { return e_() / div_ + off_; }
 };
 
+template <typename Engine>
+class RandomIntSpanShift {
+    Engine &e_;
+    int shift_, off_;
+public:
+    RandomIntSpanShift(Engine &e, int log2)
+        : e_(e)
+    {
+        shift_ = 32 - log2;
+        off_ = - (1 << (log2 - 1));
+    }
+    int operator()() { return (e_() >> shift_) + off_; }
+};
+
 Quantizer::Quantizer(const std::shared_ptr<ISource> &source,
                      uint32_t bitdepth, bool no_dither, bool is_float)
     : FilterBase(source), m_no_dither(no_dither)
@@ -78,17 +92,12 @@ void Quantizer::ditherInt(int *data, size_t count, unsigned depth)
     const int one = 1 << (31 - depth);
     const int half = one / 2;
     const unsigned mask = ~(one - 1);
-    /*
-     * XXX:
-     * std::uniform_int_distribution<int> is too slow due to
-     * double<->int conversion
-     */
-    // std::uniform_int_distribution<int> dist(-half, half);
-    RandomIntSpan<std::mt19937> nrand(m_mt, -half, half);
+
+    //RandomIntSpan<RandomEngine> nrand(m_engine, -half, half);
+    RandomIntSpanShift<RandomEngine> nrand(m_engine, 31 - depth);
     for (size_t i = 0; i < count; ++i) {
         int value = data[i] >> 1;
         if (depth <= 18 && !m_no_dither) {
-            // int noise = dist(m_mt) + dist(m_mt);
             int noise = nrand() + nrand();
             value += noise;
         }
@@ -107,7 +116,7 @@ void Quantizer::ditherFloat(T *src, int *dst, size_t count, unsigned depth)
     for (size_t i = 0; i < count; ++i) {
         double value = src[i] * half;
         if (depth <= 18 && !m_no_dither) {
-            double noise = dist(m_mt) + dist(m_mt);
+            double noise = dist(m_engine) + dist(m_engine);
             value += noise;
         }
         dst[i] = lrint(clip(value, min_value, max_value)) << shifts;

@@ -5,10 +5,12 @@
 #include <random>
 #include "iointer.h"
 #include "cautil.h"
+#include "rng.h"
 
 class Quantizer: public FilterBase {
+    typedef rng::LCG RandomEngine;
     AudioStreamBasicDescription m_asbd;
-    std::mt19937 m_mt;
+    RandomEngine m_engine;
     std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
     std::vector<double> m_dbuffer;
