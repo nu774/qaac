@@ -126,6 +126,12 @@ namespace util {
         }
     }
 
+    void convert_sign(uint32_t *data, size_t size)
+    {
+        for (size_t i = 0; i < size; ++i)
+            data[i] ^= 0x80000000U;
+    }
+
     ssize_t nread(int fd, void *buffer, size_t size)
     {
         char *bp = static_cast<char*>(buffer);

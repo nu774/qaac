@@ -174,6 +174,8 @@ namespace util {
     void unpack(const void *input, void *output, size_t *size, unsigned width,
                 unsigned new_width);
 
+    void convert_sign(uint32_t *data, size_t size);
+
     ssize_t nread(int fd, void *buffer, size_t size);
 }
 

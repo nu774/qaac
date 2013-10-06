@@ -109,16 +109,15 @@ std::string WaveSink::buildHeader()
  */
 void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
 {
-    uint8_t *bp = static_cast<uint8_t *>(const_cast<void*>(data));
+    void *bp = const_cast<void *>(data);
+    if (m_asbd.mBitsPerChannel <= 8) {
+        util::convert_sign(static_cast<uint32_t *>(bp),
+                           nsamples * m_asbd.mChannelsPerFrame);
+    }
     if (m_bytes_per_frame < m_asbd.mBytesPerFrame) {
         unsigned obpc = m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
         unsigned nbpc = m_bytes_per_frame / m_asbd.mChannelsPerFrame;
         util::pack(bp, &length, obpc, nbpc);
-    }
-    if (m_asbd.mBitsPerChannel <= 8 &&
-        m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
-        for (size_t i = 0; i < length; ++i)
-            bp[i] ^= 0x80;
     }
     write(bp, length);
     m_bytes_written += length;

@@ -42,10 +42,8 @@ size_t RawSource::readSamples(void *buffer, size_t nsamples)
         if (!(m_asbd.mFormatFlags & kAudioFormatFlagIsFloat) &&
             !(m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
         {
-            size_t count = nsamples * m_asbd.mChannelsPerFrame;
-            uint32_t *bp = static_cast<uint32_t*>(buffer);
-            for (size_t i = 0; i < count; ++i)
-                bp[i] ^= 0x80000000U;
+            util::convert_sign(static_cast<uint32_t *>(buffer),
+                               nsamples * m_asbd.mChannelsPerFrame);
         }
     }
     m_position += nsamples;

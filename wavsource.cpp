@@ -55,10 +55,8 @@ size_t WaveSource::readSamples(void *buffer, size_t nsamples)
                      m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame);
         /* convert to signed */
         if (m_asbd.mBitsPerChannel <= 8) {
-            size_t count = nsamples * m_asbd.mChannelsPerFrame;
-            uint32_t *bp = static_cast<uint32_t *>(buffer);
-            for (size_t i = 0; i < count; ++i)
-                bp[i] ^= 0x80000000U;
+            util::convert_sign(static_cast<uint32_t *>(buffer),
+                               nsamples * m_asbd.mChannelsPerFrame);
         }
         m_position += nsamples;
     }
