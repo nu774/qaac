@@ -17,9 +17,8 @@
 #include "cuesheet.h"
 #include "composite.h"
 #include "nullsource.h"
-#include "soxdsp.h"
-#include "soxrmodule.h"
 #include "soxresampler.h"
+#include "soxlpf.h"
 #include "normalize.h"
 #include "mixer.h"
 #include "Quantizer.h"
@@ -505,8 +504,8 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
     }
     // remix
     if (opts.remix_preset || opts.remix_file) {
-        if (!input::factory()->libsoxrate.loaded())
-            LOG(L"WARNING: mixer requires libsoxrate. Mixing disabled\n");
+        if (!input::factory()->libsoxconvolver.loaded())
+            LOG(L"WARNING: mixer requires libsoxconvolver. Mixing disabled\n");
         else {
             std::vector<std::vector<complex_t> > matrix;
             matrix_from_preset(opts, &matrix);
@@ -516,9 +515,9 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
                     static_cast<uint32_t>(matrix.size()));
             }
             std::shared_ptr<ISource>
-                mixer(new MatrixMixer(chain.back(), input::factory()->libsoxrate,
-                                      matrix, threading,
-                                      !opts.no_matrix_normalize));
+                mixer(new MatrixMixer(chain.back(),
+                                      input::factory()->libsoxconvolver,
+                                      matrix, !opts.no_matrix_normalize));
             chain.push_back(mixer);
             channels = 0;
             nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
@@ -693,19 +692,16 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 #endif
     }
     if (opts.lowpass > 0) {
-        if (!input::factory()->libsoxrate.loaded())
-            LOG(L"WARNING: --lowpass requires libsoxrate. LPF disabled\n");
+        if (!input::factory()->libsoxconvolver.loaded())
+            LOG(L"WARNING: --lowpass requires libsoxconvolver. LPF disabled\n");
         else {
             if (opts.verbose > 1 || opts.logfilename)
                 LOG(L"Applying LPF: %dHz\n", opts.lowpass);
-            std::shared_ptr<ISoxDSPEngine>
-                engine(new SoxLowpassFilter(input::factory()->libsoxrate,
-                                            chain.back()->getSampleFormat(),
-                                            opts.lowpass,
-                                            threading));
-            std::shared_ptr<ISource>
-                processor(new SoxDSPProcessor(engine, chain.back()));
-            chain.push_back(processor);
+            std::shared_ptr<SoxLowpassFilter>
+                f(new SoxLowpassFilter(input::factory()->libsoxconvolver,
+                                       chain.back(),
+                                       opts.lowpass));
+            chain.push_back(f);
         }
     }
     AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
@@ -746,22 +742,11 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 if (opts.verbose > 1 || opts.logfilename)
                     LOG(L"Using libsoxr SRC: %hs\n", resampler->engine());
                 chain.push_back(resampler);
-            } else if (input::factory()->libsoxrate.loaded()) {
-                if (opts.verbose > 1 || opts.logfilename)
-                    LOG(L"Using libsoxrate SRC\n");
-                std::shared_ptr<ISoxDSPEngine>
-                    engine(new SoxResampler(input::factory()->libsoxrate,
-                                            chain.back()->getSampleFormat(),
-                                            oasbd.mSampleRate,
-                                            threading));
-                std::shared_ptr<ISource>
-                    processor(new SoxDSPProcessor(engine, chain.back()));
-                chain.push_back(processor);
             }
         } else {
 #ifndef QAAC
             oasbd.mSampleRate = iasbd.mSampleRate;
-            LOG(L"WARNING: --rate requires libsoxrate\n");
+            LOG(L"WARNING: --rate requires libsoxr\n");
 #else
             if (opts.native_resampler_quality >= 0 ||
                 opts.native_resampler_complexity >= 0 ||
@@ -1234,12 +1219,12 @@ void setup_input_factory(const Options &opts)
     if (!factory->libwavpack.loaded())
         factory->libwavpack = WavpackModule(L"libwavpack-1.dll");
     factory->libtak = TakModule(L"tak_deco_lib.dll");
-#ifdef _WIN64
-    factory->libsoxrate = SoxModule(L"libsoxrate64.dll");
-#else
-    factory->libsoxrate = SoxModule(L"libsoxrate.dll");
-#endif
     factory->libsoxr = SOXRModule(L"libsoxr.dll");
+#ifdef _WIN64
+    factory->libsoxconvolver = SoXConvolverModule(L"libsoxconvolver64.dll");
+#else
+    factory->libsoxconvolver = SoXConvolverModule(L"libsoxconvolver.dll");
+#endif
 
     if (opts.is_raw) {
         AudioStreamBasicDescription asbd;
@@ -1413,9 +1398,9 @@ int wmain1(int argc, wchar_t **argv)
         input::InputFactory *factory = input::factory();
 
         if (opts.check_only) {
-            if (factory->libsoxrate.loaded())
-                LOG(L"libsoxrate %hs\n",
-                    factory->libsoxrate.version_string());
+            if (factory->libsoxconvolver.loaded())
+                LOG(L"libsoxconvolver %hs\n",
+                    factory->libsoxconvolver.version());
             if (factory->libsoxr.loaded())
                 LOG(L"%hs\n", factory->libsoxr.version());
             if (factory->libsndfile.loaded())

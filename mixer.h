@@ -4,27 +4,25 @@
 #include <complex>
 #include <deque>
 #include "iointer.h"
-#include "soxdsp.h"
+#include "soxcmodule.h"
 
-typedef std::complex<double> complex_t;
+typedef std::complex<float> complex_t;
 
 class MatrixMixer: public FilterBase {
-    bool m_mt;
     uint32_t m_shiftMask;
     int64_t m_position;
-    double m_filter_gain;
     std::vector<std::vector<complex_t> > m_matrix;
-    std::shared_ptr<lsx_fir_t> m_filter;
-    std::vector<double> m_coefs;
-    std::deque<double> m_syncque;
+    std::vector<std::shared_ptr<lsx_convolver_t> > m_filter;
+    std::deque<float> m_syncque;
     std::vector<uint8_t> m_ibuffer;
-    std::vector<double> m_fbuffer;
-    DecodeBuffer<double> m_buffer;
+    std::vector<float> m_fbuffer;
+    DecodeBuffer<float> m_buffer;
     AudioStreamBasicDescription m_asbd;
-    SoxModule m_module;
+    SoXConvolverModule m_module;
 public:
-    MatrixMixer(const std::shared_ptr<ISource> &source, const SoxModule &module,
-                const std::vector<std::vector<complex_t> > &spec, bool mt,
+    MatrixMixer(const std::shared_ptr<ISource> &source,
+                const SoXConvolverModule &module,
+                const std::vector<std::vector<complex_t> > &spec,
                 bool normalize=true);
     const AudioStreamBasicDescription &getSampleFormat() const
     {

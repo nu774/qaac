@@ -6,8 +6,8 @@
 #include "wvpacksrc.h"
 #include "taksrc.h"
 #include "libsndfilesrc.h"
-#include "soxdsp.h"
 #include "soxrmodule.h"
+#include "soxcmodule.h"
 
 namespace input {
     class InputFactory {
@@ -37,8 +37,8 @@ namespace input {
         WavpackModule libwavpack;
         TakModule libtak;
         LibSndfileModule libsndfile;
-        SoxModule libsoxrate;
         SOXRModule libsoxr;
+        SoXConvolverModule libsoxconvolver;
     };
 
     inline InputFactory *factory() { return InputFactory::getInstance(); }

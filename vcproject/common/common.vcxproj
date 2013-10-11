@@ -157,7 +157,8 @@
     <ClCompile Include="..\..\Quantizer.cpp" />
     <ClCompile Include="..\..\rawsource.cpp" />
     <ClCompile Include="..\..\sink.cpp" />
-    <ClCompile Include="..\..\soxdsp.cpp" />
+    <ClCompile Include="..\..\soxcmodule.cpp" />
+    <ClCompile Include="..\..\soxlpf.cpp" />
     <ClCompile Include="..\..\soxresampler.cpp" />
     <ClCompile Include="..\..\soxrmodule.cpp" />
     <ClCompile Include="..\..\strutil.cpp" />
