@@ -94,7 +94,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>shlwapi.lib;advapi32.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest</AdditionalManifestFiles>
@@ -114,7 +114,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)mp4v2.lib;$(Outdir)taglib.lib;$(Outdir)common.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;$(Outdir)mp4v2.lib;$(Outdir)taglib.lib;$(Outdir)common.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest</AdditionalManifestFiles>
@@ -140,7 +140,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>shlwapi.lib;advapi32.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest</AdditionalManifestFiles>
@@ -166,7 +166,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)mp4v2.lib;$(Outdir)taglib.lib;$(Outdir)common.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;$(Outdir)mp4v2.lib;$(Outdir)taglib.lib;$(Outdir)common.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest</AdditionalManifestFiles>

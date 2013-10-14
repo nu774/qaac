@@ -76,7 +76,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)qaac.exe</OutputFile>
       <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -109,7 +109,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)qaac.exe</OutputFile>
       <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -141,7 +141,7 @@
       <OmitFramePointers>true</OmitFramePointers>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)qaac.exe</OutputFile>
       <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -175,7 +175,7 @@
       <OmitFramePointers>true</OmitFramePointers>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)qaac.exe</OutputFile>
       <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>

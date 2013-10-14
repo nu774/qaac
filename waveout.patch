@@ -1,0 +1,393 @@
+diff --git a/main.cpp b/main.cpp
+index de40137..d24455b 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -13,6 +13,7 @@
+ #include "sink.h"
+ #include "alacsink.h"
+ #include "wavsink.h"
++#include "waveoutsink.h"
+ #include "peaksink.h"
+ #include "cuesheet.h"
+ #include "composite.h"
+@@ -812,7 +813,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
+             // Don't automatically quantize float input
+             throw std::runtime_error("ALAC: input format is not supported");
+         }
+-    } else if (opts.isLPCM()) {
++    } else if (opts.isLPCM() || opts.isWaveOut()) {
+         /* output f64 sample only when input was already f64 */
+         if (sasbd.mBitsPerChannel <= 32 &&
+             chain.back()->getSampleFormat().mBitsPerChannel > 32)
+@@ -884,7 +885,10 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
+         fileptr = win32::fopen(ofilename, L"wb");
+         sink = std::make_shared<WaveSink>(fileptr.get(), src->length(),
+                                           sf, chanmask);
+-    } else if (opts.isPeak())
++    }
++    else if (opts.isWaveOut())
++        sink = std::make_shared<WaveOutSink>(sf, chanmask);
++    else if (opts.isPeak())
+         sink = std::make_shared<PeakSink>(sf);
+ 
+     Progress progress(opts.verbose, src->length(), sf.mSampleRate);
+@@ -1132,7 +1136,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
+     std::vector<std::shared_ptr<ISource> > chain;
+     build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout,
+                        &iasbd, &oasbd);
+-    if (opts.isLPCM() || opts.isPeak()) {
++    if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
+         decode_file(chain, ofilename, opts, wavChanmask);
+         return;
+     }
+@@ -1179,7 +1183,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
+     std::vector<std::shared_ptr<ISource> > chain;
+     build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout, &iasbd, 0);
+ 
+-    if (opts.isLPCM() || opts.isPeak()) {
++    if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
+         decode_file(chain, ofilename, opts, wavChanmask);
+         return;
+     }
+@@ -1531,6 +1535,8 @@ int wmain1(int argc, wchar_t **argv)
+ #endif
+             }
+         }
++        if (opts.isWaveOut())
++            WaveOutDevice::instance()->close();
+     } catch (const std::exception &e) {
+         if (opts.print_available_formats)
+             Log::instance()->enable_stderr();
+diff --git a/options.cpp b/options.cpp
+index f7a54ea..f2d310e 100644
+--- a/options.cpp
++++ b/options.cpp
+@@ -21,6 +21,7 @@ static wide::option long_options[] = {
+ #endif
+     { L"check", no_argument, 0, 'chck' },
+     { L"decode", no_argument, 0, 'D' },
++    { L"play", no_argument, 0, 'play' },
+     { L"no-optimize", no_argument, 0, 'noop' },
+     { L"bits-per-sample", required_argument, 0, 'b' },
+     { L"no-dither", no_argument, 0, 'ndit' },
+@@ -136,7 +137,8 @@ void usage()
+ #endif
+ "-d <dirname>           Output directory. Default is current working dir.\n"
+ "--check                Show library versions and exit.\n"
+-"-D, --decode           Wave output mode.\n"
++"-D, --decode           Decode to a WAV file.\n"
++"--play                 Decode to a WaveOut device (playback).\n"
+ "-r, --rate <keep|auto|n>\n"
+ "                       keep: output sampling rate will be same as input\n"
+ "                             if possible.\n"
+@@ -360,6 +362,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
+             }
+             this->output_format = 'aach';
+         }
++        else if (ch == 'play') {
++            if (this->output_format && !isWaveOut()) {
++                std::fputws(L"--play cannot be specified with encoding mode.\n",
++                            stderr);
++                return false;
++            }
++            this->output_format = 'play';
++        }
+         else if (ch == 'peak') {
+             if (this->output_format && !isPeak()) {
+                 std::fputws(L"--peak cannot be specified with encoding mode.\n",
+diff --git a/options.h b/options.h
+index 70f6576..be6dc9f 100644
+--- a/options.h
++++ b/options.h
+@@ -57,6 +57,10 @@ struct Options {
+     {
+         return output_format == 'lpcm';
+     }
++    bool isWaveOut() const
++    {
++        return output_format == 'play';
++    }
+     bool isPeak() const
+     {
+         return output_format == 'peak';
+@@ -65,7 +69,7 @@ struct Options {
+     {
+         if (isMP4()) return L".m4a";
+         else if (isLPCM()) return L".wav";
+-        else if (isPeak()) return L"";
++        else if (isWaveOut() || isPeak()) return L"";
+         else return L".aac";
+     }
+ 
+diff --git a/vcproject/common/common.vcxproj b/vcproject/common/common.vcxproj
+index 322e44b..7f9cc1c 100644
+--- a/vcproject/common/common.vcxproj
++++ b/vcproject/common/common.vcxproj
+@@ -165,6 +165,7 @@
+     <ClCompile Include="..\..\taksrc.cpp" />
+     <ClCompile Include="..\..\textfile.cpp" />
+     <ClCompile Include="..\..\util.cpp" />
++    <ClCompile Include="..\..\waveoutsink.cpp" />
+     <ClCompile Include="..\..\wavsink.cpp" />
+     <ClCompile Include="..\..\wavsource.cpp" />
+     <ClCompile Include="..\..\wgetopt.cpp" />
+diff --git a/vcproject/qaac/qaac.vcxproj b/vcproject/qaac/qaac.vcxproj
+index 946df2d..6dca2b6 100644
+--- a/vcproject/qaac/qaac.vcxproj
++++ b/vcproject/qaac/qaac.vcxproj
+@@ -76,7 +76,7 @@
+       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+     </ClCompile>
+     <Link>
+-      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+       <OutputFile>$(OutDir)qaac.exe</OutputFile>
+       <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+@@ -109,7 +109,7 @@
+       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+     </ClCompile>
+     <Link>
+-      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+       <OutputFile>$(OutDir)qaac.exe</OutputFile>
+       <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+@@ -141,7 +141,7 @@
+       <OmitFramePointers>true</OmitFramePointers>
+     </ClCompile>
+     <Link>
+-      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+       <OutputFile>$(OutDir)qaac.exe</OutputFile>
+       <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+@@ -175,7 +175,7 @@
+       <OmitFramePointers>true</OmitFramePointers>
+     </ClCompile>
+     <Link>
+-      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>delayimp.lib;version.lib;CoreFoundation.lib;CoreAudioToolbox.lib;shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;$(Outdir)taglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+       <OutputFile>$(OutDir)qaac.exe</OutputFile>
+       <AdditionalLibraryDirectories>..\..\implib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+diff --git a/vcproject/refalac/refalac.vcxproj b/vcproject/refalac/refalac.vcxproj
+index eed0175..7b8ddd2 100644
+--- a/vcproject/refalac/refalac.vcxproj
++++ b/vcproject/refalac/refalac.vcxproj
+@@ -94,7 +94,7 @@
+     <Link>
+       <SubSystem>Console</SubSystem>
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+-      <AdditionalDependencies>shlwapi.lib;advapi32.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+     </Link>
+     <Manifest>
+       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest</AdditionalManifestFiles>
+@@ -114,7 +114,7 @@
+     <Link>
+       <SubSystem>Console</SubSystem>
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+-      <AdditionalDependencies>shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)mp4v2.lib;$(Outdir)taglib.lib;$(Outdir)common.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;$(Outdir)mp4v2.lib;$(Outdir)taglib.lib;$(Outdir)common.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
+     </Link>
+     <Manifest>
+       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest</AdditionalManifestFiles>
+@@ -140,7 +140,7 @@
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+       <OptimizeReferences>true</OptimizeReferences>
+-      <AdditionalDependencies>shlwapi.lib;advapi32.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+     </Link>
+     <Manifest>
+       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest</AdditionalManifestFiles>
+@@ -166,7 +166,7 @@
+       <GenerateDebugInformation>true</GenerateDebugInformation>
+       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+       <OptimizeReferences>true</OptimizeReferences>
+-      <AdditionalDependencies>shlwapi.lib;advapi32.lib;wsetargv.obj;$(Outdir)mp4v2.lib;$(Outdir)taglib.lib;$(Outdir)common.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
++      <AdditionalDependencies>shlwapi.lib;advapi32.lib;winmm.lib;wsetargv.obj;$(Outdir)mp4v2.lib;$(Outdir)taglib.lib;$(Outdir)common.lib;$(Outdir)alac.lib;%(AdditionalDependencies)</AdditionalDependencies>
+     </Link>
+     <Manifest>
+       <AdditionalManifestFiles>$(SolutionDir)..\Windows7.manifest</AdditionalManifestFiles>
+diff --git a/waveoutsink.cpp b/waveoutsink.cpp
+new file mode 100644
+index 0000000..8768653
+--- /dev/null
++++ b/waveoutsink.cpp
+@@ -0,0 +1,111 @@
++#include "waveoutsink.h"
++#include <mmreg.h>
++
++inline void mm_try(MMRESULT expr, const char *msg)
++{
++    if (expr != MMSYSERR_NOERROR) {
++        wchar_t text[1024];
++        waveOutGetErrorTextW(expr, text, 1024);
++	throw std::runtime_error(strutil::format("WaveOut: %s",
++                                                 strutil::w2us(text).c_str()));
++    }
++} 
++#define TRYMM(expr) (void)(mm_try(expr, #expr))
++
++void WaveOutDevice::open(const AudioStreamBasicDescription &format,
++                         uint32_t chanmask)
++{
++    if (std::memcmp(&format, &m_asbd, sizeof(format)) == 0
++        && chanmask == m_chanmask)
++        return;
++    close();
++
++    m_asbd = format;
++    m_chanmask = chanmask;
++    memset(m_packets, 0, sizeof m_packets);
++
++    for (size_t i = 0; i < NUMBUFFERS; ++i) {
++	m_packets[i].dwFlags = WHDR_DONE;
++	m_events[i] = CreateEventW(0, 1, 1, 0); /* initially set. */
++    }
++
++    WAVEFORMATEXTENSIBLE wfex = { 0 };
++    WAVEFORMATEX &wfx = wfex.Format;
++    wfx.cbSize = sizeof wfx;
++    if (format.mChannelsPerFrame > 2 || format.mBitsPerChannel > 16)
++        wfx.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
++    else
++        wfx.wFormatTag = WAVE_FORMAT_PCM;
++    wfx.nChannels = format.mChannelsPerFrame;
++    wfx.nSamplesPerSec = format.mSampleRate;
++    wfx.wBitsPerSample = ((format.mBitsPerChannel + 7) & ~7);
++    wfx.nBlockAlign = wfx.nChannels * (wfx.wBitsPerSample >> 3);
++    wfx.nAvgBytesPerSec = wfx.nSamplesPerSec * wfx.nBlockAlign;
++    wfx.cbSize = 0;
++    if (wfx.wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
++        wfx.cbSize = 22;
++        wfex.Samples.wValidBitsPerSample = wfx.wBitsPerSample;
++        wfex.dwChannelMask = chanmask;
++        if (format.mFormatFlags & kAudioFormatFlagIsFloat)
++            wfex.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
++        else
++            wfex.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
++    }
++    HWAVEOUT device;
++    TRYMM(waveOutOpen(&device, WAVE_MAPPER,
++                      reinterpret_cast<LPCWAVEFORMATEX>(&wfex),
++                      reinterpret_cast<DWORD_PTR>(staticWaveOutProc),
++                      reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION));
++    m_device = std::shared_ptr<HWAVEOUT__>(device, waveOutClose);
++}
++
++void WaveOutDevice::writeSamples(const void *data, size_t length,
++                                 size_t nsamples)
++{
++    void *bp = const_cast<void *>(data);
++    if (m_asbd.mBitsPerChannel <= 8) {
++        util::convert_sign(static_cast<uint32_t *>(bp),
++                           nsamples * m_asbd.mChannelsPerFrame);
++    }
++    unsigned obpc = m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame;
++    unsigned nbpc = ((m_asbd.mBitsPerChannel + 7) & ~7) >> 3;
++    util::pack(bp, &length, obpc, nbpc);
++    size_t pos = m_ibuffer.size();
++    m_ibuffer.resize(pos + length);
++    std::memcpy(&m_ibuffer[pos], bp, length);
++    if (m_ibuffer.size() < m_asbd.mSampleRate / NUMBUFFERS)
++        return;
++
++    DWORD n = WaitForMultipleObjects(util::sizeof_array(m_events), m_events,
++                                     0, INFINITE);
++    n -= WAIT_OBJECT_0;
++    ResetEvent(m_events[n]);
++    WAVEHDR& wh = m_packets[n];
++    TRYMM(waveOutUnprepareHeader(m_device.get(), &wh, sizeof wh));
++    m_buffers[n] = m_ibuffer;
++    m_ibuffer.clear();
++    wh.lpData = &m_buffers[n][0];
++    wh.dwBufferLength = m_buffers[n].size();
++    TRYMM(waveOutPrepareHeader(m_device.get(), &wh, sizeof wh));
++    TRYMM(waveOutWrite(m_device.get(), &wh, sizeof wh));
++}
++
++void WaveOutDevice::close()
++{
++    WaitForMultipleObjects(NUMBUFFERS, m_events, 1, INFINITE);
++    for (size_t i = 0; i < NUMBUFFERS; ++i)
++	if (m_events[i]) CloseHandle(m_events[i]);
++    memset(m_events, 0, sizeof m_events);
++    memset(&m_asbd, 0, sizeof m_asbd);
++    m_chanmask = 0;
++    m_device.reset();
++}
++
++void
++WaveOutDevice::waveOutProc(UINT uMsg, DWORD_PTR dwParam1, DWORD_PTR)
++{
++    if (uMsg == WOM_DONE) {
++	LPWAVEHDR lpwh = reinterpret_cast<LPWAVEHDR>(dwParam1);
++	SetEvent(m_events[lpwh - m_packets]);
++    }
++}
+diff --git a/waveoutsink.h b/waveoutsink.h
+new file mode 100644
+index 0000000..9426570
+--- /dev/null
++++ b/waveoutsink.h
+@@ -0,0 +1,57 @@
++#ifndef _WAVEOUTSINK_H
++#define _WAVEOUTSINK_H
++
++#include <vector>
++#include <memory>
++#include <windows.h>
++#include <mmsystem.h>
++#include "iointer.h"
++
++class WaveOutDevice {
++    enum { NUMBUFFERS = 2 };
++    std::shared_ptr<HWAVEOUT__> m_device;
++    HANDLE m_events[NUMBUFFERS];
++    WAVEHDR m_packets[NUMBUFFERS];
++    std::vector<char> m_buffers[NUMBUFFERS];
++    std::vector<char> m_ibuffer;
++    AudioStreamBasicDescription m_asbd;
++    uint32_t m_chanmask;
++public:
++    static WaveOutDevice *instance()
++    {
++        static WaveOutDevice *x = new WaveOutDevice();
++        return x;
++    }
++    void open(const AudioStreamBasicDescription &asbd, uint32_t chanmask);
++    void writeSamples(const void *data, size_t length, size_t nsamples);
++    void close();
++private:
++    WaveOutDevice()
++        : m_chanmask(0)
++    {
++        memset(m_events, 0, sizeof m_events);
++        memset(&m_asbd, 0, sizeof m_asbd);
++    }
++    static void CALLBACK
++        staticWaveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance,
++                          DWORD_PTR dwParam1, DWORD_PTR dwParam2)
++    {
++	WaveOutDevice *self = reinterpret_cast<WaveOutDevice*>(dwInstance);
++	self->waveOutProc(uMsg, dwParam1, dwParam2);
++    }
++    void waveOutProc(UINT uMsg, DWORD_PTR dwParam1, DWORD_PTR dwParam2);
++};
++
++class WaveOutSink: public ISink {
++public:
++    WaveOutSink(const AudioStreamBasicDescription &format, uint32_t chanmask)
++    {
++        WaveOutDevice::instance()->open(format, chanmask);
++    }
++    void writeSamples(const void *data, size_t length, size_t nsamples)
++    {
++        WaveOutDevice::instance()->writeSamples(data, length, nsamples);
++    }
++};
++
++#endif

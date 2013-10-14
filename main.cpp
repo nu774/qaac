@@ -13,6 +13,7 @@
 #include "sink.h"
 #include "alacsink.h"
 #include "wavsink.h"
+#include "waveoutsink.h"
 #include "peaksink.h"
 #include "cuesheet.h"
 #include "composite.h"
@@ -812,7 +813,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             // Don't automatically quantize float input
             throw std::runtime_error("ALAC: input format is not supported");
         }
-    } else if (opts.isLPCM()) {
+    } else if (opts.isLPCM() || opts.isWaveOut()) {
         /* output f64 sample only when input was already f64 */
         if (sasbd.mBitsPerChannel <= 32 &&
             chain.back()->getSampleFormat().mBitsPerChannel > 32)
@@ -884,7 +885,10 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
         fileptr = win32::fopen(ofilename, L"wb");
         sink = std::make_shared<WaveSink>(fileptr.get(), src->length(),
                                           sf, chanmask);
-    } else if (opts.isPeak())
+    }
+    else if (opts.isWaveOut())
+        sink = std::make_shared<WaveOutSink>(sf, chanmask);
+    else if (opts.isPeak())
         sink = std::make_shared<PeakSink>(sf);
 
     Progress progress(opts.verbose, src->length(), sf.mSampleRate);
@@ -1132,7 +1136,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::vector<std::shared_ptr<ISource> > chain;
     build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout,
                        &iasbd, &oasbd);
-    if (opts.isLPCM() || opts.isPeak()) {
+    if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
         decode_file(chain, ofilename, opts, wavChanmask);
         return;
     }
@@ -1179,7 +1183,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::vector<std::shared_ptr<ISource> > chain;
     build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout, &iasbd, 0);
 
-    if (opts.isLPCM() || opts.isPeak()) {
+    if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
         decode_file(chain, ofilename, opts, wavChanmask);
         return;
     }
@@ -1531,6 +1535,8 @@ int wmain1(int argc, wchar_t **argv)
 #endif
             }
         }
+        if (opts.isWaveOut())
+            WaveOutDevice::instance()->close();
     } catch (const std::exception &e) {
         if (opts.print_available_formats)
             Log::instance()->enable_stderr();

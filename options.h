@@ -57,6 +57,10 @@ struct Options {
     {
         return output_format == 'lpcm';
     }
+    bool isWaveOut() const
+    {
+        return output_format == 'play';
+    }
     bool isPeak() const
     {
         return output_format == 'peak';
@@ -65,7 +69,7 @@ struct Options {
     {
         if (isMP4()) return L".m4a";
         else if (isLPCM()) return L".wav";
-        else if (isPeak()) return L"";
+        else if (isWaveOut() || isPeak()) return L"";
         else return L".aac";
     }
 

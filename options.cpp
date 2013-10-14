@@ -21,6 +21,7 @@ static wide::option long_options[] = {
 #endif
     { L"check", no_argument, 0, 'chck' },
     { L"decode", no_argument, 0, 'D' },
+    { L"play", no_argument, 0, 'play' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"bits-per-sample", required_argument, 0, 'b' },
     { L"no-dither", no_argument, 0, 'ndit' },
@@ -136,7 +137,8 @@ void usage()
 #endif
 "-d <dirname>           Output directory. Default is current working dir.\n"
 "--check                Show library versions and exit.\n"
-"-D, --decode           Wave output mode.\n"
+"-D, --decode           Decode to a WAV file.\n"
+"--play                 Decode to a WaveOut device (playback).\n"
 "-r, --rate <keep|auto|n>\n"
 "                       keep: output sampling rate will be same as input\n"
 "                             if possible.\n"
@@ -359,6 +361,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 return false;
             }
             this->output_format = 'aach';
+        }
+        else if (ch == 'play') {
+            if (this->output_format && !isWaveOut()) {
+                std::fputws(L"--play cannot be specified with encoding mode.\n",
+                            stderr);
+                return false;
+            }
+            this->output_format = 'play';
         }
         else if (ch == 'peak') {
             if (this->output_format && !isPeak()) {
