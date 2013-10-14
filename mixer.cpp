@@ -84,7 +84,8 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
       m_module(module)
 {
     const AudioStreamBasicDescription &fmt = source->getSampleFormat();
-    if (!validateMatrix(m_matrix, &m_shiftMask))
+    uint32_t shiftMask;
+    if (!validateMatrix(m_matrix, &shiftMask))
         throw std::runtime_error("invalid/unsupported matrix spec");
     if (m_matrix[0].size() != fmt.mChannelsPerFrame)
         throw std::runtime_error("unmatch number of channels with matrix");
@@ -93,7 +94,13 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
     m_asbd = cautil::buildASBDForPCM(fmt.mSampleRate, spec.size(),
                                      32, kAudioFormatFlagIsFloat);
     m_buffer.units_per_packet = fmt.mChannelsPerFrame;
-    if (m_shiftMask)
+    for (unsigned i = 0; i < fmt.mChannelsPerFrame; ++i) {
+        if (shiftMask & (1 << i))
+            m_shift_channels.push_back(i);
+        else
+            m_pass_channels.push_back(i);
+    }
+    if (shiftMask)
         initFilter();
 }
 
@@ -110,15 +117,13 @@ void MatrixMixer::initFilter()
          ii != coefs.end(); ++ii)
         *ii /= filter_gain;
 
-    for (unsigned n = 0; n < fmt.mChannelsPerFrame; ++n) {
-        if (m_shiftMask & (1 << n)) {
-            lsx_convolver_t *f =
-                m_module.create(1, &coefs[0], coefs.size(), coefs.size()>>1);
-            if (!f)
-                throw std::runtime_error("failed to init hilbert transformer");
-            std::shared_ptr<lsx_convolver_t> filterp(f, m_module.close);
-            m_filter.push_back(filterp);
-        }
+    for (unsigned i = 0; i < m_shift_channels.size(); ++i) {
+        lsx_convolver_t *f =
+            m_module.create(1, &coefs[0], coefs.size(), coefs.size()>>1);
+        if (!f)
+            throw std::runtime_error("failed to init hilbert transformer");
+        std::shared_ptr<lsx_convolver_t> filterp(f, m_module.close);
+        m_filter.push_back(filterp);
     }
 }
 
@@ -128,7 +133,7 @@ size_t MatrixMixer::readSamples(void *buffer, size_t nsamples)
     if (m_fbuffer.size() < nsamples * ichannels)
         m_fbuffer.resize(nsamples * ichannels);
 
-    if (m_shiftMask)
+    if (m_shift_channels.size())
         nsamples = phaseShift(nsamples);
     else
         nsamples = readSamplesAsFloat(source(), &m_ibuffer,
@@ -152,7 +157,13 @@ size_t MatrixMixer::readSamples(void *buffer, size_t nsamples)
 
 size_t MatrixMixer::phaseShift(size_t nsamples)
 {
-    uint32_t ichannels = source()->getSampleFormat().mChannelsPerFrame;
+    const uint32_t ichannels = source()->getSampleFormat().mChannelsPerFrame;
+    const size_t pass_channels_size = m_pass_channels.size();
+    const size_t shift_channels_size = m_shift_channels.size();
+    const unsigned * const pass_channels =
+        pass_channels_size ? &m_pass_channels[0]: 0;
+    const unsigned * const shift_channels = &m_shift_channels[0];
+
     size_t ilen = 0, olen = 0;
     do {
         if (m_buffer.count() == 0) {
@@ -160,32 +171,33 @@ size_t MatrixMixer::phaseShift(size_t nsamples)
             ilen = readSamplesAsFloat(source(), &m_ibuffer,
                                       m_buffer.write_ptr(), nsamples);
             m_buffer.commit(ilen);
-            for (size_t i = 0; i < ilen; ++i) {
-                float *frame = m_buffer.read_ptr() + i * ichannels;
-                for (unsigned n = 0; n < ichannels; ++n)
-                    if (!(m_shiftMask & (1 << n)))
-                        m_syncque.push_back(frame[n]);
+            if (pass_channels_size > 0) {
+                for (size_t i = 0; i < ilen; ++i) {
+                    float *frame = m_buffer.read_ptr() + i * ichannels;
+                    for (unsigned n = 0; n < pass_channels_size; ++n)
+                        m_syncque.push_back(frame[pass_channels[n]]);
+                }
             }
         }
         float *bp = m_buffer.read_ptr();
-        for (unsigned k = 0, n = 0; n < ichannels; ++n) {
-            if (m_shiftMask & (1 << n)) {
-                ilen = m_buffer.count();
-                olen = nsamples;
-                float *ip = bp + n;
-                float *op = &m_fbuffer[n];
-                m_module.process_ni(m_filter[k++].get(), &ip, &op,
-                                    ichannels, ichannels, &ilen, &olen);
-            }
+        for (unsigned i = 0; i < shift_channels_size; ++i) {
+            unsigned n = shift_channels[i];
+            ilen = m_buffer.count();
+            olen = nsamples;
+            float *ip = bp + n;
+            float *op = &m_fbuffer[n];
+            m_module.process_ni(m_filter[i].get(), &ip, &op,
+                                ichannels, ichannels, &ilen, &olen);
         }
         m_buffer.advance(ilen);
     } while (ilen != 0 && olen == 0);
 
-    for (size_t i = 0; i < olen; ++i) {
-        float *frame = &m_fbuffer[i * ichannels];
-        for (unsigned n = 0; n < ichannels; ++n) {
-            if (!(m_shiftMask & (1 << n))) {
-                frame[n] = m_syncque.front();
+    if (pass_channels_size > 0) {
+        float *fp = &m_fbuffer[0];
+        for (size_t i = 0; i < olen; ++i) {
+            float *frame = fp + i * ichannels;
+            for (unsigned n = 0; n < pass_channels_size; ++n) {
+                frame[pass_channels[n]] = m_syncque.front();
                 m_syncque.pop_front();
             }
         }

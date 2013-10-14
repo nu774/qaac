@@ -9,10 +9,10 @@
 typedef std::complex<float> complex_t;
 
 class MatrixMixer: public FilterBase {
-    uint32_t m_shiftMask;
     int64_t m_position;
     std::vector<std::vector<complex_t> > m_matrix;
     std::vector<std::shared_ptr<lsx_convolver_t> > m_filter;
+    std::vector<unsigned> m_shift_channels, m_pass_channels;
     std::deque<float> m_syncque;
     std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
