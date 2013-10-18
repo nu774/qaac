@@ -38,7 +38,7 @@ public:
 
 Quantizer::Quantizer(const std::shared_ptr<ISource> &source,
                      uint32_t bitdepth, bool no_dither, bool is_float)
-    : FilterBase(source), m_no_dither(no_dither)
+    : FilterBase(source)
 {
     const AudioStreamBasicDescription &asbd = source->getSampleFormat();
     m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
@@ -46,35 +46,94 @@ Quantizer::Quantizer(const std::shared_ptr<ISource> &source,
                                       bitdepth, 32,
                                       is_float ? kAudioFormatFlagIsFloat
                                         : kAudioFormatFlagIsSignedInteger);
+
+    bool dither = !no_dither && m_asbd.mBitsPerChannel <= 18;
+
+    if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat)
+        m_convert = &Quantizer::convertSamples_a2f;
+    else if (asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
+        if (m_asbd.mBitsPerChannel >= asbd.mBitsPerChannel)
+            m_convert = &Quantizer::convertSamples_i2i_0;
+        else if (dither)
+            m_convert = &Quantizer::convertSamples_i2i_2;
+        else
+            m_convert = &Quantizer::convertSamples_i2i_1;
+    } else if (asbd.mBitsPerChannel <= 32)
+        m_convert = dither ? &Quantizer::convertSamples_f2i_2
+                           : &Quantizer::convertSamples_f2i_1;
+    else
+        m_convert = dither ? &Quantizer::convertSamples_d2i_2
+                           : &Quantizer::convertSamples_d2i_1;
 }
 
-size_t Quantizer::readSamples(void *buffer, size_t nsamples)
+size_t Quantizer::convertSamples_a2f(void *buffer, size_t nsamples)
 {
-    const AudioStreamBasicDescription &iasbd = source()->getSampleFormat();
+    return readSamplesAsFloat(source(), &m_pivot,
+                              static_cast<float*>(buffer), nsamples);
+}
 
-    if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
-        float *fp = static_cast<float*>(buffer);
-        nsamples = readSamplesAsFloat(source(), &m_ibuffer, fp, nsamples);
-    } else if (iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) {
-        nsamples = source()->readSamples(buffer, nsamples);
-        if (m_asbd.mBitsPerChannel < iasbd.mBitsPerChannel) {
-            ditherInt(static_cast<int*>(buffer),
-                      nsamples * m_asbd.mChannelsPerFrame,
-                      m_asbd.mBitsPerChannel);
-        }
-    } else if (iasbd.mBitsPerChannel <= 32) {
-        nsamples = readSamplesAsFloat(source(), 0, &m_fbuffer,
-                                      nsamples);
-        ditherFloat(&m_fbuffer[0], static_cast<int*>(buffer),
-                    nsamples * m_asbd.mChannelsPerFrame,
-                    m_asbd.mBitsPerChannel);
-    } else {
-        nsamples = readSamplesAsFloat(source(), 0, &m_dbuffer,
-                                      nsamples);
-        ditherFloat(&m_dbuffer[0], static_cast<int*>(buffer),
-                    nsamples * m_asbd.mChannelsPerFrame,
-                    m_asbd.mBitsPerChannel);
-    }
+size_t Quantizer::convertSamples_i2i_0(void *buffer, size_t nsamples)
+{
+    return source()->readSamples(buffer, nsamples);
+}
+
+size_t Quantizer::convertSamples_i2i_1(void *buffer, size_t nsamples)
+{
+    nsamples = source()->readSamples(buffer, nsamples);
+    ditherInt1(static_cast<int32_t *>(buffer),
+               m_asbd.mChannelsPerFrame * nsamples,
+               m_asbd.mBitsPerChannel);
+    return nsamples;
+}
+
+size_t Quantizer::convertSamples_i2i_2(void *buffer, size_t nsamples)
+{
+    nsamples = source()->readSamples(buffer, nsamples);
+    ditherInt2(static_cast<int32_t *>(buffer),
+               m_asbd.mChannelsPerFrame * nsamples,
+               m_asbd.mBitsPerChannel);
+    return nsamples;
+}
+
+size_t Quantizer::convertSamples_f2i_1(void *buffer, size_t nsamples)
+{
+    nsamples = source()->readSamples(buffer, nsamples);
+    ditherFloat1(static_cast<float *>(buffer),
+                 static_cast<int32_t *>(buffer),
+                 m_asbd.mChannelsPerFrame * nsamples,
+                 m_asbd.mBitsPerChannel);
+    return nsamples;
+}
+
+size_t Quantizer::convertSamples_f2i_2(void *buffer, size_t nsamples)
+{
+    nsamples = source()->readSamples(buffer, nsamples);
+    ditherFloat2(static_cast<float *>(buffer),
+                 static_cast<int32_t *>(buffer),
+                 m_asbd.mChannelsPerFrame * nsamples,
+                 m_asbd.mBitsPerChannel);
+    return nsamples;
+}
+
+size_t Quantizer::convertSamples_d2i_1(void *buffer, size_t nsamples)
+{
+    growPivot(nsamples);
+    nsamples = source()->readSamples(&m_pivot[0], nsamples);
+    ditherFloat1(reinterpret_cast<double *>(&m_pivot[0]),
+                 static_cast<int32_t *>(buffer),
+                 m_asbd.mChannelsPerFrame * nsamples,
+                 m_asbd.mBitsPerChannel);
+    return nsamples;
+}
+
+size_t Quantizer::convertSamples_d2i_2(void *buffer, size_t nsamples)
+{
+    growPivot(nsamples);
+    nsamples = source()->readSamples(&m_pivot[0], nsamples);
+    ditherFloat2(reinterpret_cast<double *>(&m_pivot[0]),
+                 static_cast<int32_t *>(buffer),
+                 m_asbd.mChannelsPerFrame * nsamples,
+                 m_asbd.mBitsPerChannel);
     return nsamples;
 }
 
@@ -87,39 +146,67 @@ size_t Quantizer::readSamples(void *buffer, size_t nsamples)
  *  We regard this as 24.7 fixed point num, and round to 24bit int.
  *  (We truncate 1bit from LSB side for handling overflow/saturation)
  */
-void Quantizer::ditherInt(int *data, size_t count, unsigned depth)
+void Quantizer::ditherInt1(int32_t *dst, size_t count, unsigned bits)
 {
-    const int one = 1 << (31 - depth);
+    const int one = 1 << (31 - bits);
     const int half = one / 2;
     const unsigned mask = ~(one - 1);
 
-    //RandomIntSpan<RandomEngine> nrand(m_engine, -half, half);
-    RandomIntSpanShift<RandomEngine> nrand(m_engine, 31 - depth);
     for (size_t i = 0; i < count; ++i) {
-        int value = data[i] >> 1;
-        if (depth <= 18 && !m_no_dither) {
-            int noise = nrand() + nrand();
-            value += noise;
-        }
-        data[i] = (clip(value + half, INT_MIN >> 1, INT_MAX >> 1) & mask)<< 1;
+        int value = ((dst[i] >> 1) + half) & mask;
+        if (value > INT_MAX>>1) value = INT_MAX>>1;
+        dst[i] = value << 1;
+    }
+}
+
+void Quantizer::ditherInt2(int32_t *dst, size_t count, unsigned bits)
+{
+    const int one = 1 << (31 - bits);
+    const int half = one / 2;
+    const unsigned mask = ~(one - 1);
+
+    RandomIntSpanShift<RandomEngine> noise(m_engine, 31 - bits);
+    for (size_t i = 0; i < count; ++i) {
+        int value = (dst[i] >> 1) + half + noise() + noise();
+        value &= mask;
+        dst[i] = clip(value, INT_MIN>>1, INT_MAX>>1) << 1;
     }
 }
 
 template <typename T>
-void Quantizer::ditherFloat(T *src, int *dst, size_t count, unsigned depth)
+void Quantizer::ditherFloat1(const T *src, int32_t *dst, size_t count,
+                             unsigned bits)
 {
-    int shifts = 32 - depth;
-    double half = 1U << (depth - 1);
+    int shifts = 32 - bits;
+    double half = 1U << (bits - 1);
+    double min_value = -half;
+    double max_value = half - 1;
+    for (size_t i = 0; i < count; ++i) {
+        double value = src[i] * half;
+        dst[i] = lrint(clip(value, min_value, max_value)) << shifts;
+    }
+}
+
+template <typename T>
+void Quantizer::ditherFloat2(const T *src, int32_t *dst, size_t count,
+                             unsigned bits)
+{
+    int shifts = 32 - bits;
+    double half = 1U << (bits - 1);
     double min_value = -half;
     double max_value = half - 1;
     std::uniform_real_distribution<double> dist(-0.5, 0.5);
     for (size_t i = 0; i < count; ++i) {
         double value = src[i] * half;
-        if (depth <= 18 && !m_no_dither) {
-            double noise = dist(m_engine) + dist(m_engine);
-            value += noise;
-        }
+        double noise = dist(m_engine) + dist(m_engine);
+        value += noise;
         dst[i] = lrint(clip(value, min_value, max_value)) << shifts;
     }
 }
 
+void Quantizer::growPivot(size_t nsamples)
+{
+    size_t nbytes = nsamples * source()->getSampleFormat().mBytesPerFrame;
+    if (m_pivot.size() < nbytes)
+        m_pivot.resize(nbytes);
+}
