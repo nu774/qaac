@@ -1223,7 +1223,12 @@ void setup_input_factory(const Options &opts)
     if (!factory->libwavpack.loaded())
         factory->libwavpack = WavpackModule(L"libwavpack-1.dll");
     factory->libtak = TakModule(L"tak_deco_lib.dll");
-    factory->libsoxr = SOXRModule(L"libsoxr.dll");
+#ifdef _WIN64
+    factory->libsoxr = SOXRModule(L"libsoxr64.dll");
+    if (!factory->libsoxr.loaded())
+#endif
+        factory->libsoxr = SOXRModule(L"libsoxr.dll");
+
 #ifdef _WIN64
     factory->libsoxconvolver = SoXConvolverModule(L"libsoxconvolver64.dll");
 #else
