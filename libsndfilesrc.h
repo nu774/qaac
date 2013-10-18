@@ -21,10 +21,12 @@ public:
     const char *(*strerror)(SNDFILE *);
     int (*command)(SNDFILE *, int, void *, int);
     sf_count_t (*seek)(SNDFILE *, sf_count_t, int);
-    sf_count_t (*read_short)(SNDFILE *, short *, sf_count_t);
-    sf_count_t (*read_int)(SNDFILE *, int *, sf_count_t);
-    sf_count_t (*read_float)(SNDFILE *, float *, sf_count_t);
-    sf_count_t (*read_double)(SNDFILE *, double *, sf_count_t);
+    /* XXX
+     * cheat as void to avoid unnecessary type casting
+     */
+    sf_count_t (*readf_int)(SNDFILE *, void *, sf_count_t);
+    sf_count_t (*readf_float)(SNDFILE *, void *, sf_count_t);
+    sf_count_t (*readf_double)(SNDFILE *, void *, sf_count_t);
 };
 
 class LibSndfileSource: public ISeekableSource, public ITagParser
@@ -38,6 +40,7 @@ class LibSndfileSource: public ISeekableSource, public ITagParser
     std::map<uint32_t, std::wstring> m_tags;
     LibSndfileModule m_module;
     AudioStreamBasicDescription m_asbd;
+    sf_count_t (*m_readf)(SNDFILE *, void *, sf_count_t);
 public:
     LibSndfileSource(const LibSndfileModule &module,
                      const std::shared_ptr<FILE> &fp);
@@ -51,7 +54,10 @@ public:
     {
         return m_chanmap.size() ? &m_chanmap: 0;
     }
-    size_t readSamples(void *buffer, size_t nsamples);
+    size_t readSamples(void *buffer, size_t nsamples)
+    {
+        return static_cast<size_t>(m_readf(m_handle.get(), buffer, nsamples));
+    }
     bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     int64_t getPosition();
@@ -60,9 +66,6 @@ public:
     {
         return 0;
     }
-private:
-    size_t readSamples8(void *buffer, size_t nsamples);
-    size_t readSamples24(void *buffer, size_t nsamples);
 };
 
 #endif

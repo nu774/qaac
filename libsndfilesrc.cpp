@@ -50,10 +50,9 @@ LibSndfileModule::LibSndfileModule(const std::wstring &path)
         CHECK(strerror = m_dl.fetch("sf_strerror"));
         CHECK(command = m_dl.fetch("sf_command"));
         CHECK(seek = m_dl.fetch("sf_seek"));
-        CHECK(read_short = m_dl.fetch("sf_read_short"));
-        CHECK(read_int = m_dl.fetch("sf_read_int"));
-        CHECK(read_float = m_dl.fetch("sf_read_float"));
-        CHECK(read_double = m_dl.fetch("sf_read_double"));
+        CHECK(readf_int = m_dl.fetch("sf_readf_int"));
+        CHECK(readf_float = m_dl.fetch("sf_readf_float"));
+        CHECK(readf_double = m_dl.fetch("sf_readf_double"));
         CHECK(close = m_dl.fetch("sf_close"));
     } catch (...) {
         m_dl.reset();
@@ -125,7 +124,7 @@ LibSndfileSource::LibSndfileSource(
          { 16, kAudioFormatFlagIsSignedInteger },
          { 24, kAudioFormatFlagIsSignedInteger },
          { 32, kAudioFormatFlagIsSignedInteger },
-         { 8,  0 /* unsigned integer */        },
+         { 8,  kAudioFormatFlagIsSignedInteger },
          { 32, kAudioFormatFlagIsFloat         },
          { 64, kAudioFormatFlagIsFloat         }
     };
@@ -139,6 +138,13 @@ LibSndfileSource::LibSndfileSource(
     m_asbd = cautil::buildASBDForPCM2(info.samplerate, info.channels,
                                       mapping[subformat].bits, pack_bits,
                                       mapping[subformat].type);
+
+    if (m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger)
+        m_readf = m_module.readf_int;
+    else if (pack_bits == 32)
+        m_readf = m_module.readf_float;
+    else
+        m_readf = m_module.readf_double;
 
     m_chanmap.resize(info.channels);
     if (m_module.command(sf, SFC_GET_CHANNEL_MAP_INFO, &m_chanmap[0],
@@ -166,23 +172,4 @@ int64_t LibSndfileSource::getPosition()
     if ((pos = m_module.seek(m_handle.get(), 0, SEEK_CUR)) == -1)
         throw std::runtime_error("sf_seek() failed");
     return pos;
-}
-
-#define SF_READ(type, handle, buffer, nsamples) \
-    m_module.read_##type(handle, reinterpret_cast<type*>(buffer), nsamples)
-
-size_t LibSndfileSource::readSamples(void *buffer, size_t nsamples)
-{
-    nsamples *= m_asbd.mChannelsPerFrame;
-    sf_count_t rc;
-    if (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
-        if (m_asbd.mBitsPerChannel <= 32)
-            rc = SF_READ(float, m_handle.get(), buffer, nsamples);
-        else
-            rc = SF_READ(double, m_handle.get(), buffer, nsamples);
-    } else
-        rc = SF_READ(int, m_handle.get(), buffer, nsamples);
-
-    nsamples = static_cast<size_t>(rc / m_asbd.mChannelsPerFrame);
-    return nsamples;
 }
