@@ -140,28 +140,22 @@ int64_t WavpackSource::getPosition()
 size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
 {
     /*
-     * Wavpack sample is aligned to low at byte level,
+     * Wavpack frame is interleaved and aligned to low at byte level,
      * but aligned to high at bit level inside of valid bytes.
      * 20bits sample is stored like the following:
      * <-- MSB ------------------ LSB ---->
      * 00000000 xxxxxxxx xxxxxxxx xxxx0000
      */
     int shifts = 32 - ((m_asbd.mBitsPerChannel + 7) & ~7);
-    size_t total = 0;
-    int *bp = static_cast<int*>(buffer);
-    while (total < nsamples) {
-        int rc = m_module.UnpackSamples(m_wpc.get(), bp, nsamples - total);
-        if (rc <= 0)
-            break;
-        if (shifts) {
-            /* align to MSB side */
-            for (size_t i = 0; i < rc * m_asbd.mChannelsPerFrame; ++i)
-                bp[i] <<= shifts; 
-        }
-        total += rc;
-        bp += rc;
+    int32_t *bp = static_cast<int32_t *>(buffer);
+    int rc = m_module.UnpackSamples(m_wpc.get(), bp, nsamples);
+    if (rc && shifts) {
+        const size_t count = rc * m_asbd.mChannelsPerFrame;
+        /* align to MSB side */
+        for (size_t i = 0; i < count; ++i)
+            bp[i] <<= shifts; 
     }
-    return total;
+    return rc;
 }
 
 void WavpackSource::fetchTags()
