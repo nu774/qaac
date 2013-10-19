@@ -2,6 +2,7 @@
 #define _WAVESINK_H
 
 #include "iointer.h"
+#include "win32util.h"
 
 class WaveSink : public ISink {
     FILE *m_file;
@@ -32,7 +33,7 @@ private:
     {
         std::fwrite(data, 1, length, m_file);
         if (ferror(m_file))
-            util::throw_crt_error("fwrite()");
+            win32::throw_error("write failed", _doserrno);
     }
 };
 

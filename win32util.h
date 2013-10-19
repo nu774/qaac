@@ -96,7 +96,7 @@ namespace win32 {
             share = _SH_DENYWR;
         FILE *fp = _wfsopen(fullpath.c_str(), mode, share);
         if (!fp)
-            util::throw_crt_error(fullpath.c_str());
+            throw_error(fullpath.c_str(), _doserrno);
         return fp;
     }
     inline std::shared_ptr<FILE> fopen(const std::wstring &path,

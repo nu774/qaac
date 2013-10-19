@@ -211,8 +211,11 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
     bs.put(0, 2); // number_of_raw_data_blocks_in_frame
     bs.byteAlign();
 
-    CHECKCRT(write(fileno(m_fp.get()), bs.data(), 7) < 0);
-    CHECKCRT(write(fileno(m_fp.get()), data, length) < 0);
+    if (write(fileno(m_fp.get()), bs.data(), 7) < 0 ||
+        write(fileno(m_fp.get()), data, length) < 0)
+    {
+        win32::throw_error("write failed", _doserrno);
+    }
 }
 
 void ADTSSink::init(const std::vector<uint8_t> &cookie)
