@@ -58,7 +58,11 @@ Quantizer::Quantizer(const std::shared_ptr<ISource> &source,
             m_convert = &Quantizer::convertSamples_i2i_2;
         else
             m_convert = &Quantizer::convertSamples_i2i_1;
-    } else if (asbd.mBitsPerChannel <= 32)
+    }
+    else if (asbd.mBitsPerChannel == 16)
+        m_convert = dither ? &Quantizer::convertSamples_h2i_2
+                           : &Quantizer::convertSamples_h2i_1;
+    else if (asbd.mBitsPerChannel <= 32)
         m_convert = dither ? &Quantizer::convertSamples_f2i_2
                            : &Quantizer::convertSamples_f2i_1;
     else
@@ -92,6 +96,28 @@ size_t Quantizer::convertSamples_i2i_2(void *buffer, size_t nsamples)
     ditherInt2(static_cast<int32_t *>(buffer),
                m_asbd.mChannelsPerFrame * nsamples,
                m_asbd.mBitsPerChannel);
+    return nsamples;
+}
+
+size_t Quantizer::convertSamples_h2i_1(void *buffer, size_t nsamples)
+{
+    nsamples = readSamplesAsFloat(source(), &m_pivot,
+                                  static_cast<float*>(buffer), nsamples);
+    ditherFloat1(static_cast<float *>(buffer),
+                 static_cast<int32_t *>(buffer),
+                 m_asbd.mChannelsPerFrame * nsamples,
+                 m_asbd.mBitsPerChannel);
+    return nsamples;
+}
+
+size_t Quantizer::convertSamples_h2i_2(void *buffer, size_t nsamples)
+{
+    nsamples = readSamplesAsFloat(source(), &m_pivot,
+                                  static_cast<float*>(buffer), nsamples);
+    ditherFloat2(static_cast<float *>(buffer),
+                 static_cast<int32_t *>(buffer),
+                 m_asbd.mChannelsPerFrame * nsamples,
+                 m_asbd.mBitsPerChannel);
     return nsamples;
 }
 

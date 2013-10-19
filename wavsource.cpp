@@ -225,10 +225,23 @@ void WaveSource::fmt(size_t size)
             throw std::runtime_error("WaveSource: invalid wave fmt");
     }
 
+    if (isfloat) {
+        if (wValidBitsPerSample != 16 && wValidBitsPerSample != 24 &&
+            wValidBitsPerSample != 32 && wValidBitsPerSample != 64)
+            throw std::runtime_error("WaveSource: not supported float format");
+        if (wBitsPerSample > 64)
+            throw std::runtime_error("WaveSource: not supported float format");
+    } else if (wBitsPerSample > 32)
+        throw std::runtime_error("WaveSource: not supported integer format");
+
     m_block_align = nBlockAlign;
+
+    unsigned bits = 32;
+    if (isfloat && wValidBitsPerSample > 32) bits = 64;
+    else if (isfloat && wValidBitsPerSample <= 16) bits = 16;
+
     m_asbd = cautil::buildASBDForPCM2(nSamplesPerSec, nChannels,
-                                      wValidBitsPerSample,
-                                      isfloat ? wBitsPerSample : 32,
+                                      wValidBitsPerSample, bits,
                                       isfloat ? kAudioFormatFlagIsFloat
                                         : kAudioFormatFlagIsSignedInteger);
 }

@@ -29,6 +29,8 @@ private:
     size_t convertSamples_i2i_0(void *buffer, size_t nsamples);
     size_t convertSamples_i2i_1(void *buffer, size_t nsamples);
     size_t convertSamples_i2i_2(void *buffer, size_t nsamples);
+    size_t convertSamples_h2i_1(void *buffer, size_t nsamples);
+    size_t convertSamples_h2i_2(void *buffer, size_t nsamples);
     size_t convertSamples_f2i_1(void *buffer, size_t nsamples);
     size_t convertSamples_f2i_2(void *buffer, size_t nsamples);
     size_t convertSamples_d2i_1(void *buffer, size_t nsamples);

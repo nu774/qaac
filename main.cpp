@@ -753,10 +753,19 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 opts.native_resampler_complexity >= 0 ||
                 (!opts.isAAC() && !opts.isALAC()))
             {
+                AudioStreamBasicDescription
+                    sfmt = chain.back()->getSampleFormat();
+                if ((sfmt.mFormatFlags & kAudioFormatFlagIsFloat) &&
+                    sfmt.mBitsPerChannel < 32)
+                {
+                    chain.push_back(std::make_shared<Quantizer>(chain.back(),
+                                                            32, false, true));
+                }
                 int quality = opts.native_resampler_quality;
                 uint32_t complexity = opts.native_resampler_complexity;
                 if (quality == -1) quality = kAudioConverterQuality_Medium;
                 if (!complexity) complexity = 'norm';
+
                 CoreAudioResampler *resampler =
                     new CoreAudioResampler(chain.back(), oasbd.mSampleRate,
                                            bound_quality(quality), complexity);
@@ -786,11 +795,14 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         chain.push_back(scaler);
     }
     if (opts.bits_per_sample) {
+        bool is_float = (opts.bits_per_sample == 32 && !opts.isALAC());
+        unsigned sbits = chain.back()->getSampleFormat().mBitsPerChannel;
+        bool sflags = chain.back()->getSampleFormat().mFormatFlags;
+
         if (opts.isAAC())
             LOG(L"WARNING: --bits-per-sample has no effect for AAC\n");
-        else if (chain.back()->getSampleFormat().mBitsPerChannel
-                 != opts.bits_per_sample) {
-            bool is_float = (opts.bits_per_sample == 32 && !opts.isALAC());
+        else if (sbits != opts.bits_per_sample ||
+                 !!(sflags & kAudioFormatFlagIsFloat) != is_float) {
             std::shared_ptr<ISource>
                 isrc(new Quantizer(chain.back(), opts.bits_per_sample,
                                    opts.no_dither, is_float));
@@ -812,6 +824,14 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         } else if (isfloat) {
             // Don't automatically quantize float input
             throw std::runtime_error("ALAC: input format is not supported");
+        }
+    } else if (opts.isAAC()) {
+        AudioStreamBasicDescription sfmt = chain.back()->getSampleFormat();
+        if ((sfmt.mFormatFlags & kAudioFormatFlagIsFloat) &&
+            sfmt.mBitsPerChannel < 32)
+        {
+            chain.push_back(std::make_shared<Quantizer>(chain.back(), 32,
+                                                        false, true));
         }
     } else if (opts.isLPCM() || opts.isWaveOut()) {
         /* output f64 sample only when input was already f64 */
