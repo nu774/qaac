@@ -15,7 +15,8 @@ namespace {
     {
         return (asbd.mChannelsPerFrame > 2
                 || asbd.mBitsPerChannel > 16
-                || (asbd.mBitsPerChannel & 7)) ? 0xfffe : 1;
+                || (asbd.mBitsPerChannel & 7)
+                || (asbd.mFormatFlags & kAudioFormatFlagIsFloat)) ? 0xfffe : 1;
     }
 }
 

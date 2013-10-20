@@ -32,7 +32,8 @@ void WaveOutDevice::open(const AudioStreamBasicDescription &format,
     WAVEFORMATEXTENSIBLE wfex = { 0 };
     WAVEFORMATEX &wfx = wfex.Format;
     wfx.cbSize = sizeof wfx;
-    if (format.mChannelsPerFrame > 2 || format.mBitsPerChannel > 16)
+    if (format.mChannelsPerFrame > 2 || format.mBitsPerChannel > 16 ||
+        (format.mFormatFlags & kAudioFormatFlagIsFloat))
         wfx.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     else
         wfx.wFormatTag = WAVE_FORMAT_PCM;
