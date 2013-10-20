@@ -19,8 +19,8 @@ public:
     bool loaded() const { return m_dl.loaded(); }
 
     const char *(*GetLibraryVersionString)();
-    WavpackContext *(*OpenFileInputEx)(void *,
-            void *, void *, char *, int, int);
+    WavpackContext *(*OpenFileInputEx)(void *, void *, void *, char *, int,
+                                       int);
     WavpackContext *(*CloseFile)(WavpackContext *);
     int (*GetBitsPerSample)(WavpackContext *);
     int (*GetChannelMask)(WavpackContext *);
@@ -32,6 +32,7 @@ public:
     uint32_t (*GetSampleRate)(WavpackContext *);
     int (*GetTagItem)(WavpackContext *, const char *, char *, int);
     int (*GetTagItemIndexed)(WavpackContext *, int, char *, int);
+    void *(*GetWrapperLocation)(void *first_block, uint32_t *size);
     int (*SeekSample)(WavpackContext *, uint32_t);
     uint32_t (*UnpackSamples)(WavpackContext *, int32_t *, uint32_t);
 };
@@ -44,6 +45,8 @@ class WavpackSource: public ISeekableSource, public ITagParser
     std::vector<uint32_t> m_chanmap;
     std::map<uint32_t, std::wstring> m_tags;
     std::vector<chapters::entry_t > m_chapters;
+    std::vector<uint8_t> m_pivot;
+    size_t (WavpackSource::*m_readSamples)(void *, size_t);
     AudioStreamBasicDescription m_asbd;
     WavpackModule m_module;
 public:
@@ -55,7 +58,10 @@ public:
     }
     const std::vector<uint32_t> *getChannels() const { return &m_chanmap; }
     int64_t getPosition();
-    size_t readSamples(void *buffer, size_t nsamples);
+    size_t readSamples(void *buffer, size_t nsamples)
+    {
+        return (this->*m_readSamples)(buffer, nsamples);
+    }
     bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
@@ -64,7 +70,10 @@ public:
         return m_chapters.size() ? &m_chapters : 0;
     }
 private:
+    bool parseWrapper();
     void fetchTags();
+    size_t readSamples16(void *buffer, size_t nsamples);
+    size_t readSamples32(void *buffer, size_t nsamples);
 };
 
 #endif

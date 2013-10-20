@@ -8,6 +8,7 @@
 #include "chanmap.h"
 #include "cautil.h"
 #include "win32util.h"
+#include "wavsource.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -31,6 +32,7 @@ WavpackModule::WavpackModule(const std::wstring &path)
         CHECK(GetSampleRate = m_dl.fetch( "WavpackGetSampleRate"));
         CHECK(GetTagItem = m_dl.fetch( "WavpackGetTagItem"));
         CHECK(GetTagItemIndexed = m_dl.fetch( "WavpackGetTagItemIndexed"));
+        CHECK(GetWrapperLocation = m_dl.fetch( "WavpackGetWrapperLocation"));
         CHECK(SeekSample = m_dl.fetch( "WavpackSeekSample"));
         CHECK(UnpackSamples = m_dl.fetch( "WavpackUnpackSamples"));
     } catch (...) {
@@ -38,53 +40,55 @@ WavpackModule::WavpackModule(const std::wstring &path)
     }
 }
 
-struct WavpackStreamReaderImpl: public WavpackStreamReader
-{
-    WavpackStreamReaderImpl()
+namespace {
+    struct WavpackStreamReaderImpl: public WavpackStreamReader
     {
-        static WavpackStreamReader t = {
-            read, tell, seek_abs, seek, pushback, size, seekable, 0/*write*/
-        };
-        std::memcpy(this, &t, sizeof(WavpackStreamReader));
-    }
-    static int32_t read(void *cookie, void *data, int32_t count)
-    {
-        int fd = reinterpret_cast<int>(cookie);
-        return util::nread(fd, data, count);
-    }
-    static uint32_t tell(void *cookie)
-    {
-        int fd = reinterpret_cast<int>(cookie);
-        int64_t off = _lseeki64(fd, 0, SEEK_CUR);
-        return std::min(off, 0xffffffffLL); // XXX
-    }
-    static int seek_abs(void *cookie, uint32_t pos)
-    {
-        int fd = reinterpret_cast<int>(cookie);
-        return _lseeki64(fd, pos, SEEK_SET) >= 0 ? 0 : -1;
-    }
-    static int seek(void *cookie, int32_t off, int whence)
-    {
-        int fd = reinterpret_cast<int>(cookie);
-        return _lseeki64(fd, off, whence) >= 0 ? 0 : -1;
-    }
-    static int pushback(void *cookie, int c)
-    {
-        int fd = reinterpret_cast<int>(cookie);
-        _lseeki64(fd, -1, SEEK_CUR); // XXX
-        return c;
-    }
-    static uint32_t size(void *cookie)
-    {
-        int fd = reinterpret_cast<int>(cookie);
-        int64_t size = _filelengthi64(fd);
-        return std::min(size, 0xffffffffLL); // XXX
-    }
-    static int seekable(void *cookie)
-    {
-        return util::is_seekable(reinterpret_cast<int>(cookie));
-    }
-};
+        WavpackStreamReaderImpl()
+        {
+            static WavpackStreamReader t = {
+                read, tell, seek_abs, seek, pushback, size, seekable, 0/*write*/
+            };
+            std::memcpy(this, &t, sizeof(WavpackStreamReader));
+        }
+        static int32_t read(void *cookie, void *data, int32_t count)
+        {
+            int fd = reinterpret_cast<int>(cookie);
+            return util::nread(fd, data, count);
+        }
+        static uint32_t tell(void *cookie)
+        {
+            int fd = reinterpret_cast<int>(cookie);
+            int64_t off = _lseeki64(fd, 0, SEEK_CUR);
+            return std::min(off, 0xffffffffLL); // XXX
+        }
+        static int seek_abs(void *cookie, uint32_t pos)
+        {
+            int fd = reinterpret_cast<int>(cookie);
+            return _lseeki64(fd, pos, SEEK_SET) >= 0 ? 0 : -1;
+        }
+        static int seek(void *cookie, int32_t off, int whence)
+        {
+            int fd = reinterpret_cast<int>(cookie);
+            return _lseeki64(fd, off, whence) >= 0 ? 0 : -1;
+        }
+        static int pushback(void *cookie, int c)
+        {
+            int fd = reinterpret_cast<int>(cookie);
+            _lseeki64(fd, -1, SEEK_CUR); // XXX
+            return c;
+        }
+        static uint32_t size(void *cookie)
+        {
+            int fd = reinterpret_cast<int>(cookie);
+            int64_t size = _filelengthi64(fd);
+            return std::min(size, 0xffffffffLL); // XXX
+        }
+        static int seekable(void *cookie)
+        {
+            return util::is_seekable(reinterpret_cast<int>(cookie));
+        }
+    };
+}
 
 WavpackSource::WavpackSource(const WavpackModule &module,
                              const std::wstring &path)
@@ -108,13 +112,21 @@ WavpackSource::WavpackSource(const WavpackModule &module,
         throw std::runtime_error("WavpackOpenFileInputEx() failed");
     m_wpc.reset(wpc, m_module.CloseFile);
 
-    bool is_float = m_module.GetMode(wpc) & MODE_FLOAT;
-    m_asbd = cautil::buildASBDForPCM2(m_module.GetSampleRate(wpc),
-                                      m_module.GetNumChannels(wpc),
-                                      m_module.GetBitsPerSample(wpc),
-                                      32,
-                                      is_float ? kAudioFormatFlagIsFloat 
-                                         : kAudioFormatFlagIsSignedInteger);
+    if (!parseWrapper()) {
+        bool is_float = m_module.GetMode(wpc) & MODE_FLOAT;
+        uint32_t flags = is_float ? kAudioFormatFlagIsFloat
+                                  : kAudioFormatFlagIsSignedInteger;
+        uint32_t bits = m_module.GetBitsPerSample(wpc);
+        uint32_t obits = (is_float && bits == 16) ? 16 : 32;
+
+        m_asbd = cautil::buildASBDForPCM2(m_module.GetSampleRate(wpc),
+                                          m_module.GetNumChannels(wpc),
+                                          bits, obits, flags);
+    }
+    if (m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame == 2)
+        m_readSamples = &WavpackSource::readSamples16;
+    else
+        m_readSamples = &WavpackSource::readSamples32;
 
     uint64_t duration = m_module.GetNumSamples(wpc);
     if (duration == 0xffffffff) duration = ~0ULL;
@@ -137,25 +149,37 @@ int64_t WavpackSource::getPosition()
     return m_module.GetSampleIndex(m_wpc.get());
 }
 
-size_t WavpackSource::readSamples(void *buffer, size_t nsamples)
+bool WavpackSource::parseWrapper()
 {
-    /*
-     * Wavpack frame is interleaved and aligned to low at byte level,
-     * but aligned to high at bit level inside of valid bytes.
-     * 20bits sample is stored like the following:
-     * <-- MSB ------------------ LSB ---->
-     * 00000000 xxxxxxxx xxxxxxxx xxxx0000
-     */
-    int shifts = 32 - ((m_asbd.mBitsPerChannel + 7) & ~7);
-    int32_t *bp = static_cast<int32_t *>(buffer);
-    int rc = m_module.UnpackSamples(m_wpc.get(), bp, nsamples);
-    if (rc && shifts) {
-        const size_t count = rc * m_asbd.mChannelsPerFrame;
-        /* align to MSB side */
-        for (size_t i = 0; i < count; ++i)
-            bp[i] <<= shifts; 
+    int fd = fileno(m_fp.get());
+    util::FilePositionSaver saver__(fd);
+    _lseeki64(fd, 0, SEEK_SET);
+
+    WavpackHeader hdr;
+    if (read(fd, &hdr, sizeof(hdr)) != sizeof(hdr))
+        return false;
+    if (std::memcmp(hdr.ckID, "wvpk", 4) != 0)
+        return false;
+    if (hdr.ckSize < sizeof(hdr) || hdr.ckSize > 0x1000000)
+        return false;
+    std::vector<char> first_block(hdr.ckSize);
+
+    _lseeki64(fd, 0, SEEK_SET);
+    if (read(fd, &first_block[0], hdr.ckSize) != hdr.ckSize)
+        return false;
+    void *loc = m_module.GetWrapperLocation(&first_block[0], 0);
+    if (!loc)
+        return false;
+    ptrdiff_t off = static_cast<char *>(loc) - &first_block[0];
+    _lseeki64(fd, off, SEEK_SET);
+
+    try {
+        WaveSource src(m_fp, false);
+        memcpy(&m_asbd, &src.getSampleFormat(), sizeof(m_asbd));
+        return true;
+    } catch (const std::runtime_error &) {
+        return false;
     }
-    return rc;
 }
 
 void WavpackSource::fetchTags()
@@ -188,4 +212,41 @@ void WavpackSource::fetchTags()
         for (it = tags.begin(); it != tags.end(); ++it)
             m_tags[it->first] = it->second;
     }
+}
+
+size_t WavpackSource::readSamples32(void *buffer, size_t nsamples)
+{
+    /*
+     * Wavpack frame is interleaved and aligned to low at byte level,
+     * but aligned to high at bit level inside of valid bytes.
+     * 20bits sample is stored like the following:
+     * <-- MSB ------------------ LSB ---->
+     * 00000000 xxxxxxxx xxxxxxxx xxxx0000
+     */
+    int shifts = 32 - ((m_asbd.mBitsPerChannel + 7) & ~7);
+    int32_t *bp = static_cast<int32_t *>(buffer);
+    int rc = m_module.UnpackSamples(m_wpc.get(), bp, nsamples);
+    if (rc && shifts) {
+        const size_t count = rc * m_asbd.mChannelsPerFrame;
+        /* align to MSB side */
+        for (size_t i = 0; i < count; ++i)
+            bp[i] <<= shifts; 
+    }
+    return rc;
+}
+
+size_t WavpackSource::readSamples16(void *buffer, size_t nsamples)
+{
+    size_t nbytes = nsamples * m_asbd.mChannelsPerFrame * 4;
+    if (m_pivot.size() < nbytes)
+        m_pivot.resize(nbytes);
+    int32_t *bp = reinterpret_cast<int32_t *>(&m_pivot[0]);
+    int rc = m_module.UnpackSamples(m_wpc.get(), bp, nsamples);
+    nbytes = rc * m_asbd.mChannelsPerFrame * 4;
+    const size_t count = rc * m_asbd.mChannelsPerFrame;
+    for (size_t i = 0; i < count; ++i)
+        bp[i] <<= 16;
+    util::pack(bp, &nbytes, 4, 2);
+    memcpy(buffer, bp, nbytes);
+    return rc;
 }
