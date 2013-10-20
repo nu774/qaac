@@ -816,18 +816,6 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             if (opts.verbose > 1 || opts.logfilename)
                 LOG(L"Convert to %d bit\n", opts.bits_per_sample);
         }
-    } else if (opts.isALAC()) {
-        bool isfloat = (chain.back()->getSampleFormat().mFormatFlags
-                        & kAudioFormatFlagIsFloat);
-        /* 
-         * When converted to float by DSP, automatically quantize to integer.
-         */
-        if ((sasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) && isfloat) {
-            unsigned bits = ((sasbd.mBitsPerChannel + 3) & ~3);
-            if (bits > 24) bits = 32;
-            chain.push_back(std::make_shared<Quantizer>(chain.back(), bits,
-                                                        opts.no_dither));
-        }
     } else if (opts.isAAC()) {
         AudioStreamBasicDescription sfmt = chain.back()->getSampleFormat();
         if ((sfmt.mFormatFlags & kAudioFormatFlagIsFloat) &&
@@ -835,14 +823,6 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         {
             chain.push_back(std::make_shared<Quantizer>(chain.back(), 32,
                                                         false, true));
-        }
-    } else if (opts.isLPCM() || opts.isWaveOut()) {
-        /* output f64 sample only when input was already f64 */
-        if (sasbd.mBitsPerChannel <= 32 &&
-            chain.back()->getSampleFormat().mBitsPerChannel > 32)
-        {
-            chain.push_back(std::make_shared<Quantizer>(chain.back(), 32,
-                                                        opts.no_dither, true));
         }
     }
     if (threading && (opts.isAAC() || opts.isALAC())) {
