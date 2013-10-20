@@ -650,6 +650,13 @@ inline uint32_t bound_quality(uint32_t n)
 
 #endif
 
+std::string pcm_format_str(AudioStreamBasicDescription &asbd)
+{
+    const char *stype[] = { "int", "float" };
+    unsigned itype = !!(asbd.mFormatFlags & kAudioFormatFlagIsFloat);
+    return strutil::format("%s%d", stype[itype], asbd.mBitsPerChannel);
+}
+
 void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                             std::vector<std::shared_ptr<ISource> > &chain,
                             const Options &opts, uint32_t *wChanmask,
@@ -663,7 +670,6 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     bool threading = opts.threading && si.dwNumberOfProcessors > 1;
 
     AudioStreamBasicDescription sasbd = src->getSampleFormat();
-
 #ifdef QAAC
     std::shared_ptr<AudioCodecX> codec;
     if (opts.isAAC() || opts.isALAC())
@@ -821,9 +827,6 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             if (bits > 24) bits = 32;
             chain.push_back(std::make_shared<Quantizer>(chain.back(), bits,
                                                         opts.no_dither));
-        } else if (isfloat) {
-            // Don't automatically quantize float input
-            throw std::runtime_error("ALAC: input format is not supported");
         }
     } else if (opts.isAAC()) {
         AudioStreamBasicDescription sfmt = chain.back()->getSampleFormat();
@@ -850,7 +853,14 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             LOG(L"Enable threading\n");
     }
     iasbd = chain.back()->getSampleFormat();
+    if (opts.verbose > 1)
+        LOG(L"Format: %hs -> %hs\n",
+            pcm_format_str(sasbd).c_str(), pcm_format_str(iasbd).c_str());
+
     if (opts.isALAC()) {
+        if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
+            throw std::runtime_error("ALAC: Not supported format");
+
         switch (iasbd.mBitsPerChannel) {
         case 16:
             oasbd.mFormatFlags = 1; break;
