@@ -68,7 +68,6 @@ public:
     {
         AddVersionAndFlags();
         AddProperty(new MP4Integer32Property(*this, "groupingType"));
-        AddProperty(new MP4Integer32Property(*this, "defaultLength"));
         MP4Integer32Property *count =
             new MP4Integer32Property(*this, "entryCount");
         AddProperty(count);
