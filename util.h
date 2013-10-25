@@ -15,7 +15,7 @@
 #include <io.h>
 #include "strutil.h"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER < 1700
 #ifdef _M_IX86
 inline int lrint(double x)
 {

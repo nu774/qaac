@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "bitstream.h"
 
 uint32_t BitStream::peek(uint32_t nbits)
