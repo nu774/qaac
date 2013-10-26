@@ -87,8 +87,8 @@ void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
 
 static
 void parseDecSpecificConfig(const std::vector<uint8_t> &config,
-        unsigned *sampling_rate_index, unsigned *sampling_rate,
-        unsigned *channel_config)
+                            unsigned *sampling_rate_index,
+                            unsigned *sampling_rate, unsigned *channel_config)
 {
     static const unsigned tab[] = {
         96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 
@@ -102,6 +102,26 @@ void parseDecSpecificConfig(const std::vector<uint8_t> &config,
     else
         *sampling_rate = tab[*sampling_rate_index];
     *channel_config = bs.get(4);
+}
+
+static
+void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
+                          std::vector<uint8_t> *alac,
+                          std::vector<uint8_t> *chan)
+{
+    const uint8_t *cp = &cookie[0];
+    const uint8_t *endp = cp + cookie.size();
+    if (std::memcmp(cp + 4, "frmaalac", 8) == 0)
+        cp += 24;
+    if (endp - cp >= 24) {
+        alac->resize(24);
+        std::memcpy(&(*alac)[0], cp, 24);
+        cp += 24;
+        if (endp - cp >= 24 && !std::memcmp(cp + 4, "chan", 4)) {
+            chan->resize(12);
+            std::memcpy(&(*chan)[0], cp + 12, 12);
+        }
+    }
 }
 
 using mp4v2::impl::MP4Atom;
@@ -143,8 +163,8 @@ void MP4SinkBase::close()
 }
 
 MP4Sink::MP4Sink(const std::wstring &path,
-        const std::vector<uint8_t> &cookie, uint32_t fcc, uint32_t trim,
-        bool temp)
+                 const std::vector<uint8_t> &cookie,
+                 uint32_t fcc, uint32_t trim, bool temp)
         : MP4SinkBase(path, temp), m_sample_id(0), m_trim(trim)
 {
     std::vector<uint8_t> config;
@@ -153,8 +173,7 @@ MP4Sink::MP4Sink(const std::wstring &path,
         unsigned index, rate, chconfig;
         parseDecSpecificConfig(config, &index, &rate, &chconfig);
         m_mp4file.SetTimeScale(rate);
-        m_track_id = m_mp4file.AddAudioTrack(
-                        rate, 1024, MP4_MPEG4_AUDIO_TYPE);
+        m_track_id = m_mp4file.AddAudioTrack(rate, 1024, MP4_MPEG4_AUDIO_TYPE);
         /*
          * According to ISO 14496-12 8.16.3, 
          * ChannelCount of AusioSampleEntry is either 1 or 2.
@@ -169,8 +188,27 @@ MP4Sink::MP4Sink(const std::wstring &path,
                 "moov.trak.mdia.minf.stbl.stsd.mp4a.timeScale",
                 scale);
         }
-        m_mp4file.SetTrackESConfiguration(
-                m_track_id, &config[0], config.size());
+        m_mp4file.SetTrackESConfiguration(m_track_id, &config[0],
+                                          config.size());
+    } catch (mp4v2::impl::Exception *e) {
+        handle_mp4error(e);
+    }
+}
+
+ALACSink::ALACSink(const std::wstring &path,
+        const std::vector<uint8_t> &magicCookie, bool temp)
+        : MP4SinkBase(path, temp)
+{
+    try {
+        std::vector<uint8_t> alac, chan;
+        parseMagicCookieALAC(magicCookie, &alac, &chan);
+        if (alac.size() != 24)
+            throw std::runtime_error("Invalid ALACSpecificConfig!");
+        if (chan.size() && chan.size() != 12)
+            throw std::runtime_error("Invalid ALACChannelLayout!");
+
+        m_track_id = m_mp4file.AddAlacAudioTrack(&alac[0],
+                                                 chan.size() ? &chan[0] : 0);
     } catch (mp4v2::impl::Exception *e) {
         handle_mp4error(e);
     }

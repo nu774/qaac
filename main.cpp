@@ -11,7 +11,6 @@
 #include "options.h"
 #include "inputfactory.h"
 #include "sink.h"
-#include "alacsink.h"
 #include "wavsink.h"
 #include "waveoutsink.h"
 #include "peaksink.h"
