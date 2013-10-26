@@ -334,6 +334,10 @@ void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
         CoreAudioEncoder *caencoder =
             dynamic_cast<CoreAudioEncoder*>(encoder);
         AudioFilePacketTableInfo pti = caencoder->getGaplessInfo();
+        if (opts.isSBR()) {
+            pti.mNumberValidFrames -= 1024;
+            pti.mRemainderFrames += 1024;
+        }
         if (opts.no_delay) {
             pti.mPrimingFrames = 0;
             pti.mNumberValidFrames -= (1024*3 - 2112);
@@ -605,7 +609,7 @@ delayed_source(const std::shared_ptr<ISeekableSource> &src,
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     double rate = asbd.mSampleRate;
     int64_t delay = 0;
-    if (!opts.delay && !opts.no_delay)
+    if (!opts.delay && !opts.no_delay && !opts.isSBR())
         return src;
     if (opts.delay && !parse_timespec(opts.delay, rate, &delay))
         throw std::runtime_error("Invalid time spec for --delay");
@@ -619,23 +623,28 @@ delayed_source(const std::shared_ptr<ISeekableSource> &src,
         int shift = opts.isSBR() ? 1 : 0;
         delay += (1024*3 - 2112) << shift;
     }
+
+    std::shared_ptr<CompositeSource> cp(new CompositeSource());
+    std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
+
     if (delay > 0) {
         if (opts.verbose > 1 || opts.logfilename)
             LOG(L"Prepend %lld samples (%g seconds)\n", delay,
                 static_cast<double>(delay) / rate);
-        std::shared_ptr<CompositeSource> cp(new CompositeSource());
-        std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
         cp->addSource(std::make_shared<TrimmedSource>(ns, 0, delay));
         cp->addSource(src);
-        return cp;
     } else if (delay < 0) {
         delay *= -1;
         if (opts.verbose > 1 || opts.logfilename)
             LOG(L"Trim %lld samples (%g seconds)\n", delay,
                 static_cast<double>(delay) / rate);
-        return std::make_shared<TrimmedSource>(src, delay, ~0ULL);
+        cp->addSource(std::make_shared<TrimmedSource>(src, delay, ~0ULL));
+    } else {
+        cp->addSource(src);
     }
-    return src;
+    if (opts.isSBR())
+        cp->addSource(std::make_shared<TrimmedSource>(ns, 0, 2048));
+    return cp;
 }
 
 #ifdef QAAC
