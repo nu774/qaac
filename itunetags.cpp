@@ -312,11 +312,11 @@ namespace ID3 {
         { "TCON", "genre"               },
         { "TCOP", "copyright"           },
         { "TDRC", "date"                },
-        { "TIT1", "content group"       },
+        { "TIT1", "contentgroup"        },
         { "TIT2", "title"               },
         { "TIT3", "subtitle"            },
         { "TPE1", "artist"              },
-        { "TPE2", "album artist"        },
+        { "TPE2", "albumartist"         },
         { "TPOS", "discnumber"          },
         { "TRCK", "tracknumber"         },
         { "TSO2", "albumartistsort"     },
@@ -394,9 +394,10 @@ namespace ID3 {
 }
 
 namespace Vorbis {
+    enum { TAG_TOTAL_DISCS = 1, TAG_TOTAL_TRACKS = 2 };
+
     const Tag::NameIDMap tagNameMap[] = {
         { "album",                      Tag::kAlbum             },
-        { "album artist",               Tag::kAlbumArtist       },
         { "albumartist",                Tag::kAlbumArtist       },
         { "albumartistsort",            'soaa'                  },
         { "albumartistsortorder",       'soaa'                  },
@@ -412,25 +413,28 @@ namespace Vorbis {
         { "composer",                   Tag::kComposer          },
         { "composersort",               'soco'                  },
         { "composersortorder",          'soco'                  },
-        { "content group",              Tag::kGrouping          },
         { "contentgroup",               Tag::kGrouping          },
         { "copyright",                  Tag::kCopyright         },
         { "date",                       Tag::kDate              },
         { "disc",                       Tag::kDisk              },
-        { "disc number",                Tag::kDisk              },
         { "discnumber",                 Tag::kDisk              },
+        { "disctotal",                  TAG_TOTAL_DISCS         },
         { "genre",                      Tag::kGenre             },
         { "grouping",                   Tag::kGrouping          },
         { "itunescompilation",          Tag::kCompilation       },
         { "lyrics",                     Tag::kLyrics            },
+        { "recordeddate",               Tag::kDate              },
         { "subtitle",                   Tag::kSubTitle          },
+        { "tempo",                      Tag::kTempo             },
         { "title",                      Tag::kTitle             },
         { "titlesort",                  'sonm'                  },
         { "titlesortorder",             'sonm'                  },
+        { "totaldiscs",                 TAG_TOTAL_DISCS         },
+        { "totaltracks",                TAG_TOTAL_TRACKS        },
         { "track",                      Tag::kTrack             },
-        { "track number",               Tag::kTrack             },
         { "tracknumber",                Tag::kTrack             },
-        { "unsynced lyrics",            Tag::kLyrics            },
+        { "tracktotal",                 TAG_TOTAL_TRACKS        },
+        { "unsyncedlyrics",             Tag::kLyrics            },
         { "year",                       Tag::kDate              },
     };
     uint32_t GetIDFromTagName(const char *name)
@@ -444,54 +448,57 @@ namespace Vorbis {
                 return std::strcmp(key, ent->name);
             }
         };
+        std::string sname;
+        for (const char *s = name; *s; ++s) {
+            unsigned char c = *s;
+            if (c != ' ' && c != '-' && c != '_')
+                sname.push_back(tolower(c));
+        }
         const Tag::NameIDMap *entry =
             static_cast<const Tag::NameIDMap *>(
-                std::bsearch(name, tagNameMap, util::sizeof_array(tagNameMap),
+                std::bsearch(sname.c_str(), tagNameMap,
+                             util::sizeof_array(tagNameMap),
                              sizeof(tagNameMap[0]), comparator::call));
         return entry ? entry->id : 0;
     }
 
-    void processTotal(const std::map<std::string, std::string> &vc,
-                      std::map<uint32_t, std::wstring> &itags)
+    void putNumberPair(std::map<uint32_t, std::wstring> *result,
+                       uint32_t fcc, unsigned number, unsigned total)
     {
-        std::map<std::string, std::string>::const_iterator vit;
-        std::map<uint32_t, std::wstring>::iterator iit;
-
-#define MERGE_TAG(x, y) \
-        do { x->second = strutil::format(L"%d/%d", \
-                                         _wtoi(x->second.c_str()), \
-                                         atoi(y->second.c_str())); \
-        } while (0)
-
-        if ((iit = itags.find(Tag::kTrack)) != itags.end()) {
-            if ((vit = vc.find("totaltracks")) != vc.end())
-                MERGE_TAG(iit, vit);
-            else if ((vit = vc.find("tracktotal")) != vc.end())
-                MERGE_TAG(iit, vit);
+        if (number) {
+            if (total)
+                (*result)[fcc] = strutil::format(L"%u/%u", number, total);
+            else
+                (*result)[fcc] = strutil::format(L"%u", number);
         }
-        if ((iit = itags.find(Tag::kDisk)) != itags.end()) {
-            if ((vit = vc.find("totaldiscs")) != vc.end())
-                MERGE_TAG(iit, vit);
-            else if ((vit = vc.find("disctotal")) != vc.end())
-                MERGE_TAG(iit, vit);
-        }
-#undef MERGE_TAG
     }
     void ConvertToItunesTags(const std::map<std::string, std::string> &vc,
                              std::map<uint32_t, std::wstring> *itags)
     {
         std::map<std::string, std::string>::const_iterator it;
-        std::map<std::string, std::string> lcvc;
         std::map<uint32_t, std::wstring> result;
         uint32_t id;
-        for (it = vc.begin(); it != vc.end(); ++it)
-            lcvc[strutil::slower(it->first)] = it->second;
+        unsigned disc = 0, track = 0, disc_total = 0, track_total = 0;
 
-        for (it = lcvc.begin(); it != lcvc.end(); ++it) {
-            if ((id = GetIDFromTagName(it->first.c_str())) > 0)
+        for (it = vc.begin(); it != vc.end(); ++it) {
+            if ((id = GetIDFromTagName(it->first.c_str())) == 0)
+                continue;
+            const char *val = it->second.c_str();
+            switch (id) {
+            case TAG_TOTAL_DISCS:
+                std::sscanf(val, "%u", &disc_total); break;
+            case TAG_TOTAL_TRACKS:
+                std::sscanf(val, "%u", &track_total); break;
+            case Tag::kDisk:
+                std::sscanf(val, "%u/%u", &disc, &disc_total); break;
+            case Tag::kTrack:
+                std::sscanf(val, "%u/%u", &track, &track_total); break;
+            default:
                 result[id] = strutil::us2w(it->second);
+            }
         }
-        processTotal(lcvc, result);
+        putNumberPair(&result, Tag::kTrack, track, track_total);
+        putNumberPair(&result, Tag::kDisk,  disc, disc_total);
         itags->swap(result);
     }
 }

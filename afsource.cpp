@@ -41,9 +41,11 @@ namespace caf {
         }
         return false;
     }
-    bool get_info_dictionary(int fd, CFDictionaryPtr *dict)
+    bool get_info_dictionary(int fd, std::map<std::string, std::string> *dict)
     {
         std::vector<char> info;
+        std::map<std::string, std::string> result;
+
         if (!get_info(fd, &info) || info.size() < 4)
             return false;
         // inside of info tag is delimited with NUL char.
@@ -56,15 +58,9 @@ namespace caf {
                 infop += tokens.back().size() + 1;
             } while (infop < endp);
         }
-        CFMutableDictionaryRef dictref =
-            cautil::CreateDictionary(tokens.size() >> 1);
-        CFDictionaryPtr dictptr(dictref, CFRelease);
-        for (size_t i = 0; i < tokens.size() >> 1; ++i) {
-            CFStringPtr key = cautil::W2CF(strutil::us2w(tokens[2 * i]));
-            CFStringPtr value = cautil::W2CF(strutil::us2w(tokens[2 * i + 1]));
-            CFDictionarySetValue(dictref, key.get(), value.get());
-        }
-        dict->swap(dictptr);
+        for (size_t i = 0; i < tokens.size() >> 1; ++i)
+            result[tokens[2 * i]] = tokens[2 * i + 1];
+        dict->swap(result);
         return true;
     }
 }
@@ -89,55 +85,33 @@ namespace audiofile {
         return _filelengthi64(reinterpret_cast<int>(cookie));
     }
 
-    const Tag::NameIDMap tagNameMap[] = {
-        { "title", Tag::kTitle },
-        { "artist", Tag::kArtist },
-        { "album", Tag::kAlbum },
-        { "composer", Tag::kComposer },
-        { "genre", Tag::kGenre },
-        { "year", Tag::kDate },
-        { "track number", Tag::kTrack },
-        { "comments", Tag::kComment },
-        { "subtitle", Tag::kSubTitle },
-        { "tempo", Tag::kTempo },
-        { 0, 0 }
-    };
-    uint32_t getIDFromTagName(const char *name)
-    {
-        const Tag::NameIDMap *map = tagNameMap;
-        for (; map->name; ++map)
-            if (!strcasecmp(map->name, name))
-                return map->id;
-        return 0;
-    }
-
-    typedef std::map<uint32_t, std::wstring> tag_t;
-
     void fetchTagDictCallback(const void *key, const void *value, void *ctx)
     {
         if (CFGetTypeID(key) != CFStringGetTypeID() ||
             CFGetTypeID(value) != CFStringGetTypeID())
             return;
-        tag_t *tagp = static_cast<tag_t*>(ctx);
+        std::map<std::string, std::string> *tag =
+            static_cast<std::map<std::string, std::string>*>(ctx);
         std::wstring wskey = cautil::CF2W(static_cast<CFStringRef>(key));
-        std::string utf8key = strutil::w2us(wskey);
-        uint32_t id = getIDFromTagName(utf8key.c_str());
-        if (id)
-            (*tagp)[id] = cautil::CF2W(static_cast<CFStringRef>(value));
+        std::wstring wsval = cautil::CF2W(static_cast<CFStringRef>(value));
+        (*tag)[strutil::w2us(wskey)] = strutil::w2us(wsval);
     }
 
-    void fetchTags(AudioFileX &af, FILE *fp, tag_t *result)
+    void fetchTags(AudioFileX &af, FILE *fp,
+                   std::map<uint32_t, std::wstring> *result)
     {
-        CFDictionaryPtr dict;
+        std::map<std::string, std::string> tags;
+
         if (af.getFileFormat() == 'caff')
-            caf::get_info_dictionary(fileno(fp), &dict);
-        else
+            caf::get_info_dictionary(fileno(fp), &tags);
+        else {
+            CFDictionaryPtr dict;
             af.getInfoDictionary(&dict);
-        tag_t tags;
-        if (dict.get()) {
-            CFDictionaryApplyFunction(dict.get(), fetchTagDictCallback, &tags);
-            result->swap(tags);
+            if (dict.get())
+                CFDictionaryApplyFunction(dict.get(), fetchTagDictCallback,
+                                          &tags);
         }
+        Vorbis::ConvertToItunesTags(tags, result);
     }
 }
 
