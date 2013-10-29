@@ -673,6 +673,10 @@ bool Options::parse(int &argc, wchar_t **&argv)
                     stderr);
         return false;
     }
+    if ((!isAAC() || isSBR()) && this->no_delay) {
+        std::fputws(L"--no-delay is only applicable for AAC LC.\n", stderr);
+        return false;
+    }
     if (this->quality == -1)
         this->quality = 2;
     return true;
