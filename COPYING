@@ -26,9 +26,7 @@ This is a header file of libsndfile (http://www.mega-nerd.com/libsndfile/),
 version 1.0.24
 
 include/wavpack.h:
-This is a header file of WavPack (http://www.wavpack.com/),
-version 4.60.1
-Slightly modified due to incompatibility with MSVC's stdint.h.
+This is a header file of WavPack (http://www.wavpack.com/)
 
 include/tak_deco_lib.h:
 This is a header file of TAK (http://www.thbeck.de/Tak/Tak.html),
