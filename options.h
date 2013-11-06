@@ -32,6 +32,8 @@ struct Options {
         filename_from_tag(false), no_delay(false), sort_args(false),
 
         gain(0.0),
+        comp_ratio(0.0), comp_threshold(0.0), comp_knee_width(0.0),
+        comp_attack(0.0), comp_release(0.0),
 
         output_format(0)
     {}
@@ -89,7 +91,9 @@ struct Options {
          normalize, print_available_formats, alac_fast, threading,
          concat, no_matrix_normalize, no_dither, filename_from_tag,
          no_delay, sort_args;
-    double gain;
+    double gain,
+           comp_ratio, comp_threshold, comp_knee_width, comp_attack,
+           comp_release;
 
     uint32_t output_format;
     std::map<uint32_t, std::wstring> tagopts;

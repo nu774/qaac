@@ -141,6 +141,7 @@
     <ClCompile Include="..\..\chanmap.cpp" />
     <ClCompile Include="..\..\chapters.cpp" />
     <ClCompile Include="..\..\composite.cpp" />
+    <ClCompile Include="..\..\compressor.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\flacmodule.cpp" />
     <ClCompile Include="..\..\flacsrc.cpp" />

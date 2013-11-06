@@ -29,6 +29,7 @@
 #include "logging.h"
 #include "textfile.h"
 #include "expand.h"
+#include "compressor.h"
 #ifdef REFALAC
 #include "alacenc.h"
 #endif
@@ -793,6 +794,21 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 LOG(L"Using CoreAudio codec default SRC\n");
 #endif
         }
+    }
+    if (opts.comp_ratio) {
+        if (opts.verbose > 1 || opts.logfilename)
+            LOG(L"DRC: Threshold %gdB Ratio %g Knee width %gdB\n"
+                L"     Attack %gms Release %gms\n",
+                opts.comp_threshold, opts.comp_ratio, opts.comp_knee_width,
+                opts.comp_attack, opts.comp_release);
+        std::shared_ptr<ISource>
+            compressor(new Compressor(chain.back(),
+                                      opts.comp_threshold,
+                                      opts.comp_ratio,
+                                      opts.comp_knee_width,
+                                      opts.comp_attack,
+                                      opts.comp_release));
+        chain.push_back(compressor);
     }
     if (normalize_pass) {
         do_normalize(chain, opts, src->isSeekable());

@@ -30,6 +30,7 @@ static wide::option long_options[] = {
     { L"peak", no_argument, 0, 'peak' },
     { L"normalize", no_argument, 0, 'N' },
     { L"gain", required_argument, 0, 'gain' },
+    { L"drc", required_argument, 0, 'drc ' },
     { L"delay", required_argument, 0, 'dlay' },
     { L"no-delay", no_argument, 0, 'ndly' },
     { L"gapless-mode", required_argument, 0, 'gapm' },
@@ -160,6 +161,14 @@ void usage()
 "                       avoid clipping introduced by DSP.\n"
 "-N, --normalize        Normalize (works in two pass. can generate HUGE\n"
 "                       tempfile for large piped input)\n"
+"--drc <thresh:ratio:knee:attack:release>\n"
+"                       Dynamic range compression.\n"
+"                       Loud parts over threshold are attenuated by ratio.\n"
+"                         thresh:  threshold (in dBFS, < 0.0)\n"
+"                         ratio:   compression ratio (> 1.0)\n"
+"                         knee:    knee width (in dB, >= 0.0)\n"
+"                         attack:  attack time (in millis, >= 0.0)\n"
+"                         release: release time (in millis, >= 0.0)\n"
 "--delay <[[hh:]mm:]ss[.ss..]|ns>\n"
 "                       Specify delay either by time or number of samples.\n"
 "                       When positive value is given, silence is prepended\n"
@@ -528,6 +537,43 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'gain') {
             if (std::swscanf(wide::optarg, L"%lf", &this->gain) != 1) {
                 std::fputws(L"--gain requires an floating point number.\n",
+                            stderr);
+                return false;
+            }
+        }
+        else if (ch == 'drc ') {
+            if (std::swscanf(wide::optarg,
+                             L"%lf:%lf:%lf:%lf:%lf",
+                             &this->comp_threshold,
+                             &this->comp_ratio,
+                             &this->comp_knee_width,
+                             &this->comp_attack,
+                             &this->comp_release) != 5) {
+                std::fputws(L"--drc requires 5 parameters.\n", stderr);
+                return false;
+            }
+            if (this->comp_threshold >= 0.0) {
+                std::fputws(L"DRC threshold cannot be positive.\n",
+                            stderr);
+                return false;
+            }
+            if (this->comp_ratio <= 1.0) {
+                std::fputws(L"DRC ratio has to be greater than 1.0\n",
+                            stderr);
+                return false;
+            }
+            if (this->comp_knee_width < 0.0) {
+                std::fputws(L"DRC knee width cannot be negative.\n",
+                            stderr);
+                return false;
+            }
+            if (this->comp_attack < 0.0) {
+                std::fputws(L"DRC attack time cannot be negative.\n",
+                            stderr);
+                return false;
+            }
+            if (this->comp_release < 0.0) {
+                std::fputws(L"DRC release time cannot be negative.\n",
                             stderr);
                 return false;
             }
