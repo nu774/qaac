@@ -5,7 +5,21 @@
 #include <map>
 #include <stdint.h>
 
+struct DRCParams {
+    double m_threshold, m_ratio, m_knee_width, m_attack, m_release;
+    DRCParams():
+        m_threshold(0.0), m_ratio(0.0), m_knee_width(0.0),
+        m_attack(0.0), m_release(0.0)
+    {}
+    DRCParams(double threshold, double ratio, double knee_width,
+              double attack, double release)
+        : m_threshold(threshold), m_ratio(ratio), m_knee_width(knee_width),
+          m_attack(attack), m_release(release)
+    {}
+};
+
 struct Options {
+
 //    enum { kABR, kTVBR, kCVBR, kCBR };
     enum { kCBR, kABR, kCVBR, kTVBR };
 
@@ -32,8 +46,6 @@ struct Options {
         filename_from_tag(false), no_delay(false), sort_args(false),
 
         gain(0.0),
-        comp_ratio(0.0), comp_threshold(0.0), comp_knee_width(0.0),
-        comp_attack(0.0), comp_release(0.0),
 
         output_format(0)
     {}
@@ -91,11 +103,10 @@ struct Options {
          normalize, print_available_formats, alac_fast, threading,
          concat, no_matrix_normalize, no_dither, filename_from_tag,
          no_delay, sort_args;
-    double gain,
-           comp_ratio, comp_threshold, comp_knee_width, comp_attack,
-           comp_release;
+    double gain;
 
     uint32_t output_format;
+    std::vector<DRCParams> drc_params;
     std::map<uint32_t, std::wstring> tagopts;
     std::map<std::string, std::wstring> longtags;
     std::vector<std::wstring> artworks;

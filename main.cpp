@@ -795,19 +795,20 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 #endif
         }
     }
-    if (opts.comp_ratio) {
+    for (size_t i = 0; i < opts.drc_params.size(); ++i) {
+        const DRCParams &p = opts.drc_params[i];
         if (opts.verbose > 1 || opts.logfilename)
             LOG(L"DRC: Threshold %gdB Ratio %g Knee width %gdB\n"
                 L"     Attack %gms Release %gms\n",
-                opts.comp_threshold, opts.comp_ratio, opts.comp_knee_width,
-                opts.comp_attack, opts.comp_release);
+                p.m_threshold, p.m_ratio, p.m_knee_width,
+                p.m_attack, p.m_release);
         std::shared_ptr<ISource>
             compressor(new Compressor(chain.back(),
-                                      opts.comp_threshold,
-                                      opts.comp_ratio,
-                                      opts.comp_knee_width,
-                                      opts.comp_attack,
-                                      opts.comp_release));
+                                      p.m_threshold,
+                                      p.m_ratio,
+                                      p.m_knee_width,
+                                      p.m_attack,
+                                      p.m_release));
         chain.push_back(compressor);
     }
     if (normalize_pass) {

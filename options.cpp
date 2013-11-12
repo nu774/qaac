@@ -542,41 +542,44 @@ bool Options::parse(int &argc, wchar_t **&argv)
             }
         }
         else if (ch == 'drc ') {
+            double threshold, ratio, knee, attack, release;
             if (std::swscanf(wide::optarg,
                              L"%lf:%lf:%lf:%lf:%lf",
-                             &this->comp_threshold,
-                             &this->comp_ratio,
-                             &this->comp_knee_width,
-                             &this->comp_attack,
-                             &this->comp_release) != 5) {
+                             &threshold,
+                             &ratio,
+                             &knee,
+                             &attack,
+                             &release) != 5) {
                 std::fputws(L"--drc requires 5 parameters.\n", stderr);
                 return false;
             }
-            if (this->comp_threshold >= 0.0) {
+            if (threshold >= 0.0) {
                 std::fputws(L"DRC threshold cannot be positive.\n",
                             stderr);
                 return false;
             }
-            if (this->comp_ratio <= 1.0) {
+            if (ratio <= 1.0) {
                 std::fputws(L"DRC ratio has to be greater than 1.0\n",
                             stderr);
                 return false;
             }
-            if (this->comp_knee_width < 0.0) {
+            if (knee < 0.0) {
                 std::fputws(L"DRC knee width cannot be negative.\n",
                             stderr);
                 return false;
             }
-            if (this->comp_attack < 0.0) {
+            if (attack < 0.0) {
                 std::fputws(L"DRC attack time cannot be negative.\n",
                             stderr);
                 return false;
             }
-            if (this->comp_release < 0.0) {
+            if (release < 0.0) {
                 std::fputws(L"DRC release time cannot be negative.\n",
                             stderr);
                 return false;
             }
+            this->drc_params.push_back(DRCParams(threshold, ratio, knee,
+                                                 attack, release));
         }
         else if (ch == 'dlay')
             this->delay = wide::optarg;
