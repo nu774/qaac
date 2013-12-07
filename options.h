@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <stdint.h>
+#include "chapters.h"
 
 struct DRCParams {
     double m_threshold, m_ratio, m_knee_width, m_attack, m_release;
@@ -109,7 +110,9 @@ struct Options {
     std::vector<DRCParams> drc_params;
     std::map<uint32_t, std::wstring> tagopts;
     std::map<std::string, std::wstring> longtags;
-    std::vector<std::wstring> artworks;
+    std::vector<chapters::abs_entry_t> chapters;
+    std::vector<std::wstring> artwork_files;
+    std::vector<std::vector<char> > artworks;
     std::wstring encoder_name;
     std::vector<uint32_t> chanmap;
     std::vector<int> cue_tracks;

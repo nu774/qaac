@@ -1,7 +1,7 @@
 #include <functional>
 #include "flacsrc.h"
 #include "strutil.h"
-#include "itunetags.h"
+#include "metadata.h"
 #include "cuesheet.h"
 #include "cautil.h"
 #include "win32util.h"
@@ -215,7 +215,7 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 void FLACSource::handleVorbisComment(
         const FLAC__StreamMetadata_VorbisComment &vc)
 {
-    std::map<std::string, std::string> vorbisComments;
+    std::map<std::string, std::string> tags;
     std::wstring cuesheet;
     for (size_t i = 0; i < vc.num_comments; ++i) {
         const char *cs = reinterpret_cast<const char *>(vc.comments[i].entry);
@@ -227,21 +227,20 @@ void FLACSource::handleVorbisComment(
             if (sscanf(value, "%i", &mask) == 1)
                 chanmap::getChannels(mask, &m_chanmap);
         } else if (value) {
-            vorbisComments[key] = value;
             if (!strcasecmp(key, "cuesheet"))
                 cuesheet = strutil::us2w(value);
             else
-                vorbisComments[key] = value;
+                tags[key] = value;
         }
     }
-    Vorbis::ConvertToItunesTags(vorbisComments, &m_tags);
     if (cuesheet.size()) {
-        std::map<uint32_t, std::wstring> tags;
+        std::map<std::string, std::string> ctags;
         Cue::CueSheetToChapters(cuesheet,
                                 m_length / m_asbd.mSampleRate,
-                                &m_chapters, &tags);
-        std::map<uint32_t, std::wstring>::const_iterator it;
-        for (it = tags.begin(); it != tags.end(); ++it)
-            m_tags[it->first] = it->second;
+                                &m_chapters, &ctags);
+        std::map<std::string, std::string>::const_iterator it;
+        for (it = ctags.begin(); it != ctags.end(); ++it)
+            tags[it->first] = it->second;
     }
+    TextBasedTag::normalizeTags(tags, &m_tags);
 }

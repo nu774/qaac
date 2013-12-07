@@ -3,12 +3,19 @@
 #include "sink.h"
 #include "util.h"
 #include "bitstream.h"
+#include "metadata.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #include "win32util.h"
 #include <io.h>
 #include <fcntl.h>
 #endif
 #include <sys/stat.h>
+
+using mp4v2::impl::itmf::enumGenreType;
+using mp4v2::impl::itmf::enumStikType;
+using mp4v2::impl::itmf::enumAccountType;
+using mp4v2::impl::itmf::enumCountryCode;
+using mp4v2::impl::itmf::enumContentRating;
 
 static
 bool getDescripterHeader(const uint8_t **p, const uint8_t *end,
@@ -31,7 +38,7 @@ void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
                          std::vector<uint8_t> *decSpecificConfig)
 {
     /*
-     * QT's "Magic Cookie" for AAC is just a esds descripter.
+     * QT's "Magic Cookie" for AAC is just an esds descripter.
      * We obtain only decSpecificConfig from it, and discard others.
      */
     const uint8_t *p = &cookie[0];
@@ -64,8 +71,8 @@ void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
              *
              * QT gives constant value for bufferSizeDB, max/avgBitrate
              * depending on encoder settings.
-             * On the other hand, mp4v2 calculates and sets them
-             * using "real" values, when finished media writing;
+             * On the other hand, mp4v2 sets decConfig from
+             * actually computed values when finished media writing.
              * Therefore, these values will be different from QT.
              */
             p += 13;
@@ -127,7 +134,8 @@ void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
 using mp4v2::impl::MP4Atom;
 
 MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
-        : m_filename(path), m_closed(false)
+        : m_filename(path), m_closed(false),
+          m_edit_start(0), m_edit_duration(0)
 {
     static const char * const compatibleBrands[] = { "M4A ", "mp42", "isom" };
     void (MP4FileX::*create)(const char *, uint32_t, int, int,
@@ -150,6 +158,63 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
     }
 }
 
+void MP4SinkBase::writeTags()
+{
+    std::map<uint32_t, std::string> shortTags;
+    std::map<std::string, std::string> longTags;
+    std::map<uint32_t, std::string>::const_iterator si;
+    std::map<std::string, std::string>::const_iterator li;
+
+    try {
+        if (m_chapters.size()) {
+            uint64_t timeScale =
+                m_mp4file.GetIntegerProperty("moov.mvhd.timeScale");
+            MP4TrackId track = m_mp4file.AddChapterTextTrack(1);
+            /*
+             * Historically, Nero AAC encoder was using chapter marker to
+             * signal encoder delay, and fb2k seems to be in honor of it.
+             * Therefore we delay the first chapter position of 
+             * Nero style chapter.
+             *
+             * QuickTime chapter is duration based, therefore first chapter
+             * always starts at beginning of the track, but last chapter can
+             * end at arbitrary point.
+             *
+             * On the other hand, Nero chapter is offset(start time) based,
+             * therefore first chapter can start at arbitrary point (and 
+             * this is used to signal encoder delay).
+             * However, last chapter always ends at track end.
+             */
+            double off = static_cast<double>(m_edit_start) / timeScale;
+            std::vector<chapters::entry_t>::const_iterator chap;
+            for (chap = m_chapters.begin(); chap != m_chapters.end(); ++chap) {
+                std::string name = strutil::w2us(chap->first);
+                const char *namep = name.c_str();
+                m_mp4file.AddChapter(track, chap->second * timeScale + 0.5,
+                                     namep);
+                int64_t stamp = off * 10000000.0 + 0.5;
+                m_mp4file.AddNeroChapter(stamp, namep);
+                off += chap->second;
+            }
+        }
+
+        M4A::convertToM4ATags(m_tags, &shortTags, &longTags);
+        for (si = shortTags.begin(); si != shortTags.end(); ++si) {
+            if (si->second.size())
+                writeShortTag(si->first, si->second);
+        }
+        for (li = longTags.begin(); li != longTags.end(); ++li) {
+            if (li->second.size())
+                writeLongTag(li->first, li->second);
+        }
+        for (size_t i = 0; i < m_artworks.size(); ++i)
+            m_mp4file.SetMetadataArtwork("covr", &m_artworks[i][0],
+                                         m_artworks[i].size());
+    } catch (mp4v2::impl::Exception *e) {
+        handle_mp4error(e);
+    }
+}
+
 void MP4SinkBase::close()
 {
     if (!m_closed) {
@@ -162,11 +227,171 @@ void MP4SinkBase::close()
     }
 }
 
+void MP4SinkBase::writeShortTag(uint32_t fcc, const std::string &value)
+{
+    struct handler_t {
+        uint32_t fcc;
+        void (MP4SinkBase::*mf)(const char *, const std::string &);
+    } handlers[] = {
+        { Tag::kAlbum,                &MP4SinkBase::writeStringTag      },
+        { Tag::kAlbumArtist,          &MP4SinkBase::writeStringTag      },
+        { Tag::kArtist,               &MP4SinkBase::writeStringTag      },
+        { Tag::kComment,              &MP4SinkBase::writeStringTag      },
+        { Tag::kComposer,             &MP4SinkBase::writeStringTag      },
+        { Tag::kCopyright,            &MP4SinkBase::writeStringTag      },
+        { Tag::kDate,                 &MP4SinkBase::writeStringTag      },
+        { Tag::kDescription,          &MP4SinkBase::writeStringTag      },
+        { Tag::kGrouping,             &MP4SinkBase::writeStringTag      },
+        { Tag::kLongDescription,      &MP4SinkBase::writeStringTag      },
+        { Tag::kLyrics,               &MP4SinkBase::writeStringTag      },
+        { Tag::kTitle,                &MP4SinkBase::writeStringTag      },
+        { Tag::kTool,                 &MP4SinkBase::writeStringTag      },
+        { Tag::kTrack,                &MP4SinkBase::writeTrackTag       },
+        { Tag::kDisk,                 &MP4SinkBase::writeDiskTag        },
+        { Tag::kGenre,                &MP4SinkBase::writeGenreTag       },
+        { Tag::kGenreID3,             &MP4SinkBase::writeGenreTag       },
+        { Tag::kCompilation,          &MP4SinkBase::writeInt8Tag        },
+        { Tag::kTempo,                &MP4SinkBase::writeInt16Tag       },
+        { Tag::kTvSeason,             &MP4SinkBase::writeInt32Tag       },
+        { Tag::kTvEpisode,            &MP4SinkBase::writeInt32Tag       },
+        { Tag::kPodcast,              &MP4SinkBase::writeInt8Tag        },
+        { Tag::kHDVideo,              &MP4SinkBase::writeInt8Tag        },
+        { Tag::kMediaType,            &MP4SinkBase::writeMediaTypeTag   },
+        { Tag::kContentRating,        &MP4SinkBase::writeRatingTag      },
+        { Tag::kGapless,              &MP4SinkBase::writeInt8Tag        },
+        { Tag::kiTunesAccountType,    &MP4SinkBase::writeAccountTypeTag },
+        { Tag::kiTunesCountry,        &MP4SinkBase::writeCountryCodeTag },
+        { Tag::kcontentID,            &MP4SinkBase::writeInt32Tag       },
+        { Tag::kartistID,             &MP4SinkBase::writeInt32Tag       },
+        { Tag::kplaylistID,           &MP4SinkBase::writeInt64Tag       },
+        { Tag::kgenreID,              &MP4SinkBase::writeInt32Tag       },
+        { Tag::kcomposerID,           &MP4SinkBase::writeInt32Tag       },
+        { 'apID',                     &MP4SinkBase::writeStringTag      },
+        { 'catg',                     &MP4SinkBase::writeStringTag      },
+        { 'keyw',                     &MP4SinkBase::writeStringTag      },
+        { 'purd',                     &MP4SinkBase::writeStringTag      },
+        { 'purl',                     &MP4SinkBase::writeStringTag      },
+        { 'soaa',                     &MP4SinkBase::writeStringTag      },
+        { 'soal',                     &MP4SinkBase::writeStringTag      },
+        { 'soar',                     &MP4SinkBase::writeStringTag      },
+        { 'soco',                     &MP4SinkBase::writeStringTag      },
+        { 'sonm',                     &MP4SinkBase::writeStringTag      },
+        { 'sosn',                     &MP4SinkBase::writeStringTag      },
+        { 'tven',                     &MP4SinkBase::writeStringTag      },
+        { 'tvnn',                     &MP4SinkBase::writeStringTag      },
+        { 'tvsh',                     &MP4SinkBase::writeStringTag      },
+        { 'xid ',                     &MP4SinkBase::writeStringTag      },
+        { FOURCC('\xa9','e','n','c'), &MP4SinkBase::writeStringTag      },
+        { 0,                          0                                 }
+    };
+
+    util::fourcc fourcc(fcc);
+    for (handler_t *p = handlers; p->fcc; ++p) {
+        if (fourcc == p->fcc) {
+            (this->*p->mf)(fourcc.svalue, value);
+            return;
+        }
+    }
+}
+
+void MP4SinkBase::writeLongTag(const std::string &key, const std::string &value)
+{
+    const uint8_t *v = reinterpret_cast<const uint8_t *>(value.c_str());
+    m_mp4file.SetMetadataFreeForm(key.c_str(), "com.apple.iTunes",
+                                  v, value.size());
+}
+
+void MP4SinkBase::writeTrackTag(const char *fcc, const std::string &value)
+{
+    int n, total = 0;
+    if (std::sscanf(value.c_str(), "%d/%d", &n, &total) > 0)
+        m_mp4file.SetMetadataTrack(n, total);
+}
+void MP4SinkBase::writeDiskTag(const char *fcc, const std::string &value)
+{
+    int n, total = 0;
+    if (std::sscanf(value.c_str(), "%d/%d", &n, &total) > 0)
+        m_mp4file.SetMetadataDisk(n, total);
+}
+void MP4SinkBase::writeGenreTag(const char *fcc, const std::string &value)
+{
+    char *endp;
+    long n = std::strtol(value.c_str(), &endp, 10);
+    if (endp != value.c_str() && *endp == 0)
+        m_mp4file.SetMetadataGenre("gnre", n);
+    else {
+        n = static_cast<uint16_t>(enumGenreType.toType(value.c_str()));
+        if (n != mp4v2::impl::itmf::GENRE_UNDEFINED)
+            m_mp4file.SetMetadataGenre("gnre", n);
+        else
+            m_mp4file.SetMetadataString("\xa9""gen", value.c_str());
+    }
+}
+void MP4SinkBase::writeMediaTypeTag(const char *fcc, const std::string &value)
+{
+    unsigned n;
+    if (std::sscanf(value.c_str(), "%u", &n) != 1)
+        n = static_cast<uint8_t>(enumStikType.toType(value.c_str()));
+    m_mp4file.SetMetadataUint8(fcc, n);
+}
+void MP4SinkBase::writeRatingTag(const char *fcc, const std::string &value)
+{
+    unsigned n;
+    if (std::sscanf(value.c_str(), "%u", &n) != 1)
+        n = static_cast<uint8_t>(enumContentRating.toType(value.c_str()));
+    m_mp4file.SetMetadataUint8(fcc, n);
+}
+void MP4SinkBase::writeAccountTypeTag(const char *fcc, const std::string &value)
+{
+    unsigned n;
+    if (std::sscanf(value.c_str(), "%u", &n) != 1)
+        n = static_cast<uint8_t>(enumAccountType.toType(value.c_str()));
+    m_mp4file.SetMetadataUint8(fcc, n);
+}
+void MP4SinkBase::writeCountryCodeTag(const char *fcc, const std::string &value)
+{
+    unsigned n;
+    if (std::sscanf(value.c_str(), "%u", &n) != 1)
+        n = static_cast<uint32_t>(enumCountryCode.toType(value.c_str()));
+    m_mp4file.SetMetadataUint32(fcc, n);
+}
+void MP4SinkBase::writeInt8Tag(const char *fcc, const std::string &value)
+{
+    int n;
+    if (std::sscanf(value.c_str(), "%d", &n) == 1)
+        m_mp4file.SetMetadataUint8(fcc, n);
+}
+void MP4SinkBase::writeInt16Tag(const char *fcc, const std::string &value)
+{
+    int n;
+    if (std::sscanf(value.c_str(), "%d", &n) == 1)
+        m_mp4file.SetMetadataUint16(fcc, n);
+}
+void MP4SinkBase::writeInt32Tag(const char *fcc, const std::string &value)
+{
+    int n;
+    if (std::sscanf(value.c_str(), "%d", &n) == 1)
+        m_mp4file.SetMetadataUint32(fcc, n);
+}
+void MP4SinkBase::writeInt64Tag(const char *fcc, const std::string &value)
+{
+    int64_t n;
+    if (std::sscanf(value.c_str(), "%lld", &n) == 1)
+        m_mp4file.SetMetadataUint64(fcc, n);
+}
+void MP4SinkBase::writeStringTag(const char *fcc, const std::string &value)
+{
+    std::string s = strutil::normalize_crlf(value.c_str(), "\r\n");
+    m_mp4file.SetMetadataString(fcc, s.c_str());
+}
+
 MP4Sink::MP4Sink(const std::wstring &path,
                  const std::vector<uint8_t> &cookie,
                  uint32_t fcc, uint32_t trim, bool temp)
-        : MP4SinkBase(path, temp), m_sample_id(0), m_trim(trim)
+        : MP4SinkBase(path, temp), m_sample_id(0), m_trim(trim),
+          m_gapless_mode(MODE_ITUNSMPB)
 {
+    std::memset(&m_priming_info, 0, sizeof m_priming_info);
     std::vector<uint8_t> config;
     parseMagicCookieAAC(cookie, &config);
     try {
@@ -193,6 +418,32 @@ MP4Sink::MP4Sink(const std::wstring &path,
     } catch (mp4v2::impl::Exception *e) {
         handle_mp4error(e);
     }
+}
+
+void MP4Sink::writeTags()
+{
+    MP4TrackId tid = m_mp4file.FindTrackId(0);
+    MP4SampleId nframes = m_mp4file.GetTrackNumberOfSamples(tid);
+    if (nframes) {
+        uint64_t duration = m_mp4file.GetTrack(tid)->GetDuration();
+
+        if (m_gapless_mode & MODE_ITUNSMPB) {
+            std::string value =
+                strutil::format(iTunSMPB_template,
+                m_edit_start,
+                uint32_t(duration - m_edit_start - m_edit_duration),
+                uint32_t(m_edit_duration >> 32),
+                uint32_t(m_edit_duration & 0xffffffff));
+            m_tags["iTunSMPB"] = value;
+        }
+        if (m_gapless_mode & MODE_EDTS) {
+            MP4EditId eid = m_mp4file.AddTrackEdit(tid);
+            m_mp4file.SetTrackEditMediaStart(tid, eid, m_edit_start);
+            m_mp4file.SetTrackEditDuration(tid, eid, m_edit_duration);
+            m_mp4file.CreateAudioSampleGroupDescription(tid, nframes);
+        }
+    }
+    MP4SinkBase::writeTags();
 }
 
 ALACSink::ALACSink(const std::wstring &path,

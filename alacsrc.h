@@ -8,7 +8,7 @@ class ALACSource: public ISeekableSource, public ITagParser
     uint64_t m_length;
     int64_t m_position;
     std::shared_ptr<ALACDecoder> m_decoder;
-    std::map<uint32_t, std::wstring> m_tags;
+    std::map<std::string, std::string> m_tags;
     std::vector<chapters::entry_t> m_chapters;
     std::vector<uint32_t> m_chanmap;
     std::shared_ptr<FILE> m_fp;
@@ -34,7 +34,7 @@ public:
         m_position = count;
         m_buffer.reset();
     }
-    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
+    const std::map<std::string, std::string> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {
         return m_chapters.size() ? &m_chapters : 0;

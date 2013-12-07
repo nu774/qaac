@@ -43,7 +43,7 @@ class WavpackSource: public ISeekableSource, public ITagParser
     std::shared_ptr<void> m_wpc;
     std::shared_ptr<FILE> m_fp, m_cfp;
     std::vector<uint32_t> m_chanmap;
-    std::map<uint32_t, std::wstring> m_tags;
+    std::map<std::string, std::string> m_tags;
     std::vector<chapters::entry_t > m_chapters;
     std::vector<uint8_t> m_pivot;
     size_t (WavpackSource::*m_readSamples)(void *, size_t);
@@ -64,7 +64,7 @@ public:
     }
     bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
-    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
+    const std::map<std::string, std::string> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {
         return m_chapters.size() ? &m_chapters : 0;

@@ -2,7 +2,6 @@
 #define _COMPOSITE_H
 
 #include "iointer.h"
-#include "itunetags.h"
 
 class CompositeSource: public ISeekableSource, public ITagParser {
     typedef std::shared_ptr<ISeekableSource> source_t;
@@ -10,7 +9,7 @@ class CompositeSource: public ISeekableSource, public ITagParser {
     int64_t m_position;
     uint64_t m_length;
     std::vector<source_t> m_sources;
-    std::map<uint32_t, std::wstring> m_tags;
+    std::map<std::string, std::string> m_tags;
     std::vector<chapters::entry_t> m_chapters;
     AudioStreamBasicDescription m_asbd;
 public:
@@ -36,7 +35,7 @@ public:
     }
     void seekTo(int64_t pos);
 
-    const std::map<uint32_t, std::wstring> &getTags() const
+    const std::map<std::string, std::string> &getTags() const
     {
         if (m_tags.size()) return m_tags;
         std::shared_ptr<ISource> src = first();
@@ -47,7 +46,7 @@ public:
     {
         return m_chapters.size() ? &m_chapters : 0;
     }
-    void setTags(const std::map<uint32_t, std::wstring> &tags)
+    void setTags(const std::map<std::string, std::string> &tags)
     {
         m_tags = tags;
     }

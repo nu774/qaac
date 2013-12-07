@@ -54,15 +54,11 @@ public:
     }
     unsigned number() const { return m_number; }
     void addSegment(const CueSegment &seg);
-    void setTag(const std::wstring &key, const std::wstring &value)
+    void setMeta(const std::wstring &key, const std::wstring &value)
     {
         m_meta[key] = value;
     }
-    const std::map<std::wstring, std::wstring> &getTags() const
-    {
-        return m_meta;
-    }
-    void iTunesTags(std::map<uint32_t, std::wstring> *tags) const;
+    void getTags(std::map<std::string, std::string> *tags) const;
 
     iterator begin() { return m_segments.begin(); }
     iterator end() { return m_segments.end(); }
@@ -91,11 +87,7 @@ public:
                     const std::wstring &fname_format);
     void asChapters(double duration, /* total duration in sec. */
                     std::vector<chapters::entry_t> *chapters) const;
-    const std::map<std::wstring, std::wstring> &getTags() const
-    {
-        return m_meta;
-    }
-    void iTunesTags(std::map<uint32_t, std::wstring> *tags) const;
+    void getTags(std::map<std::string, std::string> *tags) const;
 
     unsigned count() const { return m_tracks.size(); }
     iterator begin() { return m_tracks.begin(); }
@@ -127,11 +119,8 @@ private:
 };
 
 namespace Cue {
-    void ConvertToItunesTags(const std::map<std::wstring, std::wstring> &from,
-        std::map<uint32_t, std::wstring> *to, bool album=false);
-
     void CueSheetToChapters(const std::wstring &cuesheet,
         double duration,
         std::vector<chapters::entry_t> *chapters,
-        std::map<uint32_t, std::wstring> *meta);
+        std::map<std::string, std::string> *meta);
 }

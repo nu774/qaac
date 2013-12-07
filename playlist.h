@@ -18,7 +18,7 @@ namespace playlist {
     typedef std::vector<Track> Playlist;
 
     std::wstring generateFileName(const std::wstring &spec,
-                                  const std::map<uint32_t, std::wstring> &tag);
+                                  const std::map<std::string, std::string>&tag);
 }
 
 #endif

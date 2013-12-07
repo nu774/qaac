@@ -8,62 +8,9 @@
 #include "chanmap.h"
 #include "mp4v2wrapper.h"
 #include "strutil.h"
-#include "itunetags.h"
+#include "metadata.h"
 
 typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;
-
-namespace caf {
-    uint64_t next_chunk(int fd, char *name)
-    {
-        uint64_t size;
-        if (util::nread(fd, name, 4) != 4 || util::nread(fd, &size, 8) != 8)
-            return 0;
-        return util::b2host64(size);
-    }
-    bool get_info(int fd, std::vector<char> *info)
-    {
-        util::FilePositionSaver _(fd);
-        if (_lseeki64(fd, 8, SEEK_SET) != 8)
-            return false;
-        uint64_t chunk_size;
-        char chunk_name[4];
-        while ((chunk_size = next_chunk(fd, chunk_name)) > 0) {
-            if (std::memcmp(chunk_name, "info", 4)) {
-                if (_lseeki64(fd, chunk_size, SEEK_CUR) < 0)
-                    break;
-            } else {
-                std::vector<char> buf(chunk_size);
-                if (util::nread(fd, &buf[0], buf.size()) != buf.size())
-                    break;
-                info->swap(buf);
-                return true;
-            }
-        }
-        return false;
-    }
-    bool get_info_dictionary(int fd, std::map<std::string, std::string> *dict)
-    {
-        std::vector<char> info;
-        std::map<std::string, std::string> result;
-
-        if (!get_info(fd, &info) || info.size() < 4)
-            return false;
-        // inside of info tag is delimited with NUL char.
-        std::vector<std::string> tokens;
-        {
-            const char *infop = &info[0] + 4;
-            const char *endp = &info[0] + info.size();
-            do {
-                tokens.push_back(std::string(infop));
-                infop += tokens.back().size() + 1;
-            } while (infop < endp);
-        }
-        for (size_t i = 0; i < tokens.size() >> 1; ++i)
-            result[tokens[2 * i]] = tokens[2 * i + 1];
-        dict->swap(result);
-        return true;
-    }
-}
 
 namespace audiofile {
     const int ioErr = -36;
@@ -98,12 +45,12 @@ namespace audiofile {
     }
 
     void fetchTags(AudioFileX &af, FILE *fp,
-                   std::map<uint32_t, std::wstring> *result)
+                   std::map<std::string, std::string> *result)
     {
         std::map<std::string, std::string> tags;
 
         if (af.getFileFormat() == 'caff')
-            caf::get_info_dictionary(fileno(fp), &tags);
+            CAF::fetchTags(fileno(fp), &tags);
         else {
             CFDictionaryPtr dict;
             af.getInfoDictionary(&dict);
@@ -111,7 +58,7 @@ namespace audiofile {
                 CFDictionaryApplyFunction(dict.get(), fetchTagDictCallback,
                                           &tags);
         }
-        Vorbis::ConvertToItunesTags(tags, result);
+        TextBasedTag::normalizeTags(tags, result);
     }
 }
 
@@ -189,7 +136,7 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
             MP4FileX file;
             std::string name = strutil::format("%d", fd);
             file.Read(name.c_str(), &provider);
-            mp4a::fetchTags(file, &m_tags);
+            M4A::fetchTags(file, &m_tags);
             file.GetChapters(&m_chapters);
         } catch (...) {}
     } else {

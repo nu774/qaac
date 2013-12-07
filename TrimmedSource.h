@@ -8,7 +8,7 @@ class TrimmedSource: public ISeekableSource, public ITagParser {
     uint64_t m_duration;
     int64_t m_position;
     std::shared_ptr<ISeekableSource> m_src;
-    std::map<uint32_t, std::wstring> m_emptyTags;
+    std::map<std::string, std::string> m_emptyTags;
 public:
     TrimmedSource(const std::shared_ptr<ISeekableSource> &src)
         : m_src(src), m_position(0)
@@ -54,7 +54,7 @@ public:
         m_position = count;
     }
 
-    const std::map<uint32_t, std::wstring> &getTags() const
+    const std::map<std::string, std::string> &getTags() const
     {
         ITagParser *parser = dynamic_cast<ITagParser*>(m_src.get());
         if (!parser)

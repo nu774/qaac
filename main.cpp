@@ -7,7 +7,6 @@
 #include "strutil.h"
 #include "win32util.h"
 #include <shellapi.h>
-#include "itunetags.h"
 #include "options.h"
 #include "inputfactory.h"
 #include "sink.h"
@@ -30,6 +29,8 @@
 #include "textfile.h"
 #include "expand.h"
 #include "compressor.h"
+#include "metadata.h"
+#include "wicimage.h"
 #ifdef REFALAC
 #include "alacenc.h"
 #endif
@@ -64,8 +65,16 @@ std::wstring errormsg(const std::exception &ex)
 }
 
 static
-void load_lyrics_file(Options *opts)
+void load_metadata_files(Options *opts)
 {
+    if (opts->chapter_file) {
+        try {
+            chapters::load_from_file(opts->chapter_file, &opts->chapters,
+                                     opts->textcp);
+        } catch (const std::exception &e) {
+            LOG(L"WARNING: %s\n", errormsg(e).c_str());
+        }
+    }
     try {
         std::map<uint32_t, std::wstring>::iterator it
             = opts->tagopts.find(Tag::kLyrics);
@@ -73,6 +82,24 @@ void load_lyrics_file(Options *opts)
             it->second = load_text_file(it->second.c_str(), opts->textcp);
     } catch (const std::exception &e) {
         LOG(L"WARNING: %s\n", errormsg(e).c_str());
+    }
+    for (size_t i = 0; i < opts->artwork_files.size(); ++i) {
+        try {
+            uint64_t size;
+            char *data = win32::load_with_mmap(opts->artwork_files[i].c_str(),
+                                               &size);
+            std::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
+            mp4v2::impl::itmf::BasicType tc =
+                mp4v2::impl::itmf::computeBasicType(data, size);
+            if (tc == mp4v2::impl::itmf::BT_IMPLICIT)
+                throw std::runtime_error("Unknown artwork image type");
+            std::vector<char> vec(data, data + size);
+            if (opts->artwork_size)
+                WICConvertArtwork(data, size, opts->artwork_size, &vec);
+            opts->artworks.push_back(vec);
+        } catch (const std::exception &e) {
+            LOG(L"WARNING: %s\n", errormsg(e).c_str());
+        }
     }
 }
 
@@ -302,74 +329,6 @@ void getRawFormat(const Options &opts, AudioStreamBasicDescription *result)
     if (iendian)
         asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
     *result = asbd;
-}
-
-static
-void write_tags(MP4FileX *mp4file, const Options &opts, ISource *src,
-        IEncoder *encoder, const std::wstring &encoder_config)
-{
-    TagEditor editor;
-
-    /*
-     * At this point, encoder's input format might not be the same with
-     * original source's format (src points to the actual source).
-     */
-    const AudioStreamBasicDescription
-        &iformat = encoder->getInputDescription(),
-        &oformat = encoder->getOutputDescription();
-
-    ITagParser *parser = dynamic_cast<ITagParser*>(src);
-    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
-
-    if (parser) {
-        editor.setTag(parser->getTags());
-        const std::vector<chapters::entry_t> *chapters = parser->getChapters();
-        if (chapters)
-            editor.setChapters(*chapters);
-    }
-    editor.setTag(Tag::kTool, opts.encoder_name + L", " + encoder_config);
-    editor.setTag(opts.tagopts);
-    editor.setLongTag(opts.longtags);
-#ifdef QAAC
-    if (opts.isAAC() && stat->samplesWritten()) {
-        CoreAudioEncoder *caencoder =
-            dynamic_cast<CoreAudioEncoder*>(encoder);
-        AudioFilePacketTableInfo pti = caencoder->getGaplessInfo();
-        if (opts.isSBR()) {
-            pti.mNumberValidFrames -= 1024;
-            pti.mRemainderFrames += 1024;
-        }
-        if (opts.no_delay) {
-            pti.mPrimingFrames = 0;
-            pti.mNumberValidFrames -= (1024*3 - 2112);
-        }
-        editor.setGaplessInfo(pti);
-        editor.setGaplessMode(opts.gapless_mode + 1);
-    }
-#endif
-    editor.setArtworkSize(opts.artwork_size);
-    for (size_t i = 0; i < opts.artworks.size(); ++i)
-        editor.addArtwork(opts.artworks[i].c_str());
-
-    if (opts.chapter_file) {
-        std::vector<chapters::abs_entry_t> abs_entries;
-        std::vector<chapters::entry_t> chapters;
-        try {
-            chapters::load_from_file(opts.chapter_file, &abs_entries,
-                                     opts.textcp);
-            double duration = stat->samplesRead() / iformat.mSampleRate;
-            chapters::abs_to_duration(abs_entries, &chapters, duration);
-            editor.setChapters(chapters);
-        } catch (const std::runtime_error &e) {
-            LOG(L"WARNING: %s\n", errormsg(e).c_str());
-        }
-    }
-    editor.save(*mp4file);
-    try {
-        editor.saveArtworks(*mp4file);
-    } catch (const std::exception &e) {
-        LOG(L"WARNING: %s\n", errormsg(e).c_str());
-    }
 }
 
 static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
@@ -950,6 +909,103 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
     }
 }
 
+static
+bool accept_tag(const std::string &name)
+{
+    /*
+     * We don't want to copy these tags from the source.
+     * XXX: should we use white list instead?
+     */
+    static const char * const black_list[] = {
+        "compatiblebrands", /* XXX: ffmpeg metadata for mp4 */
+        "cuesheet",
+        "encodedby",
+        "encodingapplication",
+        "itunnorm",
+        "itunpgap",
+        "itunsmpb",
+        "log",
+        "majorbrand",      /* XXX: ffmpeg metadata for mp4 */
+        "minorversion",    /* XXX: ffmpeg metadata for mp4 */
+        "replaygainalbumgain",
+        "replaygainalbumpeak",
+        "replaygaintrackgain",
+        "replaygaintrackpeak",
+        0
+    };
+    const char * const * p;
+    std::string ss;
+    for (const char *s = name.c_str(); *s; ++s)
+        if (!std::strchr(" -_", *s))
+            ss.push_back(tolower(static_cast<unsigned char>(*s)));
+    for (p = black_list; *p; ++p)
+        if (std::strcmp(ss.c_str(), *p) == 0)
+            break;
+    return *p == 0;
+}
+
+static
+void set_tags(ISource *src, ISink *sink, const Options &opts,
+              const std::wstring encoder_config)
+{
+    ITagStore *tagstore = dynamic_cast<ITagStore*>(sink);
+    if (!tagstore)
+        return;
+    MP4SinkBase *mp4sink = dynamic_cast<MP4SinkBase*>(tagstore);
+    ITagParser *parser = dynamic_cast<ITagParser*>(src);
+    if (parser) {
+        const std::map<std::string, std::string> &tags = parser->getTags();
+        std::map<std::string, std::string>::const_iterator ssi;
+        for (ssi = tags.begin(); ssi != tags.end(); ++ssi)
+            if (accept_tag(ssi->first))
+                tagstore->setTag(ssi->first, ssi->second);
+        if (mp4sink) {
+            const std::vector<chapters::entry_t> *chapters =
+                parser->getChapters();
+            if (chapters)
+                mp4sink->setChapters(*chapters);
+        }
+    }
+    tagstore->setTag("encoding application",
+        strutil::w2us(opts.encoder_name + L", " + encoder_config));
+
+    std::map<uint32_t, std::wstring>::const_iterator uwi;
+    for (uwi = opts.tagopts.begin(); uwi != opts.tagopts.end(); ++uwi)
+        tagstore->setTag(M4A::getTagNameFromFourCC(uwi->first),
+                         strutil::w2us(uwi->second));
+
+    std::map<std::string, std::wstring>::const_iterator swi;
+    for (swi = opts.longtags.begin(); swi != opts.longtags.end(); ++swi)
+        tagstore->setTag(swi->first, strutil::w2us(swi->second));
+
+    if (mp4sink) {
+        for (size_t i = 0; i < opts.artworks.size(); ++i)
+            mp4sink->addArtwork(opts.artworks[i]);
+    }
+}
+
+static
+void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
+                   const std::wstring &ofilename, const Options &opts)
+{
+    IEncoderStat *stat = dynamic_cast<IEncoderStat *>(encoder);
+    if (opts.chapter_file) {
+        try {
+            double duration = stat->samplesRead() /
+                encoder->getInputDescription().mSampleRate;
+            std::vector<chapters::entry_t> chapters;
+            chapters::abs_to_duration(opts.chapters, &chapters, duration);
+            sink->setChapters(chapters);
+        } catch (const std::runtime_error &e) {
+            LOG(L"WARNING: %s\n", errormsg(e).c_str());
+        }
+    }
+    sink->writeTags();
+    if (!opts.no_optimize)
+        do_optimize(sink->getFile(), ofilename, opts.verbose > 1);
+    sink->close();
+}
+
 #ifdef QAAC
 static
 std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
@@ -1159,6 +1215,7 @@ void config_aac_codec(AudioConverterX &converter, const Options &opts)
     converter.setCodecQuality(bound_quality((opts.quality + 1) << 5));
 }
 
+
 static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
                  const std::wstring &ofilename, const Options &opts,
@@ -1194,16 +1251,29 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     else
         sink = open_sink(ofilename, opts, cookie);
     encoder.setSink(sink);
+    set_tags(src.get(), sink.get(), opts, encoder_config);
     do_encode(&encoder, ofilename, chain, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
-    MP4SinkBase *asink = dynamic_cast<MP4SinkBase*>(sink.get());
-    if (asink) {
-        write_tags(asink->getFile(), opts, src.get(), &encoder,
-                   encoder_config);
-        if (!opts.no_optimize)
-            do_optimize(asink->getFile(), ofilename, opts.verbose > 1);
-        asink->close();
+
+    if (opts.isAAC()) {
+        MP4Sink *asink = dynamic_cast<MP4Sink*>(sink.get());
+        if (asink) {
+            asink->setGaplessMode(opts.gapless_mode + 1);
+            AudioFilePacketTableInfo pti = encoder.getGaplessInfo();
+            if (opts.isSBR()) {
+                pti.mNumberValidFrames -= 1024;
+                pti.mRemainderFrames += 1024;
+            }
+            if (opts.no_delay) {
+                pti.mPrimingFrames = 0;
+                pti.mNumberValidFrames -= (1024*3 - 2112);
+            }
+            asink->setGaplessInfo(pti);
+        }
     }
+    MP4SinkBase *msink = dynamic_cast<MP4SinkBase*>(sink.get());
+    if (msink)
+        finalize_m4a(msink, &encoder, ofilename, opts);
 }
 #endif // QAAC
 #ifdef REFALAC
@@ -1231,13 +1301,12 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
         std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     encoder.setSource(chain.back());
     encoder.setSink(sink);
+    set_tags(src.get(), sink.get(), opts, L"Apple Lossless Encoder");
     do_encode(&encoder, ofilename, chain, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
-    write_tags(sink->getFile(), opts, src.get(), &encoder,
-               L"Apple Lossless Encoder");
-    if (!opts.no_optimize)
-        do_optimize(sink->getFile(), ofilename, opts.verbose > 1);
-    sink->close();
+    MP4SinkBase *msink = dynamic_cast<MP4SinkBase*>(sink.get());
+    if (msink)
+        finalize_m4a(msink, &encoder, ofilename, opts);
 }
 #endif
 
@@ -1311,12 +1380,12 @@ void load_track(const wchar_t *ifilename, const Options &opts,
 
     ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
     if (parser) {
-        const std::map<uint32_t, std::wstring> &meta =
+        const std::map<std::string, std::string> &meta =
             parser->getTags();
-        std::map<uint32_t, std::wstring>::const_iterator it
-            = meta.find(Tag::kTitle);
+        std::map<std::string, std::string>::const_iterator it
+            = meta.find("title");
         if (it != meta.end())
-            title = it->second;
+            title = strutil::us2w(it->second);
         if (opts.filename_from_tag) {
             std::wstring fn =
                 playlist::generateFileName(opts.fname_format, meta);
@@ -1473,7 +1542,7 @@ int wmain1(int argc, wchar_t **argv)
         mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
         //mp4v2::impl::log.setVerbosity(MP4_LOG_VERBOSE4);
 
-        load_lyrics_file(&opts);
+        load_metadata_files(&opts);
         if (opts.tmpdir) {
             std::wstring env(L"TMP=");
             env += win32::GetFullPathNameX(opts.tmpdir);

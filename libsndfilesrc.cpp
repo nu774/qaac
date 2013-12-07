@@ -1,6 +1,6 @@
 #include "libsndfilesrc.h"
 #include "win32util.h"
-#include "itunetags.h"
+#include "metadata.h"
 #include "cautil.h"
 
 static

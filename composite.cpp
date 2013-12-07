@@ -46,6 +46,23 @@ void CompositeSource::addSource(const std::shared_ptr<ISeekableSource> &src)
         m_length += src->length();
     else if (len == ~0ULL)
         m_length = ~0ULL;
+
+    /*
+     * Discard tags that take different values on each song.
+     * This way, only album common tags should remain.
+     */
+    ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
+    if (parser) {
+        const std::map<std::string, std::string> &tags = parser->getTags();
+        std::map<std::string, std::string>::const_iterator s;
+        bool is_empty = m_tags.empty();
+        for (s = tags.begin(); s != tags.end(); ++s) {
+            if (is_empty)
+                m_tags[s->first] = s->second;
+            else if (m_tags.find(s->first) != m_tags.end())
+                m_tags.erase(s->first);
+        }
+    }
 }
 
 void CompositeSource::addSourceWithChapter(
@@ -55,40 +72,20 @@ void CompositeSource::addSourceWithChapter(
     addSource(src);
     ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
     if (parser) {
-        if (count() == 1)
-            fetchAlbumTags(parser);
         const std::vector<chapters::entry_t> *chaps;
         if ((chaps = parser->getChapters())) {
             std::copy(chaps->begin(), chaps->end(),
                       std::back_inserter(m_chapters));
             return;
         }
-        const std::map<uint32_t, std::wstring> &tags = parser->getTags();
-        std::map<uint32_t, std::wstring>::const_iterator
-            tag = tags.find(Tag::kTitle);
+        const std::map<std::string, std::string> &tags = parser->getTags();
+        std::map<std::string, std::string>::const_iterator
+            tag = tags.find("title");
         if (tag != tags.end()) {
-            addChapter(tag->second, src->length() / m_asbd.mSampleRate);
+            addChapter(strutil::us2w(tag->second),
+                       src->length() / m_asbd.mSampleRate);
             return;
         }
     }
     addChapter(title, src->length() / m_asbd.mSampleRate);
 }
-
-void CompositeSource::fetchAlbumTags(ITagParser *parser)
-{
-    const std::map<uint32_t, std::wstring> &tags = parser->getTags();
-    std::map<uint32_t, std::wstring>::const_iterator tagit;
-    for (tagit = tags.begin(); tagit != tags.end(); ++tagit) {
-        if (Tag::isAlbumTag(tagit->first))
-            m_tags[tagit->first] = tagit->second;
-        if (tagit->first == Tag::kAlbumArtist)
-            m_tags[Tag::kArtist] = tagit->second;
-        else if (tagit->first == Tag::kArtist) {
-            std::map<uint32_t, std::wstring>::const_iterator it
-                = m_tags.find(Tag::kArtist);
-            if (it == m_tags.end())
-                m_tags[Tag::kArtist] = tagit->second;
-        }
-    }
-}
-

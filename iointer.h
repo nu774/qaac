@@ -30,8 +30,13 @@ struct ISink {
 
 struct ITagParser {
     virtual ~ITagParser() {}
-    virtual const std::map<uint32_t, std::wstring> &getTags() const = 0;
+    virtual const std::map<std::string, std::string> &getTags() const = 0;
     virtual const std::vector<chapters::entry_t> *getChapters() const = 0;
+};
+
+struct ITagStore {
+    virtual ~ITagStore() {}
+    virtual void setTag(const std::string &key, const std::string &value) = 0;
 };
 
 class FilterBase: public ISource {

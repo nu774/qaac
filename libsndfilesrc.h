@@ -37,7 +37,7 @@ class LibSndfileSource: public ISeekableSource, public ITagParser
     std::string m_format_name;
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
-    std::map<uint32_t, std::wstring> m_tags;
+    std::map<std::string, std::string> m_tags;
     LibSndfileModule m_module;
     AudioStreamBasicDescription m_asbd;
     sf_count_t (*m_readf)(SNDFILE *, void *, sf_count_t);
@@ -61,7 +61,7 @@ public:
     bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     int64_t getPosition();
-    const std::map<uint32_t, std::wstring> &getTags() const { return m_tags; }
+    const std::map<std::string, std::string> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const
     {
         return 0;

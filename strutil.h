@@ -49,6 +49,16 @@ namespace strutil {
     {
         return strtransform(s, towlower);
     }
+    inline
+    std::string supper(const std::string &s)
+    {
+        return strtransform(s, toupper);
+    }
+    inline
+    std::wstring wsupper(const std::wstring &s)
+    {
+        return strtransform(s, towupper);
+    }
     inline ssize_t strindex(const char *s, int ch)
     {
         const char *p = std::strchr(s, ch);

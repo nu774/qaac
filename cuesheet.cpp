@@ -2,7 +2,7 @@
 #include <clocale>
 #include <locale>
 #include "cuesheet.h"
-#include "itunetags.h"
+#include "metadata.h"
 #include "composite.h"
 #include "nullsource.h"
 #include "TrimmedSource.h"
@@ -94,34 +94,24 @@ void CueTrack::addSegment(const CueSegment &seg)
     m_segments.push_back(seg);
 }
 
-void CueTrack::iTunesTags(std::map<uint32_t, std::wstring> *tags) const
+void CueTrack::getTags(std::map<std::string, std::string> *tags) const
 {
-    std::map<uint32_t, std::wstring> result;
-    m_cuesheet->iTunesTags(&result);
+    std::map<std::string, std::string> result;
     std::map<std::wstring, std::wstring>::const_iterator it;
+    m_cuesheet->getTags(&result);
     for (it = m_meta.begin(); it != m_meta.end(); ++it) {
-        std::wstring key = strutil::wslower(it->first);
-        uint32_t ikey = 0;
-        if (key == L"title")
-            ikey = Tag::kTitle;
-        else if (key == L"performer")
-            ikey = Tag::kArtist;
-        else if (key == L"genre")
-            ikey = Tag::kGenre;
-        else if (key == L"date")
-            ikey = Tag::kDate;
-        else if (key == L"songwriter")
-            ikey = Tag::kComposer;
-        if (ikey) result[ikey] = it->second;
+        std::string key = strutil::w2us(it->first);
+        std::string val = strutil::w2us(it->second);
+
+        if (key == "PERFORMER")
+            result["artist"] = val;
+        else
+            result[key] = val;
     }
-    CueSheet::const_iterator last = m_cuesheet->end() - 1;
-    result[Tag::kTrack] =
-        strutil::format(L"%d/%d", number(), last->number());
-    std::map<uint32_t, std::wstring>::iterator iaa
-        = result.find(Tag::kAlbumArtist);
-    if (result.find(Tag::kArtist) == result.end() && iaa != result.end())
-        result[Tag::kArtist] = iaa->second;
-    tags->swap(result);
+    std::string track = strutil::format("%u/%u", number(),
+                                        m_cuesheet->count());
+    result["track number"] = track;
+    TextBasedTag::normalizeTags(result, tags);
 }
 
 void CueSheet::parse(std::wstreambuf *src)
@@ -172,9 +162,7 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
     std::shared_ptr<ISeekableSource> src;
     for (const_iterator track = begin(); track != end(); ++track) {
         std::shared_ptr<CompositeSource> track_source(new CompositeSource());
-        std::map<uint32_t, std::wstring> track_tags;
-        track->iTunesTags(&track_tags);
-        track_source->setTags(track_tags);
+        std::map<std::string, std::string> track_tags;
         for (CueTrack::const_iterator
              segment = track->begin(); segment != track->end(); ++segment)
         {
@@ -194,6 +182,8 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
             src.reset(new TrimmedSource(src, begin, duration));
             track_source->addSource(src);
         }
+        track->getTags(&track_tags);
+        track_source->setTags(track_tags);
         std::wstring ofilename =
             playlist::generateFileName(fname_format, track_tags) + L".stub";
 
@@ -231,36 +221,24 @@ void CueSheet::asChapters(double duration,
     chapters->swap(chaps);
 }
 
-void CueSheet::iTunesTags(std::map<uint32_t, std::wstring> *tags) const
+void CueSheet::getTags(std::map<std::string, std::string> *tags) const
 {
     std::map<std::wstring, std::wstring>::const_iterator it;
-    std::map<uint32_t, std::wstring> result;
+    std::map<std::string, std::string> result;
     int discnumber = 0, totaldiscs = 0;
     for (it = m_meta.begin(); it != m_meta.end(); ++it) {
-        std::wstring key = strutil::wslower(it->first);
-        uint32_t ikey = 0;
-        if (key == L"title")
-            ikey = Tag::kAlbum;
-        else if (key == L"performer")
-            ikey = Tag::kAlbumArtist;
-        else if (key == L"genre")
-            ikey = Tag::kGenre;
-        else if (key == L"date")
-            ikey = Tag::kDate;
-        else if (key == L"songwriter")
-            ikey = Tag::kComposer;
-        else if (key == L"discnumber")
-            discnumber = _wtoi(it->second.c_str());
-        else if (key == L"totaldiscs")
-            totaldiscs = _wtoi(it->second.c_str());
-        if (ikey) result[ikey] = it->second;
+        std::string key = strutil::w2us(it->first);
+        std::string val = strutil::w2us(it->second);
+
+        if (key == "PERFORMER") {
+            result["artist"] = val;
+            result["ALBUM ARTIST"] = val;
+        } else if (key == "TITLE")
+            result["album"] = val;
+        else
+            result[key] = val;
     }
-    if (discnumber) {
-        result[Tag::kDisk] =
-            totaldiscs ? strutil::format(L"%d/%d", discnumber, totaldiscs)
-                       : strutil::format(L"%d", discnumber);
-    }
-    tags->swap(result);
+    TextBasedTag::normalizeTags(result, tags);
 }
 
 void CueSheet::validate()
@@ -323,7 +301,7 @@ void CueSheet::parseIndex(const std::wstring *args)
         if (m_tracks.size() == 1) {
             /* HTOA */
             m_tracks.insert(m_tracks.begin(), CueTrack(this, 0));
-            m_tracks[0].setTag(L"title", L"(HTOA)");
+            m_tracks[0].setMeta(L"title", L"(HTOA)");
             segment.m_index = 1;
         } else
             segment.m_index = 0x7fffffff;
@@ -356,7 +334,7 @@ void CueSheet::parsePregap(const std::wstring *args)
 void CueSheet::parseMeta(const std::wstring *args)
 {
     if (m_tracks.size())
-        m_tracks.back().setTag(args[0], args[1]);
+        m_tracks.back().setMeta(args[0], args[1]);
     else
         m_meta[args[0]] = args[1];
 }
@@ -365,14 +343,12 @@ namespace Cue {
     void CueSheetToChapters(const std::wstring &cuesheet,
             double duration,
             std::vector<chapters::entry_t> *chapters,
-            std::map<uint32_t, std::wstring> *meta)
+            std::map<std::string, std::string> *meta)
     {
         std::wstringbuf strbuf(cuesheet);
         CueSheet parser;
         parser.parse(&strbuf);
-        parser.iTunesTags(meta);
-        if (meta->find(Tag::kAlbumArtist) != meta->end())
-            (*meta)[Tag::kArtist] = (*meta)[Tag::kAlbumArtist];
+        parser.getTags(meta);
         parser.asChapters(duration, chapters);
     }
 }

@@ -3,7 +3,7 @@
 #include "taksrc.h"
 #include "strutil.h"
 #include "win32util.h"
-#include "itunetags.h"
+#include "metadata.h"
 #include "cuesheet.h"
 #include <apefile.h>
 #include <apetag.h>
@@ -166,7 +166,7 @@ void TakSource::fetchTags()
     TagLibX::FDIOStreamReader stream(fd);
     TagLib::APE::File file(&stream, false);
 
-    std::map<std::string, std::string> vc;
+    std::map<std::string, std::string> tags;
     std::wstring cuesheet;
 
     TagLib::APE::Tag *tag = file.APETag(false);
@@ -175,21 +175,21 @@ void TakSource::fetchTags()
     for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
         if (it->second.type() != TagLib::APE::Item::Text)
             continue;
-        std::wstring key = it->first.toWString();
+        std::string key = it->first.toCString();
         std::wstring value = it->second.toString().toWString();
-        if (key == L"cuesheet")
+        if (strutil::slower(key) == "cuesheet")
             cuesheet = value;
         else
-            vc[strutil::w2us(key)] = strutil::w2us(value);
+            tags[key] = strutil::w2us(value);
     }
-    Vorbis::ConvertToItunesTags(vc, &m_tags);
     if (cuesheet.size()) {
-        std::map<uint32_t, std::wstring> tags;
+        std::map<std::string, std::string> ctags;
         Cue::CueSheetToChapters(cuesheet,
                                 m_length / m_asbd.mSampleRate,
-                                &m_chapters, &tags);
-        std::map<uint32_t, std::wstring>::const_iterator it;
-        for (it = tags.begin(); it != tags.end(); ++it)
-            m_tags[it->first] = it->second;
+                                &m_chapters, &ctags);
+        std::map<std::string, std::string>::const_iterator it;
+        for (it = ctags.begin(); it != ctags.end(); ++it)
+            tags[it->first] = it->second;
     }
+    TextBasedTag::normalizeTags(tags, &m_tags);
 }
