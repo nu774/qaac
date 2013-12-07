@@ -32,7 +32,9 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     LARGE_INTEGER li = { 0 };
     ULARGE_INTEGER ui;
     HR(stream->Seek(li, STREAM_SEEK_END, &ui));
-    if (ui.QuadPart > 0x100000) {
+    if (!ui.QuadPart)
+        return L"";
+    else if (ui.QuadPart > 0x100000) {
         throw std::runtime_error(strutil::w2us(path + L": file too big"));
     }
     size_t fileSize = ui.LowPart;
