@@ -11,6 +11,7 @@
 #include "inputfactory.h"
 #include "sink.h"
 #include "wavsink.h"
+#include "cafsink.h"
 #include "waveoutsink.h"
 #include "peaksink.h"
 #include "cuesheet.h"
@@ -442,8 +443,8 @@ void matrix_from_preset(const Options &opts,
 
 static void
 mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
-              const Options &opts, uint32_t *wav_chanmask,
-              uint32_t *aac_layout, bool threading)
+              const Options &opts, uint32_t *channel_layout,
+              bool threading)
 {
     uint32_t nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
     const std::vector<uint32_t> *channels = chain.back()->getChannels();
@@ -507,7 +508,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
             LOG(L"Using default channel layout.\n");
         chanmask = chanmap::defaultChannelMask(nchannels);
     }
-    *wav_chanmask = chanmask;
+    *channel_layout = chanmask;
     if (chanmask) {
         if (opts.isLPCM() && opts.verbose > 1) {
             std::vector<uint32_t> vec;
@@ -518,7 +519,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
     }
     if (opts.isAAC() || opts.isALAC()) {
         // construct mapped channel layout to AAC/ALAC order
-        *aac_layout = chanmap::AACLayoutFromBitmap(chanmask);
+        *channel_layout = chanmap::AACLayoutFromBitmap(chanmask);
         std::vector<uint32_t> aacmap;
         chanmap::getMappingToAAC(chanmask, &aacmap);
         if (aacmap.size()) {
@@ -529,7 +530,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
         if (opts.verbose > 1) {
             std::vector<uint32_t> vec;
             AudioChannelLayout acl = { 0 };
-            acl.mChannelLayoutTag = *aac_layout;
+            acl.mChannelLayoutTag = *channel_layout;
             chanmap::getChannels(&acl, &vec);
             LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
         }
@@ -627,8 +628,7 @@ std::string pcm_format_str(AudioStreamBasicDescription &asbd)
 
 void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                             std::vector<std::shared_ptr<ISource> > &chain,
-                            const Options &opts, uint32_t *wChanmask,
-                            uint32_t *aacLayout,
+                            const Options &opts, uint32_t *channel_layout,
                             AudioStreamBasicDescription *inputDesc,
                             AudioStreamBasicDescription *outputDesc,
                             bool normalize_pass=false)
@@ -643,15 +643,15 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     if (opts.isAAC() || opts.isALAC())
         codec.reset(new AudioCodecX(opts.output_format));
 #endif
-    mapped_source(chain, opts, wChanmask, aacLayout, threading);
+    mapped_source(chain, opts, channel_layout, threading);
 
     if (opts.isAAC() || opts.isALAC()) {
 #ifdef QAAC
-        if (!codec->isAvailableOutputChannelLayout(*aacLayout))
+        if (!codec->isAvailableOutputChannelLayout(*channel_layout))
             throw std::runtime_error("Channel layout not supported");
 #endif
 #ifdef REFALAC
-        switch (*aacLayout) {
+        switch (*channel_layout) {
         case kAudioChannelLayoutTag_Mono:
         case kAudioChannelLayoutTag_Stereo:
         case kAudioChannelLayoutTag_AAC_3_0:
@@ -697,7 +697,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 codec->getClosestAvailableOutputSampleRate(rate);
         else {
             AudioChannelLayout acl = { 0 };
-            acl.mChannelLayoutTag = *aacLayout;
+            acl.mChannelLayoutTag = *channel_layout;
             AudioConverterX converter(iasbd, oasbd);
             converter.setInputChannelLayout(acl);
             converter.setOutputChannelLayout(acl);
@@ -821,6 +821,13 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         LOG(L"Format: %hs -> %hs\n",
             pcm_format_str(sasbd).c_str(), pcm_format_str(iasbd).c_str());
 
+    if (opts.isLPCM())
+        oasbd = iasbd;
+    else if (opts.isAAC())
+        oasbd.mFramesPerPacket = opts.isSBR() ? 2048 : 1024;
+    else if (opts.isALAC())
+        oasbd.mFramesPerPacket = 4096;
+
     if (opts.isALAC()) {
         if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
             throw std::runtime_error("ALAC: Not supported format");
@@ -844,13 +851,12 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
 void build_filter_chain(std::shared_ptr<ISeekableSource> src,
                         std::vector<std::shared_ptr<ISource> > &chain,
-                        const Options &opts, uint32_t *wChanmask,
-                        uint32_t *aacLayout,
+                        const Options &opts, uint32_t *channel_layout,
                         AudioStreamBasicDescription *inputDesc,
                         AudioStreamBasicDescription *outputDesc)
 {
     chain.push_back(src);
-    build_filter_chain_sub(src, chain, opts, wChanmask, aacLayout,
+    build_filter_chain_sub(src, chain, opts, channel_layout,
                            inputDesc, outputDesc, opts.normalize);
     if (opts.normalize && src->isSeekable()) {
         src->seekTo(0);
@@ -860,52 +866,8 @@ void build_filter_chain(std::shared_ptr<ISeekableSource> src,
         chain.push_back(src);
         if (peak > FLT_MIN)
             chain.push_back(std::make_shared<Scaler>(src, 1.0/peak));
-        build_filter_chain_sub(src, chain, opts, wChanmask, aacLayout,
+        build_filter_chain_sub(src, chain, opts, channel_layout,
                                inputDesc, outputDesc, false);
-    }
-}
-
-static
-void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
-                 const std::wstring &ofilename, const Options &opts,
-                 uint32_t chanmask)
-{
-    const std::shared_ptr<ISource> src = chain.back();
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
-
-    std::shared_ptr<FILE> fileptr;
-    std::shared_ptr<ISink> sink;
-    if (opts.isLPCM()) {
-        fileptr = win32::fopen(ofilename, L"wb");
-        sink = std::make_shared<WaveSink>(fileptr.get(), src->length(),
-                                          sf, chanmask);
-    }
-    else if (opts.isWaveOut())
-        sink = std::make_shared<WaveOutSink>(sf, chanmask);
-    else if (opts.isPeak())
-        sink = std::make_shared<PeakSink>(sf);
-
-    Progress progress(opts.verbose, src->length(), sf.mSampleRate);
-    uint32_t bpf = sf.mBytesPerFrame;
-    std::vector<uint8_t> buffer(4096 * bpf);
-    try {
-        size_t nread;
-        while (!g_interrupted &&
-               (nread = src->readSamples(&buffer[0], 4096)) > 0) {
-            progress.update(src->getPosition());
-            sink->writeSamples(&buffer[0], nread * bpf, nread);
-        }
-        progress.finish(src->getPosition());
-    } catch (const std::exception &e) {
-        LOG(L"\nERROR: %s\n", errormsg(e).c_str());
-    }
-
-    if (opts.isLPCM()) {
-        WaveSink *p = dynamic_cast<WaveSink *>(sink.get());
-        p->finishWrite();
-    } else if (opts.isPeak()) {
-        PeakSink *p = dynamic_cast<PeakSink *>(sink.get());
-        LOG(L"peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
     }
 }
 
@@ -929,6 +891,7 @@ bool accept_tag(const std::string &name)
         "minorversion",    /* XXX: ffmpeg metadata for mp4 */
         "replaygainalbumgain",
         "replaygainalbumpeak",
+        "replaygainreferenceloudness",
         "replaygaintrackgain",
         "replaygaintrackpeak",
         0
@@ -985,6 +948,63 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
 }
 
 static
+void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
+                 const std::wstring &ofilename, const Options &opts,
+                 AudioStreamBasicDescription &oasbd, uint32_t chanmask)
+{
+    const std::shared_ptr<ISource> src = chain.back();
+    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+
+    std::shared_ptr<FILE> fileptr;
+    std::shared_ptr<ISink> sink;
+    CAFSink *cafsink = 0;
+
+    if (opts.isLPCM()) {
+        fileptr = win32::fopen(ofilename, L"wb");
+        if (!opts.is_caf) {
+            sink = std::make_shared<WaveSink>(fileptr.get(), src->length(),
+                                              sf, chanmask);
+        } else {
+            sink = std::make_shared<CAFSink>(fileptr, oasbd, chanmask,
+                                             std::vector<uint8_t>());
+            cafsink = dynamic_cast<CAFSink*>(sink.get());
+            set_tags(chain[0].get(), cafsink, opts, L"");
+            cafsink->beginWrite();
+        }
+    }
+    else if (opts.isWaveOut())
+        sink = std::make_shared<WaveOutSink>(sf, chanmask);
+    else if (opts.isPeak())
+        sink = std::make_shared<PeakSink>(sf);
+
+    Progress progress(opts.verbose, src->length(), sf.mSampleRate);
+    uint32_t bpf = sf.mBytesPerFrame;
+    std::vector<uint8_t> buffer(4096 * bpf);
+    try {
+        size_t nread;
+        while (!g_interrupted &&
+               (nread = src->readSamples(&buffer[0], 4096)) > 0) {
+            progress.update(src->getPosition());
+            sink->writeSamples(&buffer[0], nread * bpf, nread);
+        }
+        progress.finish(src->getPosition());
+    } catch (const std::exception &e) {
+        LOG(L"\nERROR: %s\n", errormsg(e).c_str());
+    }
+
+    if (opts.isLPCM()) {
+        WaveSink *wavsink = dynamic_cast<WaveSink *>(sink.get());
+        if (wavsink)
+            wavsink->finishWrite();
+        else if (cafsink)
+            cafsink->finishWrite(AudioFilePacketTableInfo());
+    } else if (opts.isPeak()) {
+        PeakSink *p = dynamic_cast<PeakSink *>(sink.get());
+        LOG(L"peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
+    }
+}
+
+static
 void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
                    const std::wstring &ofilename, const Options &opts)
 {
@@ -1010,10 +1030,15 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
 static
 std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
                                  const Options &opts,
+                                 const AudioStreamBasicDescription &asbd,
+                                 uint32_t channel_layout,
                                  const std::vector<uint8_t> &cookie)
 {
     if (opts.is_adts)
         return std::make_shared<ADTSSink>(ofilename, cookie);
+    else if (opts.is_caf)
+        return std::make_shared<CAFSink>(ofilename, asbd, channel_layout,
+                                         cookie);
     else if (opts.isALAC())
         return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     else if (opts.isAAC())
@@ -1221,20 +1246,18 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
                  const std::wstring &ofilename, const Options &opts,
                  const std::shared_ptr<FILE> *adts_fp=0)
 {
-    uint32_t wavChanmask;
-    uint32_t aacLayout;
+    uint32_t channel_layout;
     AudioStreamBasicDescription iasbd, oasbd;
 
     std::vector<std::shared_ptr<ISource> > chain;
-    build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout,
-                       &iasbd, &oasbd);
+    build_filter_chain(src, chain, opts, &channel_layout, &iasbd, &oasbd);
     if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
-        decode_file(chain, ofilename, opts, wavChanmask);
+        decode_file(chain, ofilename, opts, oasbd, channel_layout);
         return;
     }
     AudioConverterX converter(iasbd, oasbd);
     AudioChannelLayout acl = { 0 };
-    acl.mChannelLayoutTag = aacLayout;
+    acl.mChannelLayoutTag = channel_layout;
     converter.setInputChannelLayout(acl);
     converter.setOutputChannelLayout(acl);
     if (opts.isAAC()) config_aac_codec(converter, opts);
@@ -1249,31 +1272,38 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     if (adts_fp && adts_fp->get())
         sink = std::make_shared<ADTSSink>(*adts_fp, cookie);
     else
-        sink = open_sink(ofilename, opts, cookie);
+        sink = open_sink(ofilename, opts, oasbd, channel_layout, cookie);
     encoder.setSink(sink);
     set_tags(src.get(), sink.get(), opts, encoder_config);
+    CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
+    if (cafsink)
+        cafsink->beginWrite();
+
     do_encode(&encoder, ofilename, chain, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
 
+    AudioFilePacketTableInfo pti = { 0 };
     if (opts.isAAC()) {
-        MP4Sink *asink = dynamic_cast<MP4Sink*>(sink.get());
-        if (asink) {
-            asink->setGaplessMode(opts.gapless_mode + 1);
-            AudioFilePacketTableInfo pti = encoder.getGaplessInfo();
-            if (opts.isSBR()) {
-                pti.mNumberValidFrames -= 1024;
-                pti.mRemainderFrames += 1024;
-            }
-            if (opts.no_delay) {
-                pti.mPrimingFrames = 0;
-                pti.mNumberValidFrames -= (1024*3 - 2112);
-            }
-            asink->setGaplessInfo(pti);
+        pti = encoder.getGaplessInfo();
+        if (opts.isSBR()) {
+            pti.mNumberValidFrames -= 1024;
+            pti.mRemainderFrames += 1024;
+        }
+        if (opts.no_delay) {
+            pti.mPrimingFrames = 0;
+            pti.mNumberValidFrames -= (1024*3 - 2112);
+        }
+        MP4Sink *mp4sink = dynamic_cast<MP4Sink*>(sink.get());
+        if (mp4sink) {
+            mp4sink->setGaplessMode(opts.gapless_mode + 1);
+            mp4sink->setGaplessInfo(pti);
         }
     }
-    MP4SinkBase *msink = dynamic_cast<MP4SinkBase*>(sink.get());
-    if (msink)
-        finalize_m4a(msink, &encoder, ofilename, opts);
+    MP4SinkBase *mp4sinkbase = dynamic_cast<MP4SinkBase*>(sink.get());
+    if (mp4sinkbase)
+        finalize_m4a(mp4sinkbase, &encoder, ofilename, opts);
+    else if (cafsink)
+        cafsink->finishWrite(pti);
 }
 #endif // QAAC
 #ifdef REFALAC
@@ -1282,14 +1312,13 @@ static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
         const std::wstring &ofilename, const Options &opts)
 {
-    uint32_t wavChanmask;
-    uint32_t aacLayout;
-    AudioStreamBasicDescription iasbd;
+    uint32_t channel_layout;
+    AudioStreamBasicDescription iasbd, oasbd;
     std::vector<std::shared_ptr<ISource> > chain;
-    build_filter_chain(src, chain, opts, &wavChanmask, &aacLayout, &iasbd, 0);
+    build_filter_chain(src, chain, opts, &channel_layout, &iasbd, &oasbd);
 
     if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
-        decode_file(chain, ofilename, opts, wavChanmask);
+        decode_file(chain, ofilename, opts, oasbd, channel_layout);
         return;
     }
     ALACEncoderX encoder(iasbd);
@@ -1297,16 +1326,27 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::vector<uint8_t> cookie;
     encoder.getMagicCookie(&cookie);
 
-    std::shared_ptr<ALACSink> sink =
-        std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
+    std::shared_ptr<ISink> sink;
+    if (opts.is_caf)
+        sink = std::make_shared<CAFSink>(ofilename, oasbd,
+                                         channel_layout, cookie);
+    else
+        sink = std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     encoder.setSource(chain.back());
     encoder.setSink(sink);
     set_tags(src.get(), sink.get(), opts, L"Apple Lossless Encoder");
+    CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
+    if (cafsink)
+        cafsink->beginWrite();
+
     do_encode(&encoder, ofilename, chain, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
-    MP4SinkBase *msink = dynamic_cast<MP4SinkBase*>(sink.get());
-    if (msink)
-        finalize_m4a(msink, &encoder, ofilename, opts);
+
+    MP4SinkBase *mp4sinkbase = dynamic_cast<MP4SinkBase*>(sink.get());
+    if (mp4sinkbase)
+        finalize_m4a(mp4sinkbase, &encoder, ofilename, opts);
+    else if (cafsink)
+        cafsink->finishWrite(AudioFilePacketTableInfo());
 }
 #endif
 

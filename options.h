@@ -39,9 +39,10 @@ struct Options {
         chapter_file(0), logfilename(0), remix_preset(0), remix_file(0),
         tmpdir(0), delay(0),
 
-        is_raw(false), is_adts(false), save_stat(false), nice(false),
-        native_chanmapper(false), ignore_length(false), no_optimize(false),
-        native_resampler(false), check_only(false), normalize(false),
+        is_raw(false), is_adts(false), is_caf(false),
+        save_stat(false), nice(false), native_chanmapper(false),
+        ignore_length(false), no_optimize(false), native_resampler(false),
+        check_only(false), normalize(false),
         print_available_formats(false), alac_fast(false), threading(false),
         concat(false), no_matrix_normalize(false), no_dither(false),
         filename_from_tag(false), no_delay(false), sort_args(false),
@@ -54,7 +55,7 @@ struct Options {
 
     bool isMP4() const
     {
-        return (isAAC() && !is_adts) || isALAC();
+        return !is_caf && ((isAAC() && !is_adts) || isALAC());
     }
     bool isAAC() const
     {
@@ -82,7 +83,8 @@ struct Options {
     }
     const wchar_t *extension() const
     {
-        if (isMP4()) return L".m4a";
+        if (is_caf) return L".caf";
+        else if (isMP4()) return L".m4a";
         else if (isLPCM()) return L".wav";
         else if (isWaveOut() || isPeak()) return L"";
         else return L".aac";
@@ -99,7 +101,7 @@ struct Options {
              gapless_mode;
     wchar_t *ofilename, *outdir, *raw_format, *fname_format, *chapter_file,
             *logfilename, *remix_preset, *remix_file, *tmpdir, *delay;
-    bool is_raw, is_adts, save_stat, nice, native_chanmapper,
+    bool is_raw, is_adts, is_caf, save_stat, nice, native_chanmapper,
          ignore_length, no_optimize, native_resampler, check_only,
          normalize, print_available_formats, alac_fast, threading,
          concat, no_matrix_normalize, no_dither, filename_from_tag,

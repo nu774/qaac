@@ -138,6 +138,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\bitstream.cpp" />
+    <ClCompile Include="..\..\cafsink.cpp" />
     <ClCompile Include="..\..\chanmap.cpp" />
     <ClCompile Include="..\..\chapters.cpp" />
     <ClCompile Include="..\..\composite.cpp" />

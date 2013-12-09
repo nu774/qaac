@@ -22,6 +22,7 @@ static wide::option long_options[] = {
     { L"check", no_argument, 0, 'chck' },
     { L"decode", no_argument, 0, 'D' },
     { L"play", no_argument, 0, 'play' },
+    { L"caf", no_argument, 0, 'caff' },
     { L"no-optimize", no_argument, 0, 'noop' },
     { L"bits-per-sample", required_argument, 0, 'b' },
     { L"no-dither", no_argument, 0, 'ndit' },
@@ -137,6 +138,7 @@ void usage()
 "-d <dirname>           Output directory. Default is current working dir.\n"
 "--check                Show library versions and exit.\n"
 "-D, --decode           Decode to a WAV file.\n"
+"--caf                  Output to CAF file instead of M4A/WAV/AAC.\n"
 "--play                 Decode to a WaveOut device (playback).\n"
 "-r, --rate <keep|auto|n>\n"
 "                       keep: output sampling rate will be same as input\n"
@@ -384,6 +386,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
             }
             this->output_format = 'peak';
         }
+        else if (ch == 'caff')
+            this->is_caf = true;
         else if (ch == 'q') {
             if (std::swscanf(wide::optarg, L"%u", &this->quality) != 1) {
                 std::fputws(L"-q requires an integer.\n", stderr);
@@ -707,6 +711,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
     }
     if (!isAAC() && this->quality != -1) {
         std::fputws(L"-q is only available for AAC.\n", stderr);
+        return false;
+    }
+    if (this->is_caf && this->is_adts) {
+        std::fputws(L"Can't use --caf and --adts at the same time.\n",
+                    stderr);
         return false;
     }
     if (this->ignore_length && this->is_raw) {
