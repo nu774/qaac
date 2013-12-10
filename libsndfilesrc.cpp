@@ -116,28 +116,34 @@ LibSndfileSource::LibSndfileSource(
     }
     uint32_t subformat = info.format & SF_FORMAT_SUBMASK;
     struct format_table_t {
+        int subtype;
         int bits;
         int type;
     } mapping[] = {
-         { 0,  0                               },
-         { 8,  kAudioFormatFlagIsSignedInteger },
-         { 16, kAudioFormatFlagIsSignedInteger },
-         { 24, kAudioFormatFlagIsSignedInteger },
-         { 32, kAudioFormatFlagIsSignedInteger },
-         { 8,  kAudioFormatFlagIsSignedInteger },
-         { 32, kAudioFormatFlagIsFloat         },
-         { 64, kAudioFormatFlagIsFloat         }
-    };
-    if (subformat < 1 || subformat > 7)
+         { SF_FORMAT_PCM_S8,   8, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_PCM_16,  16, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_PCM_24,  24, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_PCM_32,  32, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_PCM_U8,   8, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_FLOAT,   32, kAudioFormatFlagIsFloat         },
+         { SF_FORMAT_DOUBLE,  64, kAudioFormatFlagIsFloat         },
+         { SF_FORMAT_ALAC_16, 16, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_ALAC_20, 20, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_ALAC_24, 24, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_ALAC_32, 32, kAudioFormatFlagIsSignedInteger },
+         { 0, 0, 0 }
+    }, *p = mapping;
+    for (; p->subtype && p->subtype != subformat; ++p)
+        ;
+    if (!p->subtype)
         throw std::runtime_error("Unsupported input subformat");
-
-    int pack_bits = mapping[subformat].bits;
-    if (mapping[subformat].type == kAudioFormatFlagIsSignedInteger)
+    int pack_bits = p->bits;
+    if (p->type == kAudioFormatFlagIsSignedInteger)
         pack_bits = 32;
 
     m_asbd = cautil::buildASBDForPCM2(info.samplerate, info.channels,
-                                      mapping[subformat].bits, pack_bits,
-                                      mapping[subformat].type);
+                                      p->bits, pack_bits,
+                                      p->type);
 
     if (m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger)
         m_readf = m_module.readf_int;
@@ -157,6 +163,8 @@ LibSndfileSource::LibSndfileSource(
         try {
             ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
         } catch (...) {}
+    } else if (m_format_name == "caf") {
+        CAF::fetchTags(fileno(m_fp.get()), &m_tags);
     }
 }
 
