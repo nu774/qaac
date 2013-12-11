@@ -455,10 +455,11 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
                 chanmap::getChannelNames(*channels).c_str());
         }
         // reorder to Microsoft (USB) order
-        chanmap::convertFromAppleLayout(*channels, &work);
+        work.assign(channels->begin(), channels->end());
+        chanmap::convertFromAppleLayout(&work);
         channels = &work;
         std::vector<uint32_t> mapping;
-        chanmap::getMappingToUSBOrder(work, &mapping);
+        chanmap::getMappingToUSBOrder(*channels, &mapping);
         if (!util::is_increasing(mapping.begin(), mapping.end())) {
             std::shared_ptr<ISource>
                 mapper(new ChannelMapper(chain.back(), mapping,

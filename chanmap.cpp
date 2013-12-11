@@ -1,14 +1,14 @@
 #include "chanmap.h"
+#include <numeric>
+#include <cassert>
 
 namespace chanmap {
 
-const char *GetChannelName(uint32_t n)
+const char *getChannelName(uint32_t n)
 {
     const char *tab[] = {
-        "?","L","R","C","LFE",
-        "Ls","Rs","Lc","Rc","Cs",
-        "Lsd","Rsd","Ts","Vhl","Vhc",
-        "Vhr","Tbl","Tbc","Tbr"
+        "?","L","R","C","LFE","Ls","Rs","Lc","Rc","Cs",
+        "Lsd","Rsd","Ts","Vhl","Vhc","Vhr","Tbl","Tbc","Tbr"
     };
     if (n <= 18) return tab[n];
     switch (n) {
@@ -22,34 +22,34 @@ const char *GetChannelName(uint32_t n)
 
 std::string getChannelNames(const std::vector<uint32_t> &channels)
 {
-    std::string result;
     const char *delim = "";
-    size_t lfe_count = 0;
-    for (size_t i = 0; i < channels.size(); ++i, delim = " ") {
-        result += delim;
-        result += GetChannelName(channels[i]);
-        if (channels[i] == 4) ++lfe_count;
-    }
-    size_t count = channels.size();
-    count -= lfe_count;
+    std::string result;
+
+    std::for_each(channels.begin(), channels.end(), [&](uint32_t c) {
+        result.append(delim).append(getChannelName(c));
+        delim = " ";
+    });
+    size_t lfe_count = std::count(channels.begin(), channels.end(), 4);
+    size_t count = channels.size() - lfe_count;
     if (count <= 2 && lfe_count == 0)
         return count == 1 ? "Mono" : "Stereo";
     else
         return strutil::format("%u.%u (%s)",
-                      static_cast<uint32_t>(count),
-                      static_cast<uint32_t>(lfe_count),
-                      result.c_str());
+                               static_cast<uint32_t>(count),
+                               static_cast<uint32_t>(lfe_count),
+                               result.c_str());
 }
 
 uint32_t getChannelMask(const std::vector<uint32_t>& channels)
 {
-    uint32_t result = 0;
-    for (size_t i = 0; i < channels.size(); ++i) {
-        if (channels[i] >= 33)
-            throw std::runtime_error("Not supported channel layout");
-        result |= (1 << (channels[i] - 1));
-    }
-    return result;
+    if (std::count_if(channels.begin(), channels.end(), [](uint32_t c) {
+                      return c >= 33; }))
+        throw std::runtime_error("Not supported channel layout");
+
+    return std::accumulate(channels.begin(), channels.end(), 0,
+                           [](uint32_t a, uint32_t c) {
+                               return a | (1 << (c - 1));
+                           });
 }
 
 void getChannels(uint32_t bitmap, std::vector<uint32_t> *result,
@@ -194,71 +194,58 @@ void getChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
     result->swap(channels);
 }
 
-void convertFromAppleLayout(const std::vector<uint32_t> &from,
-                                    std::vector<uint32_t> *to)
+void convertFromAppleLayout(std::vector<uint32_t> *channels)
 {
-    struct Simple {
-        static uint32_t trans(uint32_t x) {
-            switch (x) {
-            case kAudioChannelLabel_Mono:
-                return kAudioChannelLabel_Center;
-            /* XXX
-             * In case of SMPTE_DTV, Lt/Rt are used with L/R and others
-             * at the same time.
-             * Therefore Lt/Rt cannot be simply mapped into L/R.
-             */
-            /*
-            case kAudioChannelLabel_LeftTotal:
-                return kAudioChannelLabel_Left;
-            case kAudioChannelLabel_RightTotal:
-                return kAudioChannelLabel_Right;
-            */
-            case kAudioChannelLabel_HeadphonesLeft:
-                return kAudioChannelLabel_Left;
-            case kAudioChannelLabel_HeadphonesRight:
-                return kAudioChannelLabel_Right;
-            }
-            return x;
-        }
-    };
-    struct RearSurround {
-        static bool exists(uint32_t x)
-        {
-            return x == 33 || x == 34; /* Rls or Rrs */
-        }
-        static uint32_t trans(uint32_t x) {
-            switch (x) {
-            case 5  /* Ls  */: return 10 /* SL  */;
-            case 6  /* Rs  */: return 11 /* SR */;
-            case 33 /* Rls */: return 5  /* BL  */;
-            case 34 /* Rrs */: return 6  /* BR  */;
-            }
-            return x;
-        }
-    };
-    std::vector<uint32_t> v(from.size());
-    std::transform(from.begin(), from.end(), v.begin(), Simple::trans);
-    if (std::find_if(v.begin(), v.end(), RearSurround::exists) != v.end())
-        std::transform(v.begin(), v.end(), v.begin(), RearSurround::trans);
-    to->swap(v);
+    if (!std::count_if(channels->begin(), channels->end(),
+                       [](uint32_t c) {
+                           return c > 18;
+                       }))
+        return;
+
+    std::vector<uint32_t> v(channels->size());
+    std::transform(channels->begin(), channels->end(), v.begin(),
+                   [](uint32_t x) ->uint32_t {
+                       switch (x) {
+                       case kAudioChannelLabel_Mono:
+                           return kAudioChannelLabel_Center;
+                       case kAudioChannelLabel_HeadphonesLeft:
+                           return kAudioChannelLabel_Left;
+                       case kAudioChannelLabel_HeadphonesRight:
+                           return kAudioChannelLabel_Right;
+                       }
+                       return x;
+                   });
+
+    size_t back = std::count(v.begin(), v.end(), 5) +
+                  std::count(v.begin(), v.end(), 6);
+    size_t side = std::count(v.begin(), v.end(), 10) +
+                  std::count(v.begin(), v.end(), 11);
+
+    std::transform(v.begin(), v.end(), v.begin(), [&](uint32_t c) -> uint32_t {
+                        switch (c) {
+                        case kAudioChannelLabel_LeftSurround:
+                        case kAudioChannelLabel_RightSurround:
+                            if (!side) c += 5;
+                            break;
+                        case kAudioChannelLabel_RearSurroundLeft:
+                        case kAudioChannelLabel_RearSurroundRight:
+                            if (!back || !side) c -= 28;
+                            break;
+                        };
+                        return c;
+                   });
+    channels->swap(v);
 }
 
-template <typename T>
-class IndexComparator {
-    const T *m_data;
-public:
-    IndexComparator(const T *data): m_data(data) {}
-    bool operator()(size_t l, size_t r) { return m_data[l-1] < m_data[r-1]; }
-};
-
 void getMappingToUSBOrder(const std::vector<uint32_t> &channels,
-                                 std::vector<uint32_t> *result)
+                          std::vector<uint32_t> *result)
 {
     std::vector<uint32_t> index(channels.size());
-    for (unsigned i = 0; i < channels.size(); ++i)
-        index[i] = i + 1;
-    std::sort(index.begin(), index.end(),
-              IndexComparator<uint32_t>(&channels[0]));
+    unsigned i = 0;
+    std::generate(index.begin(), index.end(), [&](){ return ++i; });
+    std::sort(index.begin(), index.end(), [&](uint32_t a, uint32_t b) {
+                  return channels[a-1] < channels[b-1];
+              });
     result->swap(index);
 }
 
@@ -302,48 +289,47 @@ uint32_t AACLayoutFromBitmap(uint32_t bitmap)
     throw std::runtime_error("No channel mapping to AAC defined");
 }
 
-static
-void NormalizeChannelsForAAC(uint32_t bitmap, std::vector<uint32_t> &channels)
-{
-    bool front = (bitmap & 0x3) == 0x3;
-    bool rear  = (bitmap & 0x30) == 0x30;
-
-    for (std::vector<uint32_t>::iterator
-         it = channels.begin(); it != channels.end(); ++it) {
-        if (bitmap == 0x63f) { // FL FR FC LFE BL BR SL SR
-            switch (*it) {
-            case 1: case 2:   *it += 6; break; /* FL, FR -> Lc, Rc */
-            case 10: case 11: *it -= 9; break; /* SL, SR -> L, R   */
-            }
-        } else {
-            if (!rear  && (*it == 10 || *it == 11))
-                *it -= 5; /* SL, SR   -> Ls, Rs */
-            if (!front && (*it == 7 || *it == 8))
-                *it -= 6; /* FLC, FRC -> L, R   */
-        }
-    }
-}
-
 void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result)
 {
     AudioChannelLayout aacLayout = { 0 };
     aacLayout.mChannelLayoutTag = AACLayoutFromBitmap(bitmap);
 
-    std::vector<uint32_t> wcs, acs, mapping;
-    getChannels(bitmap, &wcs);
-    getChannels(&aacLayout, &acs);
-    convertFromAppleLayout(acs, &acs);
-    NormalizeChannelsForAAC(bitmap, wcs);
-
-    if (wcs == acs)
-        return;
-    for (size_t i = 0; i < acs.size(); ++i) {
-        std::vector<uint32_t>::iterator
-            pos = std::find(wcs.begin(), wcs.end(), acs[i]);
-        if (pos == wcs.end())
-            throw std::runtime_error("No channel mapping to AAC defined");
-        mapping.push_back(std::distance(wcs.begin(), pos) + 1);
-    }
+    std::vector<uint32_t> cs, mapping;
+    getChannels(&aacLayout, &cs);
+    /*
+     * rewrite channels in pre-defined AAC channel layout to match with
+     * input channel bitmap
+     */
+    std::transform(cs.begin(), cs.end(), cs.begin(),
+                   [&](uint32_t c) -> uint32_t {
+                        switch (c) {
+                        case kAudioChannelLabel_Left:
+                        case kAudioChannelLabel_Right:
+                            if (bitmap == 0x63f)
+                                c += 9;
+                            else if (!(bitmap & 0x3) && (bitmap & 0xc))
+                                c += 6;
+                            break;
+                        case kAudioChannelLabel_LeftCenter:
+                        case kAudioChannelLabel_RightCenter:
+                            if (bitmap == 0x63f)
+                                c -= 6;
+                            break;
+                        case kAudioChannelLabel_LeftSurround:
+                        case kAudioChannelLabel_RightSurround:
+                            if (!(bitmap & 0x30) && (bitmap & 0x600))
+                                c += 5;
+                            break;
+                        case kAudioChannelLabel_RearSurroundLeft:
+                        case kAudioChannelLabel_RearSurroundRight:
+                            c -= 18;
+                            break;
+                        }
+                        return c;
+                  });
+    assert(getChannelMask(cs) == bitmap);
+    getMappingToUSBOrder(cs, &mapping);
+    getMappingToUSBOrder(mapping, &mapping);
     result->swap(mapping);
 }
 
@@ -354,6 +340,10 @@ ChannelMapper::ChannelMapper(const std::shared_ptr<ISource> &source,
                              uint32_t bitmap)
     : FilterBase(source)
 {
+    const AudioStreamBasicDescription &asbd = source->getSampleFormat();
+    assert(chanmap.size() == asbd.mChannelsPerFrame);
+    assert(chanmap.size() <= 8);
+
     for (size_t i = 0; i < chanmap.size(); ++i)
         m_chanmap.push_back(chanmap[i] - 1);
     if (bitmap) {
@@ -366,22 +356,53 @@ ChannelMapper::ChannelMapper(const std::shared_ptr<ISource> &source,
             for (size_t i = 0; i < m_chanmap.size(); ++i)
                 m_layout.push_back(orig->at(m_chanmap[i]));
     }
+    switch (asbd.mBytesPerFrame / asbd.mChannelsPerFrame) {
+    case 2:
+        m_process = &ChannelMapper::process16; break;
+    case 4:
+        m_process = &ChannelMapper::process32; break;
+    case 8:
+        m_process = &ChannelMapper::process64; break;
+    default:
+        assert(0);
+    }
 }
 
-size_t ChannelMapper::readSamples(void *buffer, size_t nsamples)
+template <typename T>
+size_t ChannelMapper::processT(T *buffer, size_t nsamples)
 {
-    const AudioStreamBasicDescription &asbd = source()->getSampleFormat();
-    size_t framelen = asbd.mBytesPerFrame;
-    size_t width = framelen / asbd.mChannelsPerFrame;
-    std::vector<char> tmp_buffer(framelen);
-    size_t rc = source()->readSamples(buffer, nsamples);
-    char *bp = reinterpret_cast<char*>(buffer);
-    for (size_t i = 0; i < rc ; ++i, bp += framelen) {
-        std::memcpy(&tmp_buffer[0], bp, framelen);
-        for (size_t j = 0; j < m_chanmap.size(); ++j) {
-            std::memcpy(bp + width * j,
-                    &tmp_buffer[0] + width * m_chanmap[j], width);
+    unsigned nchannels = source()->getSampleFormat().mChannelsPerFrame;
+    const uint32_t *chanmap = &m_chanmap[0];
+    T work[8], *bp = buffer;
+
+    nsamples = source()->readSamples(buffer, nsamples);
+    for (size_t i = 0; i < nsamples; ++i, bp += nchannels) {
+        memcpy(work, bp, sizeof(T) * nchannels);
+        switch (nchannels) {
+        case 8: bp[7] = work[chanmap[7]];
+        case 7: bp[6] = work[chanmap[6]];
+        case 6: bp[5] = work[chanmap[5]];
+        case 5: bp[4] = work[chanmap[4]];
+        case 4: bp[3] = work[chanmap[3]];
+        case 3: bp[2] = work[chanmap[2]];
+        case 2: bp[1] = work[chanmap[1]];
+        case 1: bp[0] = work[chanmap[0]];
         }
     }
-    return rc;
+    return nsamples;
+}
+
+size_t ChannelMapper::process16(void *buffer, size_t nsamples)
+{
+    return processT(static_cast<uint16_t *>(buffer), nsamples);
+}
+
+size_t ChannelMapper::process32(void *buffer, size_t nsamples)
+{
+    return processT(static_cast<uint32_t *>(buffer), nsamples);
+}
+
+size_t ChannelMapper::process64(void *buffer, size_t nsamples)
+{
+    return processT(static_cast<uint64_t *>(buffer), nsamples);
 }
