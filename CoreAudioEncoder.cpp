@@ -95,7 +95,8 @@ long CoreAudioEncoder::inputDataProc(UInt32 *npackets, AudioBufferList *abl)
         _CrtCheckMemory();
 #endif
     } catch (...) {
-        return -39; // eofError
+        /* treat as EOF */
+        *npackets = 0;
     }
     if (*npackets == 0) {
         ab.mData = 0;
