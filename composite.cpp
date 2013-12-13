@@ -27,8 +27,6 @@ void CompositeSource::seekTo(int64_t pos)
     }
     if (m_cur_file == m_sources.size())
         throw std::runtime_error("Invalid seek offset");
-    for (uint32_t i = m_cur_file + 1; i < m_sources.size(); ++i)
-        m_sources[i]->seekTo(0);
     m_sources[m_cur_file]->seekTo(pos - acc);
     m_position = pos;
 }
@@ -42,22 +40,19 @@ void CompositeSource::addSource(const std::shared_ptr<ISeekableSource> &src)
                                  "different sample format is not supported");
     m_sources.push_back(src);
     uint64_t len = src->length();
-    if (len != ~0ULL && m_length != ~0ULL)
-        m_length += src->length();
-    else if (len == ~0ULL)
-        m_length = ~0ULL;
+    m_length = (len > ~0ULL - m_length) ? ~0ULL : m_length + len;
 
     /*
      * Want to discard tags that take different values on each track.
      * This way, only (per-album) common tags should finally remain.
      */
-    auto *parser = dynamic_cast<ITagParser*>(src.get());
+    auto parser = dynamic_cast<ITagParser*>(src.get());
     if (!parser)
         return;
-    auto &tags = parser->getTags();
+    auto tags = parser->getTags();
     bool is_empty = m_tags.empty();
     std::for_each(tags.begin(), tags.end(),
-                  [&](const std::pair<std::string, std::string> &kv) {
+                  [&](const decltype(*tags.begin()) &kv) {
                       if (is_empty)
                           m_tags[kv.first] = kv.second;
                       else {
@@ -73,22 +68,18 @@ void CompositeSource::addSourceWithChapter(
                             const std::wstring &title)
 {
     addSource(src);
-    ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
+    std::wstring name(title);
+    auto parser = dynamic_cast<ITagParser*>(src.get());
     if (parser) {
-        const std::vector<chapters::entry_t> *chaps;
-        if ((chaps = parser->getChapters())) {
+        auto chaps = parser->getChapters();
+        if (chaps) {
             std::copy(chaps->begin(), chaps->end(),
                       std::back_inserter(m_chapters));
             return;
         }
-        const std::map<std::string, std::string> &tags = parser->getTags();
-        std::map<std::string, std::string>::const_iterator
-            tag = tags.find("title");
-        if (tag != tags.end()) {
-            addChapter(strutil::us2w(tag->second),
-                       src->length() / m_asbd.mSampleRate);
-            return;
-        }
+        auto tags = parser->getTags();
+        if (tags.find("title") != tags.end())
+            name = strutil::us2w(tags["title"]);
     }
-    addChapter(title, src->length() / m_asbd.mSampleRate);
+    addChapter(name, src->length() / m_asbd.mSampleRate);
 }

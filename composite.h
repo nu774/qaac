@@ -5,7 +5,7 @@
 
 class CompositeSource: public ISeekableSource, public ITagParser {
     typedef std::shared_ptr<ISeekableSource> source_t;
-    int32_t m_cur_file;
+    uint32_t m_cur_file;
     int64_t m_position;
     uint64_t m_length;
     std::vector<source_t> m_sources;
