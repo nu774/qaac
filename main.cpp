@@ -1517,13 +1517,15 @@ int wmain1(int argc, wchar_t **argv)
         return 1;
 
     COMInitializer __com__;
+    std::unique_ptr<Log> logger(Log::instance());;
+
     try {
         ConsoleTitleSaver consoleTitle;
 
         if (opts.verbose && !opts.print_available_formats)
-            Log::instance()->enable_stderr();
+            logger->enable_stderr();
         if (opts.logfilename && !opts.print_available_formats)
-            Log::instance()->enable_file(opts.logfilename);
+            logger->enable_file(opts.logfilename);
 
         if (opts.nice)
             SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
@@ -1548,8 +1550,8 @@ int wmain1(int argc, wchar_t **argv)
         if (!opts.print_available_formats)
             LOG(L"%s\n", opts.encoder_name.c_str());
 
+        std::unique_ptr<input::InputFactory>factory(input::factory());
         setup_input_factory(opts);
-        input::InputFactory *factory = input::factory();
 
         if (opts.check_only) {
             if (factory->libsoxconvolver.loaded())
@@ -1689,11 +1691,10 @@ int wmain1(int argc, wchar_t **argv)
             WaveOutDevice::instance()->close();
     } catch (const std::exception &e) {
         if (opts.print_available_formats)
-            Log::instance()->enable_stderr();
+            logger->enable_stderr();
         LOG(L"ERROR: %s\n", errormsg(e).c_str());
         result = 2;
     }
-    delete Log::instance();
     return result;
 }
 

@@ -17,6 +17,7 @@ public:
     SoxLowpassFilter(const SoXConvolverModule &module,
                      const std::shared_ptr<ISource> &src,
                      unsigned Fp);
+    ~SoxLowpassFilter() { m_convolver.reset(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;

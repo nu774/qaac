@@ -15,6 +15,7 @@ class SoxrResampler: public FilterBase {
 public:
     SoxrResampler(const SOXRModule &module, const std::shared_ptr<ISource> &src,
                   unsigned rate);
+    ~SoxrResampler() { m_resampler.reset(); }
     uint64_t length() const
     {
         return m_length;

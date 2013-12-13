@@ -44,6 +44,7 @@ class LibSndfileSource: public ISeekableSource, public ITagParser
 public:
     LibSndfileSource(const LibSndfileModule &module,
                      const std::shared_ptr<FILE> &fp);
+    ~LibSndfileSource() { m_handle.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {

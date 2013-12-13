@@ -63,6 +63,7 @@ class TakSource: public ISeekableSource, public ITagParser
     TakModule m_module;
 public:
     TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp);
+    ~TakSource() { m_decoder.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {

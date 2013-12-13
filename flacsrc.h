@@ -24,6 +24,7 @@ class FLACSource: public ISeekableSource, public ITagParser
     FLACModule m_module;
 public:
     FLACSource(const FLACModule &module, const std::shared_ptr<FILE> &fp);
+    ~FLACSource() { m_decoder.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {

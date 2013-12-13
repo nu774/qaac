@@ -51,6 +51,7 @@ class WavpackSource: public ISeekableSource, public ITagParser
     WavpackModule m_module;
 public:
     WavpackSource(const WavpackModule &module, const std::wstring &path);
+    ~WavpackSource() { m_wpc.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
