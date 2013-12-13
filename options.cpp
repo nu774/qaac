@@ -723,7 +723,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
                     stderr);
         return false;
     }
-    if (this->concat && argc > 1 && !this->ofilename) {
+    if (this->concat && argc > 1 && !this->ofilename &&
+        !this->isPeak() && !this->isWaveOut()) {
         std::fputws(L"--concat requires output filename (use -o option).\n",
                     stderr);
         return false;
