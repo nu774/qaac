@@ -48,21 +48,24 @@ void CompositeSource::addSource(const std::shared_ptr<ISeekableSource> &src)
         m_length = ~0ULL;
 
     /*
-     * Discard tags that take different values on each song.
-     * This way, only album common tags should remain.
+     * Want to discard tags that take different values on each track.
+     * This way, only (per-album) common tags should finally remain.
      */
-    ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
-    if (parser) {
-        const std::map<std::string, std::string> &tags = parser->getTags();
-        std::map<std::string, std::string>::const_iterator s;
-        bool is_empty = m_tags.empty();
-        for (s = tags.begin(); s != tags.end(); ++s) {
-            if (is_empty)
-                m_tags[s->first] = s->second;
-            else if (m_tags.find(s->first) != m_tags.end())
-                m_tags.erase(s->first);
-        }
-    }
+    auto *parser = dynamic_cast<ITagParser*>(src.get());
+    if (!parser)
+        return;
+    auto &tags = parser->getTags();
+    bool is_empty = m_tags.empty();
+    std::for_each(tags.begin(), tags.end(),
+                  [&](const std::pair<std::string, std::string> &kv) {
+                      if (is_empty)
+                          m_tags[kv.first] = kv.second;
+                      else {
+                          auto it = m_tags.find(kv.first);
+                          if (it != m_tags.end() && it->second != kv.second)
+                              m_tags.erase(it);
+                      }
+                  });
 }
 
 void CompositeSource::addSourceWithChapter(
