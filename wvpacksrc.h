@@ -57,7 +57,10 @@ public:
     {
         return m_asbd;
     }
-    const std::vector<uint32_t> *getChannels() const { return &m_chanmap; }
+    const std::vector<uint32_t> *getChannels() const
+    {
+        return m_chanmap.size() ? &m_chanmap : 0;
+    }
     int64_t getPosition();
     size_t readSamples(void *buffer, size_t nsamples)
     {

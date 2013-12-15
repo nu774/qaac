@@ -350,8 +350,7 @@ ChannelMapper::ChannelMapper(const std::shared_ptr<ISource> &source,
         for (unsigned i = 0; i < 32; ++i, bitmap >>= 1)
             if (bitmap & 1) m_layout.push_back(i + 1);
     } else {
-        const std::vector<uint32_t> *orig =
-            FilterBase::getChannels();
+        const std::vector<uint32_t> *orig = FilterBase::getChannels();
         if (orig)
             for (size_t i = 0; i < m_chanmap.size(); ++i)
                 m_layout.push_back(orig->at(m_chanmap[i]));

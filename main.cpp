@@ -523,7 +523,8 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
         *channel_layout = chanmap::AACLayoutFromBitmap(chanmask);
         std::vector<uint32_t> aacmap;
         chanmap::getMappingToAAC(chanmask, &aacmap);
-        if (aacmap.size()) {
+        if (aacmap.size() &&
+            !util::is_increasing(aacmap.begin(), aacmap.end())) {
             std::shared_ptr<ISource>
                 mapper(new ChannelMapper(chain.back(), aacmap));
             chain.push_back(mapper);
