@@ -32,8 +32,7 @@ void CoreAudioResampler::init()
     m_converter.setSampleRateConverterComplexity(m_complexity);
     m_encoder.reset(new CoreAudioEncoder(m_converter));
 
-    struct Dispose { static void call(ISink *x) {} };
-    std::shared_ptr<ISink> sink(this, Dispose::call);
+    std::shared_ptr<ISink> sink(this, [](ISink *){});
     m_encoder->setSource(sourcePtr());
     m_encoder->setSink(sink);
 }

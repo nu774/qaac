@@ -97,20 +97,16 @@ void CueTrack::addSegment(const CueSegment &seg)
 void CueTrack::getTags(std::map<std::string, std::string> *tags) const
 {
     std::map<std::string, std::string> result;
-    std::map<std::wstring, std::wstring>::const_iterator it;
     m_cuesheet->getTags(&result);
-    for (it = m_meta.begin(); it != m_meta.end(); ++it) {
-        std::string key = strutil::w2us(it->first);
-        std::string val = strutil::w2us(it->second);
-
-        if (key == "PERFORMER")
-            result["artist"] = val;
-        else
-            result[key] = val;
-    }
-    std::string track = strutil::format("%u/%u", number(),
-                                        m_cuesheet->count());
-    result["track number"] = track;
+    std::for_each(m_meta.begin(), m_meta.end(),
+                  [&](const decltype(*m_meta.begin()) &tag) {
+                      auto key = strutil::w2us(tag.first);
+                      if (key == "PERFORMER")
+                          key = "artist";
+                      result[key] = strutil::w2us(tag.second);
+                  });
+    result["track number"]
+        = strutil::format("%u/%u", number(), m_cuesheet->count());
     TextBasedTag::normalizeTags(result, tags);
 }
 
@@ -160,40 +156,40 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
                           const std::wstring &fname_format)
 {
     std::shared_ptr<ISeekableSource> src;
-    for (const_iterator track = begin(); track != end(); ++track) {
+    std::for_each(begin(), end(), [&](const CueTrack &track) {
         std::shared_ptr<CompositeSource> track_source(new CompositeSource());
         std::map<std::string, std::string> track_tags;
-        for (CueTrack::const_iterator
-             segment = track->begin(); segment != track->end(); ++segment)
-        {
-            if (segment->m_filename == L"__GAP__") {
-                if (!src.get()) continue;
-                src.reset(new NullSource(src->getSampleFormat()));
+        std::for_each(track.begin(), track.end(), [&](const CueSegment &seg) {
+            if (seg.m_filename == L"__GAP__") {
+                if (src.get())
+                    src.reset(new NullSource(src->getSampleFormat()));
             } else {
                 std::wstring ifilename =
-                    win32::PathCombineX(cuedir, segment->m_filename);
+                    win32::PathCombineX(cuedir, seg.m_filename);
                 src = input::factory()->open(ifilename.c_str());
             }
-            double rate = src->getSampleFormat().mSampleRate;
-            uint64_t begin = frame2sample(rate, segment->m_begin);
-            uint64_t duration = ~0ULL;
-            if (segment->m_end != ~0U)
-                duration = frame2sample(rate, segment->m_end) - begin;
-            src.reset(new TrimmedSource(src, begin, duration));
-            track_source->addSource(src);
-        }
-        track->getTags(&track_tags);
+            if (src.get()) {
+                double rate = src->getSampleFormat().mSampleRate;
+                uint64_t begin = frame2sample(rate, seg.m_begin);
+                uint64_t duration = ~0ULL;
+                if (seg.m_end != ~0U)
+                    duration = frame2sample(rate, seg.m_end) - begin;
+                src.reset(new TrimmedSource(src, begin, duration));
+                track_source->addSource(src);
+            }
+        });
+        track.getTags(&track_tags);
         track_source->setTags(track_tags);
         std::wstring ofilename =
             playlist::generateFileName(fname_format, track_tags) + L".stub";
 
         playlist::Track new_track;
-        new_track.number = track->number();
-        new_track.name = track->name();
+        new_track.number = track.number();
+        new_track.name = track.name();
         new_track.source = track_source;
         new_track.ofilename = ofilename;
         tracks.push_back(new_track);
-    }
+    });
 }
 
 void CueSheet::asChapters(double duration,
@@ -204,31 +200,30 @@ void CueSheet::asChapters(double duration,
 
     std::vector<chapters::entry_t> chaps;
     unsigned tbeg, tend, last_end = 0;
-    for (const_iterator track = begin(); track != end(); ++track) {
-        tbeg = track->begin()->m_begin;
-        tend = track->begin()->m_end;
+    std::for_each(begin(), end(), [&](const CueTrack &track) {
+        tbeg = track.begin()->m_begin;
+        tend = track.begin()->m_end;
         double track_duration;
         if (tend != ~0U)
             track_duration = (tend - tbeg) / 75.0;
         else
             track_duration = duration - (last_end / 75.0);
-        std::wstring title = track->name();
+        std::wstring title = track.name();
         if (title == L"")
-            title = strutil::format(L"Track %02d", track->number()); 
+            title = strutil::format(L"Track %02d", track.number()); 
         chaps.push_back(std::make_pair(title, track_duration));
         last_end = tend;
-    }
+    });
     chapters->swap(chaps);
 }
 
 void CueSheet::getTags(std::map<std::string, std::string> *tags) const
 {
-    std::map<std::wstring, std::wstring>::const_iterator it;
     std::map<std::string, std::string> result;
-    int discnumber = 0, totaldiscs = 0;
-    for (it = m_meta.begin(); it != m_meta.end(); ++it) {
-        std::string key = strutil::w2us(it->first);
-        std::string val = strutil::w2us(it->second);
+    std::for_each(m_meta.begin(), m_meta.end(),
+                  [&](const decltype(*m_meta.begin()) &tag) {
+        std::string key = strutil::w2us(tag.first);
+        std::string val = strutil::w2us(tag.second);
 
         if (key == "PERFORMER") {
             result["artist"] = val;
@@ -237,25 +232,26 @@ void CueSheet::getTags(std::map<std::string, std::string> *tags) const
             result["album"] = val;
         else
             result[key] = val;
-    }
+    });
     TextBasedTag::normalizeTags(result, tags);
 }
 
 void CueSheet::validate()
 {
-    CueTrack::const_iterator segment;
-    for (iterator track = begin(); track != end(); ++track) {
-        bool index1_found = false;
-        for (segment = track->begin(); segment != track->end(); ++segment)
-            if (segment->m_index == 1)
-                index1_found = true;
-        if (!index1_found) {
-            std::string msg =
-                strutil::format("cuesheet: INDEX01 not found on track %u",
-                                track->number());
-            throw std::runtime_error(msg);
-        }
-    }
+    auto index1_missing =
+        [](const CueTrack &track) {
+            return !std::count_if(track.begin(), track.end(),
+                                  [](const CueSegment &seg) {
+                                      return seg.m_index == 1;
+                                  });
+        };
+    auto track = std::find_if(begin(), end(), index1_missing);
+    if (track != end()) {
+        std::string msg =
+            strutil::format("cuesheet: INDEX01 not found on track %u",
+                            track->number());
+        throw std::runtime_error(msg);
+    };
 }
 
 void CueSheet::parseFile(const std::wstring *args)

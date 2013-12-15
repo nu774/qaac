@@ -1,3 +1,4 @@
+#include <numeric>
 #include "compressor.h"
 #include "cautil.h"
 
@@ -5,12 +6,10 @@ namespace {
     template <typename T>
     inline T frame_amplitude(const T *frame, unsigned nchannels)
     {
-        T x = 0;
-        for (unsigned i = 0; i < nchannels; ++i) {
-            T y = std::abs(frame[i]);
-            if (y > x) x = y;
-        }
-        return x;
+        return std::accumulate(frame, frame + nchannels, static_cast<T>(0),
+                               [](T acc, T x) -> T {
+                                  return std::max(acc, std::abs(x));
+                               });
     }
 }
 
