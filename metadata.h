@@ -67,6 +67,8 @@ namespace M4A {
 }
 
 namespace CAF {
+    void fetchTags(const std::vector<uint8_t> &info,
+                   std::map<std::string, std::string> *dict);
     bool fetchTags(int fd, std::map<std::string, std::string> *tags);
 }
 

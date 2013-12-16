@@ -581,7 +581,7 @@ namespace CAF {
             return 0;
         return util::b2host64(size);
     }
-    bool get_info(int fd, std::vector<char> *info)
+    bool get_info(int fd, std::vector<uint8_t> *info)
     {
         util::FilePositionSaver _(fd);
         if (_lseeki64(fd, 8, SEEK_SET) != 8)
@@ -593,7 +593,7 @@ namespace CAF {
                 if (_lseeki64(fd, chunk_size, SEEK_CUR) < 0)
                     break;
             } else {
-                std::vector<char> buf(chunk_size);
+                std::vector<uint8_t> buf(chunk_size);
                 if (util::nread(fd, &buf[0], buf.size()) != buf.size())
                     break;
                 info->swap(buf);
@@ -602,18 +602,17 @@ namespace CAF {
         }
         return false;
     }
-    bool fetchTags(int fd, std::map<std::string, std::string> *dict)
+    void fetchTags(const std::vector<uint8_t> &info,
+                   std::map<std::string, std::string> *dict)
     {
-        std::vector<char> info;
-        std::map<std::string, std::string> result;
-
-        if (!get_info(fd, &info) || info.size() < 4)
-            return false;
+        if (info.size() < 5)
+            return;
         // inside of info tag is delimited with NUL char.
+        std::map<std::string, std::string> result;
         std::vector<std::string> tokens;
         {
-            const char *infop = &info[0] + 4;
-            const char *endp = &info[0] + info.size();
+            const char *infop = reinterpret_cast<const char*>(info.data()) + 4;
+            const char *endp  = infop + info.size() - 4;
             do {
                 tokens.push_back(std::string(infop));
                 infop += tokens.back().size() + 1;
@@ -622,6 +621,13 @@ namespace CAF {
         for (size_t i = 0; i < tokens.size() >> 1; ++i)
             result[tokens[2 * i]] = tokens[2 * i + 1];
         TextBasedTag::normalizeTags(result, dict);
+    }
+    bool fetchTags(int fd, std::map<std::string, std::string> *dict)
+    {
+        std::vector<uint8_t> info;
+        if (!get_info(fd, &info) || info.size() < 4)
+            return false;
+        fetchTags(info, dict);
         return true;
     }
 }

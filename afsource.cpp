@@ -49,9 +49,11 @@ namespace audiofile {
     {
         std::map<std::string, std::string> tags;
 
-        if (af.getFileFormat() == 'caff')
-            CAF::fetchTags(fileno(fp), &tags);
-        else {
+        if (af.getFileFormat() == 'caff') {
+            std::vector<uint8_t> data;
+            af.getUserData('info', 0, &data);
+            CAF::fetchTags(data, &tags);
+        } else {
             CFDictionaryPtr dict;
             af.getInfoDictionary(&dict);
             if (dict.get())
