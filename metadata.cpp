@@ -512,7 +512,10 @@ namespace M4A {
 
         if (fcc == Tag::kGenreID3) {
             unsigned v = (value[0] << 8) | value[1];
-            return strutil::format("%u", v);
+            if (v > 0 && v < 255) {
+                auto x = static_cast<mp4v2::impl::itmf::GenreType>(v);
+                return mp4v2::impl::itmf::enumGenreType.toString(x);
+            }
         } else if (fcc == Tag::kDisk || fcc == Tag::kTrack) {
             unsigned index = (value[2] << 8) | value[3];
             unsigned total = (value[4] << 8) | value[5];
