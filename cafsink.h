@@ -33,7 +33,8 @@ public:
     }
     void setTag(const std::string &key, const std::string &value)
     {
-        m_tags[key] = value;
+        if (key.find("iTunes:") != 0)
+            m_tags[key] = value;
     }
     void beginWrite();
     void writeSamples(const void *data, size_t length, size_t nsamples);
