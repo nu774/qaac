@@ -935,9 +935,11 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
         strutil::w2us(opts.encoder_name + L", " + encoder_config));
 
     std::map<uint32_t, std::wstring>::const_iterator uwi;
-    for (uwi = opts.tagopts.begin(); uwi != opts.tagopts.end(); ++uwi)
-        tagstore->setTag(M4A::getTagNameFromFourCC(uwi->first),
-                         strutil::w2us(uwi->second));
+    for (uwi = opts.tagopts.begin(); uwi != opts.tagopts.end(); ++uwi) {
+        const char *name = M4A::getTagNameFromFourCC(uwi->first);
+        if (name)
+            tagstore->setTag(name, strutil::w2us(uwi->second));
+    }
 
     std::map<std::string, std::wstring>::const_iterator swi;
     for (swi = opts.longtags.begin(); swi != opts.longtags.end(); ++swi)
