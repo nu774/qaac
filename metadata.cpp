@@ -109,43 +109,36 @@ namespace TextBasedTag {
     std::string normalizeTagName(const char *name)
     {
         typedef const char *entry_t[2];
-        struct comparator {
-            static int call(const void *k, const void *v)
-            {
-                const char *key = static_cast<const char *>(k);
-                const entry_t *ent = static_cast<const entry_t *>(v);
-                return std::strcmp(key, (*ent)[0]);
-            }
-        };
         std::string sname;
-        bool alllower = true;
+        bool lower = true;
         for (const char *s = name; *s; ++s) {
             unsigned char c = *s;
             if (c != ' ' && c != '-' && c != '_')
                 sname.push_back(tolower(c));
             if (isalpha(c) && !islower(c))
-                alllower = false;
+                lower = false;
         }
-        const entry_t *entry =
+        entry_t search = { sname.c_str(), 0 };
+        entry_t *end = known_keys + util::sizeof_array(known_keys);
+        auto entry =
             static_cast<entry_t *>(
-                std::bsearch(sname.c_str(), known_keys,
-                             util::sizeof_array(known_keys),
-                             sizeof(entry_t), comparator::call));
-        if (entry)
-            return (*entry)[1];
-        return alllower ? strutil::supper(name) : name;
+                std::lower_bound(known_keys, end, search,
+                                 [](const entry_t &a, const entry_t &b) ->int {
+                                    return std::strcmp(a[0], b[0]) < 0;
+                                 }));
+        return entry < end && !std::strcmp((*entry)[0], search[0])
+                   ? (*entry)[1] : lower ? strutil::supper(name) : name;
     }
     void normalizeTags(const std::map<std::string, std::string> &src,
                        std::map<std::string, std::string> *dst)
     {
         std::map<std::string, std::string> result;
-        std::map<std::string, std::string>::const_iterator it;
         unsigned track = 0, track_total = 0;
         unsigned disc = 0, disc_total = 0;
 
-        for (it = src.begin(); it != src.end(); ++it) {
-            std::string key = normalizeTagName(it->first.c_str());
-            const char *sv = it->second.c_str();
+        std::for_each(src.begin(), src.end(), [&](decltype(*src.begin()) tag) {
+            std::string key = normalizeTagName(tag.first.c_str());
+            const char *sv = tag.second.c_str();
             if (key == "track number")
                 sscanf(sv, "%u/%u", &track, &track_total);
             else if (key == "TOTAL TRACKS")
@@ -155,8 +148,8 @@ namespace TextBasedTag {
             else if (key == "TOTAL DISCS")
                 sscanf(sv, "%u", &disc_total);
             else
-                result[key] = it->second;
-        }
+                result[key] = tag.second;
+        });
         if (track) {
             if (track_total)
                 result["track number"] =
@@ -171,14 +164,6 @@ namespace TextBasedTag {
             else
                 result["DISC NUMBER"] = strutil::format("%u", disc);
         }
-#if 0
-        if (result.find("artist") == result.end()) {
-            if (result.find("PERFORMER") != result.end())
-                result["artist"] = result["PERFORMER"];
-            if (result.find("ALBUM ARTIST") != result.end())
-                result["artist"] = result["ALBUM ARTIST"];
-        }
-#endif
         dst->swap(result);
     }
 }
@@ -223,47 +208,36 @@ namespace ID3 {
     void fetchID3v2Tags(TagLib::ID3v2::Tag *tag,
                         std::map<std::string, std::string> *result)
     {
-        using TagLib::ID3v2::Frame;
-        using TagLib::ID3v2::FrameList;
-        using TagLib::ID3v2::TextIdentificationFrame;
-
         typedef const char *entry_t[2];
-        struct comparator {
-            static int call(const void *k, const void *v)
-            {
-                const char *key = static_cast<const char *>(k);
-                const entry_t *ent = static_cast<const entry_t *>(v);
-                return std::strcmp(key, (*ent)[0]);
-            }
-        };
-
         std::map<std::string, std::string> tags;
 
-        const FrameList &frameList = tag->frameList();
-        FrameList::ConstIterator it;
-        for (it = frameList.begin(); it != frameList.end(); ++it) {
-            Frame *frame = *it;
-            TagLib::ByteVector vID = frame->frameID();
+        auto frameList = tag->frameList();
+        std::for_each(frameList.begin(), frameList.end(),
+                      [&](TagLib::ID3v2::Frame *frame) {
+            auto vID = frame->frameID();
             std::string sID(vID.data(), vID.data() + vID.size());
 
             if (sID == "TXXX") {
-                TextIdentificationFrame *txframe
-                    = dynamic_cast<TextIdentificationFrame*>(frame);
-                TagLib::StringList fields = txframe->fieldList();
-                std::wstring k = fields.begin()->toWString();
-                std::wstring v = (++fields.begin())->toWString();
+                auto txframe =
+                  dynamic_cast<TagLib::ID3v2::TextIdentificationFrame*>(frame);
+                auto fields = txframe->fieldList();
+                auto k = fields.begin()->toWString();
+                auto v = (++fields.begin())->toWString();
                 tags[strutil::w2us(k)] = strutil::w2us(v);
             } else {
-                entry_t *entry = static_cast<entry_t*>(
-                    std::bsearch(sID.c_str(), known_keys,
-                                 util::sizeof_array(known_keys),
-                                 sizeof(known_keys[0]), comparator::call));
-                if (entry) {
-                    std::wstring value = frame->toString().toWString();
+                entry_t search = { sID.c_str(), 0 };
+                entry_t *end = known_keys + util::sizeof_array(known_keys);
+                auto entry =
+                    std::lower_bound(known_keys, end, search,
+                                     [](const entry_t &a,
+                                        const entry_t &b) -> int
+                                     { return std::strcmp(a[0], b[0]) < 0; });
+                if (entry < end && !std::strcmp((*entry)[0], search[0])) {
+                    auto value = frame->toString().toWString();
                     tags[(*entry)[1]] = strutil::w2us(value);
                 }
             }
-        }
+        });
         TextBasedTag::normalizeTags(tags, result);
     }
     void fetchAiffID3Tags(int fd, std::map<std::string, std::string> *result)
@@ -272,7 +246,7 @@ namespace ID3 {
         lseek(fd, 0, SEEK_SET);
         TagLibX::FDIOStreamReader stream(fd);
         TagLib::RIFF::AIFF::File file(&stream, false);
-        TagLib::ID3v2::Tag *tag = file.tag();
+        auto tag = file.tag();
         fetchID3v2Tags(tag, result);
     }
     void fetchMPEGID3Tags(int fd, std::map<std::string, std::string> *result)
@@ -283,7 +257,7 @@ namespace ID3 {
         TagLib::MPEG::File file(&stream,
                                 TagLib::ID3v2::FrameFactory::instance(),
                                 false);
-        TagLib::ID3v2::Tag *tag = file.ID3v2Tag();
+        auto tag = file.ID3v2Tag();
         fetchID3v2Tags(tag, result);
     }
 }
@@ -321,6 +295,7 @@ namespace M4A {
         { 'pcst',                     "iTunes:pcst"          },
         { 'pgap',                     "iTunes:pgap"          },
         { 'plID',                     "iTunes:plID"          },
+        { 'purd',                     "iTunes:purd"          },
         { 'purl',                     "iTunes:purl"          },
         { 'rtng',                     "iTunes:rtng"          },
         { 'sfID',                     "iTunes:sfID"          },
@@ -393,6 +368,7 @@ namespace M4A {
         { "itunes:pcst",                'pcst'                     },
         { "itunes:pgap",                'pgap'                     },
         { "itunes:plid",                'plID'                     },
+        { "itunes:purd",                'purd'                     },
         { "itunes:purl",                'purl'                     },
         { "itunes:rtng",                'rtng'                     },
         { "itunes:sfid",                'sfID'                     },
@@ -421,26 +397,22 @@ namespace M4A {
     };
     uint32_t getFourCCFromTagName(const char *name)
     {
-        struct comparator {
-            static int call(const void *k, const void *v)
-            {
-                const char *key = static_cast<const char *>(k);
-                const name2fcc_t *ent = static_cast<const name2fcc_t *>(v);
-                return std::strcmp(key, ent->name);
-            }
-        };
         std::string sname;
         for (const char *s = name; *s; ++s) {
             unsigned char c = *s;
             if (c != ' ' && c != '-' && c != '_')
                 sname.push_back(tolower(c));
         }
-        const name2fcc_t *entry =
-            static_cast<name2fcc_t *>(
-                std::bsearch(sname.c_str(), iTunes_name2fcc_map,
-                             util::sizeof_array(iTunes_name2fcc_map),
-                             sizeof(name2fcc_t), comparator::call));
-        return entry ? entry->fcc : 0;
+        name2fcc_t search = { sname.c_str(), 0 };
+        auto end = iTunes_name2fcc_map +
+            util::sizeof_array(iTunes_name2fcc_map);
+        auto entry =
+            std::lower_bound(iTunes_name2fcc_map, end, search,
+                             [](const name2fcc_t &a,
+                                const name2fcc_t &b) -> int
+                             { return std::strcmp(a.name, b.name) < 0; });
+        return entry < end && !std::strcmp(entry->name, search.name)
+                ? entry->fcc : 0;
     }
 
     void putNumberPair(std::map<uint32_t, std::string> *result,
@@ -457,31 +429,30 @@ namespace M4A {
                           std::map<uint32_t, std::string> *shortTags,
                           std::map<std::string, std::string> *longTags)
     {
-        std::map<std::string, std::string>::const_iterator it;
         std::map<uint32_t, std::string> shortTags_;
         std::map<std::string, std::string> longTags_;
         uint32_t id;
         unsigned disc = 0, track = 0, disc_total = 0, track_total = 0;
 
-        for (it = src.begin(); it != src.end(); ++it) {
-            if ((id = getFourCCFromTagName(it->first.c_str())) == 0) {
-                longTags_[it->first] = it->second;
-                continue;
+        std::for_each(src.begin(), src.end(), [&](decltype(*src.begin()) tag) {
+            if ((id = getFourCCFromTagName(tag.first.c_str())) == 0)
+                longTags_[tag.first] = tag.second;
+            else {
+                const char *val = tag.second.c_str();
+                switch (id) {
+                case TAG_TOTAL_DISCS:
+                    std::sscanf(val, "%u", &disc_total); break;
+                case TAG_TOTAL_TRACKS:
+                    std::sscanf(val, "%u", &track_total); break;
+                case Tag::kDisk:
+                    std::sscanf(val, "%u/%u", &disc, &disc_total); break;
+                case Tag::kTrack:
+                    std::sscanf(val, "%u/%u", &track, &track_total); break;
+                default:
+                    shortTags_[id] = tag.second;
+                }
             }
-            const char *val = it->second.c_str();
-            switch (id) {
-            case TAG_TOTAL_DISCS:
-                std::sscanf(val, "%u", &disc_total); break;
-            case TAG_TOTAL_TRACKS:
-                std::sscanf(val, "%u", &track_total); break;
-            case Tag::kDisk:
-                std::sscanf(val, "%u/%u", &disc, &disc_total); break;
-            case Tag::kTrack:
-                std::sscanf(val, "%u/%u", &track, &track_total); break;
-            default:
-                shortTags_[id] = it->second;
-            }
-        }
+        });
         putNumberPair(&shortTags_, Tag::kTrack, track, track_total);
         putNumberPair(&shortTags_, Tag::kDisk,  disc, disc_total);
         shortTags->swap(shortTags_);
@@ -489,21 +460,15 @@ namespace M4A {
     }
     const char *getTagNameFromFourCC(uint32_t fcc)
     {
-        struct comparator {
-            static int call(const void *k, const void *v)
-            {
-                const uint32_t *fcc = static_cast<const uint32_t *>(k);
-                const fcc2name_t  *ent
-                    = static_cast<const fcc2name_t *>(v);
-                return *fcc < ent->fcc ? -1 : *fcc > ent->fcc ? 1 : 0;
-            }
-        };
-        const fcc2name_t *entry =
-            static_cast<const fcc2name_t *>(
-                std::bsearch(&fcc, iTunes_fcc2name_map,
-                             util::sizeof_array(iTunes_fcc2name_map),
-                             sizeof(fcc2name_t), comparator::call));
-        return entry ? entry->name : 0;
+        fcc2name_t search = { fcc, 0 };
+        auto end = iTunes_fcc2name_map +
+            util::sizeof_array(iTunes_fcc2name_map);
+        auto entry =
+            std::lower_bound(iTunes_fcc2name_map, end, search,
+                             [](const fcc2name_t &a,
+                                const fcc2name_t &b) -> int
+                             { return a.fcc < b.fcc; });
+        return entry < end && entry->fcc == search.fcc ? entry->name : 0;
     }
 
     std::string parseValue(uint32_t fcc, const MP4ItmfData &data)
@@ -549,17 +514,17 @@ namespace M4A {
     {
         std::map<std::string, std::string> result;
         try {
-            MP4ItmfItemList *iL = mp4v2::impl::itmf::genericGetItems(file);
+            auto iL = mp4v2::impl::itmf::genericGetItems(file);
             if (!iL) return;
             std::shared_ptr<MP4ItmfItemList>
                 _(iL, mp4v2::impl::itmf::genericItemListFree);
             for (size_t i = 0; i < iL->size; ++i) {
-                MP4ItmfItem &item = iL->elements[i];
+                auto item = iL->elements[i];
                 uint32_t fcc = util::fourcc(item.code);
-                MP4ItmfData &data = item.dataList.elements[0];
+                auto data = item.dataList.elements[0];
                 if (!data.value || !data.valueSize)
                     continue;
-                std::string v = parseValue(fcc, data);
+                auto v = parseValue(fcc, data);
                 if (v.empty())
                     continue;
                 if (fcc == '----')
