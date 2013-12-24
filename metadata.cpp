@@ -12,19 +12,8 @@
 #endif
 #include "strutil.h"
 #include "mp4v2wrapper.h"
-#include "wicimage.h"
 #include "cuesheet.h"
-#include "src/itmf/type.h"
 #include "taglibhelper.h"
-
-using mp4v2::impl::MP4File;
-using mp4v2::impl::MP4Atom;
-using mp4v2::impl::Exception;
-using mp4v2::impl::itmf::enumGenreType;
-using mp4v2::impl::itmf::enumStikType;
-using mp4v2::impl::itmf::enumAccountType;
-using mp4v2::impl::itmf::enumCountryCode;
-using mp4v2::impl::itmf::enumContentRating;
 
 namespace TextBasedTag {
     const char *known_keys[][2] = {
