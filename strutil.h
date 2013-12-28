@@ -78,6 +78,17 @@ namespace strutil {
                 *q++ = *p;
         *q = 0;
     }
+    template <typename T>
+    std::basic_string<T> squeeze(const std::basic_string<T> &str,
+                                 const T *charset)
+    {
+        std::basic_string<T> result;
+        std::copy_if(str.begin(), str.end(), std::back_inserter(result),
+                     [&](T c) -> bool {
+                        return strindex(charset, c) == -1;
+                     });
+        return result;
+    }
 
     inline
     std::wstring m2w(const std::string &src,

@@ -15,6 +15,25 @@
 #include "cuesheet.h"
 #include "taglibhelper.h"
 
+namespace {
+    typedef const char *kvpair_t[2];
+
+    const char* lookup_by_key(const kvpair_t* begin, const kvpair_t *end,
+                              const char *key)
+    {
+        kvpair_t search = { key, 0 };
+        auto entry =
+            std::lower_bound(begin, end, search,
+                             [](const kvpair_t &a, const kvpair_t &b) -> bool {
+                                return std::strcmp(a[0], b[0]) < 0;
+                             });
+        if (entry < end && !std::strcmp((*entry)[0], key))
+            return (*entry)[1];
+        else
+            return 0;
+    }
+}
+
 namespace TextBasedTag {
     const char *known_keys[][2] = {
         { "album",                      "album"                    },
@@ -97,26 +116,16 @@ namespace TextBasedTag {
     };
     std::string normalizeTagName(const char *name)
     {
-        typedef const char *entry_t[2];
-        std::string sname;
-        bool lower = true;
-        for (const char *s = name; *s; ++s) {
-            unsigned char c = *s;
-            if (c != ' ' && c != '-' && c != '_')
-                sname.push_back(tolower(c));
-            if (isalpha(c) && !islower(c))
-                lower = false;
-        }
-        entry_t search = { sname.c_str(), 0 };
-        entry_t *end = known_keys + util::sizeof_array(known_keys);
-        auto entry =
-            static_cast<entry_t *>(
-                std::lower_bound(known_keys, end, search,
-                                 [](const entry_t &a, const entry_t &b) ->int {
-                                    return std::strcmp(a[0], b[0]) < 0;
-                                 }));
-        return entry < end && !std::strcmp((*entry)[0], search[0])
-                   ? (*entry)[1] : lower ? strutil::supper(name) : name;
+        std::string sname =
+            strutil::slower(strutil::squeeze(std::string(name), " -_"));
+        bool contains_upper =
+            std::any_of(sname.begin(), sname.end(), [](char c) -> bool {
+                            auto uc = static_cast<unsigned char>(c);
+                            return isalpha(uc) && !islower(uc);
+                        });
+        auto end = known_keys + util::sizeof_array(known_keys);
+        auto found = lookup_by_key(known_keys, end, sname.c_str());
+        return found ? found : contains_upper ? name : strutil::supper(name);
     }
     void normalizeTags(const std::map<std::string, std::string> &src,
                        std::map<std::string, std::string> *dst)
@@ -197,7 +206,6 @@ namespace ID3 {
     void fetchID3v2Tags(TagLib::ID3v2::Tag *tag,
                         std::map<std::string, std::string> *result)
     {
-        typedef const char *entry_t[2];
         std::map<std::string, std::string> tags;
 
         auto frameList = tag->frameList();
@@ -214,17 +222,10 @@ namespace ID3 {
                 auto v = (++fields.begin())->toWString();
                 tags[strutil::w2us(k)] = strutil::w2us(v);
             } else {
-                entry_t search = { sID.c_str(), 0 };
-                entry_t *end = known_keys + util::sizeof_array(known_keys);
-                auto entry =
-                    std::lower_bound(known_keys, end, search,
-                                     [](const entry_t &a,
-                                        const entry_t &b) -> int
-                                     { return std::strcmp(a[0], b[0]) < 0; });
-                if (entry < end && !std::strcmp((*entry)[0], search[0])) {
-                    auto value = frame->toString().toWString();
-                    tags[(*entry)[1]] = strutil::w2us(value);
-                }
+                auto end = known_keys + util::sizeof_array(known_keys);
+                auto key = lookup_by_key(known_keys, end, sID.c_str());
+                if (key)
+                    tags[key] = strutil::w2us(frame->toString().toWString());
             }
         });
         TextBasedTag::normalizeTags(tags, result);
@@ -386,19 +387,15 @@ namespace M4A {
     };
     uint32_t getFourCCFromTagName(const char *name)
     {
-        std::string sname;
-        for (const char *s = name; *s; ++s) {
-            unsigned char c = *s;
-            if (c != ' ' && c != '-' && c != '_')
-                sname.push_back(tolower(c));
-        }
+        std::string sname =
+            strutil::slower(strutil::squeeze(std::string(name), " -_"));
         name2fcc_t search = { sname.c_str(), 0 };
         auto end = iTunes_name2fcc_map +
             util::sizeof_array(iTunes_name2fcc_map);
         auto entry =
             std::lower_bound(iTunes_name2fcc_map, end, search,
                              [](const name2fcc_t &a,
-                                const name2fcc_t &b) -> int
+                                const name2fcc_t &b) -> bool
                              { return std::strcmp(a.name, b.name) < 0; });
         return entry < end && !std::strcmp(entry->name, search.name)
                 ? entry->fcc : 0;
@@ -455,7 +452,7 @@ namespace M4A {
         auto entry =
             std::lower_bound(iTunes_fcc2name_map, end, search,
                              [](const fcc2name_t &a,
-                                const fcc2name_t &b) -> int
+                                const fcc2name_t &b) -> bool
                              { return a.fcc < b.fcc; });
         return entry < end && entry->fcc == search.fcc ? entry->name : 0;
     }
