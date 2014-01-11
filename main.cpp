@@ -709,24 +709,24 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     }
 #endif
     if (oasbd.mSampleRate != iasbd.mSampleRate) {
-        LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
-        if (!opts.native_resampler) {
-            if (input::factory()->libsoxr.loaded()) {
-                std::shared_ptr<SoxrResampler>
-                    resampler(new SoxrResampler(input::factory()->libsoxr,
-                                                chain.back(),
-                                                oasbd.mSampleRate));
-                if (opts.verbose > 1 || opts.logfilename)
-                    LOG(L"Using libsoxr SRC: %hs\n", resampler->engine());
-                chain.push_back(resampler);
-            }
+        if (!opts.native_resampler && input::factory()->libsoxr.loaded()) {
+            LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
+            std::shared_ptr<SoxrResampler>
+                resampler(new SoxrResampler(input::factory()->libsoxr,
+                                            chain.back(),
+                                            oasbd.mSampleRate));
+            if (opts.verbose > 1 || opts.logfilename)
+                LOG(L"Using libsoxr SRC: %hs\n", resampler->engine());
+            chain.push_back(resampler);
         } else {
 #ifndef QAAC
-            oasbd.mSampleRate = iasbd.mSampleRate;
             LOG(L"WARNING: --rate requires libsoxr\n");
+            oasbd.mSampleRate = iasbd.mSampleRate;
 #else
+            LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
+
             if (opts.native_resampler_quality >= 0 ||
-                opts.native_resampler_complexity >= 0 ||
+                opts.native_resampler_complexity > 0 ||
                 (!opts.isAAC() && !opts.isALAC()))
             {
                 AudioStreamBasicDescription
