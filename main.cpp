@@ -832,7 +832,8 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
     if (opts.isALAC()) {
         if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
-            throw std::runtime_error("ALAC: Not supported format");
+            throw std::runtime_error(
+                "floating point PCM is not supported for ALAC");
 
         switch (iasbd.mBitsPerChannel) {
         case 16:
@@ -844,7 +845,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         case 32:
             oasbd.mFormatFlags = 4; break;
         default:
-            throw std::runtime_error("ALAC: Not supported bit depth");
+            throw std::runtime_error("Not supported bit depth for ALAC");
         }
     }
     if (inputDesc) *inputDesc = iasbd;
