@@ -74,8 +74,9 @@ size_t Normalizer::readSamplesT(void *buffer, size_t nsamples)
     int nc = util::nread(fd(), buffer, nsamples * m_asbd.mBytesPerFrame);
     T *fp = static_cast<T*>(buffer);
     if (m_peak > FLT_MIN) {
+        T peak = m_peak / 0.99609375;
         for (size_t i = 0; i < nc / sizeof(T); ++i)
-            fp[i] = fp[i] / m_peak;
+            fp[i] = fp[i] / peak;
     }
     nsamples = std::max(0, static_cast<int>(nc/m_asbd.mBytesPerFrame));
     m_position += nsamples;
