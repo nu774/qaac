@@ -61,7 +61,7 @@ ALACSource::ALACSource(const std::shared_ptr<FILE> &fp)
         m_oasbd = cautil::buildASBDForPCM2(timeScale, alac[9], alac[5],
                                            32, kAudioFormatFlagIsSignedInteger);
 
-        m_buffer.units_per_packet = m_asbd.mBytesPerFrame;
+        m_buffer.set_unit(m_asbd.mBytesPerFrame);
 
         AudioChannelLayout acl = { 0 };
         if (chan.size()) {
@@ -109,7 +109,7 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
         }
         BitBuffer bits;
         BitBufferInit(&bits, vp, size);
-        m_buffer.resize(duration);
+        m_buffer.reserve(duration);
         uint32_t ncount;
         CHECKCA(m_decoder->Decode(&bits, m_buffer.write_ptr(),
                                   duration, m_asbd.mChannelsPerFrame,
@@ -117,13 +117,11 @@ size_t ALACSource::readSamples(void *buffer, size_t nsamples)
         m_buffer.commit(ncount);
         m_buffer.advance(m_position - start);
     }
-    uint32_t count = std::min(m_buffer.count(),
-                              static_cast<uint32_t>(nsamples));
+    uint32_t count = std::min(m_buffer.count(), nsamples);
     size_t nbytes = count * bpf;
-    util::unpack(m_buffer.read_ptr(), buffer, &nbytes,
+    util::unpack(m_buffer.read(count), buffer, &nbytes,
                  m_asbd.mBytesPerFrame / m_asbd.mChannelsPerFrame,
                  m_oasbd.mBytesPerFrame / m_oasbd.mChannelsPerFrame);
-    m_buffer.advance(count);
     m_position += count;
     return count;
 }

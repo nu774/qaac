@@ -16,7 +16,7 @@ class MatrixMixer: public FilterBase {
     std::deque<float> m_syncque;
     std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
-    DecodeBuffer<float> m_buffer;
+    util::FIFO<float> m_buffer;
     AudioStreamBasicDescription m_asbd;
     SoXConvolverModule m_module;
 public:

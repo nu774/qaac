@@ -19,7 +19,7 @@ class FLACSource: public ISeekableSource, public ITagParser
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
     std::vector<chapters::entry_t> m_chapters;
-    DecodeBuffer<int32_t> m_buffer;
+    util::FIFO<int32_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
     FLACModule m_module;
 public:

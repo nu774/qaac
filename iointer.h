@@ -63,40 +63,6 @@ public:
     }
 };
 
-/*
- * Kind of a simple FIFO, but only applicable for iterations of
- * put once -> get N times, where all items are consumed on each iteration.
- */
-template <typename T>
-class DecodeBuffer {
-    uint32_t npackets_;
-    uint32_t position_;
-    std::vector<T> v_;
-public:
-    uint32_t units_per_packet; // bytes per frame, or number of channels
-
-    DecodeBuffer(): npackets_(0), position_(0), units_per_packet(0) {}
-    void resize(uint32_t npackets)
-    {
-        size_t n = npackets * units_per_packet;
-        if (n > v_.size()) v_.resize(n);
-    }
-    T *read_ptr() { return &v_[position_ * units_per_packet]; }
-    T *write_ptr() { return &v_[0]; }
-    void reset() { npackets_ = position_ = 0; }
-    uint32_t count() { return npackets_ - position_; }
-    void advance(uint32_t n) {
-        position_ += n;
-        if (position_ >= npackets_)
-            reset();
-    }
-    void commit(uint32_t count)
-    {
-        position_ = 0;
-        npackets_ = count;
-    }
-};
-
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
                           std::vector<float> *floatBuffer, size_t nsamples);
 

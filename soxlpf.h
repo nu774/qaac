@@ -9,7 +9,7 @@ class SoxLowpassFilter: public FilterBase {
     int64_t m_position;
     uint64_t m_length;
     std::vector<uint8_t > m_pivot;
-    DecodeBuffer<float> m_buffer;
+    util::FIFO<float> m_buffer;
     std::shared_ptr<lsx_convolver_t> m_convolver;
     AudioStreamBasicDescription m_asbd;
     SoXConvolverModule m_module;

@@ -13,7 +13,7 @@ class ALACSource: public ISeekableSource, public ITagParser
     std::vector<uint32_t> m_chanmap;
     std::shared_ptr<FILE> m_fp;
     MP4FileX m_file;
-    DecodeBuffer<uint8_t> m_buffer;
+    util::FIFO<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd, m_oasbd;
 public:
     ALACSource(const std::shared_ptr<FILE> &fp);

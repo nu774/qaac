@@ -77,7 +77,7 @@ FLACSource::FLACSource(const FLACModule &module,
                 m_decoder.get()));
     if (m_giveup || m_asbd.mBitsPerChannel == 0)
         flac::want(false);
-    m_buffer.units_per_packet = m_asbd.mChannelsPerFrame;
+    m_buffer.set_unit(m_asbd.mChannelsPerFrame);
     m_initialize_done = true;
 }
 
@@ -100,12 +100,10 @@ size_t FLACSource::readSamples(void *buffer, size_t nsamples)
             return 0;
         TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
     }
-    uint32_t count = std::min(static_cast<size_t>(m_buffer.count()),
-                              nsamples);
+    uint32_t count = std::min(m_buffer.count(), nsamples);
     if (count) {
         uint32_t bytes = count * m_asbd.mChannelsPerFrame * 4;
-        std::memcpy(buffer, m_buffer.read_ptr(), bytes);
-        m_buffer.advance(count);
+        std::memcpy(buffer, m_buffer.read(count), bytes);
         m_position += count;
     }
     return count;
@@ -173,7 +171,7 @@ FLACSource::writeCallback( const FLAC__Frame *frame,
      * shifting to MSB side.
      */
     uint32_t shifts = 32 - h.bits_per_sample;
-    m_buffer.resize(h.blocksize);
+    m_buffer.reserve(h.blocksize);
     int32_t *bp = m_buffer.write_ptr();
     for (size_t i = 0; i < h.blocksize; ++i)
         for (size_t n = 0; n < h.channels; ++n)

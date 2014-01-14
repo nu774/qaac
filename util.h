@@ -48,6 +48,40 @@ namespace util {
     template <typename T, size_t size>
     inline size_t sizeof_array(const T (&)[size]) { return size; }
 
+    template <typename T> class FIFO {
+        std::vector<T> m_data;
+        size_t m_unit, m_begin, m_end;
+    public:
+        FIFO(): m_data(256), m_unit(1), m_begin(0), m_end(0) {}
+        void set_unit(size_t n) { m_unit = n; }
+        void reset() { m_begin = m_end = 0; }
+        size_t count() { return (m_end - m_begin) / m_unit; }
+        T *read_ptr() { return &m_data[m_begin]; }
+        void advance(size_t n) { m_begin += n * m_unit; }
+        T *read(size_t n)
+        {
+            T *begin = read_ptr();
+            advance(n);
+            return begin;
+        }
+        T *write_ptr() { return &m_data[m_end]; }
+        void commit(size_t n) { m_end += n * m_unit; }
+        void reserve(size_t n)
+        {
+            if (m_begin == m_end)
+                reset();
+            if (m_begin > 0) {
+                std::memmove(&m_data[0], read_ptr(),
+                             sizeof(T) * (m_end - m_begin));
+                m_end -= m_begin;
+                m_begin = 0;
+            }
+            if (m_end + n * m_unit > m_data.size()) {
+                m_data.resize(m_end + n * m_unit);
+            }
+        }
+    };
+
     struct fourcc {
         uint32_t nvalue;
         char svalue[5];

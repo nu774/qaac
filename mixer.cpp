@@ -93,7 +93,7 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
         normalizeMatrix(m_matrix);
     m_asbd = cautil::buildASBDForPCM(fmt.mSampleRate, spec.size(),
                                      32, kAudioFormatFlagIsFloat);
-    m_buffer.units_per_packet = fmt.mChannelsPerFrame;
+    m_buffer.set_unit(fmt.mChannelsPerFrame);
     for (unsigned i = 0; i < fmt.mChannelsPerFrame; ++i) {
         if (shiftMask & (1 << i))
             m_shift_channels.push_back(i);
@@ -167,7 +167,7 @@ size_t MatrixMixer::phaseShift(size_t nsamples)
     size_t ilen = 0, olen = 0;
     do {
         if (m_buffer.count() == 0) {
-            m_buffer.resize(nsamples);
+            m_buffer.reserve(nsamples);
             ilen = readSamplesAsFloat(source(), &m_ibuffer,
                                       m_buffer.write_ptr(), nsamples);
             m_buffer.commit(ilen);

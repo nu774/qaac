@@ -9,7 +9,7 @@ SoxLowpassFilter::SoxLowpassFilter(const SoXConvolverModule &module,
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
                                      32, kAudioFormatFlagIsFloat);
-    m_buffer.units_per_packet = m_asbd.mChannelsPerFrame;
+    m_buffer.set_unit(m_asbd.mChannelsPerFrame);
 
     double Fn = asbd.mSampleRate / 2.0;
     double Fs = Fp + asbd.mSampleRate * 0.0125;
@@ -34,16 +34,15 @@ size_t SoxLowpassFilter::readSamples(void *buffer, size_t nsamples)
     size_t ilen = 0, olen = 0;
     do {
         if (m_buffer.count() == 0) {
-            m_buffer.resize(nsamples);
+            m_buffer.reserve(nsamples);
             size_t n = readSamplesAsFloat(source(), &m_pivot,
                                           m_buffer.write_ptr(), nsamples);
             m_buffer.commit(n);
         }
-        float *src = m_buffer.read_ptr();
         ilen = m_buffer.count();
         olen = nsamples;
-        m_module.process(m_convolver.get(), src, static_cast<float *>(buffer),
-                         &ilen, &olen);
+        m_module.process(m_convolver.get(), m_buffer.read_ptr(),
+                         static_cast<float *>(buffer), &ilen, &olen);
         m_buffer.advance(ilen);
     } while (ilen != 0 && olen == 0);
 
