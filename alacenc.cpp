@@ -41,30 +41,19 @@ ALACEncoderX::ALACEncoderX(const AudioStreamBasicDescription &desc)
 
 uint32_t ALACEncoderX::encodeChunk(UInt32 npackets)
 {
-    const AudioStreamBasicDescription &asbd = getInputDescription();
-    uint32_t n = 0, nread = 0;
-    size_t nsamples = 0;
+    unsigned n = 0;
     for (n = 0; n < npackets; ++n) {
-        uint8_t *bp = &m_input_buffer[0];
-        while (nsamples < kALACDefaultFramesPerPacket) {
-            nread = kALACDefaultFramesPerPacket - nsamples;
-            nread = m_src->readSamples(bp, nread);
-            if (nread == 0)
-                break;
-            bp += nread * asbd.mBytesPerFrame;
-            nsamples += nread;
-        }
+        size_t nsamples = readSamplesFull(src(), &m_input_buffer[0],
+                                          kALACDefaultFramesPerPacket);
         if (nsamples == 0)
             break;
-        m_stat.updateRead(nsamples);
+        size_t nbytes = nsamples * m_iasbd.mBytesPerFrame;
+        if (m_iafd.mBytesPerFrame < m_iasbd.mBytesPerFrame)
+            util::pack(&m_input_buffer[0], &nbytes,
+                       m_iasbd.mBytesPerFrame / m_iasbd.mChannelsPerFrame,
+                       m_iafd.mBytesPerFrame / m_iafd.mChannelsPerFrame);
 
-        size_t nbytes = nsamples * asbd.mBytesPerFrame;
-        if (m_iafd.mBytesPerFrame < m_iasbd.mBytesPerFrame) {
-            uint32_t obpc = m_iasbd.mBytesPerFrame / m_iasbd.mChannelsPerFrame;
-            uint32_t nbpc = m_iafd.mBytesPerFrame / m_iafd.mChannelsPerFrame;
-            util::pack(&m_input_buffer[0], &nbytes, obpc, nbpc);
-        }
-        int xbytes = nbytes;
+        int32_t xbytes = static_cast<int32_t>(nbytes);
         m_encoder->Encode(m_iafd, m_odesc.afd, &m_input_buffer[0],
                           &m_output_buffer[0], &xbytes);
         m_sink->writeSamples(&m_output_buffer[0], xbytes, nsamples);

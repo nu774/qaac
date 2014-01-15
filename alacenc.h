@@ -36,7 +36,7 @@ public:
     {
         return m_odesc.asbd;
     }
-    uint64_t samplesRead() const { return m_stat.samplesRead(); }
+    uint64_t samplesRead() const { return m_src->getPosition(); }
     uint64_t samplesWritten() const { return m_stat.samplesWritten(); }
     uint64_t framesWritten() const { return m_stat.framesWritten(); }
     double currentBitrate() const { return m_stat.currentBitrate(); }
