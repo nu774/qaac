@@ -48,6 +48,18 @@ namespace {
     }
 }
 
+size_t readSamplesFull(ISource *src, void *buffer, size_t nsamples)
+{
+    uint8_t *bp = static_cast<uint8_t*>(buffer);
+    size_t n, rest = nsamples;
+    unsigned bpf = src->getSampleFormat().mBytesPerFrame;
+    while (rest > 0 && (n = src->readSamples(bp, rest)) > 0) {
+        rest -= n;
+        bp += n * bpf;
+    }
+    return nsamples - rest;
+}
+
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
                           std::vector<float> *floatBuffer, size_t nsamples)
 {

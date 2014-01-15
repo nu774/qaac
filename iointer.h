@@ -63,6 +63,8 @@ public:
     }
 };
 
+size_t readSamplesFull(ISource *src, void *buffer, size_t nsamples);
+
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
                           std::vector<float> *floatBuffer, size_t nsamples);
 
