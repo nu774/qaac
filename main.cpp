@@ -802,14 +802,13 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             if (opts.verbose > 1 || opts.logfilename)
                 LOG(L"Convert to %d bit\n", opts.bits_per_sample);
         }
-    } else if (opts.isAAC()) {
+    }
+    if (opts.isAAC()) {
         AudioStreamBasicDescription sfmt = chain.back()->getSampleFormat();
-        if ((sfmt.mFormatFlags & kAudioFormatFlagIsFloat) &&
-            sfmt.mBitsPerChannel < 32)
-        {
+        if (!(sfmt.mFormatFlags & kAudioFormatFlagIsFloat) ||
+            sfmt.mBitsPerChannel != 32)
             chain.push_back(std::make_shared<Quantizer>(chain.back(), 32,
                                                         false, true));
-        }
     }
     if (threading && (opts.isAAC() || opts.isALAC())) {
         PipedReader *reader = new PipedReader(chain.back());
