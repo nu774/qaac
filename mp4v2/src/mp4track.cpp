@@ -48,7 +48,7 @@ MP4Track::MP4Track(MP4File& file, MP4Atom& trakAtom)
     m_pCachedReadSample = NULL;
     m_cachedReadSampleSize = 0;
 
-    m_writeSampleId = 1;
+    m_writeSampleId = 0;
     m_fixedSampleDuration = 0;
     m_pChunkBuffer = NULL;
     m_chunkBufferSize = 0;
@@ -407,7 +407,7 @@ void MP4Track::WriteSample(
 
     log.verbose3f("\"%s\": WriteSample: track %u id %u size %u (0x%x) ",
                   GetFile().GetFilename().c_str(),
-                  m_trackId, m_writeSampleId, numBytes, numBytes);
+                  m_trackId, m_writeSampleId + 1, numBytes, numBytes);
 
     if (pBytes == NULL && numBytes > 0) {
         throw new Exception("no sample data", __FILE__, __LINE__, __FUNCTION__ );
@@ -455,6 +455,7 @@ void MP4Track::WriteSample(
     m_chunkSamples++;
     m_chunkDuration += duration;
 
+    m_writeSampleId++;
     UpdateSampleSizes(m_writeSampleId, numBytes);
 
     UpdateSampleTimes(duration);
@@ -471,8 +472,6 @@ void MP4Track::WriteSample(
     UpdateDurations(duration);
 
     UpdateModificationTimes();
-
-    m_writeSampleId++;
 }
 
 void MP4Track::WriteSampleDependency(
@@ -518,7 +517,6 @@ void MP4Track::WriteChunkBuffer()
 
 void MP4Track::FinishWrite(uint32_t options)
 {
-    m_writeSampleId--;
     FinishSdtp();
 
     // write out any remaining samples in chunk buffer
