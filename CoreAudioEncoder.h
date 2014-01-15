@@ -19,10 +19,11 @@ class CoreAudioEncoder: public IEncoder, public IEncoderStat {
     EncoderStat m_stat;
 public:
     CoreAudioEncoder(AudioConverterX &converter);
+    virtual ~CoreAudioEncoder() {};
     void setSource(const std::shared_ptr<ISource> &source) { m_src = source; }
     void setSink(const std::shared_ptr<ISink> &sink) { m_sink = sink; }
     uint32_t encodeChunk(UInt32 npackets);
-    AudioFilePacketTableInfo getGaplessInfo();
+    virtual AudioFilePacketTableInfo getGaplessInfo();
     AudioConverterX getConverter() { return m_converter; }
     ISource *src() { return m_src.get(); }
     const AudioStreamBasicDescription &getInputDescription() const
@@ -33,11 +34,21 @@ public:
     {
         return m_output_desc;
     }
-    uint64_t samplesRead() const { return m_stat.samplesRead(); }
+    uint64_t samplesRead() const { return m_src->getPosition(); }
     uint64_t samplesWritten() const { return m_stat.samplesWritten(); }
     uint64_t framesWritten() const { return m_stat.framesWritten(); }
     double currentBitrate() const { return m_stat.currentBitrate(); }
     double overallBitrate() const { return m_stat.overallBitrate(); }
+protected:
+    virtual size_t readSamples(void *buffer, size_t nsamples)
+    {
+        return m_src->readSamples(buffer, nsamples);
+    }
+    virtual void writeSamples(const void *data, size_t length, size_t nsamples)
+    {
+        m_sink->writeSamples(data, length, nsamples);
+        m_stat.updateWritten(nsamples, length);
+    }
 private:
     static OSStatus staticInputDataProc(
             AudioConverterRef inAudioConverter,

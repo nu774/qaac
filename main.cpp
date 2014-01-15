@@ -39,6 +39,7 @@
 #include <delayimp.h>
 #include "AudioCodecX.h"
 #include "CoreAudioEncoder.h"
+#include "CoreAudioCookedEncoder.h"
 #include "CoreAudioResampler.h"
 #endif
 #include <ShlObj.h>
@@ -572,20 +573,10 @@ delayed_source(const std::shared_ptr<ISeekableSource> &src,
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     double rate = asbd.mSampleRate;
     int64_t delay = 0;
-    if (!opts.delay && !opts.no_delay && !opts.isSBR())
+    if (!opts.delay)
         return src;
     if (opts.delay && !parse_timespec(opts.delay, rate, &delay))
         throw std::runtime_error("Invalid time spec for --delay");
-    if (opts.no_delay) {
-        /*
-         * We prepend silence here so that
-         * (total amount of delay) = 3 * 1024
-         * Then chop off first 3 AAC frames later, and tweak iTunSMPB to
-         * reflect it.
-         */
-        int shift = opts.isSBR() ? 1 : 0;
-        delay += (1024*3 - 2112) << shift;
-    }
 
     std::shared_ptr<CompositeSource> cp(new CompositeSource());
     std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
@@ -605,8 +596,6 @@ delayed_source(const std::shared_ptr<ISeekableSource> &src,
     } else {
         cp->addSource(src);
     }
-    if (opts.isSBR())
-        cp->addSource(std::make_shared<TrimmedSource>(ns, 0, 2048));
     return cp;
 }
 
@@ -1048,7 +1037,6 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     else if (opts.isAAC())
         return std::make_shared<MP4Sink>(ofilename, cookie,
                                          opts.output_format,
-                                         opts.no_delay ? 3 : 0,
                                          !opts.no_optimize);
     throw std::runtime_error("XXX");
 }
@@ -1270,33 +1258,36 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     LOG(L"%s\n", encoder_config.c_str());
     std::vector<uint8_t> cookie;
     converter.getCompressionMagicCookie(&cookie);
-    CoreAudioEncoder encoder(converter);
-    encoder.setSource(chain.back());
+
+    std::shared_ptr<CoreAudioEncoder> encoder;
+    if (opts.isAAC()) {
+        if (opts.no_delay)
+            encoder = std::make_shared<CoreAudioNoDelayEncoder>(converter);
+        else if (opts.no_smart_padding)
+            encoder = std::make_shared<CoreAudioEncoder>(converter);
+        else
+            encoder = std::make_shared<CoreAudioPaddedEncoder>(converter);
+    } else
+        encoder = std::make_shared<CoreAudioEncoder>(converter);
+
+    encoder->setSource(chain.back());
     std::shared_ptr<ISink> sink;
     if (adts_fp && adts_fp->get())
         sink = std::make_shared<ADTSSink>(*adts_fp, cookie);
     else
         sink = open_sink(ofilename, opts, oasbd, channel_layout, cookie);
-    encoder.setSink(sink);
+    encoder->setSink(sink);
     set_tags(src.get(), sink.get(), opts, encoder_config);
     CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
     if (cafsink)
         cafsink->beginWrite();
 
-    do_encode(&encoder, ofilename, chain, opts);
-    LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
+    do_encode(encoder.get(), ofilename, chain, opts);
+    LOG(L"Overall bitrate: %gkbps\n", encoder->overallBitrate());
 
     AudioFilePacketTableInfo pti = { 0 };
     if (opts.isAAC()) {
-        pti = encoder.getGaplessInfo();
-        if (opts.isSBR()) {
-            pti.mNumberValidFrames -= 1024;
-            pti.mRemainderFrames += 1024;
-        }
-        if (opts.no_delay) {
-            pti.mPrimingFrames = 0;
-            pti.mNumberValidFrames -= (1024*3 - 2112);
-        }
+        pti = encoder->getGaplessInfo();
         MP4Sink *mp4sink = dynamic_cast<MP4Sink*>(sink.get());
         if (mp4sink) {
             mp4sink->setGaplessMode(opts.gapless_mode + 1);
@@ -1305,7 +1296,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     }
     MP4SinkBase *mp4sinkbase = dynamic_cast<MP4SinkBase*>(sink.get());
     if (mp4sinkbase)
-        finalize_m4a(mp4sinkbase, &encoder, ofilename, opts);
+        finalize_m4a(mp4sinkbase, encoder.get(), ofilename, opts);
     else if (cafsink)
         cafsink->finishWrite(pti);
 }

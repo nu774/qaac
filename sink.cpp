@@ -387,8 +387,8 @@ void MP4SinkBase::writeStringTag(const char *fcc, const std::string &value)
 
 MP4Sink::MP4Sink(const std::wstring &path,
                  const std::vector<uint8_t> &cookie,
-                 uint32_t fcc, uint32_t trim, bool temp)
-        : MP4SinkBase(path, temp), m_sample_id(0), m_trim(trim),
+                 uint32_t fcc, bool temp)
+        : MP4SinkBase(path, temp), m_sample_id(0),
           m_gapless_mode(MODE_ITUNSMPB)
 {
     std::memset(&m_priming_info, 0, sizeof m_priming_info);

@@ -31,14 +31,8 @@ uint32_t CoreAudioEncoder::encodeChunk(UInt32 npackets)
     AudioBufferList *abl = m_output_abl.get();
     AudioStreamPacketDescription *aspd = &m_packet_desc[0];
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-    _CrtCheckMemory();
-#endif
     CHECKCA(AudioConverterFillComplexBuffer(m_converter, staticInputDataProc,
-                this, &npackets, abl, aspd));
-#if defined(_MSC_VER) && defined(_DEBUG)
-    _CrtCheckMemory();
-#endif
+                                            this, &npackets, abl, aspd));
 
     if (samplesRead() == 0)
         return false;
@@ -47,9 +41,8 @@ uint32_t CoreAudioEncoder::encodeChunk(UInt32 npackets)
         return 0;
 
     if (!m_requires_packet_desc) {
-        m_sink->writeSamples(abl->mBuffers[0].mData,
-                abl->mBuffers[0].mDataByteSize, npackets);
-        m_stat.updateWritten(npackets, abl->mBuffers[0].mDataByteSize);
+        writeSamples(abl->mBuffers[0].mData,
+                     abl->mBuffers[0].mDataByteSize, npackets);
     } else {
         for (uint32_t i = 0; i < npackets; ++i) {
             if (aspd[i].mVariableFramesInPacket) m_variable_packet_len = true;
@@ -58,9 +51,8 @@ uint32_t CoreAudioEncoder::encodeChunk(UInt32 npackets)
                                       : m_output_desc.mFramesPerPacket;
             if (nsamples) {
                 uint8_t *p = static_cast<uint8_t*>(abl->mBuffers[0].mData);
-                m_sink->writeSamples(
-                    p + aspd[i].mStartOffset, aspd[i].mDataByteSize, nsamples);
-                m_stat.updateWritten(nsamples, aspd[i].mDataByteSize);
+                writeSamples(p + aspd[i].mStartOffset,
+                             aspd[i].mDataByteSize, nsamples);
             }
         }
     }
@@ -87,23 +79,14 @@ long CoreAudioEncoder::inputDataProc(UInt32 *npackets, AudioBufferList *abl)
     prepareInputBuffer(abl, *npackets);
     AudioBuffer &ab = abl->mBuffers[0];
     try {
-#if defined(_MSC_VER) && defined(_DEBUG)
-        _CrtCheckMemory();
-#endif
-        *npackets = m_src->readSamples(ab.mData, *npackets);
-#if defined(_MSC_VER) && defined(_DEBUG)
-        _CrtCheckMemory();
-#endif
+        *npackets = readSamples(ab.mData, *npackets);
     } catch (...) {
         /* treat as EOF */
         *npackets = 0;
     }
-    if (*npackets == 0) {
+    ab.mDataByteSize = *npackets * m_input_desc.mBytesPerFrame;
+    if (*npackets == 0)
         ab.mData = 0;
-        ab.mDataByteSize = 0;
-    } else
-        ab.mDataByteSize = *npackets * m_input_desc.mBytesPerFrame;
-    m_stat.updateRead(*npackets);
     return 0;
 }
 

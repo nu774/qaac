@@ -57,7 +57,6 @@ private:
 
 class MP4Sink: public ISink, public MP4SinkBase {
     uint32_t m_sample_id;
-    uint32_t m_trim;
     AudioFilePacketTableInfo m_priming_info;
     int m_gapless_mode;
 public:
@@ -67,14 +66,12 @@ public:
         MODE_BOTH = 3,
     };
     MP4Sink(const std::wstring &path, const std::vector<uint8_t> &cookie,
-            uint32_t fcc, uint32_t trim=0, bool temp=false);
+            uint32_t fcc, bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
         try {
-            if (++m_sample_id > m_trim) {
-                m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
-                                      length, MP4_INVALID_DURATION);
-            }
+            m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
+                                  length, MP4_INVALID_DURATION);
         } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
         }

@@ -14,6 +14,7 @@ static wide::option long_options[] = {
     { L"quality", required_argument, 0, 'q' },
     { L"adts", no_argument, 0, 'ADTS' },
     { L"alac", no_argument, 0, 'A' },
+    { L"no-smart-padding", no_argument, 0, 'nspd' },
     { L"native-resampler", optional_argument, 0, 'nsrc' },
 #endif
 #ifdef REFALAC
@@ -131,6 +132,16 @@ void usage()
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
 "-A, --alac             ALAC encoding mode\n"
+"--no-smart-padding     Don't apply smart padding for gapless playback.\n"
+"                       By default, beginning and ending of input is\n"
+"                       extrapolated to achieve smooth transition between\n"
+"                       songs. This option also works as a workaround for\n"
+"                       bug of CoreAudio HE-AAC encoder that stops encoding\n"
+"                       1 frame too early.\n"
+"                       Setting this option can lead to gapless playback\n"
+"                       issue especially on HE-AAC.\n"
+"                       However, resulting bitstream will be identical with\n"
+"                       iTunes only when this option is set.\n"
 #endif
 #ifdef REFALAC
 "--fast                 Fast stereo encoding mode.\n"
@@ -396,6 +407,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
         }
         else if (ch == 'log ')
             this->logfilename = wide::optarg;
+        else if (ch == 'nspd')
+            this->no_smart_padding = true;
         else if (ch == 'nsrc') {
             this->native_resampler = true;
             if (wide::optarg) {

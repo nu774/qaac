@@ -25,8 +25,7 @@ struct IEncoderStat {
     virtual double overallBitrate() const = 0;
 };
 
-class EncoderStat: public IEncoderStat {
-    uint64_t m_samples_read;
+class EncoderStat {
     uint64_t m_samples_written;
     uint64_t m_frames_written;
     uint64_t m_bytes_written;
@@ -34,8 +33,7 @@ class EncoderStat: public IEncoderStat {
     AudioStreamBasicDescription m_desc;
 public:
     EncoderStat()
-        : m_samples_read(0),
-          m_samples_written(0),
+        : m_samples_written(0),
           m_frames_written(0),
           m_bytes_written(0)
     {}
@@ -43,7 +41,6 @@ public:
     {
         m_desc = desc;
     }
-    void updateRead(uint32_t n) { m_samples_read += n; }
     void updateWritten(uint32_t samples, uint32_t bytes)
     {
         m_frames_written += 1;
@@ -51,7 +48,6 @@ public:
         m_bytes_written += bytes;
         m_current_bitrate = calcBitrate(bytes, samples);
     }
-    uint64_t samplesRead() const { return m_samples_read; }
     uint64_t samplesWritten() const { return m_samples_written; }
     uint64_t framesWritten() const { return m_frames_written; }
     double currentBitrate() const { return m_current_bitrate; }
