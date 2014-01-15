@@ -137,7 +137,8 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
         : m_filename(path), m_closed(false),
           m_edit_start(0), m_edit_duration(0)
 {
-    static const char * const compatibleBrands[] = { "M4A ", "mp42", "isom" };
+    static const char * const compatibleBrands[] =
+        { "M4A ", "mp42", "isom", "" };
     void (MP4FileX::*create)(const char *, uint32_t, int, int,
             char*, uint32_t, char **, uint32_t);
     if (temp) m_filename = L"qaac.int";
