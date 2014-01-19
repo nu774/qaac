@@ -7,7 +7,7 @@
 namespace win32 {
     void throw_error(const std::wstring &msg, DWORD code)
     {
-        LPWSTR pszMsg;
+        LPWSTR pszMsg = 0;
         FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER |
                        FORMAT_MESSAGE_FROM_SYSTEM,
                        0,

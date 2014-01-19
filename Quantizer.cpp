@@ -204,7 +204,7 @@ void Quantizer::ditherFloat1(const T *src, int32_t *dst, size_t count,
                              unsigned bits)
 {
     int shifts = 32 - bits;
-    double half = 1U << (bits - 1);
+    double half = static_cast<double>(1U << (bits - 1));
     double min_value = -half;
     double max_value = half - 1;
     for (size_t i = 0; i < count; ++i) {
@@ -218,7 +218,7 @@ void Quantizer::ditherFloat2(const T *src, int32_t *dst, size_t count,
                              unsigned bits)
 {
     int shifts = 32 - bits;
-    double half = 1U << (bits - 1);
+    double half = static_cast<double>(1U << (bits - 1));
     double min_value = -half;
     double max_value = half - 1;
     std::uniform_real_distribution<double> dist(-0.5, 0.5);

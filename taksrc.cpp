@@ -14,7 +14,7 @@
     while (0)
 
 TakModule::TakModule(const std::wstring &path)
-    : m_dl(path)
+    : m_dl(path), m_compatible(false)
 {
     if (!m_dl.loaded())
         return;
@@ -27,13 +27,13 @@ TakModule::TakModule(const std::wstring &path)
         CHECK(SSD_Seek = m_dl.fetch("tak_SSD_Seek"));
         CHECK(SSD_ReadAudio = m_dl.fetch("tak_SSD_ReadAudio"));
         CHECK(SSD_GetReadPos = m_dl.fetch("tak_SSD_GetReadPos"));
+        TtakInt32 ver, comp;
+        GetLibraryVersion(&ver, &comp);
+        m_compatible = (comp <= tak_InterfaceVersion
+                        && tak_InterfaceVersion <= ver);
     } catch (...) {
         m_dl.reset();
     }
-    TtakInt32 ver, comp;
-    GetLibraryVersion(&ver, &comp);
-    m_compatible = (comp <= tak_InterfaceVersion
-                    && tak_InterfaceVersion <= ver);
 }
 
 namespace tak {
