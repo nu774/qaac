@@ -28,7 +28,7 @@ struct Options {
         method(-1), bitrate(-1), quality(-1),
 
         rate(-1), verbose(1), lowpass(0), native_resampler_quality(-1),
-        chanmask(-1),
+        chanmask(-1), num_priming(2112),
 
         bits_per_sample(0), raw_channels(2), raw_sample_rate(44100),
         artwork_size(0), native_resampler_complexity(0), textcp(0),
@@ -45,7 +45,7 @@ struct Options {
         check_only(false), normalize(false),
         print_available_formats(false), alac_fast(false), threading(false),
         concat(false), no_matrix_normalize(false), no_dither(false),
-        filename_from_tag(false), no_delay(false), sort_args(false),
+        filename_from_tag(false), sort_args(false),
         no_smart_padding(false),
 
         gain(0.0),
@@ -97,6 +97,7 @@ struct Options {
     int chanmask; /*     -1: honor chanmask in the source(default)
                           0: ignore chanmask in the source
                      others: use the value as chanmask     */
+    unsigned num_priming;
     uint32_t bits_per_sample, raw_channels, raw_sample_rate,
              artwork_size, native_resampler_complexity, textcp,
              gapless_mode;
@@ -106,7 +107,7 @@ struct Options {
          ignore_length, no_optimize, native_resampler, check_only,
          normalize, print_available_formats, alac_fast, threading,
          concat, no_matrix_normalize, no_dither, filename_from_tag,
-         no_delay, sort_args, no_smart_padding;
+         sort_args, no_smart_padding;
     double gain;
 
     uint32_t output_format;

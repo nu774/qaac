@@ -39,7 +39,7 @@
 #include <delayimp.h>
 #include "AudioCodecX.h"
 #include "CoreAudioEncoder.h"
-#include "CoreAudioCookedEncoder.h"
+#include "CoreAudioPaddedEncoder.h"
 #include "CoreAudioResampler.h"
 #endif
 #include <ShlObj.h>
@@ -1261,12 +1261,11 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 
     std::shared_ptr<CoreAudioEncoder> encoder;
     if (opts.isAAC()) {
-        if (opts.no_delay)
-            encoder = std::make_shared<CoreAudioNoDelayEncoder>(converter);
-        else if (opts.no_smart_padding)
+        if (opts.no_smart_padding)
             encoder = std::make_shared<CoreAudioEncoder>(converter);
         else
-            encoder = std::make_shared<CoreAudioPaddedEncoder>(converter);
+            encoder = std::make_shared<CoreAudioPaddedEncoder>(
+                                         converter, opts.num_priming);
     } else
         encoder = std::make_shared<CoreAudioEncoder>(converter);
 

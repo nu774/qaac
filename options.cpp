@@ -35,6 +35,7 @@ static wide::option long_options[] = {
     { L"drc", required_argument, 0, 'drc ' },
     { L"delay", required_argument, 0, 'dlay' },
     { L"no-delay", no_argument, 0, 'ndly' },
+    { L"num-priming", required_argument, 0, 'encd' },
     { L"gapless-mode", required_argument, 0, 'gapm' },
     { L"matrix-preset", required_argument, 0, 'mixp' },
     { L"matrix-file", required_argument, 0, 'mixm' },
@@ -194,6 +195,11 @@ void usage()
 "                       the beginning (and also tweak iTunSMPB).\n"
 "                       This option is mainly intended for resolving\n"
 "                       A/V sync issue of video. \n"
+"--num-priming <n>      (Experimental). Set arbitrary number of priming\n"
+"                       samples in range from 0 to 2112 (default 2112).\n"
+"                       Applicable only for AAC LC.\n"
+"                       --num-priming=0 is the same as --no-delay.\n"
+"                       Doesn't work with --no-smart-padding.\n"
 "--gapless-mode <n>     Encoder delay signaling for gapless playback.\n"
 "                         0: iTunSMPB (default)\n"
 "                         1: ISO standard (elst + sbgp + sgpd)\n"
@@ -598,7 +604,18 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'dlay')
             this->delay = wide::optarg;
         else if (ch == 'ndly')
-            this->no_delay = true;
+            this->num_priming = 0;
+        else if (ch == 'encd') {
+            if (std::swscanf(wide::optarg, L"%u", &this->num_priming) != 1) {
+                std::fputws(L"Invalid arg for --num-priming.\n", stderr);
+                return false;
+            }
+            if (this->num_priming > 2112) {
+                std::fputws(L"num-priming must not be greater than 2112.\n",
+                            stderr);
+                return false;
+            }
+        }
         else if (ch == 'soar')
             this->sort_args = true;
         else if (ch == 'gapm') {
@@ -742,8 +759,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
                     stderr);
         return false;
     }
-    if ((!isAAC() || isSBR()) && this->no_delay) {
-        std::fputws(L"--no-delay is only applicable for AAC LC.\n", stderr);
+    if ((!isAAC() || isSBR()) && this->num_priming != 2112) {
+        std::fputws(L"--num-priming is only applicable for AAC LC.\n", stderr);
         return false;
     }
     if (this->quality == -1)
