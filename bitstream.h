@@ -22,6 +22,12 @@ public:
     void advance(size_t nbits);
     void rewind() { m_cur = m_pos = 0; }
     void byteAlign() { if (m_pos) put(0, 8 - m_pos); }
+    uint32_t copy(BitStream &src, uint32_t nbits)
+    {
+        uint32_t val = src.get(nbits);
+        put(val, nbits);
+        return val;
+    }
 };
 
 #endif

@@ -5,6 +5,7 @@
 #include "mp4v2wrapper.h"
 #include "chapters.h"
 #include "iointer.h"
+#include "win32util.h"
 
 class MP4SinkBase: public ITagStore {
 protected:
@@ -109,6 +110,7 @@ class ADTSSink: public ISink {
     uint32_t m_sample_rate_index;
     uint32_t m_channel_config;
     bool m_seekable;
+    std::vector<uint8_t> m_pce_data;
 public:
     ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie);
     ADTSSink(const std::shared_ptr<FILE> &fp,
@@ -116,6 +118,11 @@ public:
     void writeSamples(const void *data, size_t length, size_t nsamples);
 private:
     void init(const std::vector<uint8_t> &cookie);
+    void write(const void *data, size_t size)
+    {
+        if (_write(fileno(m_fp.get()), data, size) < 0)
+            win32::throw_error("write failed", _doserrno);
+    }
 };
 
 #endif

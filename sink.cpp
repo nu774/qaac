@@ -93,9 +93,9 @@ void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
 }
 
 static
-void parseDecSpecificConfig(const std::vector<uint8_t> &config,
-                            unsigned *sampling_rate_index,
-                            unsigned *sampling_rate, unsigned *channel_config)
+size_t parseDecSpecificConfig(const std::vector<uint8_t> &config,
+                              unsigned *sampling_rate_index,
+                              unsigned *sampling_rate, unsigned *channel_config)
 {
     static const unsigned tab[] = {
         96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 
@@ -109,6 +109,7 @@ void parseDecSpecificConfig(const std::vector<uint8_t> &config,
     else
         *sampling_rate = tab[*sampling_rate_index];
     *channel_config = bs.get(4);
+    return bs.position();
 }
 
 static
@@ -496,16 +497,15 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
                    * copyright_identification_bit: 1
                    * copyright_identification_start: 1
                    */
-    bs.put(length + 7, 13); // frame_length
+    bs.put(length + m_pce_data.size() + 7, 13); // frame_length
     bs.put(0x7ff, 11); // adts_buffer_fullness, 0x7ff for VBR
     bs.put(0, 2); // number_of_raw_data_blocks_in_frame
     bs.byteAlign();
 
-    if (write(fileno(m_fp.get()), bs.data(), 7) < 0 ||
-        write(fileno(m_fp.get()), data, length) < 0)
-    {
-        win32::throw_error("write failed", _doserrno);
-    }
+    write(bs.data(), 7);
+    if (m_pce_data.size())
+        write(&m_pce_data[0], m_pce_data.size());
+    write(data, length);
 }
 
 void ADTSSink::init(const std::vector<uint8_t> &cookie)
@@ -514,6 +514,42 @@ void ADTSSink::init(const std::vector<uint8_t> &cookie)
     std::vector<uint8_t> config;
     parseMagicCookieAAC(cookie, &config);
     unsigned rate;
-    parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
-                           &m_channel_config);
+    size_t off = parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
+                                        &m_channel_config);
+
+    /* keep program config element stored in GASpecificConfig */
+    if (m_channel_config == 0 && config.size() * 8 > off) {
+        BitStream ibs(&config[0], config.size());
+        ibs.advance(off + 3);
+        BitStream obs;
+        obs.put(5, 3); /* ID_PCE */
+        obs.copy(ibs, 4+2+4); /* element_instance_tag, object_type, sf_index */
+
+        /* number of channels */
+        unsigned nfront, nside, nback, nlfe, ndata, ncc;
+        nfront = obs.copy(ibs, 4);
+        nside  = obs.copy(ibs, 4);
+        nback  = obs.copy(ibs, 4);
+        nlfe   = obs.copy(ibs, 2);
+        ndata  = obs.copy(ibs, 3);
+        ncc    = obs.copy(ibs, 4);
+
+        if (obs.copy(ibs, 1)) obs.copy(ibs, 4); /* mono_mixdown */
+        if (obs.copy(ibs, 1)) obs.copy(ibs, 4); /* stereo_mixdown */
+        if (obs.copy(ibs, 1)) obs.copy(ibs, 2+1); /* matrix_mixdown */
+
+        /* channel data */
+        for (int i = 0; i < nfront + nside + nback; ++i)
+            obs.copy(ibs, 1+4);
+        for (int i = 0; i < nlfe + ndata; ++i)
+            obs.copy(ibs, 4);
+        for (int i = 0; i < ncc; ++i)
+            obs.copy(ibs, 1+4);
+
+        obs.byteAlign();
+        obs.put(0, 8); /* comment_field_bytes */
+
+        std::copy(obs.data(), obs.data() + obs.position() / 8,
+                  std::back_inserter(m_pce_data));
+    }
 }
