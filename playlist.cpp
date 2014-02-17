@@ -30,13 +30,12 @@ namespace playlist {
     std::wstring generateFileName(const std::wstring &spec,
                                   const std::map<std::string, std::string> &tag)
     {
-        std::wstring ofilename = process_template(spec, TagLookup(tag));
-        struct ToSafe {
-            static wchar_t call(wchar_t ch) {
-                return std::wcschr(L":/\\?|<>*\"", ch) ? L'_' : ch;
-            }
-        };
-        return strutil::strtransform(ofilename, ToSafe::call);
+        auto ofilename = process_template(spec, TagLookup(tag));
+        auto res = strutil::strtransform(ofilename, [](wchar_t c)->wchar_t {
+            return std::wcschr(L":/\\?|<>*\"", c) ? L'_' : c;
+        });
+        if (res.size() > 250) res = res.substr(0, 250);
+        return res;
     }
 
 } // namespace playlist
