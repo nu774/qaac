@@ -9,6 +9,7 @@
 #include <shellapi.h>
 #include "options.h"
 #include "inputfactory.h"
+#include "bitstream.h"
 #include "sink.h"
 #include "wavsink.h"
 #include "cafsink.h"
@@ -638,7 +639,12 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
     if (opts.isAAC() || opts.isALAC()) {
 #ifdef QAAC
-        if (!codec->isAvailableOutputChannelLayout(*channel_layout))
+        uint32_t clayout = 
+            (opts.isAAC() && !opts.is_caf) ?
+                chanmap::getChannelLayoutForCodec(*channel_layout)
+              : *channel_layout;
+
+        if (!codec->isAvailableOutputChannelLayout(clayout))
             throw std::runtime_error("Channel layout not supported");
 #endif
 #ifdef REFALAC
@@ -688,7 +694,8 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 codec->getClosestAvailableOutputSampleRate(rate);
         else {
             AudioChannelLayout acl = { 0 };
-            acl.mChannelLayoutTag = *channel_layout;
+            acl.mChannelLayoutTag =
+                chanmap::getChannelLayoutForCodec(*channel_layout);
             AudioConverterX converter(iasbd, oasbd);
             converter.setInputChannelLayout(acl);
             converter.setOutputChannelLayout(acl);
@@ -1232,6 +1239,54 @@ void config_aac_codec(AudioConverterX &converter, const Options &opts)
     converter.setCodecQuality(bound_quality((opts.quality + 1) << 5));
 }
 
+static
+void insert_pce(uint32_t channel_layout, std::vector<uint8_t> *cookie)
+{
+    if (channel_layout != chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear)
+        return;
+
+    BitStream ibs(cookie->data(), cookie->size());
+    BitStream bs;
+    uint32_t obj_type = bs.copy(ibs, 5); 
+    uint32_t sf_index = bs.copy(ibs, 4);
+    uint32_t channel_config = ibs.get(4);
+    bs.put(0, 4);
+    bs.copy(ibs, 3);
+
+    bs.put(0, 4); /* element_instance_tag */
+    bs.put(obj_type, 2);
+    bs.put(sf_index, 4);
+    bs.put(2, 4); /* num_front_channel_elements */
+    bs.put(1, 4); /* num_side_channel_elements  */
+    bs.put(1, 4); /* num_back_channel_elements  */
+    bs.put(1, 2); /* num_lfe_channel_elements   */
+    bs.put(0, 3); /* num_assoc_data_elements    */
+    bs.put(0, 4); /* num_valid_cc_elements      */
+    bs.put(0, 3); /* mono_mixdown, stereo_mixdown, matrix_mixdown */
+
+    /* C */
+    bs.put(0, 1); /* front_element_is_cpe */
+    bs.put(0, 4); /* front_element_tag_select */
+    /* L+R */
+    bs.put(1, 1); /* front_element_is_cpe */
+    bs.put(0, 4); /* front_element_tag_select */
+    /* Ls+Rs */
+    bs.put(1, 1); /* side_element_is_cpe */
+    bs.put(1, 4); /* side_element_tag_select */
+    /* Rls+Rrs */
+    bs.put(1, 1); /* back_element_is_cpe */
+    bs.put(2, 4); /* back_element_tag_select */
+    /* LFE */
+    bs.put(0, 4); /* lfe_elementtag_select */
+    bs.byteAlign();
+
+    size_t len = bs.position() / 8;
+    std::vector<uint8_t> result(cookie->size() + len);
+    std::memcpy(&result[0], bs.data(), len);
+    if (cookie->size() > 2)
+        std::memcpy(&result[len], cookie->data() + 2, cookie->size() - 2);
+    cookie->swap(result);
+}
 
 static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
@@ -1249,7 +1304,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     }
     AudioConverterX converter(iasbd, oasbd);
     AudioChannelLayout acl = { 0 };
-    acl.mChannelLayoutTag = channel_layout;
+    acl.mChannelLayoutTag = chanmap::getChannelLayoutForCodec(channel_layout);
     converter.setInputChannelLayout(acl);
     converter.setOutputChannelLayout(acl);
     if (opts.isAAC()) config_aac_codec(converter, opts);
@@ -1261,6 +1316,9 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 
     std::shared_ptr<CoreAudioEncoder> encoder;
     if (opts.isAAC()) {
+        cautil::parseMagicCookieAAC(cookie, &cookie);
+        insert_pce(channel_layout, &cookie);
+
         if (opts.no_smart_padding)
             encoder = std::make_shared<CoreAudioEncoder>(converter);
         else
@@ -1274,7 +1332,8 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     if (adts_fp && adts_fp->get())
         sink = std::make_shared<ADTSSink>(*adts_fp, cookie);
     else
-        sink = open_sink(ofilename, opts, oasbd, channel_layout, cookie);
+        sink = open_sink(ofilename, opts, oasbd,
+                         channel_layout, cookie);
     encoder->setSink(sink);
     set_tags(src.get(), sink.get(), opts, encoder_config);
     CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());

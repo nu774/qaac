@@ -18,81 +18,6 @@ using mp4v2::impl::itmf::enumCountryCode;
 using mp4v2::impl::itmf::enumContentRating;
 
 static
-bool getDescripterHeader(const uint8_t **p, const uint8_t *end,
-                         int *tag, uint32_t *size)
-{
-    *size = 0;
-    if (*p < end) {
-        *tag = *(*p)++;
-        while (*p < end) {
-            int n = *(*p)++;
-            *size = (*size << 7) | (n & 0x7f);
-            if (!(n & 0x80)) return true;
-        }
-    }
-    return false;
-}
-
-static
-void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
-                         std::vector<uint8_t> *decSpecificConfig)
-{
-    /*
-     * QT's "Magic Cookie" for AAC is just an esds descripter.
-     * We obtain only decSpecificConfig from it, and discard others.
-     */
-    const uint8_t *p = &cookie[0];
-    const uint8_t *end = p + cookie.size();
-    int tag;
-    uint32_t size;
-    while (getDescripterHeader(&p, end, &tag, &size)) {
-        switch (tag) {
-        case 3: // esds
-            /*
-             * ES_ID: 16
-             * streamDependenceFlag: 1
-             * URLFlag: 1
-             * OCRstreamFlag: 1
-             * streamPriority: 5
-             *
-             * (flags are all zero, so other atttributes are not present)
-             */
-            p += 3;
-            break;
-        case 4: // decConfig
-            /*
-             * objectTypeId: 8
-             * streamType: 6
-             * upStream: 1
-             * reserved: 1
-             * bufferSizeDB: 24
-             * maxBitrate: 32
-             * avgBitrate: 32
-             *
-             * QT gives constant value for bufferSizeDB, max/avgBitrate
-             * depending on encoder settings.
-             * On the other hand, mp4v2 sets decConfig from
-             * actually computed values when finished media writing.
-             * Therefore, these values will be different from QT.
-             */
-            p += 13;
-            break;
-        case 5: // decSpecificConfig
-            {
-                std::vector<uint8_t> vec(size);
-                std::memcpy(&vec[0], p, size);
-                decSpecificConfig->swap(vec);
-            }
-            return;
-        default:
-            p += size;
-        }
-    }
-    throw std::runtime_error(
-            "Magic cookie format is different from expected!!");
-}
-
-static
 size_t parseDecSpecificConfig(const std::vector<uint8_t> &config,
                               unsigned *sampling_rate_index,
                               unsigned *sampling_rate, unsigned *channel_config)
@@ -388,14 +313,12 @@ void MP4SinkBase::writeStringTag(const char *fcc, const std::string &value)
 }
 
 MP4Sink::MP4Sink(const std::wstring &path,
-                 const std::vector<uint8_t> &cookie,
+                 const std::vector<uint8_t> &config,
                  uint32_t fcc, bool temp)
         : MP4SinkBase(path, temp), m_sample_id(0),
           m_gapless_mode(MODE_ITUNSMPB)
 {
     std::memset(&m_priming_info, 0, sizeof m_priming_info);
-    std::vector<uint8_t> config;
-    parseMagicCookieAAC(cookie, &config);
     try {
         unsigned index, rate, chconfig;
         parseDecSpecificConfig(config, &index, &rate, &chconfig);
@@ -508,18 +431,16 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
     write(data, length);
 }
 
-void ADTSSink::init(const std::vector<uint8_t> &cookie)
+void ADTSSink::init(const std::vector<uint8_t> &config)
 {
     m_seekable = util::is_seekable(fileno(m_fp.get()));
-    std::vector<uint8_t> config;
-    parseMagicCookieAAC(cookie, &config);
     unsigned rate;
     size_t off = parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
                                         &m_channel_config);
 
     /* keep program config element stored in GASpecificConfig */
     if (m_channel_config == 0 && config.size() * 8 > off) {
-        BitStream ibs(&config[0], config.size());
+        BitStream ibs(config.data(), config.size());
         ibs.advance(off + 3);
         BitStream obs;
         obs.put(5, 3); /* ID_PCE */

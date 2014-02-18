@@ -93,6 +93,9 @@ namespace cautil {
                          unsigned valid_bits, unsigned pack_bits,
                          unsigned type_flags,
                          unsigned alignment=kAudioFormatFlagIsAlignedHigh);
+
+    void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
+                             std::vector<uint8_t> *decSpecificConfig);
 }
 
 #endif

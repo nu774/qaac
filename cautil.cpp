@@ -86,4 +86,76 @@ namespace cautil {
         asbd.mBytesPerPacket = asbd.mFramesPerPacket * asbd.mBytesPerFrame;
         return asbd;
     }
+
+    bool getDescripterHeader(const uint8_t **p, const uint8_t *end,
+                             int *tag, uint32_t *size)
+    {
+        *size = 0;
+        if (*p < end) {
+            *tag = *(*p)++;
+            while (*p < end) {
+                int n = *(*p)++;
+                *size = (*size << 7) | (n & 0x7f);
+                if (!(n & 0x80)) return true;
+            }
+        }
+        return false;
+    }
+    void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
+                             std::vector<uint8_t> *decSpecificConfig)
+    {
+        /*
+         * QT's "Magic Cookie" for AAC is just an esds descripter.
+         * We obtain only decSpecificConfig from it, and discard others.
+         */
+        const uint8_t *p = &cookie[0];
+        const uint8_t *end = p + cookie.size();
+        int tag;
+        uint32_t size;
+        while (getDescripterHeader(&p, end, &tag, &size)) {
+            switch (tag) {
+            case 3: // esds
+                /*
+                 * ES_ID: 16
+                 * streamDependenceFlag: 1
+                 * URLFlag: 1
+                 * OCRstreamFlag: 1
+                 * streamPriority: 5
+                 *
+                 * (flags are all zero, so other atttributes are not present)
+                 */
+                p += 3;
+                break;
+            case 4: // decConfig
+                /*
+                 * objectTypeId: 8
+                 * streamType: 6
+                 * upStream: 1
+                 * reserved: 1
+                 * bufferSizeDB: 24
+                 * maxBitrate: 32
+                 * avgBitrate: 32
+                 *
+                 * QT gives constant value for bufferSizeDB, max/avgBitrate
+                 * depending on encoder settings.
+                 * On the other hand, mp4v2 sets decConfig from
+                 * actually computed values when finished media writing.
+                 * Therefore, these values will be different from QT.
+                 */
+                p += 13;
+                break;
+            case 5: // decSpecificConfig
+                {
+                    std::vector<uint8_t> vec(size);
+                    std::memcpy(&vec[0], p, size);
+                    decSpecificConfig->swap(vec);
+                }
+                return;
+            default:
+                p += size;
+            }
+        }
+        throw std::runtime_error(
+                "Magic cookie format is different from expected!!");
+    }
 }

@@ -176,6 +176,8 @@ void getChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
         layout = "\x01\x02\x03\x04\x05\x06\x21\x22"; break;
     case kAudioChannelLayoutTag_Emagic_Default_7_1:
         layout = "\x01\x02\x05\x06\x03\x04\x07\x08"; break;
+    case kAudioChannelLayoutTag_AAC_7_1_Rear:
+        layout = "\x03\x01\x02\x05\x06\x21\x22\x04"; break;
     /* 8ch */
     case kAudioChannelLayoutTag_Octagonal:
         /* XXX: actually the last two are Left Wide/Right Wide */
@@ -283,7 +285,7 @@ uint32_t AACLayoutFromBitmap(uint32_t bitmap)
     case 0x13f: return kAudioChannelLayoutTag_AAC_6_1;
     case 0x637: return kAudioChannelLayoutTag_AAC_7_0;
     case 0xff:  return kAudioChannelLayoutTag_AAC_7_1;
-    case 0x63f: return kAudioChannelLayoutTag_AAC_7_1; /* XXX */
+    case 0x63f: return kAudioChannelLayoutTag_AAC_7_1_Rear;
     case 0x737: return kAudioChannelLayoutTag_AAC_Octagonal;
     }
     throw std::runtime_error("No channel mapping to AAC defined");
@@ -305,24 +307,17 @@ void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result)
                         switch (c) {
                         case kAudioChannelLabel_Left:
                         case kAudioChannelLabel_Right:
-                            if (bitmap == 0x63f)
-                                c += 9;
-                            else if (!(bitmap & 0x3) && (bitmap & 0xc))
+                            if (!(bitmap & 0x3) && (bitmap & 0xc))
                                 c += 6;
-                            break;
-                        case kAudioChannelLabel_LeftCenter:
-                        case kAudioChannelLabel_RightCenter:
-                            if (bitmap == 0x63f)
-                                c -= 6;
                             break;
                         case kAudioChannelLabel_LeftSurround:
                         case kAudioChannelLabel_RightSurround:
-                            if (!(bitmap & 0x30) && (bitmap & 0x600))
+                            if (bitmap & 0x600)
                                 c += 5;
                             break;
                         case kAudioChannelLabel_RearSurroundLeft:
                         case kAudioChannelLabel_RearSurroundRight:
-                            c -= 18;
+                            c -= 28;
                             break;
                         }
                         return c;
