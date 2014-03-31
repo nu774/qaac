@@ -292,7 +292,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
         FILE *statfp = statPtr.get();
         while (!g_interrupted && encoder->encodeChunk(1)) {
             progress.update(src->getPosition());
-            if (statfp)
+            if (statfp && stat->framesWritten())
                 std::fwprintf(statfp, L"%g\n", stat->currentBitrate());
         }
         progress.finish(src->getPosition());
