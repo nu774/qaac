@@ -29,11 +29,13 @@
     <ClCompile Include="..\..\taglib\mpeg\id3v1\id3v1tag.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\attachedpictureframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\commentsframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\eventtimingcodesframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\generalencapsulatedobjectframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\ownershipframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\popularimeterframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\privateframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\relativevolumeframe.cpp" />
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\synchronizedlyricsframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\textidentificationframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\uniquefileidentifierframe.cpp" />
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\unknownframe.cpp" />
