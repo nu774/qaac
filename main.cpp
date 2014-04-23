@@ -1120,7 +1120,7 @@ void show_available_codec_setttings(UInt32 fmt)
             for (size_t k = 0; k < bits.size(); ++k) {
                 if (!bits[k].mMinimum) continue;
                 int delim = k == 0 ? L' ' : L',';
-                std::wprintf(L"%c%g", delim, bits[k].mMinimum / 1000.0);
+                std::wprintf(L"%c%d", delim, lrint(bits[k].mMinimum / 1000.0));
             }
             std::putwchar(L'\n');
         }
