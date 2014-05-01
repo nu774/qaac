@@ -185,7 +185,7 @@ void ExtAFSource::seekTo(int64_t count)
     switch (m_asbd.mFormatID) {
     case kAudioFormatMPEGLayer1: preroll_packets = 1; break;
     case kAudioFormatMPEGLayer2: preroll_packets = 1; break;
-    case kAudioFormatMPEGLayer3: preroll_packets = 2; break;
+    case kAudioFormatMPEGLayer3: preroll_packets = 9; break;
     }
     int64_t off
         = std::max(0LL, count - m_asbd.mFramesPerPacket * preroll_packets);
