@@ -85,7 +85,7 @@ void CAFSink::writeASBD(uint32_t format)
     bool downsampled = m_asbd.mFormatID == 'aach' && format == 'aac ';
 
     if (format == 'lpcm')
-        flags = (2 | !!(m_asbd.mFormatFlags & kAudioFormatFlagIsFloat));
+        flags = (2 | (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat));
 
     writef64(downsampled ? m_asbd.mSampleRate / 2.0 : m_asbd.mSampleRate);
     write32(format);
