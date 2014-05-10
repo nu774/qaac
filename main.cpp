@@ -1034,15 +1034,19 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
                                  uint32_t channel_layout,
                                  const std::vector<uint8_t> &cookie)
 {
+    std::vector<uint8_t> asc;
+    if (opts.isAAC())
+        cautil::parseMagicCookieAAC(cookie, &asc);
+
     if (opts.is_adts)
-        return std::make_shared<ADTSSink>(ofilename, cookie);
+        return std::make_shared<ADTSSink>(ofilename, asc);
     else if (opts.is_caf)
         return std::make_shared<CAFSink>(ofilename, asbd, channel_layout,
                                          cookie);
     else if (opts.isALAC())
         return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     else if (opts.isAAC())
-        return std::make_shared<MP4Sink>(ofilename, cookie,
+        return std::make_shared<MP4Sink>(ofilename, asc,
                                          opts.output_format,
                                          !opts.no_optimize);
     throw std::runtime_error("XXX");
@@ -1240,12 +1244,12 @@ void config_aac_codec(AudioConverterX &converter, const Options &opts)
 }
 
 static
-void insert_pce(uint32_t channel_layout, std::vector<uint8_t> *cookie)
+bool insert_pce(uint32_t channel_layout, std::vector<uint8_t> *asc)
 {
     if (channel_layout != chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear)
-        return;
+        return false;
 
-    BitStream ibs(cookie->data(), cookie->size());
+    BitStream ibs(asc->data(), asc->size());
     BitStream bs;
     uint32_t obj_type = bs.copy(ibs, 5); 
     uint32_t sf_index = bs.copy(ibs, 4);
@@ -1281,11 +1285,12 @@ void insert_pce(uint32_t channel_layout, std::vector<uint8_t> *cookie)
     bs.byteAlign();
 
     size_t len = bs.position() / 8;
-    std::vector<uint8_t> result(cookie->size() + len);
-    std::memcpy(&result[0], bs.data(), len);
-    if (cookie->size() > 2)
-        std::memcpy(&result[len], cookie->data() + 2, cookie->size() - 2);
-    cookie->swap(result);
+    std::vector<uint8_t> result(asc->size() + len);
+    std::memcpy(result.data(), bs.data(), len);
+    if (asc->size() > 2)
+        std::memcpy(&result[len], asc->data() + 2, asc->size() - 2);
+    asc->swap(result);
+    return true;
 }
 
 static
@@ -1316,8 +1321,10 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 
     std::shared_ptr<CoreAudioEncoder> encoder;
     if (opts.isAAC()) {
-        cautil::parseMagicCookieAAC(cookie, &cookie);
-        insert_pce(channel_layout, &cookie);
+        std::vector<uint8_t> asc;
+        cautil::parseMagicCookieAAC(cookie, &asc);
+        if (insert_pce(channel_layout, &asc))
+            cautil::replaceASCInMagicCookie(&cookie, asc);
 
         if (opts.no_smart_padding)
             encoder = std::make_shared<CoreAudioEncoder>(converter);

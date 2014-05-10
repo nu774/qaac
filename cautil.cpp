@@ -87,19 +87,20 @@ namespace cautil {
         return asbd;
     }
 
-    bool getDescripterHeader(const uint8_t **p, const uint8_t *end,
-                             int *tag, uint32_t *size)
+    const uint8_t *getDescripterHeader(const uint8_t *p, const uint8_t *end,
+                                       int *tag, uint32_t *size)
     {
+        const uint8_t *q = p;
         *size = 0;
-        if (*p < end) {
-            *tag = *(*p)++;
-            while (*p < end) {
-                int n = *(*p)++;
+        if (q < end) {
+            *tag = *q++;
+            while (q < end) {
+                int n = *q++;
                 *size = (*size << 7) | (n & 0x7f);
-                if (!(n & 0x80)) return true;
+                if (!(n & 0x80)) return q;
             }
         }
-        return false;
+        return 0;
     }
     void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
                              std::vector<uint8_t> *decSpecificConfig)
@@ -108,11 +109,11 @@ namespace cautil {
          * QT's "Magic Cookie" for AAC is just an esds descripter.
          * We obtain only decSpecificConfig from it, and discard others.
          */
-        const uint8_t *p = &cookie[0];
+        const uint8_t *p = &cookie[0], *q;
         const uint8_t *end = p + cookie.size();
         int tag;
         uint32_t size;
-        while (getDescripterHeader(&p, end, &tag, &size)) {
+        for (;(q = getDescripterHeader(p, end, &tag, &size)); p = q) {
             switch (tag) {
             case 3: // esds
                 /*
@@ -124,7 +125,7 @@ namespace cautil {
                  *
                  * (flags are all zero, so other atttributes are not present)
                  */
-                p += 3;
+                q += 3;
                 break;
             case 4: // decConfig
                 /*
@@ -142,20 +143,71 @@ namespace cautil {
                  * actually computed values when finished media writing.
                  * Therefore, these values will be different from QT.
                  */
-                p += 13;
+                q += 13;
                 break;
             case 5: // decSpecificConfig
                 {
                     std::vector<uint8_t> vec(size);
-                    std::memcpy(&vec[0], p, size);
+                    std::memcpy(&vec[0], q, size);
                     decSpecificConfig->swap(vec);
                 }
                 return;
             default:
-                p += size;
+                q += size;
             }
         }
         throw std::runtime_error(
                 "Magic cookie format is different from expected!!");
+    }
+    void replaceASCInMagicCookie(std::vector<uint8_t> *cookie,
+                              const std::vector<uint8_t> &data)
+    {
+        std::vector<uint8_t> configs;
+        const uint8_t *p = cookie->data(), *q;
+        const uint8_t *end = p + cookie->size();
+        int tag;
+        uint32_t size;
+        size_t esds_pos, decConfig_pos, decConfig_end;
+
+        for (;(q = getDescripterHeader(p, end, &tag, &size)); p = q) {
+            switch (tag) {
+            case 3:
+                esds_pos = configs.size();
+                std::copy(p, q + 3, std::back_inserter(configs));
+                q += 3;
+                break;
+            case 4:
+                decConfig_pos = configs.size();
+                std::copy(p, q + 13, std::back_inserter(configs));
+                q += 13;
+                break;
+            case 5:
+                configs.push_back(5);
+                configs.push_back((data.size() >> 21) | 0x80);
+                configs.push_back((data.size() >> 14) | 0x80);
+                configs.push_back((data.size() >>  7) | 0x80);
+                configs.push_back((data.size() & 0x7f));
+                std::copy(data.begin(), data.end(),
+                          std::back_inserter(configs));
+                decConfig_end = configs.size();
+                q += size;
+                break;
+            default:
+                std::copy(p, q + size, std::back_inserter(configs));
+                q += size;
+            }
+        }
+        size_t esds_size = configs.size() - esds_pos - 5;
+        size_t decConfig_size = decConfig_end - decConfig_pos - 5;
+        configs[esds_pos + 1] = ((esds_size >> 21) | 0x80);
+        configs[esds_pos + 2] = ((esds_size >> 14) | 0x80);
+        configs[esds_pos + 3] = ((esds_size >>  7) | 0x80);
+        configs[esds_pos + 4] = (esds_size & 0x7F);
+        configs[decConfig_pos + 1] = ((decConfig_size >> 21) | 0x80);
+        configs[decConfig_pos + 2] = ((decConfig_size >> 14) | 0x80);
+        configs[decConfig_pos + 3] = ((decConfig_size >>  7) | 0x80);
+        configs[decConfig_pos + 4] = (decConfig_size & 0x7F);
+
+        cookie->swap(configs);
     }
 }

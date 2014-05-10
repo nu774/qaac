@@ -96,6 +96,10 @@ namespace cautil {
 
     void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
                              std::vector<uint8_t> *decSpecificConfig);
+
+    void replaceASCInMagicCookie(std::vector<uint8_t> *cookie,
+                                 const std::vector<uint8_t> &data);
+
 }
 
 #endif
