@@ -16,7 +16,7 @@ public:
         attach(converter, takeOwn);
     }
     AudioConverterX(const AudioStreamBasicDescription &iasbd,
-            const AudioStreamBasicDescription &oasbd)
+                    const AudioStreamBasicDescription &oasbd)
     {
         AudioConverterRef converter;
         CHECKCA(AudioConverterNew(&iasbd, &oasbd, &converter));
@@ -239,8 +239,7 @@ public:
         getApplicableEncodeBitRates(&rates);
         double distance = std::numeric_limits<double>::max();
         double pick = 0;
-        std::vector<AudioValueRange>::const_iterator it = rates.begin();
-        for (; it != rates.end(); ++it) {
+        for (auto it = rates.begin(); it != rates.end(); ++it) {
             if (!it->mMinimum) continue;
             double diff = std::abs(value - it->mMinimum);
             if (distance > diff) {
