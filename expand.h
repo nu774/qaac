@@ -10,67 +10,54 @@
 /*
  * - ${VAR} evaluates to variable VAR's value
  * - ${VAR&word} evaluates to ${VAR} if ${VAR} is empty,
- *   otherwise literal word
+ *   otherwise word
  * - ${VAR|word} evaluates to ${VAR} if ${VAR} is not empty,
- *   otherwise literal word
+ *   otherwise word
  */
 
-template <typename CharT, typename Func>
+template <typename CharT, typename Iterator, typename Func>
 std::basic_string<CharT>
-expand(const std::basic_string<CharT> &name, Func lookup)
+process1(Iterator &begin, Iterator end, Func lookup, int delim);
+
+template <typename CharT, typename Iterator, typename Func>
+std::basic_string<CharT> expand(Iterator &begin, Iterator end, Func lookup)
 {
-    static CharT meta[] = { '&', '|', 0 };
-    typename std::basic_string<CharT>::size_type
-        pos = name.find_first_of(meta);
-    if (pos == std::basic_string<CharT>::npos)
-        return lookup(name);
-    std::basic_string<CharT> value = lookup(name.substr(0, pos));
-    if (name[pos] == '&')
-        return value.empty() ? value : name.substr(pos + 1);
+    std::basic_string<CharT> name, value, value2;
+    CharT c;
+    while (begin < end && (c = *begin++) != '&' && c != '|' && c != '}')
+        name.push_back(c);
+    value = lookup(name);
+    if (c != '&' && c != '|')
+        return value;
+    // XXX: not short-circuit
+    value2 = process1<CharT>(begin, end, lookup, '}');
+    if (c == '&')
+        return value.empty() ? value : value2;
     else
-        return value.empty() ? name.substr(pos + 1) : value;
+        return value.empty() ? value2 : value;
+}
+
+template <typename CharT, typename Iterator, typename Func>
+std::basic_string<CharT>
+process1(Iterator &begin, Iterator end, Func lookup, int delim)
+{
+    std::basic_string<CharT> result;
+    CharT c;
+    while (begin < end && (c = *begin++) != delim) {
+        if (c == '$' && begin < end && *begin == '{')
+            result += expand<CharT>(++begin, end, lookup);
+        else
+            result.push_back(c);
+    }
+    return result;
 }
 
 template <typename CharT, typename Func>
 std::basic_string<CharT>
 process_template(const std::basic_string<CharT> &s, Func lookup)
 {
-    typedef std::char_traits<CharT> traits_type;
-    enum State { INIT, DOLLAR, OPEN, NAME };
-
-    std::basic_stringbuf<CharT> src(s);
-    std::basic_string<CharT> acc, name;
-    typename std::char_traits<CharT>::int_type c;
-    State state = INIT;
-
-    while (traits_type::not_eof(c = src.sbumpc())) {
-        if (state == INIT) {
-            if (c == '$')
-                state = DOLLAR;
-            else
-                acc.push_back(c);
-        } else if (state == DOLLAR) {
-            if (c == '{')
-                state = OPEN;
-            else {
-                state = INIT;
-                acc.push_back('$');
-                acc.push_back(c);
-            }
-        } else if (c == '}') {
-            state = INIT;
-            acc += expand(name, lookup);
-            name.clear();
-        } else
-            name.push_back(c);
-    }
-    if (state != INIT)
-        acc.push_back('$');
-    if (state == OPEN) {
-        acc.push_back('{');
-        acc += name;
-    }
-    return acc;
+    typename std::basic_string<CharT>::const_iterator it = s.begin();
+    return process1<CharT>(it, s.end(), lookup, 0);
 }
 
 #endif
