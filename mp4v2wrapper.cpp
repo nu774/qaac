@@ -67,7 +67,12 @@ public:
     MP4SgpdAtom(MP4File &file, const char *id): MP4Atom(file, id)
     {
         AddVersionAndFlags();
+        SetVersion(1);
         AddProperty(new MP4Integer32Property(*this, "groupingType"));
+        MP4Integer32Property *defaultLength =
+            new MP4Integer32Property(*this, "defaultLength");
+        defaultLength->SetValue(2);
+        AddProperty(defaultLength);
         MP4Integer32Property *count =
             new MP4Integer32Property(*this, "entryCount");
         AddProperty(count);
@@ -75,15 +80,6 @@ public:
         AddProperty(table);
         table->AddProperty(new MP4Integer16Property(table->GetParentAtom(),
                                                     "rollDistance"));
-    }
-    void Generate()
-    {
-        SetVersion(1);
-        MP4Atom::Generate();
-
-        MP4Property *prop;
-        FindProperty("sgpd.defaultLength", &prop);
-        dynamic_cast<MP4Integer32Property*>(prop)->SetValue(2);
     }
 };
 
@@ -219,6 +215,7 @@ MP4FileX::CreateAudioSampleGroupDescription(MP4TrackId trackId,
 
     MP4SbgpAtom * sbgp = new MP4SbgpAtom(*this, "sbgp");
     stbl->AddChildAtom(sbgp);
+    sbgp->Generate();
     sbgp->FindProperty("sbgp.groupingType", &prop);
     dynamic_cast<MP4Integer32Property*>(prop)->SetValue('roll');
     sbgp->FindProperty("sbgp.entries.sampleCount", &prop);
@@ -230,6 +227,7 @@ MP4FileX::CreateAudioSampleGroupDescription(MP4TrackId trackId,
 
     MP4SgpdAtom * sgpd = new MP4SgpdAtom(*this, "sgpd");
     stbl->AddChildAtom(sgpd);
+    sgpd->Generate();
     sgpd->FindProperty("sgpd.groupingType", &prop);
     dynamic_cast<MP4Integer32Property*>(prop)->SetValue('roll');
     sgpd->FindProperty("sgpd.entries.rollDistance", &prop);
