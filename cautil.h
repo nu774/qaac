@@ -100,6 +100,9 @@ namespace cautil {
     void replaceASCInMagicCookie(std::vector<uint8_t> *cookie,
                                  const std::vector<uint8_t> &data);
 
+    void parseASC(const std::vector<uint8_t> &asc,
+                  AudioStreamBasicDescription *asbd,
+                  std::vector<uint32_t> *channels);
 }
 
 #endif

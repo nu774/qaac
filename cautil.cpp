@@ -1,5 +1,6 @@
 #include "cautil.h"
 #include "dl.h"
+#include "bitstream.h"
 
 namespace cautil {
     std::string make_coreaudio_error(long code, const char *s)
@@ -209,5 +210,154 @@ namespace cautil {
         configs[decConfig_pos + 4] = (decConfig_size & 0x7F);
 
         cookie->swap(configs);
+    }
+
+    void parseASC(const std::vector<uint8_t> &asc,
+                  AudioStreamBasicDescription *asbd,
+                  std::vector<uint32_t> *channels)
+    {
+        BitStream bs(asc.data(), asc.size());
+        uint8_t aot = bs.get(5);
+        if (aot != 2 && aot != 5 && aot != 29)
+            throw std::runtime_error("Unsupported AudioSpecificConfig");
+        static const unsigned sftab[] = {
+            96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 
+            16000, 12000, 11025, 8000, 7350, 0, 0, 0
+        };
+        uint32_t sample_rate    = sftab[bs.get(4)];
+        uint8_t  chan_config    = bs.get(4);
+        if (aot == 5 || aot == 29) {
+            sample_rate = sftab[bs.get(4)];
+            bs.advance(5); // AOT
+        }
+        // GASpecificConfig
+        bs.advance(1); // frameLengthFlag
+        if (bs.get(1)) bs.advance(14); // dependsOnCoreCoder
+        bs.advance(1); // extensionFlag
+        const char *ch_layout_tab[] = {
+            "",
+            "\x01",
+            "\x01\x02",
+            "\x03\x01\x02",
+            "\x03\x01\x02\x09",
+            "\x03\x01\x02\x05\x06",
+            "\x03\x01\x02\x05\x06\x04",
+            "\x03\x07\x08\x01\x02\x05\x06\x04"
+        };
+        if (chan_config) {
+            const char *lp = ch_layout_tab[chan_config];
+            std::vector<uint32_t> v;
+            while (*lp) v.push_back(*lp++); 
+            channels->swap(v);
+        } else { // PCE
+            bs.advance(10); // element_instance_tag, object_type, sf_index
+            uint8_t nfront  = bs.get(4);
+            uint8_t nside   = bs.get(4);
+            uint8_t nback   = bs.get(4);
+            uint8_t nlfe    = bs.get(2);
+            uint8_t nassoc  = bs.get(3);
+            uint8_t ncc     = bs.get(4);
+            if (bs.get(1)) bs.get(4); // mono_mixdown
+            if (bs.get(1)) bs.get(4); // stereo_mixdown
+            if (bs.get(1)) bs.get(3); // matrix_mixdown
+            uint8_t nfront_channels = 0;
+            uint8_t nside_channels  = 0;
+            uint8_t nback_channels  = 0;
+            for (uint8_t i = 0; i < nfront; ++i) {
+                if (bs.get(1)) // is_cpe
+                    nfront_channels += 2;
+                else
+                    nfront_channels += 1;
+                bs.advance(4); // element_tag_select
+            }
+            for (uint8_t i = 0; i < nside; ++i) {
+                if (bs.get(1)) // is_cpe
+                    nside_channels += 2;
+                else
+                    nside_channels += 1;
+                bs.advance(4); // element_tag_select
+            }
+            for (uint8_t i = 0; i < nback; ++i) {
+                if (bs.get(1)) // is_cpe
+                    nback_channels += 2;
+                else
+                    nback_channels += 1;
+                bs.advance(4); // element_tag_select
+            }
+            for (uint8_t i = 0; i < nlfe; ++i)
+                bs.advance(4);
+            for (uint8_t i = 0; i < nassoc; ++i)
+                bs.advance(4);
+            for (uint8_t i = 0; i < ncc; ++i)
+                bs.advance(5);
+            {
+                std::vector<uint32_t> v;
+                if (nfront_channels & 1) {
+                    v.push_back(3);
+                    --nfront_channels;
+                }
+                if (nfront_channels > 3) {
+                    v.push_back(7);
+                    v.push_back(8);
+                    nfront_channels -= 2;
+                }
+                if (nfront_channels > 1) {
+                    v.push_back(1);
+                    v.push_back(2);
+                    nfront_channels -= 2;
+                }
+                nside_channels += nback_channels;
+                if (nside_channels > 1) {
+                    v.push_back(10);
+                    v.push_back(11);
+                    nside_channels -= 2;
+                }
+                if (nside_channels > 1) {
+                    v.push_back(5);
+                    v.push_back(6);
+                    nside_channels -= 2;
+                }
+                if (nside_channels & 1) {
+                    v.push_back(9);
+                    --nside_channels;
+                }
+                if (nlfe) {
+                    v.push_back(4);
+                    --nlfe;
+                }
+                if (nfront_channels || nside_channels || nlfe)
+                    throw std::runtime_error("Unsupported channel layout");
+                channels->swap(v);
+            }
+            // byte align
+            bs.advance((8 - (bs.position() & 7)) & 7);
+            uint8_t comment_len = bs.get(1);
+            bs.advance(8 * comment_len);
+        }
+        if (asc.size() * 8 - bs.position() >= 16) {
+            if (bs.get(11) == 0x2b7) {
+                uint8_t tmp = bs.get(5);
+                if (tmp == 5 && bs.get(1)) {
+                    aot = tmp;
+                    sample_rate = sftab[bs.get(4)];
+                }
+                if (asc.size() * 8 - bs.position() >= 12) {
+                    if (bs.get(11) == 0x548 && bs.get(1))
+                        aot = 29;
+                }
+            }
+        }
+        if (aot == 29) {
+            std::vector<uint32_t> v;
+            v.push_back(1);
+            v.push_back(2);
+            channels->swap(v);
+        }
+        memset(asbd, 0, sizeof(AudioStreamBasicDescription));
+        asbd->mSampleRate = sample_rate;
+        asbd->mFormatID   = (aot == 2) ? 'aac '
+                                       : (aot == 5) ? 'aach' : 'aacp';
+        asbd->mFramesPerPacket  = (aot == 2) ? 1024 : 2048;
+        asbd->mChannelsPerFrame = channels->size();
     }
 }
