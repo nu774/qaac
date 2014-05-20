@@ -207,11 +207,14 @@
     <ClCompile Include="..\..\afsource.cpp" />
     <ClCompile Include="..\..\cautil.cpp" />
     <ClCompile Include="..\..\CoreAudioEncoder.cpp" />
+    <ClCompile Include="..\..\CoreAudioPacketDecoder.cpp" />
     <ClCompile Include="..\..\CoreAudioPaddedEncoder.cpp" />
     <ClCompile Include="..\..\CoreAudioResampler.cpp" />
     <ClCompile Include="..\..\inputfactory.cpp" />
     <ClCompile Include="..\..\lpc.c" />
     <ClCompile Include="..\..\main.cpp" />
+    <ClCompile Include="..\..\MPAHeader.cpp" />
+    <ClCompile Include="..\..\MP4Source.cpp" />
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\version.cpp" />
   </ItemGroup>

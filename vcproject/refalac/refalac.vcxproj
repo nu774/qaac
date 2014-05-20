@@ -174,10 +174,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\alacenc.cpp" />
-    <ClCompile Include="..\..\alacsrc.cpp" />
+    <ClCompile Include="..\..\ALACPacketDecoder.cpp" />
     <ClCompile Include="..\..\cautil.cpp" />
     <ClCompile Include="..\..\inputfactory.cpp" />
     <ClCompile Include="..\..\main.cpp" />
+    <ClCompile Include="..\..\MP4Source.cpp" />
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\version.cpp" />
   </ItemGroup>

@@ -69,6 +69,11 @@ public:
             kAudioConverterPrimeMethod, &size, &value));
         return value;
     }
+    void setPrimeMethod(UInt32 value)
+    {
+        CHECKCA(AudioConverterSetProperty(m_converter.get(),
+                    kAudioConverterPrimeMethod, sizeof value, &value));
+    }
     void getPrimeInfo(AudioConverterPrimeInfo *result)
     {
         UInt32 size = sizeof(AudioConverterPrimeInfo);
@@ -90,6 +95,12 @@ public:
         CHECKCA(AudioConverterGetProperty(m_converter.get(),
                 kAudioConverterCompressionMagicCookie, &size, &vec[0]));
         result->swap(vec);
+    }
+    void setDecompressionMagicCookie(const std::vector<uint8_t> &cookie)
+    {
+        CHECKCA(AudioConverterSetProperty(m_converter.get(),
+                kAudioConverterDecompressionMagicCookie,
+                cookie.size(), cookie.data()));
     }
     UInt32 getEncodeBitRate()
     {

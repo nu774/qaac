@@ -11,6 +11,7 @@
 #include "taksrc.h"
 #include "wavsource.h"
 #include "wvpacksrc.h"
+#include "MP4Source.h"
 
 namespace input {
     std::shared_ptr<ISeekableSource> InputFactory::open(const wchar_t *path)
@@ -51,15 +52,14 @@ namespace input {
 
         if (libtak.loaded() && libtak.compatible())
             TRY_MAKE_SHARED(TakSource, libtak, fp);
+
+        TRY_MAKE_SHARED(MP4Source, fp);
 #ifdef QAAC
         TRY_MAKE_SHARED(ExtAFSource, fp);
 #endif
         if (libsndfile.loaded())
             TRY_MAKE_SHARED(LibSndfileSource, libsndfile, fp);
 
-#ifndef QAAC
-        TRY_MAKE_SHARED(ALACSource, fp);
-#endif
         throw std::runtime_error("Not available input file format");
     }
 }

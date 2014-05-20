@@ -18,6 +18,12 @@ struct AudioConverterPrimeInfo {
 typedef struct AudioConverterPrimeInfo AudioConverterPrimeInfo;
 
 enum {
+   kConverterPrimeMethod_Pre     = 0,
+   kConverterPrimeMethod_Normal  = 1,
+   kConverterPrimeMethod_None    = 2
+};
+
+enum {
    kAudioConverterPropertyMinimumInputBufferSize    = 'mibs',
    kAudioConverterPropertyMinimumOutputBufferSize   = 'mobs',
    kAudioConverterPropertyMaximumInputBufferSize    = 'xibs',
@@ -82,6 +88,10 @@ OSStatus AudioConverterNew (
 );
 
 OSStatus AudioConverterDispose (
+   AudioConverterRef inAudioConverter
+);
+
+OSStatus AudioConverterReset (
    AudioConverterRef inAudioConverter
 );
 
