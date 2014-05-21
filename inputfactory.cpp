@@ -2,8 +2,6 @@
 #include "win32util.h"
 #ifdef QAAC
 #include "afsource.h"
-#else
-#include "alacsrc.h"
 #endif
 #include "flacsrc.h"
 #include "libsndfilesrc.h"
