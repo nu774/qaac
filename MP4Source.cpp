@@ -98,7 +98,7 @@ size_t MP4Source::readSamples(void *buffer, size_t nsamples)
     m_decode_buffer.reserve(fpp);
     ssize_t nframes = m_decoder->decode(m_decode_buffer.write_ptr(),
                                         fpp);
-    m_position_raw += fpp;
+    m_position_raw += nframes;
     int64_t trim = std::max(m_position_raw
                             - m_edits.mediaOffset(edit)
                             - m_edits.duration(edit)
@@ -106,7 +106,7 @@ size_t MP4Source::readSamples(void *buffer, size_t nsamples)
                             static_cast<int64_t>(0));
     if (trim > 0)
         nframes -= trim;
-    if (nframes < 0)
+    if (nframes <= 0)
         return 0;
     m_decode_buffer.commit(nframes);
     if (m_start_skip) {
@@ -135,6 +135,7 @@ void MP4Source::seekTo(int64_t count)
         return;
     }
     m_decoder->reset();
+    m_decode_buffer.reset();
     m_position = count;
     int64_t  mediapos  = m_edits.mediaOffsetForPosition(count);
     uint32_t fpp       = m_iasbd.mFramesPerPacket;
@@ -142,10 +143,11 @@ void MP4Source::seekTo(int64_t count)
     uint32_t preroll   = getMaxFrameDependency();
     m_position_raw     = ipacket * fpp;
     m_current_packet   = std::max(0LL, ipacket - preroll);
+    preroll            = ipacket - m_current_packet;
     m_start_skip = mediapos - ipacket * fpp + getDecoderDelay();
     
     std::vector<uint8_t> v(m_iasbd.mFramesPerPacket * m_oasbd.mBytesPerFrame);
-    while (m_current_packet < ipacket)
+    for (uint32_t i = 0; i < preroll; ++i)
         m_decoder->decode(v.data(), m_iasbd.mFramesPerPacket);
 }
 
