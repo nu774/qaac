@@ -1038,6 +1038,8 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     if (opts.isAAC())
         cautil::parseMagicCookieAAC(cookie, &asc);
 
+    if (ofilename != L"-") win32::fopen(ofilename, L"w");
+
     if (opts.is_adts)
         return std::make_shared<ADTSSink>(ofilename, asc);
     else if (opts.is_caf)
