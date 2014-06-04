@@ -25,7 +25,7 @@ struct Options {
     enum { kCBR, kABR, kCVBR, kTVBR };
 
     Options() :
-        method(-1), bitrate(-1), quality(-1),
+        method(-1), bitrate(-1.0), quality(-1),
 
         rate(-1), verbose(1), lowpass(0), native_resampler_quality(-1),
         chanmask(-1), num_priming(2112),
@@ -91,7 +91,7 @@ struct Options {
         else return L".aac";
     }
 
-    int32_t method, bitrate, quality;
+    int32_t method, quality;
     int rate; /* -1: keep, 0: auto, others: literal value */
     int verbose, lowpass, native_resampler_quality;
     int chanmask; /*     -1: honor chanmask in the source(default)
@@ -108,7 +108,7 @@ struct Options {
          normalize, print_available_formats, alac_fast, threading,
          concat, no_matrix_normalize, no_dither, filename_from_tag,
          sort_args, no_smart_padding;
-    double gain;
+    double bitrate, gain;
 
     uint32_t output_format;
     std::vector<DRCParams> drc_params;

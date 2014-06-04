@@ -679,21 +679,20 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     oasbd.mFormatID = opts.output_format;
     oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
 
-    double rate = opts.rate > 0 ? opts.rate
-                                : opts.rate == -1 ? iasbd.mSampleRate
-                                                  : 0;
-    if (!opts.isAAC()) {
-        oasbd.mSampleRate = rate > 0 ? rate : iasbd.mSampleRate;
-    }
+    double rate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
+    if (!opts.isAAC())
+        oasbd.mSampleRate = rate;
 #ifdef QAAC
     else {
-        if (rate > 0)
-            oasbd.mSampleRate =
-                codec->getClosestAvailableOutputSampleRate(rate);
+        double closest_rate = codec->getClosestAvailableOutputSampleRate(rate);
+        if (opts.rate != 0)
+            oasbd.mSampleRate = closest_rate;
         else {
             AudioChannelLayout acl = { 0 };
             acl.mChannelLayoutTag =
                 chanmap::getChannelLayoutForCodec(*channel_layout);
+            AudioStreamBasicDescription iiasbd = iasbd;
+            iiasbd.mSampleRate = closest_rate;
             AudioConverterX converter(iasbd, oasbd);
             converter.setInputChannelLayout(acl);
             converter.setOutputChannelLayout(acl);
@@ -1230,11 +1229,32 @@ void set_dll_directories(int verbose)
 }
 
 static
-void config_aac_codec(AudioConverterX &converter, const Options &opts)
+void config_aac_codec(AudioConverterX &converter,
+                      const Options &opts)
 {
     converter.setBitRateControlMode(opts.method);
+    double bitrate = opts.bitrate * 1000.0;
+    if (bitrate == 0.0)
+        bitrate = 1000.0 * 1000.0 * 1000.0;
+    else if (bitrate < 8000.0) {
+        bitrate /= 1000.0;
+        AudioStreamBasicDescription iasbd, oasbd;
+        converter.getInputStreamDescription(&iasbd);
+        converter.getOutputStreamDescription(&oasbd);
+        std::shared_ptr<AudioChannelLayout> layout;
+        converter.getOutputChannelLayout(&layout);
+
+        double rate = oasbd.mSampleRate ? oasbd.mSampleRate : iasbd.mSampleRate;
+        unsigned nchannels = oasbd.mChannelsPerFrame;
+        switch (layout->mChannelLayoutTag) {
+        case kAudioChannelLayoutTag_MPEG_5_1_D:
+        case kAudioChannelLayoutTag_AAC_6_1:
+        case kAudioChannelLayoutTag_MPEG_7_1_B:
+            --nchannels;
+        }
+        bitrate *= nchannels * rate;
+    }
     if (opts.method != Options::kTVBR) {
-        double bitrate = opts.bitrate ? opts.bitrate * 1000 : 0x7fffffff;
         bitrate = converter.getClosestAvailableBitRate(bitrate);
         converter.setEncodeBitRate(bitrate);
     } else {

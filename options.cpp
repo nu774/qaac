@@ -360,7 +360,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 return false;
             }
             this->method = pos;
-            if (std::swscanf(wide::optarg, L"%u", &this->bitrate) != 1) {
+            if (std::swscanf(wide::optarg, L"%lf", &this->bitrate) != 1) {
                 std::fputws(L"AAC Bitrate/Quality must be an integer.\n",
                             stderr);
                 return false;
