@@ -70,6 +70,8 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
                     double  len = m_file.GetTrackEditDuration(m_track_id, i);
                     len /= m_file.GetTimeScale();
                     len *= m_file.GetTrackTimeScale(m_track_id);
+                    if (len == 0.0)
+                        len = m_file.GetTrackDuration(m_track_id) - off;
                     m_edits.addEntry(off, len + .5);
                 }
             }
