@@ -79,10 +79,9 @@ void load_metadata_files(Options *opts)
         }
     }
     try {
-        std::map<uint32_t, std::wstring>::iterator it
-            = opts->tagopts.find(Tag::kLyrics);
-        if (it != opts->tagopts.end())
-            it->second = load_text_file(it->second.c_str(), opts->textcp);
+        auto tag = opts->tagopts.find(Tag::kLyrics);
+        if (tag != opts->tagopts.end())
+            tag->second = load_text_file(tag->second.c_str(), opts->textcp);
     } catch (const std::exception &e) {
         LOG(L"WARNING: %s\n", errormsg(e).c_str());
     }
@@ -92,9 +91,8 @@ void load_metadata_files(Options *opts)
             char *data = win32::load_with_mmap(opts->artwork_files[i].c_str(),
                                                &size);
             std::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
-            mp4v2::impl::itmf::BasicType tc =
-                mp4v2::impl::itmf::computeBasicType(data, size);
-            if (tc == mp4v2::impl::itmf::BT_IMPLICIT)
+            auto type = mp4v2::impl::itmf::computeBasicType(data, size);
+            if (type == mp4v2::impl::itmf::BT_IMPLICIT)
                 throw std::runtime_error("Unknown artwork image type");
             std::vector<char> vec(data, data + size);
             if (opts->artwork_size)
@@ -1477,20 +1475,15 @@ void load_track(const wchar_t *ifilename, const Options &opts,
     std::wstring ofilename(name);
     std::wstring title(name, PathFindExtensionW(name));
 
-    std::shared_ptr<ISeekableSource>
-        src(input::factory()->open(ifilename));
-
-    ITagParser *parser = dynamic_cast<ITagParser*>(src.get());
+    auto src(input::factory()->open(ifilename));
+    auto parser = dynamic_cast<ITagParser*>(src.get());
     if (parser) {
-        const std::map<std::string, std::string> &meta =
-            parser->getTags();
-        std::map<std::string, std::string>::const_iterator it
-            = meta.find("title");
-        if (it != meta.end())
-            title = strutil::us2w(it->second);
+        auto meta = parser->getTags();
+        auto tag = meta.find("title");
+        if (tag != meta.end())
+            title = strutil::us2w(tag->second);
         if (opts.filename_from_tag) {
-            std::wstring fn =
-                playlist::generateFileName(opts.fname_format, meta);
+            auto fn = playlist::generateFileName(opts.fname_format, meta);
             if (fn.size()) ofilename = fn + L".stub";
         }
     }
