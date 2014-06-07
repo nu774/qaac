@@ -24,6 +24,7 @@
 #include "mixer.h"
 #include "Quantizer.h"
 #include "scaler.h"
+#include "limiter.h"
 #include "pipedreader.h"
 #include "TrimmedSource.h"
 #include "chanmap.h"
@@ -778,6 +779,12 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 opts.gain, scale);
         std::shared_ptr<ISource> scaler(new Scaler(chain.back(), scale));
         chain.push_back(scaler);
+    }
+    if (opts.limiter) {
+        if (opts.verbose > 1 || opts.logfilename)
+            LOG(L"Limiter on\n");
+        std::shared_ptr<ISource> limiter(new Limiter(chain.back()));
+        chain.push_back(limiter);
     }
     if (opts.bits_per_sample) {
         bool is_float = (opts.bits_per_sample == 32 && !opts.isALAC());

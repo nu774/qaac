@@ -33,6 +33,7 @@ static wide::option long_options[] = {
     { L"normalize", no_argument, 0, 'N' },
     { L"gain", required_argument, 0, 'gain' },
     { L"drc", required_argument, 0, 'drc ' },
+    { L"limiter", no_argument, 0, 'limt' },
     { L"delay", required_argument, 0, 'dlay' },
     { L"no-delay", no_argument, 0, 'ndly' },
     { L"num-priming", required_argument, 0, 'encd' },
@@ -181,6 +182,8 @@ void usage()
 "                         knee:    knee width (in dB, >= 0.0)\n"
 "                         attack:  attack time (in millis, >= 0.0)\n"
 "                         release: release time (in millis, >= 0.0)\n"
+"--limiter              Apply smart limiter that softly clips portions\n"
+"                       where peak exceeds (near) 0dBFS\n"
 "--delay <[[hh:]mm:]ss[.ss..]|ns>\n"
 "                       Specify delay either by time or number of samples.\n"
 "                       When positive value is given, silence is prepended\n"
@@ -601,6 +604,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->drc_params.push_back(DRCParams(threshold, ratio, knee,
                                                  attack, release));
         }
+        else if (ch == 'limt')
+            this->limiter = true;
         else if (ch == 'dlay')
             this->delay = wide::optarg;
         else if (ch == 'ndly')
