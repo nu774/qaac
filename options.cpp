@@ -34,6 +34,8 @@ static wide::option long_options[] = {
     { L"gain", required_argument, 0, 'gain' },
     { L"drc", required_argument, 0, 'drc ' },
     { L"limiter", no_argument, 0, 'limt' },
+    { L"start", required_argument, 0, 'from' },
+    { L"end", required_argument, 0, 'end ' },
     { L"delay", required_argument, 0, 'dlay' },
     { L"no-delay", no_argument, 0, 'ndly' },
     { L"num-priming", required_argument, 0, 'encd' },
@@ -184,15 +186,23 @@ void usage()
 "                         release: release time (in millis, >= 0.0)\n"
 "--limiter              Apply smart limiter that softly clips portions\n"
 "                       where peak exceeds (near) 0dBFS\n"
-"--delay <[[hh:]mm:]ss[.ss..]|ns>\n"
-"                       Specify delay either by time or number of samples.\n"
+"--start <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
+"                       Specify start point of the input.\n"
+"                       You specify either in seconds(hh:mm:ss.sss..form) or\n"
+"                       number of samples followed by 's' or\n"
+"                       cuesheet frames(mm:ss:ff form) followed by 'f'.\n"
+"                       Example:\n"
+"                         --start 4010160s : start at 4010160 samples\n"
+"                         --start 1:30:70f : same as above, in cuepoint\n"
+"                         --start 1:30.93333 : same as above\n"
+"--end <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
+"                       Specify end point of the input (exclusive).\n"
+"--delay <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
+"                       Specify amount of delay.\n"
 "                       When positive value is given, silence is prepended\n"
 "                       at the begining to achieve specified amount of delay.\n"
 "                       When negative value is given, specified length is\n"
 "                       dropped from the beginning.\n"
-"                       Example:\n"
-"                         --delay -2112s : trim 2112 samples at beginning\n"
-"                         --delay 1.234  : prepend 1.234 seconds silence\n"
 "--no-delay             Compensate encoder delay by prepending 960 samples \n"
 "                       of scilence, then trimming 3 AAC frames from \n"
 "                       the beginning (and also tweak iTunSMPB).\n"
@@ -606,6 +616,10 @@ bool Options::parse(int &argc, wchar_t **&argv)
         }
         else if (ch == 'limt')
             this->limiter = true;
+        else if (ch == 'from')
+            this->start = wide::optarg;
+        else if (ch == 'end ')
+            this->end = wide::optarg;
         else if (ch == 'dlay')
             this->delay = wide::optarg;
         else if (ch == 'ndly')

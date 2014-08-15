@@ -37,7 +37,7 @@ struct Options {
         ofilename(0), outdir(0), raw_format(L"S16LE"),
         fname_format(L"${tracknumber}${title& }${title}"),
         chapter_file(0), logfilename(0), remix_preset(0), remix_file(0),
-        tmpdir(0), delay(0),
+        tmpdir(0), start(0), end(0), delay(0),
 
         is_raw(false), is_adts(false), is_caf(false),
         save_stat(false), nice(false), native_chanmapper(false),
@@ -102,7 +102,8 @@ struct Options {
              artwork_size, native_resampler_complexity, textcp,
              gapless_mode;
     wchar_t *ofilename, *outdir, *raw_format, *fname_format, *chapter_file,
-            *logfilename, *remix_preset, *remix_file, *tmpdir, *delay;
+            *logfilename, *remix_preset, *remix_file, *tmpdir,
+            *start, *end, *delay;
     bool is_raw, is_adts, is_caf, save_stat, nice, native_chanmapper,
          ignore_length, no_optimize, native_resampler, check_only,
          normalize, print_available_formats, alac_fast, threading,

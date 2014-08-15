@@ -543,7 +543,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
 static
 bool parse_timespec(const wchar_t *spec, double sample_rate, int64_t *result)
 {
-    int hh, mm, sign = 1;
+    int hh, mm, s, ff, sign = 1;
     wchar_t a, b;
     double ss;
     if (!spec || !*spec)
@@ -554,7 +554,10 @@ bool parse_timespec(const wchar_t *spec, double sample_rate, int64_t *result)
         sign = -1;
         ++spec;
     }
-    if (std::swscanf(spec, L"%d:%d:%lf%c", &hh, &mm, &ss, &a) == 3)
+    if (std::swscanf(spec, L"%d:%d:%d%c%c", &mm, &s, &ff, &a, &b) == 4 &&
+        a == L'f')
+        ss = mm * 60 + s + ff / 75.0;
+    else if (std::swscanf(spec, L"%d:%d:%lf%c", &hh, &mm, &ss, &a) == 3)
         ss = ss + ((hh * 60.0) + mm) * 60.0;
     else if (std::swscanf(spec, L"%d:%lf%c", &mm, &ss, &a) == 2)
         ss = ss + mm * 60.0;
@@ -567,19 +570,27 @@ bool parse_timespec(const wchar_t *spec, double sample_rate, int64_t *result)
 
 static
 std::shared_ptr<ISeekableSource>
-delayed_source(const std::shared_ptr<ISeekableSource> &src,
-               const Options & opts)
+select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     double rate = asbd.mSampleRate;
-    int64_t delay = 0;
-    if (!opts.delay)
+    int64_t start = 0, end = 0, delay = 0;
+    if (!opts.start && !opts.end && !opts.delay)
         return src;
+    if (opts.start && !parse_timespec(opts.start, rate, &start))
+        throw std::runtime_error("Invalid time spec for --start");
+    if (opts.end   && !parse_timespec(opts.end, rate, &end))
+        throw std::runtime_error("Invalid time spec for --end");
     if (opts.delay && !parse_timespec(opts.delay, rate, &delay))
         throw std::runtime_error("Invalid time spec for --delay");
 
     std::shared_ptr<CompositeSource> cp(new CompositeSource());
     std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
+
+    if (start > 0 || end > 0)
+        src = std::make_shared<TrimmedSource>(src, start,
+                                              end ? std::max(0LL, end - start)
+                                                  : ~0ULL);
 
     if (delay > 0) {
         if (opts.verbose > 1 || opts.logfilename)
@@ -1726,7 +1737,7 @@ int wmain1(int argc, wchar_t **argv)
                     ofn = PathFindFileNameW(ofilename.c_str());
                 LOG(L"\n%s\n", ofn);
                 std::shared_ptr<ISeekableSource> src =
-                    delayed_source(track.source, opts);
+                    select_timeline(track.source, opts);
                 src->seekTo(0);
                 encode_file(src, ofilename, opts);
             }
@@ -1759,7 +1770,7 @@ int wmain1(int argc, wchar_t **argv)
                     }
                     cs->addSourceWithChapter(track->source, track->name);
                 }
-                std::shared_ptr<ISeekableSource> src(delayed_source(cs, opts));
+                std::shared_ptr<ISeekableSource> src(select_timeline(cs, opts));
                 src->seekTo(0);
 #ifdef REFALAC
                 encode_file(src, ofilename, opts);
