@@ -768,13 +768,19 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 L"     Attack %gms Release %gms\n",
                 p.m_threshold, p.m_ratio, p.m_knee_width,
                 p.m_attack, p.m_release);
+        std::shared_ptr<FILE> stat_file;
+        if (p.m_stat_file) {
+            FILE *fp = win32::wfopenx(p.m_stat_file, L"wb");
+            stat_file = std::shared_ptr<FILE>(fp, std::fclose);
+        }
         std::shared_ptr<ISource>
             compressor(new Compressor(chain.back(),
                                       p.m_threshold,
                                       p.m_ratio,
                                       p.m_knee_width,
                                       p.m_attack,
-                                      p.m_release));
+                                      p.m_release,
+                                      stat_file));
         chain.push_back(compressor);
     }
     if (normalize_pass) {

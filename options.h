@@ -7,15 +7,19 @@
 #include "chapters.h"
 
 struct DRCParams {
-    double m_threshold, m_ratio, m_knee_width, m_attack, m_release;
+    double   m_threshold, m_ratio, m_knee_width, m_attack, m_release;
+    wchar_t *m_stat_file;
+
     DRCParams():
         m_threshold(0.0), m_ratio(0.0), m_knee_width(0.0),
-        m_attack(0.0), m_release(0.0)
+        m_attack(0.0), m_release(0.0),
+        m_stat_file(0)
     {}
     DRCParams(double threshold, double ratio, double knee_width,
-              double attack, double release)
+              double attack, double release, wchar_t *stat_file)
         : m_threshold(threshold), m_ratio(ratio), m_knee_width(knee_width),
-          m_attack(attack), m_release(release)
+          m_attack(attack), m_release(release),
+          m_stat_file(stat_file)
     {}
 };
 

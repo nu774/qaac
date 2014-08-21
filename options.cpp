@@ -611,8 +611,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
                             stderr);
                 return false;
             }
+            wchar_t *p = wide::optarg;
+            for (int i = 0; i < 5; ++i) {
+                p = wcschr(p, L':');
+                if (p) ++p;
+            }
             this->drc_params.push_back(DRCParams(threshold, ratio, knee,
-                                                 attack, release));
+                                                 attack, release, p));
         }
         else if (ch == 'limt')
             this->limiter = true;

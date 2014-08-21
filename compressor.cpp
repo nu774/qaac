@@ -15,7 +15,8 @@ namespace {
 
 Compressor::Compressor(const std::shared_ptr<ISource> &src,
                        double threshold, double ratio, double knee_width,
-                       double attack, double release)
+                       double attack, double release,
+                       std::shared_ptr<FILE> statfp)
     : FilterBase(src),
       m_threshold(threshold),
       m_slope((1.0 - ratio) / ratio),
@@ -26,7 +27,8 @@ Compressor::Compressor(const std::shared_ptr<ISource> &src,
       m_Thi(threshold + knee_width / 2.0),
       m_knee_factor(m_slope / (knee_width * 2.0)),
       m_yR(0.0),
-      m_yA(0.0)
+      m_yA(0.0),
+      m_statfile(statfp)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     unsigned bits = 32;
@@ -36,6 +38,12 @@ Compressor::Compressor(const std::shared_ptr<ISource> &src,
         bits = 64;
     m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
                                      bits, kAudioFormatFlagIsFloat);
+    if (m_statfile.get()) {
+        AudioStreamBasicDescription asbd =
+            cautil::buildASBDForPCM(m_asbd.mSampleRate, 1,
+                                    32, kAudioFormatFlagIsFloat);
+        m_statsink = std::make_shared<WaveSink>(m_statfile.get(), ~0ULL, asbd);
+    }
 }
 
 size_t Compressor::readSamples(void *buffer, size_t nsamples)
@@ -58,6 +66,9 @@ size_t Compressor::readSamplesT(T *buffer, size_t nsamples)
 
     nsamples = readSamplesAsFloat(source(), &m_pivot, buffer, nsamples);
 
+    if (m_statbuf.size() < nsamples)
+        m_statbuf.resize(nsamples);
+
     for (size_t i = 0; i < nsamples; ++i) {
         T *frame = &buffer[i * nchannels];
         double xL = frame_amplitude(frame, nchannels);
@@ -67,6 +78,13 @@ size_t Compressor::readSamplesT(T *buffer, size_t nsamples)
         T cL = static_cast<T>(util::dB_to_scale(cG));
         for (unsigned n = 0; n < nchannels; ++n)
             frame[n] *= cL;
+        m_statbuf[i] = cL;
+    }
+    if (m_statsink.get()) {
+        m_statsink->writeSamples(m_statbuf.data(), nsamples * sizeof(float),
+                                 nsamples);
+        if (nsamples == 0)
+            m_statsink->finishWrite();
     }
     return nsamples;
 }

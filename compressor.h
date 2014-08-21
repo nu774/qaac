@@ -3,6 +3,7 @@
 
 #include "iointer.h"
 #include "util.h"
+#include "wavsink.h"
 
 class Compressor: public FilterBase {
     const double m_threshold;
@@ -19,10 +20,15 @@ class Compressor: public FilterBase {
     double m_yA;
     std::vector<uint8_t > m_pivot;
     AudioStreamBasicDescription m_asbd;
+
+    std::shared_ptr<FILE> m_statfile;
+    std::shared_ptr<WaveSink> m_statsink;
+    std::vector<float> m_statbuf;
 public:
     Compressor(const std::shared_ptr<ISource> &src,
                double threshold, double ratio, double knee_width,
-               double attack, double release);
+               double attack, double release,
+               std::shared_ptr<FILE> statfp);
     const AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
