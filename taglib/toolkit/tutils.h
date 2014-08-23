@@ -44,6 +44,8 @@
 # include <sys/endian.h>
 #endif
 
+#include <cstring>
+
 namespace TagLib
 {
   namespace Utils
@@ -155,11 +157,11 @@ namespace TagLib
 
 # if SYSTEM_BYTEORDER == 1
 
-    const ByteOrder SystemByteOrder = LittleEndian; 
+    const ByteOrder SystemByteOrder = LittleEndian;
 
 # else
 
-    const ByteOrder SystemByteOrder = BigEndian; 
+    const ByteOrder SystemByteOrder = BigEndian;
 
 # endif
 
@@ -178,8 +180,40 @@ namespace TagLib
       else
         return BigEndian;
     }
-    
-    const ByteOrder SystemByteOrder = systemByteOrder(); 
+
+    const ByteOrder SystemByteOrder = systemByteOrder();
+
+#endif
+
+#ifdef FLOAT_BYTEORDER
+
+# if FLOAT_BYTEORDER == 1
+
+    const ByteOrder FloatByteOrder = LittleEndian;
+
+# else
+
+    const ByteOrder FloatByteOrder = BigEndian;
+
+# endif
+
+#else
+
+    inline ByteOrder floatByteOrder()
+    {
+        double bin[] = {
+            // "*TAGLIB*" encoded as a little-endian floating-point number
+            (double) 3.9865557444897601e-105, (double) 0.0
+        };
+
+        char *str = (char*)&bin[0];
+        if(strncmp(&str[1], "TAGLIB", 6) == 0)
+          return LittleEndian;
+        else
+          return BigEndian;
+    }
+
+    const ByteOrder FloatByteOrder = floatByteOrder();
 
 #endif
   }

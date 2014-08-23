@@ -163,7 +163,6 @@ namespace TagLib {
      */
     String(wchar_t c, Type t = Latin1);
 
-
     /*!
      * Makes a deep copy of the data in \a s.
      *
@@ -173,10 +172,7 @@ namespace TagLib {
     String(const char *s, Type t = Latin1);
 
     /*!
-     * Makes a deep copy of the data in \a s.
-     *
-     * \note This should only be used with the 8-bit codecs Latin1 and UTF8, when
-     * used with other codecs it will simply print a warning and exit.
+     * Makes a deep copy of the data in \a v.
      */
     String(const ByteVector &v, Type t = Latin1);
 
@@ -334,6 +330,9 @@ namespace TagLib {
      * UTF8, this will return a vector of 8 bit characters, otherwise it will use
      * 16 bit characters.
      *
+     * \note If \a t is UTF16, the returned data is encoded in little-endian
+     * format and has a BOM.
+     *
      * \note The returned data is not null terminated.
      */
     ByteVector data(Type t) const;
@@ -397,6 +396,30 @@ namespace TagLib {
      * returns false if the strings match.
      */
     bool operator!=(const String &s) const;
+
+    /*!
+     * Compares each character of the String with each character of \a s and
+     * returns true if the strings match.
+     */
+    bool operator==(const char *s) const;
+
+    /*!
+     * Compares each character of the String with each character of \a s and
+     * returns false if the strings match.
+     */
+    bool operator!=(const char *s) const;
+
+    /*!
+     * Compares each character of the String with each character of \a s and
+     * returns true if the strings match.
+     */
+    bool operator==(const wchar_t *s) const;
+
+    /*!
+     * Compares each character of the String with each character of \a s and
+     * returns false if the strings match.
+     */
+    bool operator!=(const wchar_t *s) const;
 
     /*!
      * Appends \a s to the end of the String.

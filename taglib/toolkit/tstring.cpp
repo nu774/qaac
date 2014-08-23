@@ -48,11 +48,6 @@
 namespace
 {
 
-  inline unsigned short combine(unsigned char c1, unsigned char c2)
-  {
-    return (c1 << 8) | c2;
-  }
-
   void UTF16toUTF8(const wchar_t *src, size_t srcLength, char *dst, size_t dstLength)
   {
 #ifdef HAVE_STD_CODECVT
@@ -75,7 +70,7 @@ namespace
       st, srcBegin, srcEnd, source, dstBegin, dstEnd, target);
 
     if(result != utf8_utf16_t::ok) {
-      debug("String::copyFromUTF8() - Unicode conversion error.");
+      debug("String::UTF16toUTF8() - Unicode conversion error.");
     }
 
 #else
@@ -93,7 +88,7 @@ namespace
       &srcBegin, srcEnd, &dstBegin, dstEnd, Unicode::lenientConversion);
 
     if(result != Unicode::conversionOK) {
-      debug("String::to8Bit() - Unicode conversion error.");
+      debug("String::UTF16toUTF8() - Unicode conversion error.");
     }
 
 #endif
@@ -121,7 +116,7 @@ namespace
       st, srcBegin, srcEnd, source, dstBegin, dstEnd, target);
 
     if(result != utf8_utf16_t::ok) {
-      debug("String::copyFromUTF8() - Unicode conversion error.");
+      debug("String::UTF8toUTF16() - Unicode conversion error.");
     }
 
 #else
@@ -139,7 +134,7 @@ namespace
       &srcBegin, srcEnd, &dstBegin, dstEnd, Unicode::lenientConversion);
 
     if(result != Unicode::conversionOK) {
-      debug("String::copyFromUTF8() - Unicode conversion error.");
+      debug("String::UTF8toUTF16() - Unicode conversion error.");
     }
 
 #endif
@@ -202,7 +197,7 @@ String::String(const std::string &s, Type t)
   else if(t == String::UTF8)
     copyFromUTF8(s.c_str(), s.length());
   else {
-    debug("String::String() -- A std::string should not contain UTF16.");
+    debug("String::String() -- std::string should not contain UTF16.");
   }
 }
 
@@ -220,7 +215,7 @@ String::String(const wstring &s, Type t)
     copyFromUTF16(s.c_str(), s.length(), t);
   }
   else {
-    debug("String::String() -- A TagLib::wstring should not contain Latin1 or UTF-8.");
+    debug("String::String() -- TagLib::wstring should not contain Latin1 or UTF-8.");
   }
 }
 
@@ -238,7 +233,7 @@ String::String(const wchar_t *s, Type t)
     copyFromUTF16(s, ::wcslen(s), t);
   }
   else {
-    debug("String::String() -- A const wchar_t * should not contain Latin1 or UTF-8.");
+    debug("String::String() -- const wchar_t * should not contain Latin1 or UTF-8.");
   }
 }
 
@@ -250,7 +245,7 @@ String::String(const char *s, Type t)
   else if(t == String::UTF8)
     copyFromUTF8(s, ::strlen(s));
   else {
-    debug("String::String() -- A const char * should not contain UTF16.");
+    debug("String::String() -- const char * should not contain UTF16.");
   }
 }
 
@@ -260,7 +255,7 @@ String::String(wchar_t c, Type t)
   if(t == UTF16 || t == UTF16BE || t == UTF16LE)
     copyFromUTF16(&c, 1, t);
   else {
-    debug("String::String() -- A const wchar_t should not contain Latin1 or UTF-8.");
+    debug("String::String() -- wchar_t should not contain Latin1 or UTF-8.");
   }
 }
 
@@ -268,7 +263,7 @@ String::String(char c, Type t)
   : d(new StringPrivate(1, static_cast<uchar>(c)))
 {
   if(t != Latin1 && t != UTF8) {
-    debug("String::String() -- A char should not contain UTF16.");
+    debug("String::String() -- char should not contain UTF16.");
   }
 }
 
@@ -321,6 +316,7 @@ const wchar_t *String::toCWString() const
 
 String::Iterator String::begin()
 {
+  detach();
   return d->data.begin();
 }
 
@@ -331,6 +327,7 @@ String::ConstIterator String::begin() const
 
 String::Iterator String::end()
 {
+  detach();
   return d->data.end();
 }
 
@@ -352,16 +349,13 @@ int String::rfind(const String &s, int offset) const
 StringList String::split(const String &separator) const
 {
   StringList list;
-  for(int index = 0;;)
-  {
+  for(int index = 0;;) {
     int sep = find(separator, index);
-    if(sep < 0)
-    {
+    if(sep < 0) {
       list.append(substr(index, size() - index));
       break;
     }
-    else
-    {
+    else {
       list.append(substr(index, sep - index));
       index = sep + separator.size();
     }
@@ -457,8 +451,7 @@ ByteVector String::data(Type t) const
       ByteVector v(2 + size() * 2, 0);
       char *p = v.data();
 
-      // Assume that if we're doing UTF16 and not UTF16BE that we want little
-      // endian encoding.  (Byte Order Mark)
+      // We use little-endian encoding here and need a BOM.
 
       *p++ = '\xff';
       *p++ = '\xfe';
@@ -613,12 +606,38 @@ const TagLib::wchar &String::operator[](int i) const
 
 bool String::operator==(const String &s) const
 {
-  return d == s.d || d->data == s.d->data;
+  return (d == s.d || d->data == s.d->data);
 }
 
 bool String::operator!=(const String &s) const
 {
-  return !operator==(s);
+  return !(*this == s);
+}
+
+bool String::operator==(const char *s) const
+{
+  const wchar_t *p = toCWString();
+
+  while(*p != L'\0' || *s != '\0') {
+    if(*p++ != static_cast<uchar>(*s++))
+      return false;
+  }
+  return true;
+}
+
+bool String::operator!=(const char *s) const
+{
+  return !(*this == s);
+}
+
+bool String::operator==(const wchar_t *s) const
+{
+  return (d->data == s);
+}
+
+bool String::operator!=(const wchar_t *s) const
+{
+  return !(*this == s);
 }
 
 String &String::operator+=(const String &s)
@@ -845,7 +864,12 @@ void String::copyFromUTF16(const char *s, size_t length, Type t)
 
   d->data.resize(length / 2);
   for(size_t i = 0; i < length / 2; ++i) {
-    d->data[i] = swap ? combine(*s, *(s + 1)) : combine(*(s + 1), *s);
+    ushort c;
+    ::memcpy(&c, s, 2);
+    if(swap)
+      c = Utils::byteSwap(c);
+
+    d->data[i] = static_cast<wchar_t>(c);
     s += 2;
   }
 }

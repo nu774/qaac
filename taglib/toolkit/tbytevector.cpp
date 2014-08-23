@@ -29,6 +29,8 @@
 
 #include <algorithm>
 #include <iostream>
+#include <limits>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <cstddef>
@@ -100,7 +102,7 @@ static const uint crcTable[256] = {
 };
 
 /*!
-  * A templatized straightforward find that works with the types 
+  * A templatized straightforward find that works with the types
   * std::vector<char>::iterator and std::vector<char>::reverse_iterator.
   */
 template <class TIterator>
@@ -109,7 +111,7 @@ int findChar(
   char c, uint offset, int byteAlign)
 {
   const size_t dataSize = dataEnd - dataBegin;
-  if(dataSize == 0 || offset > dataSize - 1)
+  if(offset + 1 > dataSize)
     return -1;
 
   // n % 0 is invalid
@@ -126,7 +128,7 @@ int findChar(
 }
 
 /*!
-  * A templatized KMP find that works with the types 
+  * A templatized KMP find that works with the types
   * std::vector<char>::iterator and std::vector<char>::reverse_iterator.
   */
 template <class TIterator>
@@ -137,7 +139,7 @@ int findVector(
 {
   const size_t dataSize    = dataEnd    - dataBegin;
   const size_t patternSize = patternEnd - patternBegin;
-  if(patternSize > dataSize || offset > dataSize - 1)
+  if(patternSize == 0 || offset + patternSize > dataSize)
     return -1;
 
   // n % 0 is invalid
@@ -159,15 +161,12 @@ int findVector(
     lastOccurrence[static_cast<uchar>(*(patternBegin + i))] = patternSize - i - 1;
 
   TIterator it = dataBegin + patternSize - 1 + offset;
-  while(true)
-  {
+  while(true) {
     TIterator itBuffer = it;
     TIterator itPattern = patternBegin + patternSize - 1;
 
-    while(*itBuffer == *itPattern)
-    {
-      if(itPattern == patternBegin)
-      {
+    while(*itBuffer == *itPattern) {
+      if(itPattern == patternBegin) {
         if((itBuffer - dataBegin - offset) % byteAlign == 0)
           return (itBuffer - dataBegin);
         else
@@ -213,7 +212,7 @@ T toNumber(const ByteVector &v, size_t offset, bool mostSignificantByteFirst)
   static const bool isBigEndian = (Utils::SystemByteOrder == Utils::BigEndian);
   const bool swap = (mostSignificantByteFirst != isBigEndian);
 
-  if(offset + sizeof(T) > v.size()) 
+  if(offset + sizeof(T) > v.size())
     return toNumber<T>(v, offset, v.size() - offset, mostSignificantByteFirst);
 
   // Uses memcpy instead of reinterpret_cast to avoid an alignment exception.
@@ -238,6 +237,95 @@ ByteVector fromNumber(T value, bool mostSignificantByteFirst)
   return ByteVector(reinterpret_cast<const char *>(&value), sizeof(T));
 }
 
+template <typename TFloat, typename TInt, Utils::ByteOrder ENDIAN>
+TFloat toFloat(const ByteVector &v, size_t offset)
+{
+  if(offset > v.size() - sizeof(TInt)) {
+    debug("toFloat() - offset is out of range. Returning 0.");
+    return 0.0;
+  }
+
+  union {
+    TInt   i;
+    TFloat f;
+  } tmp;
+  ::memcpy(&tmp, v.data() + offset, sizeof(TInt));
+
+  if(ENDIAN != Utils::FloatByteOrder)
+    tmp.i = Utils::byteSwap(tmp.i);
+
+  return tmp.f;
+}
+
+template <typename TFloat, typename TInt, Utils::ByteOrder ENDIAN>
+ByteVector fromFloat(TFloat value)
+{
+  union {
+    TInt   i;
+    TFloat f;
+  } tmp;
+  tmp.f = value;
+
+  if(ENDIAN != Utils::FloatByteOrder)
+    tmp.i = Utils::byteSwap(tmp.i);
+
+  return ByteVector(reinterpret_cast<char *>(&tmp), sizeof(TInt));
+}
+
+template <Utils::ByteOrder ENDIAN>
+long double toFloat80(const ByteVector &v, size_t offset)
+{
+  if(offset > v.size() - 10) {
+    debug("toFloat80() - offset is out of range. Returning 0.");
+    return 0.0;
+  }
+
+  uchar bytes[10];
+  ::memcpy(bytes, v.data() + offset, 10);
+
+  if(ENDIAN == Utils::LittleEndian) {
+    std::swap(bytes[0], bytes[9]);
+    std::swap(bytes[1], bytes[8]);
+    std::swap(bytes[2], bytes[7]);
+    std::swap(bytes[3], bytes[6]);
+    std::swap(bytes[4], bytes[5]);
+  }
+
+  // 1-bit sign
+  const bool negative = ((bytes[0] & 0x80) != 0);
+
+  // 15-bit exponent
+  const int exponent = ((bytes[0] & 0x7F) << 8) | bytes[1];
+
+  // 64-bit fraction. Leading 1 is explicit.
+  const ulonglong fraction
+    = (static_cast<ulonglong>(bytes[2]) << 56)
+    | (static_cast<ulonglong>(bytes[3]) << 48)
+    | (static_cast<ulonglong>(bytes[4]) << 40)
+    | (static_cast<ulonglong>(bytes[5]) << 32)
+    | (static_cast<ulonglong>(bytes[6]) << 24)
+    | (static_cast<ulonglong>(bytes[7]) << 16)
+    | (static_cast<ulonglong>(bytes[8]) <<  8)
+    | (static_cast<ulonglong>(bytes[9]));
+
+  long double val;
+  if(exponent == 0 && fraction == 0)
+    val = 0;
+  else {
+    if(exponent == 0x7FFF) {
+      debug("toFloat80() - can't handle the infinity or NaN. Returning 0.");
+      return 0.0;
+    }
+    else
+      val = ::ldexp(static_cast<long double>(fraction), exponent - 16383 - 63);
+  }
+
+  if(negative)
+    return -val;
+  else
+    return val;
+}
+
 class DataPrivate : public RefCounter
 {
 public:
@@ -245,8 +333,8 @@ public:
   {
   }
 
-  DataPrivate(const std::vector<char> &v, uint offset, uint length) 
-    : data(v.begin() + offset, v.begin() + offset + length) 
+  DataPrivate(const std::vector<char> &v, uint offset, uint length)
+    : data(v.begin() + offset, v.begin() + offset + length)
   {
   }
 
@@ -256,8 +344,8 @@ public:
   {
   }
 
-  DataPrivate(uint len, char c) 
-    : data(len, c) 
+  DataPrivate(uint len, char c)
+    : data(len, c)
   {
   }
 
@@ -267,11 +355,11 @@ public:
 class ByteVector::ByteVectorPrivate : public RefCounter
 {
 public:
-  ByteVectorPrivate() 
+  ByteVectorPrivate()
     : RefCounter()
     , data(new DataPrivate())
     , offset(0)
-    , length(0) 
+    , length(0)
   {
   }
 
@@ -292,7 +380,7 @@ public:
   {
   }
 
-  ByteVectorPrivate(uint l, char c) 
+  ByteVectorPrivate(uint l, char c)
     : RefCounter()
     , data(new DataPrivate(l, c))
     , offset(0)
@@ -300,14 +388,14 @@ public:
   {
   }
 
-  ByteVectorPrivate(const char *s, uint l) 
+  ByteVectorPrivate(const char *s, uint l)
     : RefCounter()
     , data(new DataPrivate(s, s + l))
     , offset(0)
     , length(l)
   {
   }
-  
+
   void detach()
   {
     if(data->count() > 1) {
@@ -371,6 +459,26 @@ ByteVector ByteVector::fromLongLong(long long value, bool mostSignificantByteFir
   return fromNumber<unsigned long long>(value, mostSignificantByteFirst);
 }
 
+ByteVector ByteVector::fromFloat32LE(float value)
+{
+  return fromFloat<float, uint, Utils::LittleEndian>(value);
+}
+
+ByteVector ByteVector::fromFloat32BE(float value)
+{
+  return fromFloat<float, uint, Utils::BigEndian>(value);
+}
+
+ByteVector ByteVector::fromFloat64LE(double value)
+{
+  return fromFloat<double, ulonglong, Utils::LittleEndian>(value);
+}
+
+ByteVector ByteVector::fromFloat64BE(double value)
+{
+  return fromFloat<double, ulonglong, Utils::BigEndian>(value);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // public members
 ////////////////////////////////////////////////////////////////////////////////
@@ -385,7 +493,7 @@ ByteVector::ByteVector(uint size, char value)
 {
 }
 
-ByteVector::ByteVector(const ByteVector &v) 
+ByteVector::ByteVector(const ByteVector &v)
   : d(v.d)
 {
   d->ref();
@@ -488,9 +596,9 @@ bool ByteVector::containsAt(const ByteVector &pattern, uint offset, uint pattern
 
   // do some sanity checking -- all of these things are needed for the search to be valid
   const uint compareLength = patternLength - patternOffset;
-  if(offset + compareLength > size() || patternOffset >= pattern.size() || patternLength == 0)    
+  if(offset + compareLength > size() || patternOffset >= pattern.size() || patternLength == 0)
     return false;
-  
+
   return (::memcmp(data() + offset, pattern.data() + patternOffset, compareLength) == 0);
 }
 
@@ -512,7 +620,7 @@ ByteVector &ByteVector::replace(const ByteVector &pattern, const ByteVector &wit
   const size_t withSize    = with.size();
   const size_t patternSize = pattern.size();
   const ptrdiff_t diff = withSize - patternSize;
-  
+
   size_t offset = 0;
   while (true)
   {
@@ -524,16 +632,16 @@ ByteVector &ByteVector::replace(const ByteVector &pattern, const ByteVector &wit
 
     if(diff < 0) {
       ::memmove(
-        data() + offset + withSize, 
-        data() + offset + patternSize, 
+        data() + offset + withSize,
+        data() + offset + patternSize,
         size() - offset - patternSize);
       resize(size() + diff);
     }
     else if(diff > 0) {
       resize(size() + diff);
       ::memmove(
-        data() + offset + withSize, 
-        data() + offset + patternSize, 
+        data() + offset + withSize,
+        data() + offset + patternSize,
         size() - diff - offset - patternSize);
     }
 
@@ -603,7 +711,8 @@ ByteVector &ByteVector::resize(uint size, char padding)
 
 ByteVector::Iterator ByteVector::begin()
 {
-  return d->data->data.begin() + d->offset;
+  detach();
+  return d->data->data.begin();
 }
 
 ByteVector::ConstIterator ByteVector::begin() const
@@ -613,7 +722,8 @@ ByteVector::ConstIterator ByteVector::begin() const
 
 ByteVector::Iterator ByteVector::end()
 {
-  return d->data->data.begin() + d->offset + d->length;
+  detach();
+  return d->data->data.end();
 }
 
 ByteVector::ConstIterator ByteVector::end() const
@@ -623,8 +733,8 @@ ByteVector::ConstIterator ByteVector::end() const
 
 ByteVector::ReverseIterator ByteVector::rbegin()
 {
-  std::vector<char> &v = d->data->data;
-  return v.rbegin() + (v.size() - (d->offset + d->length));
+  detach();
+  return d->data->data.rbegin();
 }
 
 ByteVector::ConstReverseIterator ByteVector::rbegin() const
@@ -635,8 +745,8 @@ ByteVector::ConstReverseIterator ByteVector::rbegin() const
 
 ByteVector::ReverseIterator ByteVector::rend()
 {
-  std::vector<char> &v = d->data->data;
-  return v.rbegin() + (v.size() - d->offset);
+  detach();
+  return d->data->data.rend();
 }
 
 ByteVector::ConstReverseIterator ByteVector::rend() const
@@ -706,6 +816,36 @@ long long ByteVector::toLongLong(bool mostSignificantByteFirst) const
 long long ByteVector::toLongLong(uint offset, bool mostSignificantByteFirst) const
 {
   return toNumber<unsigned long long>(*this, offset, mostSignificantByteFirst);
+}
+
+float ByteVector::toFloat32LE(size_t offset) const
+{
+  return toFloat<float, uint, Utils::LittleEndian>(*this, offset);
+}
+
+float ByteVector::toFloat32BE(size_t offset) const
+{
+  return toFloat<float, uint, Utils::BigEndian>(*this, offset);
+}
+
+double ByteVector::toFloat64LE(size_t offset) const
+{
+  return toFloat<double, ulonglong, Utils::LittleEndian>(*this, offset);
+}
+
+double ByteVector::toFloat64BE(size_t offset) const
+{
+  return toFloat<double, ulonglong, Utils::BigEndian>(*this, offset);
+}
+
+long double ByteVector::toFloat80LE(size_t offset) const
+{
+  return toFloat80<Utils::LittleEndian>(*this, offset);
+}
+
+long double ByteVector::toFloat80BE(size_t offset) const
+{
+  return toFloat80<Utils::BigEndian>(*this, offset);
 }
 
 const char &ByteVector::operator[](int index) const

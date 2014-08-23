@@ -89,35 +89,35 @@ String APE::Tag::title() const
 {
   if(d->itemListMap["TITLE"].isEmpty())
     return String::null;
-  return d->itemListMap["TITLE"].toString();
+  return d->itemListMap["TITLE"].values().toString();
 }
 
 String APE::Tag::artist() const
 {
   if(d->itemListMap["ARTIST"].isEmpty())
     return String::null;
-  return d->itemListMap["ARTIST"].toString();
+  return d->itemListMap["ARTIST"].values().toString();
 }
 
 String APE::Tag::album() const
 {
   if(d->itemListMap["ALBUM"].isEmpty())
     return String::null;
-  return d->itemListMap["ALBUM"].toString();
+  return d->itemListMap["ALBUM"].values().toString();
 }
 
 String APE::Tag::comment() const
 {
   if(d->itemListMap["COMMENT"].isEmpty())
     return String::null;
-  return d->itemListMap["COMMENT"].toString();
+  return d->itemListMap["COMMENT"].values().toString();
 }
 
 String APE::Tag::genre() const
 {
   if(d->itemListMap["GENRE"].isEmpty())
     return String::null;
-  return d->itemListMap["GENRE"].toString();
+  return d->itemListMap["GENRE"].values().toString();
 }
 
 TagLib::uint APE::Tag::year() const
@@ -233,7 +233,7 @@ PropertyMap APE::Tag::setProperties(const PropertyMap &origProps)
       toRemove.append(remIt->first);
   }
 
-  for (StringList::Iterator removeIt = toRemove.begin(); removeIt != toRemove.end(); removeIt++)
+  for(StringList::ConstIterator removeIt = toRemove.begin(); removeIt != toRemove.end(); removeIt++)
     removeItem(*removeIt);
 
   // now sync in the "forward direction"
