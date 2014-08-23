@@ -78,6 +78,9 @@
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\attachedpictureframe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\chapterframe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\commentsframe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -97,6 +100,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\synchronizedlyricsframe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\tableofcontentsframe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\textidentificationframe.cpp">
