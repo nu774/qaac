@@ -1069,9 +1069,7 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     else if (opts.isALAC())
         return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     else if (opts.isAAC())
-        return std::make_shared<MP4Sink>(ofilename, asc,
-                                         opts.output_format,
-                                         !opts.no_optimize);
+        return std::make_shared<MP4Sink>(ofilename, asc, !opts.no_optimize);
     throw std::runtime_error("XXX");
 }
 

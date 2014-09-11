@@ -314,25 +314,30 @@ void MP4SinkBase::writeStringTag(const char *fcc, const std::string &value)
 
 MP4Sink::MP4Sink(const std::wstring &path,
                  const std::vector<uint8_t> &config,
-                 uint32_t fcc, bool temp)
+                 bool temp)
         : MP4SinkBase(path, temp), m_sample_id(0),
           m_gapless_mode(MODE_ITUNSMPB)
 {
     std::memset(&m_priming_info, 0, sizeof m_priming_info);
     try {
-        unsigned index, rate, chconfig;
-        parseDecSpecificConfig(config, &index, &rate, &chconfig);
+        AudioStreamBasicDescription asbd;
+        std::vector<uint32_t> channels;
+        cautil::parseASC(config, &asbd, &channels);
+        unsigned rate = asbd.mSampleRate;
+        if (asbd.mFormatID == 'aach')
+            rate /= 2;
         m_mp4file.SetTimeScale(rate);
-        m_track_id = m_mp4file.AddAudioTrack(rate, 1024, MP4_MPEG4_AUDIO_TYPE);
+        m_track_id = m_mp4file.AddAudioTrack(rate, 1024,
+                                             MP4_MPEG4_AUDIO_TYPE);
         /*
          * According to ISO 14496-12 8.16.3, 
          * ChannelCount of AusioSampleEntry is either 1 or 2.
          */
         m_mp4file.SetIntegerProperty(
                 "moov.trak.mdia.minf.stbl.stsd.mp4a.channels",
-                chconfig == 1 ? 1 : 2);
+                asbd.mChannelsPerFrame);
         /* Looks like iTunes sets upsampled scale here */
-        if (fcc == 'aach') { 
+        if (asbd.mFormatID == 'aach') { 
             uint64_t scale = static_cast<uint64_t>(rate) << 17;
             m_mp4file.SetIntegerProperty(
                 "moov.trak.mdia.minf.stbl.stsd.mp4a.timeScale",

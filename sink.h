@@ -67,7 +67,7 @@ public:
         MODE_BOTH = 3,
     };
     MP4Sink(const std::wstring &path, const std::vector<uint8_t> &cookie,
-            uint32_t fcc, bool temp=false);
+            bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
         try {
