@@ -101,7 +101,7 @@ WavpackSource::WavpackSource(const WavpackModule &module,
     m_fp = win32::fopen(path, L"rb");
     try { m_cfp = win32::fopen(path + L"c", L"rb"); } catch(...) {}
 
-    int flags = OPEN_TAGS | (m_cfp.get() ? OPEN_WVC : 0);
+    int flags = OPEN_TAGS | OPEN_NORMALIZE | (m_cfp.get() ? OPEN_WVC : 0);
     void *ra = reinterpret_cast<void*>(fileno(m_fp.get()));
     void *rc =
         m_cfp.get() ? reinterpret_cast<void*>(fileno(m_cfp.get())) : 0;
