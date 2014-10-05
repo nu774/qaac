@@ -1480,6 +1480,7 @@ void setup_input_factory(const Options &opts)
 #else
     factory->libsoxconvolver = SoXConvolverModule(L"libsoxconvolver.dll");
 #endif
+    factory->avisynth = AvisynthModule(L"avisynth.dll");
 
     if (opts.is_raw) {
         AudioStreamBasicDescription asbd;

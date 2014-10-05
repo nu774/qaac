@@ -8,6 +8,7 @@
 #include "libsndfilesrc.h"
 #include "soxrmodule.h"
 #include "soxcmodule.h"
+#include "avssrc.h"
 
 namespace input {
     class InputFactory {
@@ -39,6 +40,7 @@ namespace input {
         LibSndfileModule libsndfile;
         SOXRModule libsoxr;
         SoXConvolverModule libsoxconvolver;
+        AvisynthModule avisynth;
     };
 
     inline InputFactory *factory() { return InputFactory::getInstance(); }

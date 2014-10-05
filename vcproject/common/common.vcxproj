@@ -137,6 +137,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\avssrc.cpp" />
     <ClCompile Include="..\..\bitstream.cpp" />
     <ClCompile Include="..\..\cafsink.cpp" />
     <ClCompile Include="..\..\chanmap.cpp" />
