@@ -60,8 +60,7 @@ namespace win32 {
     char *load_with_mmap(const wchar_t *path, uint64_t *size)
     {
         std::wstring fullpath = prefixed_path(path);
-        HANDLE hFile = CreateFileW(fullpath.c_str(), GENERIC_READ,
-                0, 0, OPEN_EXISTING, 0, 0);
+        HANDLE hFile = CreateFileW(fullpath.c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
         if (hFile == INVALID_HANDLE_VALUE)
             throw_error(fullpath, GetLastError());
         DWORD sizeHi, sizeLo;
