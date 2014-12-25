@@ -240,7 +240,7 @@ void usage()
 "--sort-args            Sort filenames given by command line arguments.\n"
 "--text-codepage <n>    Specify text code page of cuesheet/chapter/lyrics.\n"
 "                       Example: 1252 for Latin-1, 65001 for UTF-8.\n"
-"                       Use this when bogus values are written into tags"
+"                       Use this when bogus values are written into tags\n"
 "                       due to automatic encoding detection failure.\n"
 "-S, --stat             Save bitrate statistics into file.\n"
 "--log <filename>       Output message to file.\n"
