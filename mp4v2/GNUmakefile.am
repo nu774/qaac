@@ -150,6 +150,7 @@ libmp4v2_la_SOURCES += \
     libplatform/platform.h               \
     libplatform/platform_base.h          \
     libplatform/platform_posix.h         \
+    libplatform/platform_win32.h         \
     libplatform/process/process.h        \
     libplatform/prog/commandline.h       \
     libplatform/prog/option.cpp          \
@@ -166,17 +167,17 @@ if ADD_PLATFORM_POSIX
         libplatform/io/FileSystem_posix.cpp    \
         libplatform/number/random_posix.cpp    \
         libplatform/process/process_posix.cpp  \
-	libplatform/prog/commandline_posix.cpp \
+        libplatform/prog/commandline_posix.cpp \
         libplatform/time/time_posix.cpp
 endif
 if ADD_PLATFORM_WIN32
     libmp4v2_la_SOURCES += \
-	libplatform/platform_win32.cpp       \
+        libplatform/platform_win32.cpp         \
         libplatform/io/File_win32.cpp          \
         libplatform/io/FileSystem_win32.cpp    \
         libplatform/number/random_win32.cpp    \
         libplatform/process/process_win32.cpp  \
-	libplatform/prog/commandline_win32.cpp \
+        libplatform/prog/commandline_win32.cpp \
         libplatform/time/time_win32.cpp
 endif
 

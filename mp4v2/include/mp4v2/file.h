@@ -35,11 +35,12 @@ typedef enum MP4FileMode_e
  */
 typedef struct MP4FileProvider_s
 {
-    void* ( *open  )( const char* name, MP4FileMode mode );
-    int   ( *seek  )( void* handle, int64_t pos );
-    int   ( *read  )( void* handle, void* buffer, int64_t size, int64_t* nin, int64_t maxChunkSize );
-    int   ( *write )( void* handle, const void* buffer, int64_t size, int64_t* nout, int64_t maxChunkSize );
-    int   ( *close )( void* handle );
+    void* ( *open    )( const char* name, MP4FileMode mode );
+    int   ( *seek    )( void* handle, int64_t pos );
+    int   ( *read    )( void* handle, void* buffer, int64_t size, int64_t* nin, int64_t maxChunkSize );
+    int   ( *write   )( void* handle, const void* buffer, int64_t size, int64_t* nout, int64_t maxChunkSize );
+    int   ( *close   )( void* handle );
+    int   ( *getSize )( void* handle, int64_t* nout );
 } MP4FileProvider;
 
 /** Close an mp4 file.
@@ -120,6 +121,78 @@ MP4FileHandle MP4CreateEx(
     uint32_t    minorVersion DEFAULT(0),
     char**      compatibleBrands DEFAULT(0),
     uint32_t    compatibleBrandsCount DEFAULT(0) );
+
+/** Create a new mp4 file.
+ *
+ *  MP4CreateProvider is the first call that should be used when you want to
+ *  create a new, empty mp4 file. It is equivalent to opening a file for
+ *  writing, but also involved with creation of necessary mp4 framework
+ *  structures. ie. invoking MP4CreateProvider() followed by MP4Close() will
+ *  result in a file with a non-zero size.
+ *
+ *  @param fileName pathname of the file to be created.
+ *      On Windows, this should be a UTF-8 encoded string.
+ *      On other platforms, it should be an 8-bit encoding that is
+ *      appropriate for the platform, locale, file system, etc.
+ *      (prefer to use UTF-8 when possible).
+ *  @param flags bitmask that allows the user to set 64-bit values for
+ *      data or time atoms. Valid bits may be any combination of:
+ *          @li #MP4_CREATE_64BIT_DATA
+ *          @li #MP4_CREATE_64BIT_TIME
+ *  @param fileProvider custom implementation of file I/O operations.
+ *      All functions in structure must be implemented.
+ *      The structure is immediately copied internally.
+ *
+ *  @return On success a handle of the newly created file for use in
+ *      subsequent calls to the library.
+ *      On error, #MP4_INVALID_FILE_HANDLE.
+ */
+MP4V2_EXPORT
+MP4FileHandle MP4CreateProvider(
+    const char*            fileName,
+    uint32_t               flags DEFAULT(0),
+    const MP4FileProvider* fileProvider DEFAULT(NULL) );
+
+/** Create a new mp4 file with extended options.
+ *
+ *  MP4CreateProviderEx is an extended version of MP4CreateProvider().
+ *
+ *  @param fileName pathname of the file to be created.
+ *      On Windows, this should be a UTF-8 encoded string.
+ *      On other platforms, it should be an 8-bit encoding that is
+ *      appropriate for the platform, locale, file system, etc.
+ *      (prefer to use UTF-8 when possible).
+ *  @param flags bitmask that allows the user to set 64-bit values for
+ *      data or time atoms. Valid bits may be any combination of:
+ *          @li #MP4_CREATE_64BIT_DATA
+ *          @li #MP4_CREATE_64BIT_TIME
+ *  @param fileProvider custom implementation of file I/O operations.
+ *      All functions in structure must be implemented.
+ *      The structure is immediately copied internally.
+ *  @param add_ftyp if true an <b>ftyp</b> atom is automatically created.
+ *  @param add_iods if true an <b>iods</b> atom is automatically created.
+ *  @param majorBrand <b>ftyp</b> brand identifier.
+ *  @param minorVersion <b>ftyp</b> informative integer for the minor version
+ *      of the major brand.
+ *  @param compatibleBrands <b>ftyp</b> list of compatible brands.
+ *  @param compatibleBrandsCount is the count of items specified in
+ *      compatibleBrands.
+ *
+ *  @return On success a handle of the newly created file for use in
+ *      subsequent calls to the library.
+ *      On error, #MP4_INVALID_FILE_HANDLE.
+ */
+MP4V2_EXPORT
+MP4FileHandle MP4CreateProviderEx(
+    const char*            fileName,
+    uint32_t               flags DEFAULT(0),
+    const MP4FileProvider* fileProvider DEFAULT(NULL),
+    int                    add_ftyp DEFAULT(1),
+    int                    add_iods DEFAULT(1),
+    char*                  majorBrand DEFAULT(0),
+    uint32_t               minorVersion DEFAULT(0),
+    char**                 compatibleBrands DEFAULT(0),
+    uint32_t               compatibleBrandsCount DEFAULT(0) );
 
 /** Dump mp4 file contents as ASCII either to stdout or the
  *  log callback (@p see MP4SetLogCallback)

@@ -104,6 +104,15 @@ static struct utf8_len_info s_len_info[] =
     { 0x04000000, 0x7FFFFFFF, 6 }
 };
 
+
+static
+std::wstring GetFullPathNameStr(const wchar_t *path)
+{
+    std::vector<wchar_t> buf(GetFullPathNameW(path, 0, 0, 0));
+    DWORD len = GetFullPathNameW(path, buf.size(), &buf[0], 0);
+    return std::wstring(&buf[0], &buf[len]);
+}
+
 /**
  * Utf8ToFilename constructor
  *
@@ -168,6 +177,13 @@ Utf8ToFilename::Utf8ToFilename( const string &utf8string )
     // Transform prefixedPath to UTF-16 so it's
     // appropriate for CreateFileW
     _wideCharString = ConvertToUTF16(prefixedPath);
+
+    // issue 151: \\?\ prefixed path is required to be canonical.
+    // We canonicalize the path via a call to GetFullPathName() API.
+    std::wstring fullPath = GetFullPathNameStr(_wideCharString);
+    free(_wideCharString);
+    _wideCharString = (wchar_t*)malloc((fullPath.size() + 1) * sizeof(wchar_t));
+    wcscpy(_wideCharString, fullPath.c_str());
 }
 
 Utf8ToFilename::~Utf8ToFilename( )

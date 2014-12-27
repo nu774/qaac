@@ -426,16 +426,7 @@ void MP4Atom::ReadChildAtoms()
             }
             continue;
         }
-        MP4Atom* pChildAtom;
-	try {
-	    pChildAtom = MP4Atom::ReadAtom(m_File, this);
-	} catch (...) {
-	    if (IsRootAtom() && m_end == File::SIZE_UNKNOWN) {
-		m_end = position;
-		break;
-	    } else
-		throw;
-	}
+        MP4Atom* pChildAtom = MP4Atom::ReadAtom(m_File, this);
 
         AddChildAtom(pChildAtom);
 

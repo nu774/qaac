@@ -97,17 +97,18 @@ void MP4File::Read( const char* name, const MP4FileProvider* provider )
     CacheProperties();
 }
 
-void MP4File::Create( const char* fileName,
-                      uint32_t    flags,
-                      int         add_ftyp,
-                      int         add_iods,
-                      char*       majorBrand,
-                      uint32_t    minorVersion,
-                      char**      supportedBrands,
-                      uint32_t    supportedBrandsCount )
+void MP4File::Create( const char*            fileName,
+                      uint32_t               flags,
+                      const MP4FileProvider* provider,
+                      int                    add_ftyp,
+                      int                    add_iods,
+                      char*                  majorBrand,
+                      uint32_t               minorVersion,
+                      char**                 supportedBrands,
+                      uint32_t               supportedBrandsCount )
 {
     m_createFlags = flags;
-    Open( fileName, File::MODE_CREATE, NULL );
+    Open( fileName, File::MODE_CREATE, provider );
 
     // generate a skeletal atom tree
     m_pRootAtom = MP4Atom::CreateAtom(*this, NULL, NULL);
