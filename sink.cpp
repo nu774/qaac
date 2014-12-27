@@ -57,6 +57,77 @@ void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
     }
 }
 
+
+namespace t {
+    void *open(const char *name, MP4FileMode mode)
+    {
+        const wchar_t *m = L"";
+        switch (mode) {
+        case FILEMODE_READ: m = L"rb"; break;
+        case FILEMODE_MODIFY: m = L"rb+"; break;
+        case FILEMODE_CREATE: m = L"wb"; break;
+        }
+        return win32::wfopenx(strutil::us2w(name).c_str(), m);
+    }
+    void *open_temp(const char *name, MP4FileMode mode)
+    {
+        return win32::tmpfile(strutil::us2w(name).c_str());
+    }
+    int seek(void *fh, int64_t pos)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        return std::fsetpos(fp, static_cast<fpos_t*>(&pos));
+    }
+    int read(void *fh, void *data, int64_t size, int64_t *nc, int64_t)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        size_t n = std::fread(data, 1, size, fp);
+        *nc = n;
+        return std::ferror(fp);
+    }
+    int write(void *fh, const void *data, int64_t size,
+                     int64_t *nc, int64_t)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        size_t n = std::fwrite(data, 1, size, fp);
+        *nc = n;
+        return std::ferror(fp);
+    }
+    int close(void *fh)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        return std::fclose(fp);
+    }
+    int get_size(void *fh, int64_t *size)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        *size = _filelengthi64(fileno(fp));
+        return *size == -1 ? -1 : 0;
+    }
+}
+
+struct MP4CustomFileProvider: public MP4FileProvider
+{
+    MP4CustomFileProvider()
+    {
+        static MP4FileProvider t = {
+            t::open, t::seek, t::read, t::write, t::close, t::get_size
+        };
+        std::memcpy(this, &t, sizeof t);
+    }
+};
+
+struct MP4TempFileProvider: public MP4FileProvider
+{
+    MP4TempFileProvider()
+    {
+        static MP4FileProvider t = {
+            t::open_temp, t::seek, t::read, t::write, t::close, t::get_size
+        };
+        std::memcpy(this, &t, sizeof t);
+    }
+};
+
 using mp4v2::impl::MP4Atom;
 
 MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
@@ -65,20 +136,20 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
 {
     static const char * const compatibleBrands[] =
         { "M4A ", "mp42", "isom", "" };
-    void (MP4FileX::*create)(const char *, uint32_t, int, int,
-            char*, uint32_t, char **, uint32_t);
     if (temp) m_filename = L"qaac.int";
     try {
-        create = temp ? &MP4FileX::CreateTemp : &MP4FileX::Create;
-        (m_mp4file.*create)(
-                    strutil::w2us(m_filename).c_str(),
-                    0, // flags
-                    1, // add_ftypes
-                    0, // add_iods
-                    "M4A ", // majorBrand
-                    0, // minorVersion
-                    const_cast<char**>(compatibleBrands), 
-                    util::sizeof_array(compatibleBrands));
+        static MP4CustomFileProvider cprovider;
+        static MP4TempFileProvider tprovider;
+        m_mp4file.Create(strutil::w2us(m_filename).c_str(),
+                         0, // flags
+                         temp ? static_cast<MP4FileProvider*>(&tprovider)
+                              : static_cast<MP4FileProvider*>(&cprovider),
+                         1, // add_ftypes
+                         0, // add_iods
+                         "M4A ", // majorBrand
+                         0, // minorVersion
+                         const_cast<char**>(compatibleBrands),
+                         util::sizeof_array(compatibleBrands));
     } catch (mp4v2::impl::Exception *e) {
         m_mp4file.ResetFile();
         handle_mp4error(e);

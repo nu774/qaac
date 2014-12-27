@@ -27,11 +27,6 @@ public:
 
     void ResetFile() { m_file = 0; }
 
-    void CreateTemp(const char *prefix,
-            uint32_t flags, int add_ftyp, int add_iods,
-            char *majorBrand, uint32_t minorVersion,
-            char **supportedBrands, uint32_t supportedBrandsCount);
-
     void FinishWriteX()
     {
         for (size_t i = 0; i < m_pTracks.Size(); ++i)
@@ -106,7 +101,7 @@ struct MP4FDReadProvider: public MP4FileProvider
     MP4FDReadProvider()
     {
         static MP4FileProvider t = {
-            open, seek, read, 0, close
+            open, seek, read, 0, close, get_size
         };
         std::memset(this, 0, sizeof t);
         std::memcpy(this, &t, sizeof t);
@@ -139,6 +134,12 @@ struct MP4FDReadProvider: public MP4FileProvider
     static int close(void *handle)
     {
         return 0;
+    }
+    static int get_size(void *handle, int64_t *size)
+    {
+        int fd = reinterpret_cast<int>(handle) - 1;
+        *size = _filelengthi64(fd);
+        return *size == -1 ? -1 : 0;
     }
 };
 
