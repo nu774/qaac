@@ -1246,6 +1246,9 @@ void set_dll_directories(int verbose)
         searchPaths = strutil::format(L"%s;%s", &vec[0], searchPaths.c_str());
     } catch (const std::exception &) {}
     std::wstring dir = win32::get_module_directory() + L"QTfiles";
+#ifdef _WIN64
+    dir += L"64";
+#endif
     searchPaths = strutil::format(L"%s;%s", dir.c_str(), searchPaths.c_str());
     SetEnvironmentVariableW(L"PATH", searchPaths.c_str());
 }
