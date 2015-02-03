@@ -13,7 +13,6 @@ static wide::option long_options[] = {
     { L"he", no_argument, 0, 'aach' },
     { L"quality", required_argument, 0, 'q' },
     { L"adts", no_argument, 0, 'ADTS' },
-    { L"alac", no_argument, 0, 'A' },
     { L"no-smart-padding", no_argument, 0, 'nspd' },
     { L"native-resampler", optional_argument, 0, 'nsrc' },
 #endif
@@ -21,6 +20,7 @@ static wide::option long_options[] = {
     { L"fast", no_argument, 0, 'afst' },
 #endif
     { L"check", no_argument, 0, 'chck' },
+    { L"alac", no_argument, 0, 'A' },
     { L"decode", no_argument, 0, 'D' },
     { L"play", no_argument, 0, 'play' },
     { L"caf", no_argument, 0, 'caff' },
@@ -135,7 +135,6 @@ void usage()
 "--he                   HE AAC mode (TVBR is not available)\n"
 "-q, --quality <n>      AAC encoding Quality [0-2]\n"
 "--adts                 ADTS output (AAC only)\n"
-"-A, --alac             ALAC encoding mode\n"
 "--no-smart-padding     Don't apply smart padding for gapless playback.\n"
 "                       By default, beginning and ending of input is\n"
 "                       extrapolated to achieve smooth transition between\n"
@@ -152,6 +151,7 @@ void usage()
 #endif
 "-d <dirname>           Output directory. Default is current working dir.\n"
 "--check                Show library versions and exit.\n"
+"-A, --alac             ALAC encoding mode\n"
 "-D, --decode           Decode to a WAV file.\n"
 "--caf                  Output to CAF file instead of M4A/WAV/AAC.\n"
 "--play                 Decode to a WaveOut device (playback).\n"
@@ -348,7 +348,7 @@ void usage()
 static const wchar_t * const short_opts = L"hDo:d:b:r:insRSNAa:V:v:c:q:";
 #endif
 #ifdef REFALAC
-static const wchar_t * const short_opts = L"hDo:d:b:r:insRSN";
+static const wchar_t * const short_opts = L"hDo:d:b:r:insRSNA";
 #endif
 
 bool Options::parse(int &argc, wchar_t **&argv)
