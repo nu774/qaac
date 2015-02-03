@@ -1602,6 +1602,7 @@ int wmain1(int argc, wchar_t **argv)
 #endif
     Options opts;
 
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
     SetDllDirectoryW(L"");
     std::setlocale(LC_CTYPE, "");
     std::setbuf(stderr, 0);
