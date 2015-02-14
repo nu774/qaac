@@ -342,11 +342,12 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
         uint64_t total = optimizer.getTotalChunks();
         PeriodicDisplay disp(100, verbose);
         for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
-            disp.put(strutil::format(L"\r%llu/%llu chunks written (optimizing)",
-                            i, total).c_str());
+            int percent = 100.0 * i / total + .5;
+            disp.put(strutil::format(L"\rOptimizing...%d%%",
+                                     percent).c_str());
         }
+        disp.put(L"\rOptimizing...done\n");
         disp.flush();
-        if (verbose) std::putwc(L'\n', stderr);
     } catch (mp4v2::impl::Exception *e) {
         handle_mp4error(e);
     }
@@ -1043,7 +1044,7 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
     }
     sink->writeTags();
     if (!opts.no_optimize)
-        do_optimize(sink->getFile(), ofilename, opts.verbose > 1);
+        do_optimize(sink->getFile(), ofilename, opts.verbose);
     sink->close();
 }
 
