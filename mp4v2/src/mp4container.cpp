@@ -69,6 +69,7 @@ void MP4Container::FindIntegerProperty(const char* name,
     case Integer24Property:
     case Integer32Property:
     case Integer64Property:
+    case Integer6432Property:
         break;
     default:
         throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);

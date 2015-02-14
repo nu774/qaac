@@ -65,6 +65,8 @@ uint64_t MP4IntegerProperty::GetValue(uint32_t index)
         return ((MP4Integer32Property*)this)->GetValue(index);
     case Integer64Property:
         return ((MP4Integer64Property*)this)->GetValue(index);
+    case Integer6432Property:
+        return ((MP4Integer6432Property*)this)->GetValue(index);
     default:
         ASSERT(false);
     }
@@ -89,6 +91,9 @@ void MP4IntegerProperty::SetValue(uint64_t value, uint32_t index)
     case Integer64Property:
         ((MP4Integer64Property*)this)->SetValue(value, index);
         break;
+    case Integer6432Property:
+        ((MP4Integer6432Property*)this)->SetValue(value, index);
+        break;
     default:
         ASSERT(false);
     }
@@ -112,6 +117,9 @@ void MP4IntegerProperty::InsertValue(uint64_t value, uint32_t index)
     case Integer64Property:
         ((MP4Integer64Property*)this)->InsertValue(value, index);
         break;
+    case Integer6432Property:
+        ((MP4Integer6432Property*)this)->InsertValue(value, index);
+        break;
     default:
         ASSERT(false);
     }
@@ -134,6 +142,9 @@ void MP4IntegerProperty::DeleteValue(uint32_t index)
         break;
     case Integer64Property:
         ((MP4Integer64Property*)this)->DeleteValue(index);
+        break;
+    case Integer6432Property:
+        ((MP4Integer6432Property*)this)->DeleteValue(index);
         break;
     default:
         ASSERT(false);

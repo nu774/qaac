@@ -48,14 +48,8 @@ void MP4StblAtom::Generate()
     MP4Atom::Generate();
 
     // but we also need one of the chunk offset atoms
-    MP4Atom* pChunkOffsetAtom;
-    if (m_File.Use64Bits(GetType())) {
-        pChunkOffsetAtom = CreateAtom(m_File, this, "co64");
-    } else {
-        pChunkOffsetAtom = CreateAtom(m_File, this, "stco");
-    }
-
-    AddChildAtom(pChunkOffsetAtom);
+    MP4Atom* pChunkOffsetAtom = CreateAtom(m_File, this, "stco");
+    AddChildAtom(CreateAtom(m_File, this, "stco"));
 
     // and ask it to self generate
     pChunkOffsetAtom->Generate();

@@ -33,28 +33,21 @@ MP4MdhdAtom::MP4MdhdAtom(MP4File &file)
 
 void MP4MdhdAtom::AddProperties(uint8_t version)
 {
-    if (version == 1) {
-        AddProperty(
-            new MP4Integer64Property(*this, "creationTime"));
-        AddProperty(
-            new MP4Integer64Property(*this, "modificationTime"));
-    } else {
-        AddProperty(
-            new MP4Integer32Property(*this, "creationTime"));
-        AddProperty(
-            new MP4Integer32Property(*this, "modificationTime"));
-    }
+    MP4Integer6432Property *p;
 
-    AddProperty(
-        new MP4Integer32Property(*this, "timeScale"));
+    p = new MP4Integer6432Property(*this, "creationTime");
+    p->Use64Bit(version == 1);
+    AddProperty(p);
 
-    if (version == 1) {
-        AddProperty(
-            new MP4Integer64Property(*this, "duration"));
-    } else {
-        AddProperty(
-            new MP4Integer32Property(*this, "duration"));
-    }
+    p = new MP4Integer6432Property(*this, "modificationTime");
+    p->Use64Bit(version == 1);
+    AddProperty(p);
+
+    AddProperty(new MP4Integer32Property(*this, "timeScale"));
+
+    p = new MP4Integer6432Property(*this, "duration");
+    p->Use64Bit(version == 1);
+    AddProperty(p);
 
     AddProperty( new MP4LanguageCodeProperty(*this,  "language" ));
     AddReserved(*this, "reserved", 2);
@@ -62,21 +55,15 @@ void MP4MdhdAtom::AddProperties(uint8_t version)
 
 void MP4MdhdAtom::Generate()
 {
-    uint8_t version = m_File.Use64Bits(GetType()) ? 1 : 0;
-    SetVersion(version);
-    AddProperties(version);
+    SetVersion(0);
+    AddProperties(0);
 
     MP4Atom::Generate();
 
     // set creation and modification times
     MP4Timestamp now = MP4GetAbsTimestamp();
-    if (version == 1) {
-        ((MP4Integer64Property*)m_pProperties[2])->SetValue(now);
-        ((MP4Integer64Property*)m_pProperties[3])->SetValue(now);
-    } else {
-        ((MP4Integer32Property*)m_pProperties[2])->SetValue(now);
-        ((MP4Integer32Property*)m_pProperties[3])->SetValue(now);
-    }
+    ((MP4Integer6432Property*)m_pProperties[2])->SetValue(now);
+    ((MP4Integer6432Property*)m_pProperties[3])->SetValue(now);
 }
 
 void MP4MdhdAtom::Read()
@@ -91,6 +78,20 @@ void MP4MdhdAtom::Read()
     ReadProperties(1);
 
     Skip(); // to end of atom
+}
+
+void MP4MdhdAtom::BeginWrite()
+{
+    if (((MP4Integer6432Property*)m_pProperties[2])->GetValue() > 0xffffffff ||
+        ((MP4Integer6432Property*)m_pProperties[3])->GetValue() > 0xffffffff ||
+        ((MP4Integer6432Property*)m_pProperties[5])->GetValue() > 0xffffffff)
+    {
+        SetVersion(1);
+        ((MP4Integer6432Property*)m_pProperties[2])->Use64Bit(true);
+        ((MP4Integer6432Property*)m_pProperties[3])->Use64Bit(true);
+        ((MP4Integer6432Property*)m_pProperties[5])->Use64Bit(true);
+    }
+    MP4Atom::BeginWrite();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -129,7 +129,6 @@ MP4Atom* MP4Atom::ReadAtom(MP4File& file, MP4Atom* pParentAtom)
     if (dataSize == 1) {
         dataSize = file.ReadUInt64();
         hdrSize += 8;
-        file.Check64BitStatus(type);
     }
 
     // extended type
@@ -501,35 +500,39 @@ void MP4Atom::Rewrite()
     m_File.SetPosition(fPos);
 }
 
-void MP4Atom::BeginWrite(bool use64)
+void MP4Atom::BeginWrite()
 {
     m_start = m_File.GetPosition();
-    //use64 = m_File.Use64Bits();
-    if (use64) {
-        m_File.WriteUInt32(1);
-    } else {
-        m_File.WriteUInt32(0);
+    if (ATOMID(m_type) == ATOMID("mdat")) {
+        m_File.WriteUInt32(8);
+        m_File.WriteBytes((uint8_t*)"free", 4);
+        m_start += 8;
     }
+    m_File.WriteUInt32(0);
     m_File.WriteBytes((uint8_t*)&m_type[0], 4);
-    if (use64) {
-        m_File.WriteUInt64(0);
-    }
     if (ATOMID(m_type) == ATOMID("uuid")) {
         m_File.WriteBytes(m_extendedType, sizeof(m_extendedType));
     }
 }
 
-void MP4Atom::FinishWrite(bool use64)
+void MP4Atom::FinishWrite()
 {
     m_end = m_File.GetPosition();
     m_size = (m_end - m_start);
 
     log.verbose1f("end: type %s %" PRIu64 " %" PRIu64 " size %" PRIu64,
                        m_type,m_start, m_end, m_size);
-    //use64 = m_File.Use64Bits();
-    if (use64) {
-        m_File.SetPosition(m_start + 8);
-        m_File.WriteUInt64(m_size);
+    if (ATOMID(m_type) == ATOMID("mdat")) {
+        if (m_size <= 0xffffffff) {
+            m_File.SetPosition(m_start);
+            m_File.WriteUInt32(m_size);
+        } else {
+            m_start -= 8;
+            m_File.SetPosition(m_start);
+            m_File.WriteUInt32(1);
+            m_File.WriteBytes((uint8_t*)&m_type[0], 4);
+            m_File.WriteUInt64(m_size + 8);
+        }
     } else {
         ASSERT(m_size <= (uint64_t)0xFFFFFFFF);
         m_File.SetPosition(m_start);
@@ -538,7 +541,7 @@ void MP4Atom::FinishWrite(bool use64)
     m_File.SetPosition(m_end);
 
     // adjust size to just reflect data portion of atom
-    m_size -= (use64 ? 16 : 8);
+    m_size -= 8;
     if (ATOMID(m_type) == ATOMID("uuid")) {
         m_size -= sizeof(m_extendedType);
     }

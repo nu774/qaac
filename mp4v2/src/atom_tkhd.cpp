@@ -34,29 +34,23 @@ MP4TkhdAtom::MP4TkhdAtom(MP4File &file)
 
 void MP4TkhdAtom::AddProperties(uint8_t version)
 {
-    if (version == 1) {
-        AddProperty( /* 2 */
-            new MP4Integer64Property(*this, "creationTime"));
-        AddProperty( /* 3 */
-            new MP4Integer64Property(*this, "modificationTime"));
-    } else { // version == 0
-        AddProperty( /* 2 */
-            new MP4Integer32Property(*this, "creationTime"));
-        AddProperty( /* 3 */
-            new MP4Integer32Property(*this, "modificationTime"));
-    }
+    MP4Integer6432Property *p;
+
+    p = new MP4Integer6432Property(*this, "creationTime");
+    p->Use64Bit(version == 1);
+    AddProperty(p);
+
+    p = new MP4Integer6432Property(*this, "modificationTime");
+    p->Use64Bit(version == 1);
+    AddProperty(p);
 
     AddProperty( /* 4 */
         new MP4Integer32Property(*this, "trackId"));
     AddReserved(*this, "reserved1", 4); /* 5 */
 
-    if (version == 1) {
-        AddProperty( /* 6 */
-            new MP4Integer64Property(*this, "duration"));
-    } else {
-        AddProperty( /* 6 */
-            new MP4Integer32Property(*this, "duration"));
-    }
+    p = new MP4Integer6432Property(*this, "duration");
+    p->Use64Bit(version == 1);
+    AddProperty(p);
 
     AddReserved(*this, "reserved2", 8); /* 7 */
 
@@ -86,21 +80,15 @@ void MP4TkhdAtom::AddProperties(uint8_t version)
 
 void MP4TkhdAtom::Generate()
 {
-    uint8_t version = m_File.Use64Bits(GetType()) ? 1 : 0;
-    SetVersion(version);
-    AddProperties(version);
+    SetVersion(0);
+    AddProperties(0);
 
     MP4Atom::Generate();
 
     // set creation and modification times
     MP4Timestamp now = MP4GetAbsTimestamp();
-    if (version == 1) {
-        ((MP4Integer64Property*)m_pProperties[2])->SetValue(now);
-        ((MP4Integer64Property*)m_pProperties[3])->SetValue(now);
-    } else {
-        ((MP4Integer32Property*)m_pProperties[2])->SetValue(now);
-        ((MP4Integer32Property*)m_pProperties[3])->SetValue(now);
-    }
+    ((MP4Integer6432Property*)m_pProperties[2])->SetValue(now);
+    ((MP4Integer6432Property*)m_pProperties[3])->SetValue(now);
 
     // property "matrix" has non-zero fixed values
     // this default identity matrix indicates no transformation, i.e.
@@ -137,6 +125,20 @@ void MP4TkhdAtom::Read()
     ReadProperties(1);
 
     Skip(); // to end of atom
+}
+
+void MP4TkhdAtom::BeginWrite()
+{
+    if (((MP4Integer6432Property*)m_pProperties[2])->GetValue() > 0xffffffff ||
+        ((MP4Integer6432Property*)m_pProperties[3])->GetValue() > 0xffffffff ||
+        ((MP4Integer6432Property*)m_pProperties[6])->GetValue() > 0xffffffff)
+    {
+        SetVersion(1);
+        ((MP4Integer6432Property*)m_pProperties[2])->Use64Bit(true);
+        ((MP4Integer6432Property*)m_pProperties[3])->Use64Bit(true);
+        ((MP4Integer6432Property*)m_pProperties[6])->Use64Bit(true);
+    }
+    MP4Atom::BeginWrite();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

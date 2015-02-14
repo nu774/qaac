@@ -62,9 +62,9 @@ class MP4RootAtom : public MP4Atom
 {
 public:
     MP4RootAtom(MP4File &file);
-    void BeginWrite(bool use64 = false);
+    void BeginWrite();
     void Write();
-    void FinishWrite(bool use64 = false);
+    void FinishWrite();
 
     void BeginOptimalWrite();
     void FinishOptimalWrite();
@@ -91,6 +91,7 @@ private:
 class MP4StandardAtom : public MP4Atom {
 public:
     MP4StandardAtom(MP4File &file, const char *name);
+    void BeginWrite();
 private:
     MP4StandardAtom();
     MP4StandardAtom( const MP4StandardAtom &src );
@@ -303,6 +304,7 @@ public:
     MP4ElstAtom(MP4File &file);
     void Generate();
     void Read();
+    void BeginWrite();
 protected:
     void AddProperties(uint8_t version);
 private:
@@ -394,6 +396,7 @@ public:
     MP4MdhdAtom(MP4File &file);
     void Generate();
     void Read();
+    void BeginWrite();
 protected:
     void AddProperties(uint8_t version);
 private:
@@ -407,6 +410,7 @@ public:
     MP4MvhdAtom(MP4File &file);
     void Generate();
     void Read();
+    void BeginWrite();
 protected:
     void AddProperties(uint8_t version);
 private:
@@ -601,6 +605,7 @@ public:
     MP4TkhdAtom(MP4File &file);
     void Generate();
     void Read();
+    void BeginWrite();
 protected:
     void AddProperties(uint8_t version);
 private:

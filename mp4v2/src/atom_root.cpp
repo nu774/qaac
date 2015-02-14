@@ -41,7 +41,7 @@ MP4RootAtom::MP4RootAtom(MP4File &file)
     ExpectChildAtom( "moof", Optional, Many );
 }
 
-void MP4RootAtom::BeginWrite(bool use64)
+void MP4RootAtom::BeginWrite()
 {
     m_rewrite_ftyp = (MP4FtypAtom*)FindChildAtom( "ftyp" );
     if( m_rewrite_ftyp ) {
@@ -56,7 +56,7 @@ void MP4RootAtom::BeginWrite(bool use64)
         m_rewrite_free->Write();
     }
 
-    m_pChildAtoms[GetLastMdatIndex()]->BeginWrite( m_File.Use64Bits( "mdat" ));
+    m_pChildAtoms[GetLastMdatIndex()]->BeginWrite();
 }
 
 void MP4RootAtom::Write()
@@ -64,7 +64,7 @@ void MP4RootAtom::Write()
     // no-op
 }
 
-void MP4RootAtom::FinishWrite(bool use64)
+void MP4RootAtom::FinishWrite()
 {
     if( m_rewrite_ftyp ) {
         const uint64_t savepos = m_File.GetPosition();
@@ -83,7 +83,7 @@ void MP4RootAtom::FinishWrite(bool use64)
 
     // finish writing last mdat atom
     const uint32_t mdatIndex = GetLastMdatIndex();
-    m_pChildAtoms[mdatIndex]->FinishWrite( m_File.Use64Bits( "mdat" ));
+    m_pChildAtoms[mdatIndex]->FinishWrite();
 
     // write all atoms after last mdat
     const uint32_t size = m_pChildAtoms.Size();
@@ -97,37 +97,54 @@ void MP4RootAtom::BeginOptimalWrite()
     WriteAtomType("moov", OnlyOne);
     WriteAtomType("udta", Many);
 
-    m_pChildAtoms[GetLastMdatIndex()]->BeginWrite(m_File.Use64Bits("mdat"));
+    /*
+     * Since stco<->co64 can switch due to chunk relocation,
+     * moov size can change.
+     * We reserve enough free space for moov size growth.
+     */
+    uint32_t room_size = 1024;
+    uint32_t ntracks = m_File.GetNumberOfTracks();
+    for (uint32_t i = 0; i < ntracks; ++i) {
+        MP4TrackId id = m_File.FindTrackId(i);
+        MP4Atom *stco = m_File.FindTrackAtom(id, "mdia.minf.stbl.stco");
+        if (stco) {
+            MP4Property *prop;
+            stco->FindProperty("stco.entryCount", &prop);
+            uint32_t cnt = dynamic_cast<MP4IntegerProperty*>(prop)->GetValue();
+            room_size += cnt * 4;
+        }
+    }
+    m_File.WriteUInt32(room_size + 8);
+    m_File.WriteBytes((uint8_t*)"free", 4);
+    uint64_t pos = m_File.GetPosition();
+    m_File.SetPosition(pos + room_size);
+
+    m_pChildAtoms[GetLastMdatIndex()]->BeginWrite();
 }
 
 void MP4RootAtom::FinishOptimalWrite()
 {
     // finish writing mdat
-    m_pChildAtoms[GetLastMdatIndex()]->FinishWrite(m_File.Use64Bits("mdat"));
+    m_pChildAtoms[GetLastMdatIndex()]->FinishWrite();
 
     // find moov atom
-    uint32_t size = m_pChildAtoms.Size();
-    MP4Atom* pMoovAtom = NULL;
-
-    uint32_t i;
-    for (i = 0; i < size; i++) {
-        if (!strcmp("moov", m_pChildAtoms[i]->GetType())) {
-            pMoovAtom = m_pChildAtoms[i];
-            break;
-        }
-    }
-    ASSERT(i < size);
-    ASSERT(pMoovAtom != NULL);
+    MP4Atom* pMoovAtom = FindChildAtom("moov");
 
     // rewrite moov so that updated chunkOffsets are written to disk
     m_File.SetPosition(pMoovAtom->GetStart());
     uint64_t oldSize = pMoovAtom->GetSize();
 
     pMoovAtom->Write();
+    if (pMoovAtom->GetSize() != oldSize)
+        WriteAtomType("udta", Many);
 
-    // sanity check
-    uint64_t newSize = pMoovAtom->GetSize();
-    ASSERT(oldSize == newSize);
+    uint64_t pos = m_File.GetPosition();
+    uint64_t mdat_start = m_pChildAtoms[GetLastMdatIndex()]->GetStart();
+    ASSERT(pos == mdat_start || (mdat_start > pos && mdat_start - pos >= 8));
+    if (mdat_start > pos) {
+        m_File.WriteUInt32(mdat_start - pos);
+        m_File.WriteBytes((uint8_t*)"free", 4);
+    }
 }
 
 uint32_t MP4RootAtom::GetLastMdatIndex()

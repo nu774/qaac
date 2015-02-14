@@ -43,17 +43,15 @@ void MP4ElstAtom::AddProperties(uint8_t version)
 {
     MP4TableProperty* pTable = (MP4TableProperty*)m_pProperties[3];
 
-    if (version == 1) {
-        pTable->AddProperty(
-            new MP4Integer64Property(pTable->GetParentAtom(), "segmentDuration"));
-        pTable->AddProperty(
-            new MP4Integer64Property(pTable->GetParentAtom(), "mediaTime"));
-    } else {
-        pTable->AddProperty(
-            new MP4Integer32Property(pTable->GetParentAtom(), "segmentDuration"));
-        pTable->AddProperty(
-            new MP4Integer32Property(pTable->GetParentAtom(), "mediaTime"));
-    }
+    MP4Integer6432Property *p;
+
+    p = new MP4Integer6432Property(pTable->GetParentAtom(), "segmentDuration");
+    p->Use64Bit(version == 1);
+    pTable->AddProperty(p);
+
+    p = new MP4Integer6432Property(pTable->GetParentAtom(), "mediaTime");
+    p->Use64Bit(version == 1);
+    pTable->AddProperty(p);
 
     pTable->AddProperty(
         new MP4Integer16Property(pTable->GetParentAtom(), "mediaRate"));
@@ -81,6 +79,24 @@ void MP4ElstAtom::Read()
     ReadProperties(1);
 
     Skip(); // to end of atom
+}
+
+void MP4ElstAtom::BeginWrite()
+{
+    MP4TableProperty* pTable = (MP4TableProperty*)m_pProperties[3];
+
+    MP4Integer6432Property* p0 =
+        (MP4Integer6432Property*)pTable->GetProperty(0);
+    MP4Integer6432Property* p1 =
+        (MP4Integer6432Property*)pTable->GetProperty(1);
+
+    if (p0->GetValue() > 0xffffffff || p1->GetValue() > 0xffffffff)
+    {
+        SetVersion(1);
+        p0->Use64Bit(true);
+        p1->Use64Bit(true);
+    }
+    MP4Atom::BeginWrite();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -92,8 +92,6 @@ public:
     void Dump( bool dumpImplicits = false );
     void Close(uint32_t flags = 0);
 
-    bool Use64Bits(const char *atomName);
-    void Check64BitStatus(const char *atomName);
     /* file properties */
 
     uint64_t GetIntegerProperty(const char* name);

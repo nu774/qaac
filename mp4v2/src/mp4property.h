@@ -38,6 +38,7 @@ enum MP4PropertyType {
     Integer24Property,
     Integer32Property,
     Integer64Property,
+    Integer6432Property,
     Float32Property,
     StringProperty,
     BytesProperty,
@@ -204,6 +205,41 @@ MP4INTEGER_PROPERTY_DECL(16);
 MP4INTEGER_PROPERTY_DECL2(32, 24);
 MP4INTEGER_PROPERTY_DECL(32);
 MP4INTEGER_PROPERTY_DECL(64);
+
+class MP4Integer6432Property: public MP4Integer64Property {
+public:
+    MP4Integer6432Property(MP4Atom& parentAtom, const char* name)
+        : MP4Integer64Property(parentAtom, name), m_is64bit(false)
+    {
+    }
+    MP4PropertyType GetType() {
+        return Integer6432Property;
+    }
+    void Use64Bit(bool on) {
+        m_is64bit = on;
+    }
+    void Read(MP4File& file, uint32_t index = 0) {
+        if (m_implicit) {
+            return;
+        }
+        if (m_is64bit)
+            m_values[index] = file.ReadUInt64();
+        else
+            m_values[index] = file.ReadUInt32();
+    }
+   
+    void Write(MP4File& file, uint32_t index = 0) {
+        if (m_implicit) {
+            return;
+        }
+        if (m_is64bit)
+            file.WriteUInt64(m_values[index]);
+        else
+            file.WriteUInt32(m_values[index]);
+    }
+private:
+    bool m_is64bit;
+};
 
 class MP4BitfieldProperty : public MP4Integer64Property {
 public:

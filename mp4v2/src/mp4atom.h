@@ -187,10 +187,10 @@ public:
 
     virtual void Generate();
     virtual void Read();
-    virtual void BeginWrite(bool use64 = false);
+    virtual void BeginWrite();
     virtual void Write();
     virtual void Rewrite();
-    virtual void FinishWrite(bool use64 = false);
+    virtual void FinishWrite();
     virtual void Dump(uint8_t indent, bool dumpImplicits);
 
     bool GetLargesizeMode();

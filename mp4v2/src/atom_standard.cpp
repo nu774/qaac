@@ -60,8 +60,7 @@ MP4StandardAtom::MP4StandardAtom (MP4File &file, const char *type) : MP4Atom(fil
         MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
-        pTable->AddProperty(
-            new MP4Integer64Property(*this, "chunkOffset"));
+        pTable->AddProperty(new MP4Integer6432Property(*this, "chunkOffset"));
     } else if (ATOMID(type) == ATOMID("ctts")) {
         AddVersionAndFlags();
 
@@ -178,7 +177,7 @@ MP4StandardAtom::MP4StandardAtom (MP4File &file, const char *type) : MP4Atom(fil
         ExpectChildAtom("soco", Optional, OnlyOne); /* sort composer */
         ExpectChildAtom("sosn", Optional, OnlyOne); /* sort show */
         ExpectChildAtom("hdvd", Optional, OnlyOne); /* HD video */
-        ExpectChildAtom("©enc", Optional, OnlyOne); /* Encoded by */
+        ExpectChildAtom("\251enc", Optional, OnlyOne); /* Encoded by */
         ExpectChildAtom("pcst", Optional, OnlyOne); /* Podcast flag */
         ExpectChildAtom("keyw", Optional, OnlyOne); /* Keywords (for podcasts?) */
         ExpectChildAtom("catg", Optional, OnlyOne); /* Category (for podcasts?) */
@@ -318,7 +317,7 @@ MP4StandardAtom::MP4StandardAtom (MP4File &file, const char *type) : MP4Atom(fil
         MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
-        pTable->AddProperty(new MP4Integer32Property(pTable->GetParentAtom(), "chunkOffset"));
+        pTable->AddProperty(new MP4Integer6432Property(pTable->GetParentAtom(), "chunkOffset"));
 
     } else if (ATOMID(type) == ATOMID("stsh")) {
         AddVersionAndFlags();
@@ -413,6 +412,26 @@ MP4StandardAtom::MP4StandardAtom (MP4File &file, const char *type) : MP4Atom(fil
          */
         SetUnknownType(true);
     }
+}
+
+void MP4StandardAtom::BeginWrite()
+{
+    if (ATOMID(GetType()) == ATOMID("stco") ||
+        ATOMID(GetType()) == ATOMID("co64"))
+    {
+        SetType("stco");
+        MP4TableProperty* pTable = (MP4TableProperty*)m_pProperties[3];
+        MP4Integer6432Property* p = (MP4Integer6432Property*)pTable->GetProperty(0);
+        p->Use64Bit(false);
+        for (uint32_t i = 0; i < p->GetCount(); ++i) {
+            if (p->GetValue(i) > 0xffffffff) {
+                SetType("co64");
+                p->Use64Bit(true);
+                break;
+            }
+        }
+    }
+    MP4Atom::BeginWrite();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
