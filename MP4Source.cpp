@@ -108,9 +108,10 @@ size_t MP4Source::readSamples(void *buffer, size_t nsamples)
                             static_cast<int64_t>(0));
     if (trim > 0)
         nframes -= trim;
-    if (nframes <= 0)
+    if (nframes > 0)
+        m_decode_buffer.commit(nframes);
+    if (!m_decode_buffer.count())
         return 0;
-    m_decode_buffer.commit(nframes);
     if (m_start_skip) {
         if (m_start_skip >= nframes) {
             m_start_skip -= nframes;
