@@ -78,12 +78,11 @@ long CoreAudioEncoder::inputDataProc(UInt32 *npackets, AudioBufferList *abl)
 {
     prepareInputBuffer(abl, *npackets);
     AudioBuffer &ab = abl->mBuffers[0];
-    try {
-        *npackets = readSamples(ab.mData, *npackets);
-    } catch (...) {
-        /* treat as EOF */
-        *npackets = 0;
-    }
+    /*
+     * Since AudioConverterFillComplexBuffer() seems to catch exceptions
+     * and returns error, we don't catch exceptions here and just pass them.
+     */
+    *npackets = readSamples(ab.mData, *npackets);
     ab.mDataByteSize = *npackets * m_input_desc.mBytesPerFrame;
     if (*npackets == 0)
         ab.mData = 0;
