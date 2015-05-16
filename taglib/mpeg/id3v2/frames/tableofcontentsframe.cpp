@@ -35,11 +35,17 @@ using namespace ID3v2;
 class TableOfContentsFrame::TableOfContentsFramePrivate
 {
 public:
+  TableOfContentsFramePrivate() :
+    tagHeader(0)
+  {
+    embeddedFrameList.setAutoDelete(true);
+  }
+
+  const ID3v2::Header *tagHeader;
   ByteVector elementID;
   bool isTopLevel;
   bool isOrdered;
   ByteVectorList childElements;
-  const FrameFactory *factory;
   FrameListMap embeddedFrameListMap;
   FrameList embeddedFrameList;
 };
@@ -48,15 +54,16 @@ public:
 // public methods
 ////////////////////////////////////////////////////////////////////////////////
 
-TableOfContentsFrame::TableOfContentsFrame(const ByteVector &data) :
+TableOfContentsFrame::TableOfContentsFrame(const ID3v2::Header *tagHeader, const ByteVector &data) :
     ID3v2::Frame(data)
 {
   d = new TableOfContentsFramePrivate;
-  d->factory = FrameFactory::instance();
+  d->tagHeader = tagHeader;
   setData(data);
 }
 
-TableOfContentsFrame::TableOfContentsFrame(const ByteVector &eID, const ByteVectorList &ch, const FrameList &eF) :
+TableOfContentsFrame::TableOfContentsFrame(const ByteVector &eID, const ByteVectorList &ch,
+                                           const FrameList &eF) :
     ID3v2::Frame("CTOC")
 {
   d = new TableOfContentsFramePrivate;
@@ -65,7 +72,6 @@ TableOfContentsFrame::TableOfContentsFrame(const ByteVector &eID, const ByteVect
   FrameList l = eF;
   for(FrameList::ConstIterator it = l.begin(); it != l.end(); ++it)
     addEmbeddedFrame(*it);
-  d->factory = FrameFactory::instance();
 }
 
 TableOfContentsFrame::~TableOfContentsFrame()
@@ -88,7 +94,7 @@ bool TableOfContentsFrame::isOrdered() const
   return d->isOrdered;
 }
 
-uint TableOfContentsFrame::entryCount() const
+TagLib::uint TableOfContentsFrame::entryCount() const
 {
   return d->childElements.size();
 }
@@ -188,7 +194,8 @@ PropertyMap TableOfContentsFrame::asProperties() const
   return map;
 }
 
-TableOfContentsFrame *TableOfContentsFrame::findByElementID(const ID3v2::Tag *tag, const ByteVector &eID) // static
+TableOfContentsFrame *TableOfContentsFrame::findByElementID(const ID3v2::Tag *tag,
+                                                            const ByteVector &eID) // static
 {
   ID3v2::FrameList tablesOfContents = tag->frameList("CTOC");
 
@@ -222,9 +229,11 @@ TableOfContentsFrame *TableOfContentsFrame::findTopLevel(const ID3v2::Tag *tag) 
 
 void TableOfContentsFrame::parseFields(const ByteVector &data)
 {
-  uint size = data.size();
+  TagLib::uint size = data.size();
   if(size < 6) {
-    debug("A CTOC frame must contain at least 6 bytes (1 byte element ID terminated by null, 1 byte flags, 1 byte entry count and 1 byte child element ID terminated by null.");
+    debug("A CTOC frame must contain at least 6 bytes (1 byte element ID terminated by "
+          "null, 1 byte flags, 1 byte entry count and 1 byte child element ID terminated "
+          "by null.");
     return;
   }
 
@@ -233,8 +242,8 @@ void TableOfContentsFrame::parseFields(const ByteVector &data)
   d->elementID.append(char(0));
   d->isTopLevel = (data.at(pos) & 2) > 0;
   d->isOrdered = (data.at(pos++) & 1) > 0;
-  uint entryCount = data.at(pos++);
-  for(uint i = 0; i < entryCount; i++)
+  TagLib::uint entryCount = data.at(pos++);
+  for(TagLib::uint i = 0; i < entryCount; i++)
   {
     ByteVector childElementID = readStringField(data, String::Latin1, &pos).data(String::Latin1);
     childElementID.append(char(0));
@@ -242,9 +251,8 @@ void TableOfContentsFrame::parseFields(const ByteVector &data)
   }
 
   size -= pos;
-  while((uint)embPos < size - Frame::headerSize(4))
-  {
-    Frame *frame = d->factory->createFrame(data.mid(pos + embPos));
+  while(embPos < size - header()->size()) {
+    Frame *frame = FrameFactory::instance()->createFrame(data.mid(pos + embPos), d->tagHeader);
 
     if(!frame)
       return;
@@ -255,7 +263,7 @@ void TableOfContentsFrame::parseFields(const ByteVector &data)
       return;
     }
 
-    embPos += frame->size() + Frame::headerSize(4);
+    embPos += frame->size() + header()->size();
     addEmbeddedFrame(frame);
   }
 }
@@ -284,10 +292,11 @@ ByteVector TableOfContentsFrame::renderFields() const
   return data;
 }
 
-TableOfContentsFrame::TableOfContentsFrame(const ByteVector &data, Header *h) :
+TableOfContentsFrame::TableOfContentsFrame(const ID3v2::Header *tagHeader,
+                                           const ByteVector &data, Header *h) :
   Frame(h)
 {
   d = new TableOfContentsFramePrivate;
-  d->factory = FrameFactory::instance();
+  d->tagHeader = tagHeader;
   parseFields(fieldData(data));
 }

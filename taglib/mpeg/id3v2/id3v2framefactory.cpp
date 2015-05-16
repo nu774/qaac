@@ -280,14 +280,36 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
   // Chapter (ID3v2 chapters 1.0)
 
   if(frameID == "CHAP")
-    return new ChapterFrame(data, header);
+    return new ChapterFrame(tagHeader, data, header);
 
   // Table of contents (ID3v2 chapters 1.0)
 
   if(frameID == "CTOC")
-    return new TableOfContentsFrame(data, header);
+    return new TableOfContentsFrame(tagHeader, data, header);
 
   return new UnknownFrame(data, header);
+}
+
+void FrameFactory::rebuildAggregateFrames(ID3v2::Tag *tag) const
+{
+  if(tag->header()->majorVersion() < 4 &&
+     tag->frameList("TDRC").size() == 1 &&
+     tag->frameList("TDAT").size() == 1)
+  {
+    TextIdentificationFrame *trdc =
+      static_cast<TextIdentificationFrame *>(tag->frameList("TDRC").front());
+    UnknownFrame *tdat =
+      static_cast<UnknownFrame *>(tag->frameList("TDAT").front());
+
+    if(trdc->fieldList().size() == 1 &&
+       trdc->fieldList().front().size() == 4 &&
+       tdat->data().size() >= 5)
+    {
+      String date(tdat->data().mid(1), String::Type(tdat->data()[0]));
+      if(date.length() == 4)
+        trdc->setText(trdc->toString() + '-' + date.substr(2, 2) + '-' + date.substr(0, 2));
+    }
+  }
 }
 
 String::Type FrameFactory::defaultTextEncoding() const
