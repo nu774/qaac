@@ -96,37 +96,45 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
 size_t MP4Source::readSamples(void *buffer, size_t nsamples)
 {
     unsigned fpp = m_iasbd.mFramesPerPacket;
-    unsigned edit = m_edits.editForPosition(m_position, 0);
-    m_decode_buffer.reserve(fpp);
-    ssize_t nframes = m_decoder->decode(m_decode_buffer.write_ptr(),
-                                        fpp);
-    m_position_raw += nframes;
-    int64_t trim = std::max(m_position_raw
-                            - m_edits.mediaOffset(edit)
-                            - m_edits.duration(edit)
-                            - getDecoderDelay(),
-                            static_cast<int64_t>(0));
-    if (trim > 0)
-        nframes -= trim;
-    if (nframes > 0)
-        m_decode_buffer.commit(nframes);
-    if (!m_decode_buffer.count())
-        return 0;
-    if (m_start_skip) {
-        if (m_start_skip >= nframes) {
-            m_start_skip -= nframes;
-            return readSamples(buffer, nsamples);
+    int64_t off;
+    unsigned edit = m_edits.editForPosition(m_position, &off);
+
+    if (!m_decode_buffer.count()) {
+        if (m_position > 0 && off == 0)
+            seekTo(m_position);
+
+        for (;;) {
+            m_decode_buffer.reserve(fpp);
+            ssize_t nframes =
+                m_decoder->decode(m_decode_buffer.write_ptr(), fpp);
+            m_position_raw += nframes;
+            int64_t trim = std::max(m_position_raw
+                                    - m_edits.mediaOffset(edit)
+                                    - m_edits.duration(edit)
+                                    - getDecoderDelay(),
+                                    static_cast<int64_t>(0));
+            if (trim > 0)
+                nframes -= trim;
+            if (nframes > 0)
+                m_decode_buffer.commit(nframes);
+            if (!m_decode_buffer.count())
+                return 0;
+            if (m_start_skip >= nframes) {
+                m_decode_buffer.reset();
+                m_start_skip -= nframes;
+                continue;
+            } else if (m_start_skip) {
+                m_decode_buffer.advance(m_start_skip);
+                nframes -= m_start_skip;
+                m_start_skip = 0;
+            }
+            m_position += nframes;
+            break;
         }
-        m_decode_buffer.advance(m_start_skip);
-        nframes -= m_start_skip;
-        m_start_skip = 0;
     }
-    m_position += nframes;
     nsamples = std::min(m_decode_buffer.count(), nsamples);
     std::memcpy(buffer, m_decode_buffer.read(nsamples),
                 nsamples * m_oasbd.mBytesPerFrame);
-    if (m_edits.editForPosition(m_position, 0) != edit)
-        seekTo(m_position);
     return nsamples;
 }
 
@@ -138,7 +146,6 @@ void MP4Source::seekTo(int64_t count)
         return;
     }
     m_decoder->reset();
-    m_decode_buffer.reset();
     m_position = count;
     int64_t  mediapos  = m_edits.mediaOffsetForPosition(count);
     uint32_t fpp       = m_iasbd.mFramesPerPacket;
