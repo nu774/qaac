@@ -131,18 +131,7 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
         ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
     else if (fcc == kAudioFileMP3Type)
         ID3::fetchMPEGID3Tags(fileno(m_fp.get()), &m_tags);
-    else if (fcc == 'm4af' || fcc == 'm4bf' || fcc == 'mp4f') {
-        try {
-            int fd = fileno(m_fp.get());
-            util::FilePositionSaver _(fd);
-            static MP4FDReadProvider provider;
-            MP4FileX file;
-            std::string name = strutil::format("%d", fd);
-            file.Read(name.c_str(), &provider);
-            M4A::fetchTags(file, &m_tags);
-            file.GetChapters(&m_chapters);
-        } catch (...) {}
-    } else {
+    else {
         try {
             audiofile::fetchTags(m_af, m_fp.get(), &m_tags);
         } catch (...) {}

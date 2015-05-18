@@ -60,8 +60,6 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
 
         m_decode_buffer.set_unit(m_oasbd.mBytesPerFrame);
         M4A::fetchTags(m_file, &m_tags);
-        m_file.GetChapters(&m_chapters);
-
         if (m_file.GetTimeScale() >= m_file.GetTrackTimeScale(m_track_id)) {
             if (m_file.FindTrackAtom(m_track_id, "edts.elst")) {
                 uint32_t nedits = m_file.GetTrackNumberOfEdits(m_track_id);
@@ -85,9 +83,24 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
                 m_edits.addEntry(priming, duration);
             }
         }
+        bool is_nero = false;
+        auto res = m_file.GetQTChapters(&m_chapters);
+        double first_off = 0.0;
+        if (!res) {
+            if (m_file.GetNeroChapters(&m_chapters, &first_off))
+                is_nero = true;
+        }
+        if (is_nero && !m_edits.count()) {
+            uint32_t priming = first_off * m_iasbd.mSampleRate + .5;
+            uint64_t dur = m_file.GetTrackDuration(m_track_id);
+            m_edits.addEntry(priming, dur - priming);
+        }
         if (!m_edits.count())
             m_edits.addEntry(0, m_file.GetTrackDuration(m_track_id));
-
+        /*
+        if (m_chapters.size() == 1)
+            m_chapters.clear();
+        */
     } catch (mp4v2::impl::Exception *e) {
         handle_mp4error(e);
     }

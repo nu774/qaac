@@ -68,8 +68,8 @@ public:
               mp4v2::impl::itmf::BasicType typeCode
                =mp4v2::impl::itmf::BT_UTF8);
     bool MP4FileX::GetQTChapters(std::vector<chapters::entry_t> *chapters);
-    bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapters);
-    bool MP4FileX::GetChapters(std::vector<chapters::entry_t> *chapters);
+    bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapters,
+                                   double *first_off);
 protected:
     mp4v2::impl::MP4DataAtom *CreateMetadataAtom(const char *name,
             mp4v2::impl::itmf::BasicType typeCode);

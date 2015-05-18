@@ -471,7 +471,8 @@ bool MP4FileX::GetQTChapters(std::vector<chapters::entry_t> *chapterList)
     return chapterList->size() > 0;
 }
 
-bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapterList)
+bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapterList,
+                               double *first_off)
 {
     MP4Atom *chpl = FindAtom("moov.udta.chpl");
     if (!chpl)
@@ -492,8 +493,7 @@ bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapterList)
     std::vector<chapters::entry_t> chapters;
     int64_t prev = pStartTime->GetValue(0);
     double scale = 10000000.0;
-    if (prev > 0)
-        chapters.push_back(std::make_pair(std::wstring(L""), prev / scale));
+    if (first_off) *first_off = prev / scale;
     const char *name = pName->GetValue(0);
     for (uint32_t i = 1; i < count; ++i) {
         int64_t start = pStartTime->GetValue(i);
@@ -508,9 +508,4 @@ bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapterList)
                                       (end - prev) / scale));
     chapterList->swap(chapters);
     return chapterList->size() > 0;
-}
-
-bool MP4FileX::GetChapters(std::vector<chapters::entry_t> *chapterList)
-{
-    return GetQTChapters(chapterList) || GetNeroChapters(chapterList);
 }
