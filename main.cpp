@@ -4,6 +4,7 @@
 #include <clocale>
 #include <algorithm>
 #include <functional>
+#include <regex>
 #include "strutil.h"
 #include "win32util.h"
 #include <shellapi.h>
@@ -898,33 +899,31 @@ bool accept_tag(const std::string &name)
      * We don't want to copy these tags from the source.
      * XXX: should we use white list instead?
      */
-    static const char * const black_list[] = {
-        "compatiblebrands", /* XXX: ffmpeg metadata for mp4 */
-        "cuesheet",
-        "encodedby",
-        "encodingapplication",
-        "itunnorm",
-        "itunpgap",
-        "itunsmpb",
-        "log",
-        "majorbrand",      /* XXX: ffmpeg metadata for mp4 */
-        "minorversion",    /* XXX: ffmpeg metadata for mp4 */
-        "replaygainalbumgain",
-        "replaygainalbumpeak",
-        "replaygainreferenceloudness",
-        "replaygaintrackgain",
-        "replaygaintrackpeak",
-        0
+    static std::regex black_list[] = {
+        std::regex("accuraterip.*"),
+        std::regex("compatiblebrands"), /* XXX: ffmpeg metadata for mp4 */
+        std::regex("ctdb.*confidence"),
+        std::regex("cuesheet"),
+        std::regex("cuetrack.*")
+        std::regex("encodedby"),
+        std::regex("encodingapplication"),
+        std::regex("itunnorm"),
+        std::regex("itunpgap"),
+        std::regex("itunsmpb"),
+        std::regex("log"),
+        std::regex("majorbrand"),      /* XXX: ffmpeg metadata for mp4 */
+        std::regex("minorversion"),    /* XXX: ffmpeg metadata for mp4 */
+        std::regex("replaygain.*"),
     };
-    const char * const * p;
     std::string ss;
     for (const char *s = name.c_str(); *s; ++s)
         if (!std::strchr(" -_", *s))
             ss.push_back(tolower(static_cast<unsigned char>(*s)));
-    for (p = black_list; *p; ++p)
-        if (std::strcmp(ss.c_str(), *p) == 0)
+    size_t i = 0, end = util::sizeof_array(black_list);
+    for (i = 0; i < end; ++i)
+        if (std::regex_match(ss, black_list[i]))
             break;
-    return *p == 0;
+    return i == end;
 }
 
 static
