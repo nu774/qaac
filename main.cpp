@@ -904,7 +904,7 @@ bool accept_tag(const std::string &name)
         std::regex("compatiblebrands"), /* XXX: ffmpeg metadata for mp4 */
         std::regex("ctdb.*confidence"),
         std::regex("cuesheet"),
-        std::regex("cuetrack.*")
+        std::regex("cuetrack.*"),
         std::regex("encodedby"),
         std::regex("encodingapplication"),
         std::regex("itunnorm"),
