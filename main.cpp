@@ -1726,8 +1726,32 @@ int wmain1(int argc, wchar_t **argv)
             ifilename = argv[i];
             if (strutil::wslower(PathFindExtensionW(ifilename)) == L".cue")
                 load_cue_sheet(ifilename, opts, tracks);
-            else
+            else {
                 load_track(ifilename, opts, tracks);
+                auto src = tracks.back().source;
+                auto parser = dynamic_cast<ITagParser*>(src.get());
+                do {
+                    if (!parser) break;
+                    auto &tags = parser->getTags();
+                    auto ti = tags.begin();
+                    for (; ti != tags.end(); ++ti)
+                        if (strcasecmp(ti->first.c_str(), "cuesheet") == 0)
+                            break;
+                    if (ti == tags.end())
+                        break;
+                    try {
+                        std::wstringbuf wsb(strutil::us2w(ti->second));
+                        CueSheet cue;
+                        cue.parse(&wsb);
+                        tracks.pop_back();
+                        cue.loadTracks(tracks, L"", 
+                                   opts.fname_format
+                                    ? opts.fname_format
+                                    : L"${tracknumber}${title& }${title}",
+                                    ifilename);
+                    } catch (...) {}
+                } while (0);
+            }
         }
         SetConsoleCtrlHandler(console_interrupt_handler, TRUE);
         if (!opts.concat) {

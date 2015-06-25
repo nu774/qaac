@@ -196,19 +196,7 @@ void WavpackSource::fetchTags()
         size = m_module.GetTagItem(wpc, &name[0], 0, 0);
         std::vector<char> value(size + 1);
         m_module.GetTagItem(wpc, &name[0], &value[0], value.size());
-        if (!strcasecmp(&name[0], "cuesheet"))
-            cuesheet = strutil::us2w(&value[0]);
-        else
-            tags[&name[0]] = &value[0];
-    }
-    if (cuesheet.size()) {
-        std::map<std::string, std::string> ctags;
-        Cue::CueSheetToChapters(cuesheet,
-                                m_length / m_asbd.mSampleRate,
-                                &m_chapters, &ctags);
-        std::map<std::string, std::string>::const_iterator it;
-        for (it = ctags.begin(); it != ctags.end(); ++it)
-            tags[it->first] = it->second;
+        tags[&name[0]] = &value[0];
     }
     TextBasedTag::normalizeTags(tags, &m_tags);
 }

@@ -153,7 +153,8 @@ void CueSheet::parse(std::wstreambuf *src)
 
 void CueSheet::loadTracks(playlist::Playlist &tracks,
                           const std::wstring &cuedir,
-                          const std::wstring &fname_format)
+                          const std::wstring &fname_format,
+                          const wchar_t *embedder_fname)
 {
     std::shared_ptr<ISeekableSource> src;
     std::for_each(begin(), end(), [&](const CueTrack &track) {
@@ -163,6 +164,8 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
             if (seg.m_filename == L"__GAP__") {
                 if (src.get())
                     src.reset(new NullSource(src->getSampleFormat()));
+            } else if (embedder_fname) {
+                src = input::factory()->open(embedder_fname);
             } else {
                 std::wstring ifilename =
                     win32::PathCombineX(cuedir, seg.m_filename);

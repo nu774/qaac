@@ -177,19 +177,7 @@ void TakSource::fetchTags()
             continue;
         std::string key = it->first.toCString();
         std::wstring value = it->second.toString().toWString();
-        if (strutil::slower(key) == "cuesheet")
-            cuesheet = value;
-        else
-            tags[key] = strutil::w2us(value);
-    }
-    if (cuesheet.size()) {
-        std::map<std::string, std::string> ctags;
-        Cue::CueSheetToChapters(cuesheet,
-                                m_length / m_asbd.mSampleRate,
-                                &m_chapters, &ctags);
-        std::map<std::string, std::string>::const_iterator it;
-        for (it = ctags.begin(); it != ctags.end(); ++it)
-            tags[it->first] = it->second;
+        tags[key] = strutil::w2us(value);
     }
     TextBasedTag::normalizeTags(tags, &m_tags);
 }

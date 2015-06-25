@@ -225,20 +225,8 @@ void FLACSource::handleVorbisComment(
             if (sscanf(value, "%i", &mask) == 1)
                 chanmap::getChannels(mask, &m_chanmap);
         } else if (value) {
-            if (!strcasecmp(key, "cuesheet"))
-                cuesheet = strutil::us2w(value);
-            else
-                tags[key] = value;
+            tags[key] = value;
         }
-    }
-    if (cuesheet.size()) {
-        std::map<std::string, std::string> ctags;
-        Cue::CueSheetToChapters(cuesheet,
-                                m_length / m_asbd.mSampleRate,
-                                &m_chapters, &ctags);
-        std::map<std::string, std::string>::const_iterator it;
-        for (it = ctags.begin(); it != ctags.end(); ++it)
-            tags[it->first] = it->second;
     }
     TextBasedTag::normalizeTags(tags, &m_tags);
 }

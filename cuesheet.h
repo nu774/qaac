@@ -84,7 +84,8 @@ public:
     void parse(std::wstreambuf *src);
     void loadTracks(playlist::Playlist &tracks,
                     const std::wstring &cuedir,
-                    const std::wstring &fname_format);
+                    const std::wstring &fname_format,
+                    const wchar_t *embedder_fname=0);
     void asChapters(double duration, /* total duration in sec. */
                     std::vector<chapters::entry_t> *chapters) const;
     void getTags(std::map<std::string, std::string> *tags) const;
