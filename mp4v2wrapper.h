@@ -30,7 +30,7 @@ public:
     void FinishWriteX()
     {
         for (size_t i = 0; i < m_pTracks.Size(); ++i)
-            m_pTracks[i]->FinishWrite(0);
+            m_pTracks[i]->FinishWrite(MP4_CLOSE_DO_NOT_COMPUTE_BITRATE);
     }
 
     util::AutoDynaCast<mp4v2::impl::MP4Atom>

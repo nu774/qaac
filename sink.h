@@ -18,6 +18,7 @@ protected:
     std::map<std::string, std::string> m_tags;
     std::vector<chapters::entry_t> m_chapters;
     std::vector<std::vector<char> > m_artworks;
+    unsigned m_max_bitrate;
 public:
     MP4SinkBase(const std::wstring &path, bool temp=false);
     virtual ~MP4SinkBase() {}
@@ -25,6 +26,8 @@ public:
     MP4FileX *getFile() { return &m_mp4file; }
     /* Don't automatically close, since close() involves finalizing */
     void close();
+    void updateMaxBitrate(bool finilize=false);
+    void writeBitrates(int avgBitrate=0);
     void setTag(const std::string &key, const std::string &value)
     {
         m_tags[key] = value;
@@ -73,6 +76,7 @@ public:
         try {
             m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
                                   length, MP4_INVALID_DURATION);
+            updateMaxBitrate();
         } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
         }
@@ -98,6 +102,7 @@ public:
         try {
             m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
                                   length, nsamples);
+            updateMaxBitrate();
         } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
         }

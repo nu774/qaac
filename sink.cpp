@@ -16,6 +16,7 @@ using mp4v2::impl::itmf::enumStikType;
 using mp4v2::impl::itmf::enumAccountType;
 using mp4v2::impl::itmf::enumCountryCode;
 using mp4v2::impl::itmf::enumContentRating;
+using mp4v2::impl::MP4Track;
 
 static
 size_t parseDecSpecificConfig(const std::vector<uint8_t> &config,
@@ -132,7 +133,8 @@ using mp4v2::impl::MP4Atom;
 
 MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
         : m_filename(path), m_closed(false),
-          m_edit_start(0), m_edit_duration(0)
+          m_edit_start(0), m_edit_duration(0),
+          m_max_bitrate(0)
 {
     static const char * const compatibleBrands[] =
         { "M4A ", "mp42", "isom", "" };
@@ -218,10 +220,44 @@ void MP4SinkBase::close()
     if (!m_closed) {
         m_closed = true;
         try {
-            m_mp4file.Close();
+            m_mp4file.Close(MP4_CLOSE_DO_NOT_COMPUTE_BITRATE);
         } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
         }
+    }
+}
+
+void MP4SinkBase::updateMaxBitrate(bool finalize)
+{
+    MP4Track *track = m_mp4file.GetTrack(m_track_id);
+    unsigned numSamples = track->GetNumberOfSamples();
+    unsigned timeScale = track->GetTimeScale();
+    unsigned duration = 0;
+    unsigned size = 0;
+    for (int sid = numSamples; sid >= 1 && duration < timeScale; --sid) {
+        MP4Timestamp dts;
+        MP4Duration delta;
+        track->GetSampleTimes(sid, &dts, &delta);
+        duration += delta;
+        size += track->GetSampleSize(sid);
+    }
+    if (!duration || (!finalize && duration < timeScale))
+        return;
+    unsigned bitrate = size * 8.0 * timeScale / duration + .5;
+    if (bitrate > m_max_bitrate)
+        m_max_bitrate = bitrate;
+}
+
+void MP4SinkBase::writeBitrates(int avgBitrate)
+{
+    updateMaxBitrate(true);
+    if (m_mp4file.FindTrackAtom(m_track_id, "mdia.minf.stbl.stsd.*.esds")) {
+        m_mp4file.SetTrackIntegerProperty(m_track_id,
+                                          "mdia.minf.stbl.stsd.*.esds.decConfigDescr.maxBitrate",
+                                          m_max_bitrate);
+        m_mp4file.SetTrackIntegerProperty(m_track_id,
+                                          "mdia.minf.stbl.stsd.*.esds.decConfigDescr.avgBitrate",
+                                          avgBitrate);
     }
 }
 

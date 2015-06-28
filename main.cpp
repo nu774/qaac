@@ -1042,6 +1042,7 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
         }
     }
     sink->writeTags();
+    sink->writeBitrates();
     if (!opts.no_optimize)
         do_optimize(sink->getFile(), ofilename, opts.verbose);
     sink->close();
