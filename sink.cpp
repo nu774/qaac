@@ -331,8 +331,11 @@ void MP4SinkBase::writeShortTag(uint32_t fcc, const std::string &value)
 void MP4SinkBase::writeLongTag(const std::string &key, const std::string &value)
 {
     const uint8_t *v = reinterpret_cast<const uint8_t *>(value.c_str());
+    auto type = mp4v2::impl::itmf::BT_UTF8;
+    if (key == "Encoding Params")
+        type = mp4v2::impl::itmf::BT_IMPLICIT;
     m_mp4file.SetMetadataFreeForm(key.c_str(), "com.apple.iTunes",
-                                  v, value.size());
+                                  v, value.size(), type);
 }
 
 void MP4SinkBase::writeTrackTag(const char *fcc, const std::string &value)
