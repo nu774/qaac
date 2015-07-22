@@ -1554,7 +1554,8 @@ void load_track(const wchar_t *ifilename, const Options &opts,
     if (std::wcscmp(ifilename, L"-"))
         name = PathFindFileNameW(ifilename);
     std::wstring ofilename(name);
-    std::wstring title(name, PathFindExtensionW(name));
+    const wchar_t *ext = PathFindExtensionW(name);
+    std::wstring title(name, ext);
 
     auto src(input::factory()->open(ifilename));
     auto parser = dynamic_cast<ITagParser*>(src.get());
