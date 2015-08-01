@@ -95,8 +95,10 @@ namespace win32 {
         if (std::wcschr(mode, L'r') && !std::wcschr(mode, L'+'))
             share = _SH_DENYWR;
         FILE *fp = _wfsopen(fullpath.c_str(), mode, share);
-        if (!fp)
-            throw_error(fullpath.c_str(), _doserrno);
+        if (!fp) {
+            if (_doserrno) throw_error(fullpath.c_str(), _doserrno);
+            util::throw_crt_error(fullpath);
+        }
         return fp;
     }
     inline std::shared_ptr<FILE> fopen(const std::wstring &path,
