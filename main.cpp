@@ -1644,6 +1644,7 @@ int wmain1(int argc, wchar_t **argv)
     std::setbuf(stderr, 0);
     _setmode(0, _O_BINARY);
     _setmode(2, _O_U8TEXT);
+    _setmaxstdio(2048);
 
 #if 0
     FILE *fp = std::fopen("CON", "r");
