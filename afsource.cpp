@@ -81,7 +81,8 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
     m_af.getFormatList(&aflist);
     m_iasbd = aflist[0].mASBD;
     if (m_iasbd.mFormatID != 'lpcm' && m_iasbd.mFormatID != 'alac' &&
-        m_iasbd.mFormatID != '.mp3')
+        m_iasbd.mFormatID != '.mp3' && m_iasbd.mFormatID != 'aac ' &&
+        m_iasbd.mFormatID != 'aach' && m_iasbd.mFormatID != 'aacp')
         throw std::runtime_error("Not supported input format");
 
     uint32_t fcc = m_af.getFileFormat();
@@ -169,9 +170,12 @@ void ExtAFSource::seekTo(int64_t count)
     int npreroll = 0;
     
     switch (m_iasbd.mFormatID) {
-    case kAudioFormatMPEGLayer1: npreroll = 1; break;
-    case kAudioFormatMPEGLayer2: npreroll = 1; break;
-    case kAudioFormatMPEGLayer3: npreroll = 10; break;
+    case kAudioFormatMPEGLayer1:     npreroll = 1; break;
+    case kAudioFormatMPEGLayer2:     npreroll = 1; break;
+    case kAudioFormatMPEGLayer3:     npreroll = 10; break;
+    case kAudioFormatMPEG4AAC:       npreroll = 1; break;
+    case kAudioFormatMPEG4AAC_HE:    npreroll = m_iasbd.mSampleRate / m_iasbd.mFramesPerPacket / 2; break;
+    case kAudioFormatMPEG4AAC_HE_V2: npreroll = m_iasbd.mSampleRate / m_iasbd.mFramesPerPacket / 2; break;
     }
     int64_t off
         = std::max(0LL, count - m_iasbd.mFramesPerPacket * npreroll);
