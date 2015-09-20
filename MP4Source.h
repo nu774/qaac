@@ -45,7 +45,7 @@ public:
     void shiftMediaOffset(int val)
     {
         std::for_each(m_edits.begin(), m_edits.end(), [val](entry_t & e) {
-                      e.first += val;
+                      e.first = std::max(e.first + val, (int64_t)0);
                       });
     }
 };
