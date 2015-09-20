@@ -35,6 +35,19 @@ public:
         unsigned edit = editForPosition(position, &off);
         return mediaOffset(edit) + off;
     }
+    void scaleShift(uint8_t shift)
+    {
+        std::for_each(m_edits.begin(), m_edits.end(), [shift](entry_t & e) {
+                      e.first  <<= shift;
+                      e.second <<= shift;
+                      });
+    }
+    void shiftMediaOffset(int val)
+    {
+        std::for_each(m_edits.begin(), m_edits.end(), [val](entry_t & e) {
+                      e.first += val;
+                      });
+    }
 };
 
 class MP4Source: public ISeekableSource, public ITagParser, public IPacketFeeder
@@ -53,6 +66,7 @@ class MP4Source: public ISeekableSource, public ITagParser, public IPacketFeeder
     std::vector<uint8_t> m_packet_buffer;
     util::FIFO<uint8_t>  m_decode_buffer;
     AudioStreamBasicDescription m_iasbd, m_oasbd;
+    uint8_t m_scale_shift;
 public:
     MP4Source(const std::shared_ptr<FILE> &fp);
     uint64_t length() const

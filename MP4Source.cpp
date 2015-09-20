@@ -29,6 +29,7 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
     : m_position(0),
       m_position_raw(0),
       m_current_packet(0),
+      m_scale_shift(0),
       m_fp(fp)
 {
     try {
@@ -91,16 +92,28 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
                 is_nero = true;
         }
         if (is_nero && !m_edits.count()) {
+            /* assume old nero style handling of priming samples + padding */
             uint32_t priming = first_off * m_iasbd.mSampleRate + .5;
             uint64_t dur = m_file.GetTrackDuration(m_track_id);
             m_edits.addEntry(priming, dur - priming);
         }
         if (!m_edits.count())
             m_edits.addEntry(0, m_file.GetTrackDuration(m_track_id));
-        /*
-        if (m_chapters.size() == 1)
-            m_chapters.clear();
-        */
+
+        if (m_iasbd.mSampleRate == m_file.GetTrackTimeScale(m_track_id) * 2)
+            m_scale_shift = 1;
+
+        if (m_scale_shift) m_edits.scaleShift(m_scale_shift);
+
+        if (m_iasbd.mFormatID == 'aach' || m_iasbd.mFormatID == 'aacp') {
+            /* 
+             * When upsampled scale is used in HE-AAC/HE-AACv2 MP4.
+             * we assume it is from Nero or FhG. We have to subtract
+             * SBR decoder delay counted in ther number of priming samples.
+             */
+            if (!m_scale_shift)
+                m_edits.shiftMediaOffset(-481 * 2);
+        }
     } catch (mp4v2::impl::Exception *e) {
         handle_mp4error(e);
     }
@@ -158,8 +171,8 @@ void MP4Source::seekTo(int64_t count)
         m_current_packet = m_file.GetTrackNumberOfSamples(m_track_id) + 1;
         return;
     }
-    m_decoder->reset();
     m_decode_buffer.reset();
+    m_decoder->reset();
     m_position = count;
     int64_t  mediapos  = m_edits.mediaOffsetForPosition(count);
     uint32_t fpp       = m_iasbd.mFramesPerPacket;
@@ -168,7 +181,7 @@ void MP4Source::seekTo(int64_t count)
     m_position_raw     = ipacket * fpp;
     m_current_packet   = std::max(0LL, ipacket - preroll);
     preroll            = ipacket - m_current_packet;
-    m_start_skip = mediapos - ipacket * fpp + getDecoderDelay();
+    m_start_skip = mediapos - m_position_raw + getDecoderDelay();
     
     std::vector<uint8_t> v(m_iasbd.mFramesPerPacket * m_oasbd.mBytesPerFrame);
     for (uint32_t i = 0; i < preroll; ++i)
@@ -290,7 +303,9 @@ void MP4Source::setupMPEG4Audio()
         }
         cautil::parseMagicCookieAAC(magic_cookie, &asc);
         cautil::parseASC(asc, &m_iasbd, &m_chanmap);
-        if (m_iasbd.mFormatID != 'aac ')
+        if (m_iasbd.mFormatID != 'aac ' &&
+            m_iasbd.mFormatID != 'aach' &&
+            m_iasbd.mFormatID != 'aacp')
             throw std::runtime_error("Not supported input codec");
         m_decoder = std::make_shared<CoreAudioPacketDecoder>(this, m_iasbd);
         m_decoder->setMagicCookie(magic_cookie);
@@ -327,6 +342,9 @@ unsigned MP4Source::getMaxFrameDependency()
     switch (m_iasbd.mFormatID) {
     case 'alac': return 0;
     case '.mp3': return 10;
+    case 'aach':
+    case 'aacp':
+        return m_iasbd.mSampleRate / 2 / m_iasbd.mFramesPerPacket;
     }
     return 1;
 }

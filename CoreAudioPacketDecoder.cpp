@@ -20,6 +20,8 @@ CoreAudioPacketDecoder(IPacketFeeder *feeder,
         }
         break;
     case 'aac ':
+    case 'aach':
+    case 'aacp':
     case '.mp1':
     case '.mp2':
     case '.mp3':
