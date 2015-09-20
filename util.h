@@ -111,8 +111,8 @@ namespace util {
 
     inline bool is_seekable(int fd)
     {
-        struct stat stb = { 0 };
-        return fstat(fd, &stb) == 0 && (stb.st_mode & S_IFMT) == S_IFREG;
+        struct _stat64 stb = { 0 };
+        return _fstat64(fd, &stb) == 0 && (stb.st_mode & S_IFMT) == S_IFREG;
     }
 
     template <typename ForwardIterator>

@@ -27,10 +27,7 @@ WaveSink::WaveSink(FILE *fp,
         : m_file(fp), m_bytes_written(0), m_closed(false), m_fact(false),
           m_seekable(false), m_chanmask(chanmask), m_asbd(asbd)
 {
-    struct stat stb = { 0 };
-    if (fstat(fileno(fp), &stb))
-        util::throw_crt_error("fstat()");
-    m_seekable = ((stb.st_mode & S_IFMT) == S_IFREG);
+    m_seekable = util::is_seekable(fileno(fp));
     std::string header = buildHeader();
 
     uint32_t hdrsize = header.size();
