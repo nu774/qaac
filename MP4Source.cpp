@@ -159,6 +159,7 @@ void MP4Source::seekTo(int64_t count)
         return;
     }
     m_decoder->reset();
+    m_decode_buffer.reset();
     m_position = count;
     int64_t  mediapos  = m_edits.mediaOffsetForPosition(count);
     uint32_t fpp       = m_iasbd.mFramesPerPacket;
