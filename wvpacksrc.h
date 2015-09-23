@@ -66,7 +66,7 @@ public:
     {
         return (this->*m_readSamples)(buffer, nsamples);
     }
-    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const

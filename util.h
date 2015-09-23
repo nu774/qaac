@@ -109,12 +109,6 @@ namespace util {
         return memory;
     }
 
-    inline bool is_seekable(int fd)
-    {
-        struct _stat64 stb = { 0 };
-        return _fstat64(fd, &stb) == 0 && (stb.st_mode & S_IFMT) == S_IFREG;
-    }
-
     template <typename ForwardIterator>
     bool is_increasing(ForwardIterator begin, ForwardIterator end)
     {

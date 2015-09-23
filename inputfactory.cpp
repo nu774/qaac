@@ -43,7 +43,7 @@ namespace input {
         } while (0)
 
         TRY_MAKE_SHARED(WaveSource, fp, m_ignore_length);
-        if (!util::is_seekable(fileno(fp.get())))
+        if (!win32::is_seekable(fileno(fp.get())))
             throw std::runtime_error("Not available input file format");
         if (libflac.loaded())
             TRY_MAKE_SHARED(FLACSource, libflac, fp);

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include "cafsink.h"
-
+#include "win32util.h"
 
 void CAFSink::init(const std::shared_ptr<FILE> &file,
                    const AudioStreamBasicDescription &asbd,
@@ -16,7 +16,7 @@ void CAFSink::init(const std::shared_ptr<FILE> &file,
     m_channel_layout = channel_layout;
     m_magic_cookie.assign(cookie.begin(), cookie.end());
     m_asbd = asbd;
-    m_seekable = util::is_seekable(fileno(m_file.get()));
+    m_seekable = win32::is_seekable(fileno(m_file.get()));
     if (asbd.mFormatID != 'lpcm' && !m_seekable) {
         throw std::runtime_error("piped output of CAF is only available for "
                                  "LPCM");

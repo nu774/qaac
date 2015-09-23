@@ -2,6 +2,7 @@
 #define _RAWSOURCE_H
 
 #include "iointer.h"
+#include "win32util.h"
 
 class RawSource: public ISeekableSource {
     uint64_t m_length;
@@ -19,7 +20,7 @@ public:
     }
     const std::vector<uint32_t> *getChannels() const { return 0; }
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     int64_t getPosition() { return m_position; }
 };

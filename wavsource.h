@@ -3,6 +3,7 @@
 
 #include "iointer.h"
 #include "cautil.h"
+#include "win32util.h"
 
 namespace wave {
     struct GUID {
@@ -38,7 +39,7 @@ public:
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
 private:
     int fd() { return fileno(m_fp.get()); }

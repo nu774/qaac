@@ -4,6 +4,7 @@
 #include "AudioFileX.h"
 #include "ExtAudioFileX.h"
 #include "iointer.h"
+#include "win32util.h"
 
 class ExtAFSource: public ISeekableSource, public ITagParser
 {
@@ -34,7 +35,7 @@ public:
     }
     int64_t getPosition();
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const

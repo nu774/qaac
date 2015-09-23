@@ -27,7 +27,7 @@ WaveSink::WaveSink(FILE *fp,
         : m_file(fp), m_bytes_written(0), m_closed(false), m_fact(false),
           m_seekable(false), m_chanmask(chanmask), m_asbd(asbd)
 {
-    m_seekable = util::is_seekable(fileno(fp));
+    m_seekable = win32::is_seekable(fileno(fp));
     std::string header = buildHeader();
 
     uint32_t hdrsize = header.size();

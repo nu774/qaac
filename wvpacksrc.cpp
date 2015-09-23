@@ -85,7 +85,7 @@ namespace {
         }
         static int seekable(void *cookie)
         {
-            return util::is_seekable(reinterpret_cast<int>(cookie));
+            return win32::is_seekable(reinterpret_cast<int>(cookie));
         }
     };
 }

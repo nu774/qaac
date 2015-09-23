@@ -2,6 +2,7 @@
 #include "iointer.h"
 #include "mp4v2wrapper.h"
 #include "PacketDecoder.h"
+#include "win32util.h"
 
 class MP4Edits {
     typedef std::pair<int64_t, int64_t> entry_t;
@@ -83,7 +84,7 @@ public:
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
     const std::vector<chapters::entry_t> *getChapters() const

@@ -59,7 +59,7 @@ public:
     {
         return static_cast<size_t>(m_readf(m_handle.get(), buffer, nsamples));
     }
-    bool isSeekable() { return util::is_seekable(fileno(m_fp.get())); }
+    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     int64_t getPosition();
     const std::map<std::string, std::string> &getTags() const { return m_tags; }

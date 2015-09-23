@@ -114,6 +114,11 @@ namespace win32 {
             return std::shared_ptr<FILE>(stdout, noop::call);
     }
 
+    inline bool is_seekable(int fd)
+    {
+        return GetFileType((HANDLE)_get_osfhandle(fd)) == FILE_TYPE_DISK;
+    }
+
     FILE *tmpfile(const wchar_t *prefix);
 
     char *load_with_mmap(const wchar_t *path, uint64_t *size);

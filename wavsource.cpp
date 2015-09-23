@@ -24,7 +24,7 @@ WaveSource::WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength)
     : m_data_pos(0), m_position(0), m_fp(fp)
 {
     std::memset(&m_asbd, 0, sizeof m_asbd);
-    m_seekable = util::is_seekable(fileno(m_fp.get()));
+    m_seekable = win32::is_seekable(fileno(m_fp.get()));
     int64_t data_length = parse();
     if (ignorelength || !data_length || data_length % m_block_align)
         m_length = ~0ULL;

@@ -6,9 +6,8 @@ RawSource::RawSource(const std::shared_ptr<FILE> &fp,
                      const AudioStreamBasicDescription &asbd)
     : m_position(0), m_fp(fp), m_asbd(asbd)
 {
-    int fd = fileno(m_fp.get());
-    if (util::is_seekable(fd))
-        m_length = _filelengthi64(fd) / asbd.mBytesPerFrame;
+    if (isSeekable())
+        m_length = _filelengthi64(fileno(m_fp.get())) / asbd.mBytesPerFrame;
     else
         m_length = ~0ULL;
     bool isfloat = asbd.mFormatFlags & kAudioFormatFlagIsFloat;
@@ -53,7 +52,7 @@ size_t RawSource::readSamples(void *buffer, size_t nsamples)
 void RawSource::seekTo(int64_t count)
 {
     int fd = fileno(m_fp.get());
-    if (util::is_seekable(fd)) {
+    if (isSeekable()) {
         CHECKCRT(_lseeki64(fd, count*m_asbd.mBytesPerFrame, SEEK_SET) < 0);
         m_position = count;
     } else if (m_position > count) {

@@ -63,7 +63,7 @@ struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
     }
     static TtakBool seekable(void *cookie)
     {
-        return util::is_seekable(reinterpret_cast<int>(cookie));
+        return win32::is_seekable(reinterpret_cast<int>(cookie));
     }
     static TtakBool read(void *cookie, void *buf, TtakInt32 n, TtakInt32 *nr)
     {

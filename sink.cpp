@@ -548,7 +548,7 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
 
 void ADTSSink::init(const std::vector<uint8_t> &config)
 {
-    m_seekable = util::is_seekable(fileno(m_fp.get()));
+    m_seekable = win32::is_seekable(fileno(m_fp.get()));
     unsigned rate;
     size_t off = parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
                                         &m_channel_config);
