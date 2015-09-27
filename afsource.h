@@ -6,7 +6,7 @@
 #include "iointer.h"
 #include "win32util.h"
 
-class ExtAFSource: public ISeekableSource, public ITagParser
+class ExtAFSource : public ISeekableSource, public ITagParser
 {
     AudioFileX m_af;
     ExtAudioFileX m_eaf;
@@ -31,18 +31,18 @@ public:
     }
     const std::vector<uint32_t> *getChannels() const
     {
-        return m_chanmap.size() ? &m_chanmap: 0;
+        return m_chanmap.size() ? &m_chanmap : 0;
     }
     int64_t getPosition();
     size_t readSamples(void *buffer, size_t nsamples);
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-	const std::vector<std::vector<char>> *getArtworks() const
-	{
-		return 0;
-	}
-	const std::vector<chapters::entry_t> *getChapters() const
+    const std::vector<std::vector<char>> *getArtworks() const
+    {
+        return 0;
+    }
+    const std::vector<chapters::entry_t> *getChapters() const
     {
         return m_chapters.size() ? &m_chapters : 0;
     }

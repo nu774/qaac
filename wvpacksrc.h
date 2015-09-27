@@ -20,24 +20,24 @@ public:
 
     const char *(*GetLibraryVersionString)();
     WavpackContext *(*OpenFileInputEx)(void *, void *, void *, char *, int,
-                                       int);
+        int);
     WavpackContext *(*CloseFile)(WavpackContext *);
-    int (*GetBitsPerSample)(WavpackContext *);
-    int (*GetChannelMask)(WavpackContext *);
-    int (*GetMode)(WavpackContext *);
-    int (*GetNumChannels)(WavpackContext *);
-    uint32_t (*GetNumSamples)(WavpackContext *);
-    int (*GetNumTagItems)(WavpackContext *);
-    uint32_t (*GetSampleIndex)(WavpackContext *);
-    uint32_t (*GetSampleRate)(WavpackContext *);
-    int (*GetTagItem)(WavpackContext *, const char *, char *, int);
-    int (*GetTagItemIndexed)(WavpackContext *, int, char *, int);
+    int(*GetBitsPerSample)(WavpackContext *);
+    int(*GetChannelMask)(WavpackContext *);
+    int(*GetMode)(WavpackContext *);
+    int(*GetNumChannels)(WavpackContext *);
+    uint32_t(*GetNumSamples)(WavpackContext *);
+    int(*GetNumTagItems)(WavpackContext *);
+    uint32_t(*GetSampleIndex)(WavpackContext *);
+    uint32_t(*GetSampleRate)(WavpackContext *);
+    int(*GetTagItem)(WavpackContext *, const char *, char *, int);
+    int(*GetTagItemIndexed)(WavpackContext *, int, char *, int);
     void *(*GetWrapperLocation)(void *first_block, uint32_t *size);
-    int (*SeekSample)(WavpackContext *, uint32_t);
-    uint32_t (*UnpackSamples)(WavpackContext *, int32_t *, uint32_t);
+    int(*SeekSample)(WavpackContext *, uint32_t);
+    uint32_t(*UnpackSamples)(WavpackContext *, int32_t *, uint32_t);
 };
 
-class WavpackSource: public ISeekableSource, public ITagParser
+class WavpackSource : public ISeekableSource, public ITagParser
 {
     uint64_t m_length;
     std::shared_ptr<void> m_wpc;
@@ -46,7 +46,7 @@ class WavpackSource: public ISeekableSource, public ITagParser
     std::map<std::string, std::string> m_tags;
     std::vector<chapters::entry_t > m_chapters;
     std::vector<uint8_t> m_pivot;
-    size_t (WavpackSource::*m_readSamples)(void *, size_t);
+    size_t(WavpackSource::*m_readSamples)(void *, size_t);
     AudioStreamBasicDescription m_asbd;
     WavpackModule m_module;
 public:
@@ -69,11 +69,11 @@ public:
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-	const std::vector<std::vector<char>> *getArtworks() const
-	{
-		return 0;
-	}
-	const std::vector<chapters::entry_t> *getChapters() const
+    const std::vector<std::vector<char>> *getArtworks() const
+    {
+        return 0;
+    }
+    const std::vector<chapters::entry_t> *getChapters() const
     {
         return m_chapters.size() ? &m_chapters : 0;
     }

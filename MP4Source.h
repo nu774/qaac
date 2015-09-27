@@ -16,9 +16,9 @@ public:
     uint64_t totalDuration() const
     {
         return std::accumulate(m_edits.begin(), m_edits.end(), 0ULL,
-                               [](uint64_t n, const entry_t &e) -> uint64_t {
-                                    return n + e.second;
-                               });
+            [](uint64_t n, const entry_t &e) -> uint64_t {
+            return n + e.second;
+        });
     }
     int64_t mediaOffset(unsigned edit_index) const
     {
@@ -39,19 +39,19 @@ public:
     void scaleShift(uint8_t shift)
     {
         std::for_each(m_edits.begin(), m_edits.end(), [shift](entry_t & e) {
-                      e.first  <<= shift;
-                      e.second <<= shift;
-                      });
+            e.first <<= shift;
+            e.second <<= shift;
+        });
     }
     void shiftMediaOffset(int val)
     {
         std::for_each(m_edits.begin(), m_edits.end(), [val](entry_t & e) {
-                      e.first = std::max(e.first + val, (int64_t)0);
-                      });
+            e.first = std::max(e.first + val, (int64_t)0);
+        });
     }
 };
 
-class MP4Source: public ISeekableSource, public ITagParser, public IPacketFeeder
+class MP4Source : public ISeekableSource, public ITagParser, public IPacketFeeder
 {
     uint32_t m_track_id;
     int64_t  m_position, m_position_raw;
@@ -80,18 +80,18 @@ public:
     }
     const std::vector<uint32_t> *getChannels() const
     {
-        return m_chanmap.size() ? &m_chanmap: 0;
+        return m_chanmap.size() ? &m_chanmap : 0;
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-	const std::vector<std::vector<char>> *getArtworks() const
-	{
-		return 0;
-	}
-	const std::vector<chapters::entry_t> *getChapters() const
+    const std::vector<std::vector<char>> *getArtworks() const
+    {
+        return 0;
+    }
+    const std::vector<chapters::entry_t> *getChapters() const
     {
         return m_chapters.size() ? &m_chapters : 0;
     }

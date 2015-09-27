@@ -29,7 +29,7 @@ namespace flac {
 #define TRYFL(expr) (void)(flac::try__((expr), #expr))
 
 FLACSource::FLACSource(const FLACModule &module,
-                       const std::shared_ptr<FILE> &fp):
+    const std::shared_ptr<FILE> &fp) :
     m_eof(false),
     m_giveup(false),
     m_initialize_done(false),
@@ -51,33 +51,33 @@ FLACSource::FLACSource(const FLACModule &module,
     }
     uint32_t fcc = util::fourcc(buffer);
     if ((fcc != 'fLaC' && fcc != 'OggS')
-     || (fcc == 'OggS' && std::memcmp(&buffer[28], "\177FLAC", 5)))
+        || (fcc == 'OggS' && std::memcmp(&buffer[28], "\177FLAC", 5)))
         throw std::runtime_error("Not a FLAC file");
     CHECKCRT(_lseeki64(fileno(m_fp.get()), 0, SEEK_SET) < 0);
 
     m_decoder =
         decoder_t(m_module.stream_decoder_new(),
-                  std::bind1st(std::mem_fun(&FLACSource::close), this));
-	TRYFL(m_module.stream_decoder_set_metadata_respond(
-		m_decoder.get(), FLAC__METADATA_TYPE_VORBIS_COMMENT));
+            std::bind1st(std::mem_fun(&FLACSource::close), this));
+    TRYFL(m_module.stream_decoder_set_metadata_respond(
+        m_decoder.get(), FLAC__METADATA_TYPE_VORBIS_COMMENT));
 
-	TRYFL(m_module.stream_decoder_set_metadata_respond(
-		m_decoder.get(), FLAC__METADATA_TYPE_PICTURE));
+    TRYFL(m_module.stream_decoder_set_metadata_respond(
+        m_decoder.get(), FLAC__METADATA_TYPE_PICTURE));
 
-	TRYFL((fcc == 'OggS' ? m_module.stream_decoder_init_ogg_stream
-                         : m_module.stream_decoder_init_stream)
-            (m_decoder.get(),
-             staticReadCallback,
-             staticSeekCallback,
-             staticTellCallback,
-             staticLengthCallback,
-             staticEofCallback,
-             staticWriteCallback,
-             staticMetadataCallback,
-             staticErrorCallback,
-             this) == FLAC__STREAM_DECODER_INIT_STATUS_OK);
+    TRYFL((fcc == 'OggS' ? m_module.stream_decoder_init_ogg_stream
+        : m_module.stream_decoder_init_stream)
+        (m_decoder.get(),
+            staticReadCallback,
+            staticSeekCallback,
+            staticTellCallback,
+            staticLengthCallback,
+            staticEofCallback,
+            staticWriteCallback,
+            staticMetadataCallback,
+            staticErrorCallback,
+            this) == FLAC__STREAM_DECODER_INIT_STATUS_OK);
     TRYFL(m_module.stream_decoder_process_until_end_of_metadata(
-                m_decoder.get()));
+        m_decoder.get()));
     if (m_giveup || m_asbd.mBitsPerChannel == 0)
         flac::want(false);
     m_buffer.set_unit(m_asbd.mChannelsPerFrame);
@@ -99,7 +99,7 @@ size_t FLACSource::readSamples(void *buffer, size_t nsamples)
         throw std::runtime_error("FLAC decoder error");
     if (!m_buffer.count()) {
         if (m_module.stream_decoder_get_state(m_decoder.get()) ==
-                FLAC__STREAM_DECODER_END_OF_STREAM)
+            FLAC__STREAM_DECODER_END_OF_STREAM)
             return 0;
         TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
     }
@@ -129,9 +129,9 @@ FLACSource::seekCallback(uint64_t offset)
 {
     m_eof = false;
     if (_lseeki64(fileno(m_fp.get()), offset, SEEK_SET) == offset)
-        return FLAC__STREAM_DECODER_SEEK_STATUS_OK; 
+        return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
     else
-        return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR; 
+        return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
 }
 
 FLAC__StreamDecoderTellStatus
@@ -160,13 +160,13 @@ FLAC__bool FLACSource::eofCallback()
 }
 
 FLAC__StreamDecoderWriteStatus
-FLACSource::writeCallback( const FLAC__Frame *frame,
-                           const FLAC__int32 *const * buffer)
+FLACSource::writeCallback(const FLAC__Frame *frame,
+    const FLAC__int32 *const * buffer)
 {
     const FLAC__FrameHeader &h = frame->header;
     if (h.channels != m_asbd.mChannelsPerFrame
-     || h.sample_rate != m_asbd.mSampleRate
-     || h.bits_per_sample != m_asbd.mBitsPerChannel)
+        || h.sample_rate != m_asbd.mSampleRate
+        || h.bits_per_sample != m_asbd.mBitsPerChannel)
         return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
     /*
@@ -190,10 +190,10 @@ void FLACSource::metadataCallback(const FLAC__StreamMetadata *metadata)
         return;
     if (metadata->type == FLAC__METADATA_TYPE_STREAMINFO)
         handleStreamInfo(metadata->data.stream_info);
-	else if (metadata->type == FLAC__METADATA_TYPE_VORBIS_COMMENT)
-		handleVorbisComment(metadata->data.vorbis_comment);
-	else if (metadata->type == FLAC__METADATA_TYPE_PICTURE)
-		handlePicture(metadata->data.picture);
+    else if (metadata->type == FLAC__METADATA_TYPE_VORBIS_COMMENT)
+        handleVorbisComment(metadata->data.vorbis_comment);
+    else if (metadata->type == FLAC__METADATA_TYPE_PICTURE)
+        handlePicture(metadata->data.picture);
 }
 
 void FLACSource::errorCallback(FLAC__StreamDecoderErrorStatus status)
@@ -205,18 +205,19 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 {
     try {
         flac::validate(si);
-    } catch (const std::runtime_error) {
+    }
+    catch (const std::runtime_error) {
         m_giveup = true;
         return;
     }
     m_length = si.total_samples;
     m_asbd = cautil::buildASBDForPCM2(si.sample_rate, si.channels,
-                                      si.bits_per_sample, 32,
-                                      kAudioFormatFlagIsSignedInteger);
+        si.bits_per_sample, 32,
+        kAudioFormatFlagIsSignedInteger);
 }
 
 void FLACSource::handleVorbisComment(
-        const FLAC__StreamMetadata_VorbisComment &vc)
+    const FLAC__StreamMetadata_VorbisComment &vc)
 {
     std::map<std::string, std::string> tags;
     std::wstring cuesheet;
@@ -229,7 +230,8 @@ void FLACSource::handleVorbisComment(
             unsigned mask = 0;
             if (sscanf(value, "%i", &mask) == 1)
                 chanmap::getChannels(mask, &m_chanmap);
-        } else if (value) {
+        }
+        else if (value) {
             tags[key] = value;
         }
     }
@@ -237,10 +239,10 @@ void FLACSource::handleVorbisComment(
 }
 
 void FLACSource::handlePicture(
-	const FLAC__StreamMetadata_Picture &pic)
+    const FLAC__StreamMetadata_Picture &pic)
 {
-	FLAC__ASSERT(pic.width);
+    FLAC__ASSERT(pic.width);
 
-	std::vector<char> vec(pic.data, pic.data + pic.data_length);
-	m_artworks.push_back(vec);
+    std::vector<char> vec(pic.data, pic.data + pic.data_length);
+    m_artworks.push_back(vec);
 }
