@@ -18,6 +18,7 @@ class FLACSource: public ISeekableSource, public ITagParser
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
+	std::vector<std::vector<char>> m_artworks;
     std::vector<chapters::entry_t> m_chapters;
     util::FIFO<int32_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
@@ -39,10 +40,14 @@ public:
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> *getChapters() const
-    {
-        return m_chapters.size() ? &m_chapters : 0;
-    }
+	const std::vector<std::vector<char>> *getArtworks() const
+	{
+		return m_artworks.size() ? &m_artworks : 0;
+	}
+	const std::vector<chapters::entry_t> *getChapters() const
+	{
+		return m_chapters.size() ? &m_chapters : 0;
+	}
 private:
     void close(FLAC__StreamDecoder *decoder)
     {
@@ -124,7 +129,8 @@ private:
     void metadataCallback(const FLAC__StreamMetadata *metadata);
     void errorCallback(FLAC__StreamDecoderErrorStatus status);
     void handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si);
-    void handleVorbisComment(const FLAC__StreamMetadata_VorbisComment &vc);
+	void handleVorbisComment(const FLAC__StreamMetadata_VorbisComment &vc);
+	void handlePicture(const FLAC__StreamMetadata_Picture &pic);
 };
 
 #endif

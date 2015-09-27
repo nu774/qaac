@@ -10,6 +10,7 @@ class CompositeSource: public ISeekableSource, public ITagParser {
     uint64_t m_length;
     std::vector<source_t> m_sources;
     std::map<std::string, std::string> m_tags;
+	std::vector<std::vector<char>> m_artworks;
     std::vector<chapters::entry_t> m_chapters;
     AudioStreamBasicDescription m_asbd;
 public:
@@ -42,11 +43,15 @@ public:
         ITagParser *tp = dynamic_cast<ITagParser*>(src.get());
         return tp ? tp->getTags() : m_tags;
     }
-    const std::vector<chapters::entry_t> *getChapters() const
-    {
-        return m_chapters.size() ? &m_chapters : 0;
-    }
-    void setTags(const std::map<std::string, std::string> &tags)
+	const std::vector<std::vector<char>> *getArtworks() const
+	{
+		return m_artworks.size() ? &m_artworks : 0;
+	}
+	const std::vector<chapters::entry_t> *getChapters() const
+	{
+		return m_chapters.size() ? &m_chapters : 0;
+	}
+	void setTags(const std::map<std::string, std::string> &tags)
     {
         m_tags = tags;
     }

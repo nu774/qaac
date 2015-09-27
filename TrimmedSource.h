@@ -62,6 +62,10 @@ public:
         else
             return parser->getTags();
     }
+	const std::vector<std::vector<char>> *getArtworks() const
+	{
+		return 0;
+	}
     const std::vector<chapters::entry_t> * getChapters() const
     {
         ITagParser *parser = dynamic_cast<ITagParser*>(m_src.get());
