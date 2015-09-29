@@ -91,7 +91,7 @@ void load_metadata_files(Options *opts)
         try {
             uint64_t size;
             char *data = win32::load_with_mmap(opts->artwork_files[i].c_str(),
-                &size);
+                                               &size);
             std::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
             auto type = mp4v2::impl::itmf::computeBasicType(data, size);
             if (type == mp4v2::impl::itmf::BT_IMPLICIT)
@@ -100,8 +100,7 @@ void load_metadata_files(Options *opts)
             if (opts->artwork_size)
                 WICConvertArtwork(data, size, opts->artwork_size, &vec);
             opts->artworks.push_back(vec);
-        }
-        catch (const std::exception &e) {
+        } catch (const std::exception &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }
     }
@@ -112,7 +111,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 {
     if (opts.ofilename)
         return !std::wcscmp(opts.ofilename, L"-") ? L"-"
-        : win32::GetFullPathNameX(opts.ofilename);
+                : win32::GetFullPathNameX(opts.ofilename);
 
     const wchar_t *ext = opts.extension();
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
@@ -129,15 +128,14 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
      */
     std::wstring ofilename =
         win32::GetFullPathNameX(strutil::format(L"%s/%s", outdir,
-            obasename.c_str()));
+                                                obasename.c_str()));
 
     /* test if ifilename and ofilename refer to the same file */
     std::shared_ptr<FILE> ifp, ofp;
     try {
         ifp = win32::fopen(ifilename, L"rb");
         ofp = win32::fopen(ofilename, L"rb");
-    }
-    catch (...) {
+    } catch (...) {
         return ofilename;
     }
     BY_HANDLE_FILE_INFORMATION ibhi = { 0 }, obhi = { 0 };
@@ -171,7 +169,7 @@ std::wstring formatSeconds(double seconds)
     int h, m, s, millis;
     secondsToHMS(seconds, &h, &m, &s, &millis);
     return h ? strutil::format(L"%d:%02d:%02d.%03d", h, m, s, millis)
-        : strutil::format(L"%d:%02d.%03d", m, s, millis);
+             : strutil::format(L"%d:%02d.%03d", m, s, millis);
 }
 
 class Timer {
@@ -191,9 +189,9 @@ class PeriodicDisplay {
     bool m_verbose;
     bool m_console_visible;
 public:
-    PeriodicDisplay(uint32_t interval, bool verbose = true)
+    PeriodicDisplay(uint32_t interval, bool verbose=true)
         : m_interval(interval),
-        m_verbose(verbose)
+          m_verbose(verbose)
     {
         m_console_visible = IsWindowVisible(GetConsoleWindow());
         m_last_tick_title = m_last_tick_stderr = GetTickCount();
@@ -234,7 +232,7 @@ class Progress {
 public:
     Progress(bool verbosity, uint64_t total, uint32_t rate)
         : m_disp(100, verbosity), m_verbose(verbosity),
-        m_total(total), m_rate(rate), m_last_percent(0)
+          m_total(total), m_rate(rate), m_last_percent(0)
     {
         long h = _get_osfhandle(_fileno(stderr));
         m_stderr_type = GetFileType(reinterpret_cast<HANDLE>(h));
@@ -250,16 +248,16 @@ public:
         double seconds = fcurrent / m_rate;
         double ellapsed = m_timer.ellapsed();
         double eta = ellapsed * (m_total / fcurrent - 1);
-        double speed = ellapsed ? seconds / ellapsed : 0.0;
+        double speed = ellapsed ? seconds/ellapsed : 0.0;
         if (m_total == ~0ULL)
             m_disp.put(strutil::format(L"\r%s (%.1fx)   ",
                 formatSeconds(seconds).c_str(), speed));
         else {
             std::wstring msg =
                 strutil::format(L"\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
-                    percent, formatSeconds(seconds).c_str(),
-                    m_tstamp.c_str(), speed,
-                    formatSeconds(eta).c_str());
+                                percent, formatSeconds(seconds).c_str(),
+                                m_tstamp.c_str(), speed,
+                                formatSeconds(eta).c_str());
             m_disp.put(msg);
         }
     }
@@ -275,8 +273,8 @@ public:
 
 static
 void do_encode(IEncoder *encoder, const std::wstring &ofilename,
-    const std::vector<std::shared_ptr<ISource> > &chain,
-    const Options &opts)
+               const std::vector<std::shared_ptr<ISource> > &chain,
+               const Options &opts)
 {
     typedef std::shared_ptr<std::FILE> file_t;
     file_t statPtr;
@@ -289,7 +287,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 
     std::shared_ptr<ISource> src = chain.back();
     Progress progress(opts.verbose, src->length(),
-        src->getSampleFormat().mSampleRate);
+                      src->getSampleFormat().mSampleRate);
     try {
         FILE *statfp = statPtr.get();
         while (!g_interrupted && encoder->encodeChunk(1)) {
@@ -298,8 +296,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
                 std::fwprintf(statfp, L"%g\n", stat->currentBitrate());
         }
         progress.finish(src->getPosition());
-    }
-    catch (...) {
+    } catch (...) {
         LOG(L"\n");
         throw;
     }
@@ -313,7 +310,7 @@ void getRawFormat(const Options &opts, AudioStreamBasicDescription *result)
     int itype, iendian;
 
     if (std::swscanf(opts.raw_format, L"%hc%d%hc",
-        &c_type, &bits, &c_endian) < 2)
+                    &c_type, &bits, &c_endian) < 2)
         throw std::runtime_error("Invalid --raw-format spec");
     if ((itype = strutil::strindex("USF", toupper(c_type))) == -1)
         throw std::runtime_error("Invalid --raw-format spec");
@@ -331,7 +328,7 @@ void getRawFormat(const Options &opts, AudioStreamBasicDescription *result)
     };
     AudioStreamBasicDescription asbd =
         cautil::buildASBDForPCM(opts.raw_sample_rate, opts.raw_channels,
-            bits, type_tab[itype]);
+                                bits, type_tab[itype]);
     if (iendian)
         asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
     *result = asbd;
@@ -348,12 +345,11 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
         for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
             int percent = 100.0 * i / total + .5;
             disp.put(strutil::format(L"\rOptimizing...%d%%",
-                percent).c_str());
+                                     percent).c_str());
         }
         disp.put(L"\rOptimizing...done\n");
         disp.flush();
-    }
-    catch (mp4v2::impl::Exception *e) {
+    } catch (mp4v2::impl::Exception *e) {
         handle_mp4error(e);
     }
 }

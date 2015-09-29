@@ -129,9 +129,9 @@ FLACSource::seekCallback(uint64_t offset)
 {
     m_eof = false;
     if (_lseeki64(fileno(m_fp.get()), offset, SEEK_SET) == offset)
-        return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
+        return FLAC__STREAM_DECODER_SEEK_STATUS_OK; 
     else
-        return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
+        return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR; 
 }
 
 FLAC__StreamDecoderTellStatus
@@ -160,13 +160,13 @@ FLAC__bool FLACSource::eofCallback()
 }
 
 FLAC__StreamDecoderWriteStatus
-FLACSource::writeCallback(const FLAC__Frame *frame,
-    const FLAC__int32 *const * buffer)
+FLACSource::writeCallback( const FLAC__Frame *frame,
+                           const FLAC__int32 *const * buffer)
 {
     const FLAC__FrameHeader &h = frame->header;
     if (h.channels != m_asbd.mChannelsPerFrame
-        || h.sample_rate != m_asbd.mSampleRate
-        || h.bits_per_sample != m_asbd.mBitsPerChannel)
+     || h.sample_rate != m_asbd.mSampleRate
+     || h.bits_per_sample != m_asbd.mBitsPerChannel)
         return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
     /*
