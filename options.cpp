@@ -115,236 +115,236 @@ static
 void usage()
 {
     std::wprintf(L"%hs %hs\n%hs", PROGNAME, get_qaac_version(),
-        "Usage: " PROGNAME " [options] infiles....\n"
-        "\n"
-        "\"-\" as infile means stdin.\n"
+"Usage: " PROGNAME " [options] infiles....\n"
+"\n"
+"\"-\" as infile means stdin.\n"
 #ifndef REFALAC
-        "On ADTS/WAV output mode, \"-\" as outfile means stdout.\n"
+"On ADTS/WAV output mode, \"-\" as outfile means stdout.\n"
 #endif
-        "\n"
-        "Main options:\n"
+"\n"
+"Main options:\n"
 #ifdef QAAC
-        "--formats              Show available AAC formats and exit\n"
-        "-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
-        "-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
-        "-v, --cvbr <bitrate>   AAC Constrained VBR mode / bitrate\n"
-        "-c, --cbr <bitrate>    AAC CBR mode / bitrate\n"
-        "                       For -a, -v, -c, \"0\" as bitrate means \"highest\".\n"
-        "                       Highest bitrate available is automatically chosen.\n"
-        "                       For LC, default is -V90\n"
-        "                       For HE, default is -v0\n"
-        "--he                   HE AAC mode (TVBR is not available)\n"
-        "-q, --quality <n>      AAC encoding Quality [0-2]\n"
-        "--adts                 ADTS output (AAC only)\n"
-        "--no-smart-padding     Don't apply smart padding for gapless playback.\n"
-        "                       By default, beginning and ending of input is\n"
-        "                       extrapolated to achieve smooth transition between\n"
-        "                       songs. This option also works as a workaround for\n"
-        "                       bug of CoreAudio HE-AAC encoder that stops encoding\n"
-        "                       1 frame too early.\n"
-        "                       Setting this option can lead to gapless playback\n"
-        "                       issue especially on HE-AAC.\n"
-        "                       However, resulting bitstream will be identical with\n"
-        "                       iTunes only when this option is set.\n"
+"--formats              Show available AAC formats and exit\n"
+"-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
+"-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
+"-v, --cvbr <bitrate>   AAC Constrained VBR mode / bitrate\n"
+"-c, --cbr <bitrate>    AAC CBR mode / bitrate\n"
+"                       For -a, -v, -c, \"0\" as bitrate means \"highest\".\n"
+"                       Highest bitrate available is automatically chosen.\n"
+"                       For LC, default is -V90\n"
+"                       For HE, default is -v0\n"
+"--he                   HE AAC mode (TVBR is not available)\n"
+"-q, --quality <n>      AAC encoding Quality [0-2]\n"
+"--adts                 ADTS output (AAC only)\n"
+"--no-smart-padding     Don't apply smart padding for gapless playback.\n"
+"                       By default, beginning and ending of input is\n"
+"                       extrapolated to achieve smooth transition between\n"
+"                       songs. This option also works as a workaround for\n"
+"                       bug of CoreAudio HE-AAC encoder that stops encoding\n"
+"                       1 frame too early.\n"
+"                       Setting this option can lead to gapless playback\n"
+"                       issue especially on HE-AAC.\n"
+"                       However, resulting bitstream will be identical with\n"
+"                       iTunes only when this option is set.\n"
 #endif
 #ifdef REFALAC
-        "--fast                 Fast stereo encoding mode.\n"
+"--fast                 Fast stereo encoding mode.\n"
 #endif
-        "-d <dirname>           Output directory. Default is current working dir.\n"
-        "--check                Show library versions and exit.\n"
-        "-A, --alac             ALAC encoding mode\n"
-        "-D, --decode           Decode to a WAV file.\n"
-        "--caf                  Output to CAF file instead of M4A/WAV/AAC.\n"
-        "--play                 Decode to a WaveOut device (playback).\n"
-        "-r, --rate <keep|auto|n>\n"
-        "                       keep: output sampling rate will be same as input\n"
-        "                             if possible.\n"
-        "                       auto: output sampling rate will be automatically\n"
-        "                             chosen by encoder.\n"
-        "                       n: desired output sampling rate in Hz.\n"
-        "--lowpass <number>     Specify lowpass filter cut-off frequency in Hz.\n"
-        "                       Use this when you want lower cut-off than\n"
-        "                       Apple default.\n"
-        "-b, --bits-per-sample <n>\n"
-        "                       Bits per sample of output (for WAV/ALAC only)\n"
-        "--no-dither            Turn off dither when quantizing to lower bit depth.\n"
-        "--peak                 Scan + print peak (don't generate output file).\n"
-        "                       Cannot be used with encoding mode or -D.\n"
-        "                       When DSP options are set, peak is computed \n"
-        "                       after all DSP filters have been applied.\n"
-        "--gain <f>             Adjust gain by f dB.\n"
-        "                       Use negative value to decrese gain, when you want to\n"
-        "                       avoid clipping introduced by DSP.\n"
-        "-N, --normalize        Normalize (works in two pass. can generate HUGE\n"
-        "                       tempfile for large piped input)\n"
-        "--drc <thresh:ratio:knee:attack:release>\n"
-        "                       Dynamic range compression.\n"
-        "                       Loud parts over threshold are attenuated by ratio.\n"
-        "                         thresh:  threshold (in dBFS, < 0.0)\n"
-        "                         ratio:   compression ratio (> 1.0)\n"
-        "                         knee:    knee width (in dB, >= 0.0)\n"
-        "                         attack:  attack time (in millis, >= 0.0)\n"
-        "                         release: release time (in millis, >= 0.0)\n"
-        "--limiter              Apply smart limiter that softly clips portions\n"
-        "                       where peak exceeds (near) 0dBFS\n"
-        "--start <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
-        "                       Specify start point of the input.\n"
-        "                       You specify either in seconds(hh:mm:ss.sss..form) or\n"
-        "                       number of samples followed by 's' or\n"
-        "                       cuesheet frames(mm:ss:ff form) followed by 'f'.\n"
-        "                       Example:\n"
-        "                         --start 4010160s : start at 4010160 samples\n"
-        "                         --start 1:30:70f : same as above, in cuepoint\n"
-        "                         --start 1:30.93333 : same as above\n"
-        "--end <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
-        "                       Specify end point of the input (exclusive).\n"
-        "--delay <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
-        "                       Specify amount of delay.\n"
-        "                       When positive value is given, silence is prepended\n"
-        "                       at the begining to achieve specified amount of delay.\n"
-        "                       When negative value is given, specified length is\n"
-        "                       dropped from the beginning.\n"
-        "--no-delay             Compensate encoder delay by prepending 960 samples \n"
-        "                       of scilence, then trimming 3 AAC frames from \n"
-        "                       the beginning (and also tweak iTunSMPB).\n"
-        "                       This option is mainly intended for resolving\n"
-        "                       A/V sync issue of video. \n"
-        "--num-priming <n>      (Experimental). Set arbitrary number of priming\n"
-        "                       samples in range from 0 to 2112 (default 2112).\n"
-        "                       Applicable only for AAC LC.\n"
-        "                       --num-priming=0 is the same as --no-delay.\n"
-        "                       Doesn't work with --no-smart-padding.\n"
-        "--gapless-mode <n>     Encoder delay signaling for gapless playback.\n"
-        "                         0: iTunSMPB (default)\n"
-        "                         1: ISO standard (elst + sbgp + sgpd)\n"
-        "                         2: Both\n"
-        "--matrix-preset <name> Specify user defined preset for matrix mixer.\n"
-        "--matrix-file <file>   Matrix file for remix.\n"
-        "--no-matrix-normalize  Don't automatically normalize(scale) matrix\n"
-        "                       coefficients for the matrix mixer.\n"
-        "--chanmap <n1,n2...>   Rearrange input channels to the specified order.\n"
-        "                       Example:\n"
-        "                         --chanmap 2,1 -> swap L and R.\n"
-        "                         --chanmap 2,3,1 -> C+L+R -> L+R+C.\n"
-        "--chanmask <n>         Force input channel mask(bitmap).\n"
-        "                       Either decimal or hex number with 0x prefix\n"
-        "                       can be used.\n"
-        "                       When 0 is given, qaac works as if no channel mask is\n"
-        "                       present in the source and picks default layout.\n"
-        "--no-optimize          Don't optimize MP4 container after encoding.\n"
-        "--tmpdir <dirname>     Specify temporary directory. Default is %TMP%\n"
-        "-s, --silent           Suppress console messages.\n"
-        "--verbose              More verbose console messages.\n"
-        "-i, --ignorelength     Assume WAV input and ignore the data chunk length.\n"
-        "--threading            Enable multi-threading.\n"
-        "-n, --nice             Give lower process priority.\n"
-        "--sort-args            Sort filenames given by command line arguments.\n"
-        "--text-codepage <n>    Specify text code page of cuesheet/chapter/lyrics.\n"
-        "                       Example: 1252 for Latin-1, 65001 for UTF-8.\n"
-        "                       Use this when bogus values are written into tags\n"
-        "                       due to automatic encoding detection failure.\n"
-        "-S, --stat             Save bitrate statistics into file.\n"
-        "--log <filename>       Output message to file.\n"
-        "\n"
-        "Option for output filename generation:\n"
-        "--fname-from-tag       Generate filename based on metadata of input.\n"
-        "                       By default, output filename will be the same as input\n"
-        "                       (only different by the file extension).\n"
-        "                       Name generation can be tweaked by --fname-format.\n"
-        "--fname-format <string>   Format string for output filename.\n"
-        "\n"
-        "Option for single output:\n"
-        "-o <filename>          Specify output filename\n"
-        "--concat               Encodes whole inputs into a single file. \n"
-        "                       Requires output filename (with -o)\n"
-        "\n"
-        "Option for cuesheet input only:\n"
-        "--cue-tracks <n[-n][,n[-n]]*>\n"
-        "                       Limit extraction to specified tracks.\n"
-        "                       Tracks can be specified with comma separated numbers.\n"
-        "                       Hyphen can be used to denote range of numbers.\n"
-        "                       Tracks non-existent in the cue are just ignored.\n"
-        "                       Numbers must be in the range 0-99.\n"
-        "                       Example:\n"
-        "                         --cue-tracks 1-3,6-9,11\n"
-        "                           -> equivalent to --cue-tracks 1,2,3,6,7,8,9,11\n"
-        "                         --cue-tracks 2-99\n"
-        "                           -> can be used to skip first track (and HTOA)\n"
-        "\n"
-        "Options for Raw PCM input only:\n"
-        "-R, --raw              Raw PCM input.\n"
-        "--raw-channels <n>     Number of channels, default 2.\n"
-        "--raw-rate     <n>     Sample rate, default 44100.\n"
-        "--raw-format   <str>   Sample format, default S16L.\n"
-        "                       Sample format spec:\n"
-        "                       1st char: S(igned) | U(nsigned) | F(loat)\n"
-        "                       2nd part: Bitwidth\n"
-        "                       Last part: L(ittle Endian) | B(ig Endian)\n"
-        "                       Last part can be omitted, L is assumed by default.\n"
-        "                       Cases are ignored. u16b is OK.\n"
-        "\n"
+"-d <dirname>           Output directory. Default is current working dir.\n"
+"--check                Show library versions and exit.\n"
+"-A, --alac             ALAC encoding mode\n"
+"-D, --decode           Decode to a WAV file.\n"
+"--caf                  Output to CAF file instead of M4A/WAV/AAC.\n"
+"--play                 Decode to a WaveOut device (playback).\n"
+"-r, --rate <keep|auto|n>\n"
+"                       keep: output sampling rate will be same as input\n"
+"                             if possible.\n"
+"                       auto: output sampling rate will be automatically\n"
+"                             chosen by encoder.\n"
+"                       n: desired output sampling rate in Hz.\n"
+"--lowpass <number>     Specify lowpass filter cut-off frequency in Hz.\n"
+"                       Use this when you want lower cut-off than\n"
+"                       Apple default.\n"
+"-b, --bits-per-sample <n>\n"
+"                       Bits per sample of output (for WAV/ALAC only)\n"
+"--no-dither            Turn off dither when quantizing to lower bit depth.\n" 
+"--peak                 Scan + print peak (don't generate output file).\n"
+"                       Cannot be used with encoding mode or -D.\n"
+"                       When DSP options are set, peak is computed \n"
+"                       after all DSP filters have been applied.\n"
+"--gain <f>             Adjust gain by f dB.\n"
+"                       Use negative value to decrese gain, when you want to\n"
+"                       avoid clipping introduced by DSP.\n"
+"-N, --normalize        Normalize (works in two pass. can generate HUGE\n"
+"                       tempfile for large piped input)\n"
+"--drc <thresh:ratio:knee:attack:release>\n"
+"                       Dynamic range compression.\n"
+"                       Loud parts over threshold are attenuated by ratio.\n"
+"                         thresh:  threshold (in dBFS, < 0.0)\n"
+"                         ratio:   compression ratio (> 1.0)\n"
+"                         knee:    knee width (in dB, >= 0.0)\n"
+"                         attack:  attack time (in millis, >= 0.0)\n"
+"                         release: release time (in millis, >= 0.0)\n"
+"--limiter              Apply smart limiter that softly clips portions\n"
+"                       where peak exceeds (near) 0dBFS\n"
+"--start <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
+"                       Specify start point of the input.\n"
+"                       You specify either in seconds(hh:mm:ss.sss..form) or\n"
+"                       number of samples followed by 's' or\n"
+"                       cuesheet frames(mm:ss:ff form) followed by 'f'.\n"
+"                       Example:\n"
+"                         --start 4010160s : start at 4010160 samples\n"
+"                         --start 1:30:70f : same as above, in cuepoint\n"
+"                         --start 1:30.93333 : same as above\n"
+"--end <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
+"                       Specify end point of the input (exclusive).\n"
+"--delay <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
+"                       Specify amount of delay.\n"
+"                       When positive value is given, silence is prepended\n"
+"                       at the begining to achieve specified amount of delay.\n"
+"                       When negative value is given, specified length is\n"
+"                       dropped from the beginning.\n"
+"--no-delay             Compensate encoder delay by prepending 960 samples \n"
+"                       of scilence, then trimming 3 AAC frames from \n"
+"                       the beginning (and also tweak iTunSMPB).\n"
+"                       This option is mainly intended for resolving\n"
+"                       A/V sync issue of video. \n"
+"--num-priming <n>      (Experimental). Set arbitrary number of priming\n"
+"                       samples in range from 0 to 2112 (default 2112).\n"
+"                       Applicable only for AAC LC.\n"
+"                       --num-priming=0 is the same as --no-delay.\n"
+"                       Doesn't work with --no-smart-padding.\n"
+"--gapless-mode <n>     Encoder delay signaling for gapless playback.\n"
+"                         0: iTunSMPB (default)\n"
+"                         1: ISO standard (elst + sbgp + sgpd)\n"
+"                         2: Both\n"
+"--matrix-preset <name> Specify user defined preset for matrix mixer.\n"
+"--matrix-file <file>   Matrix file for remix.\n"
+"--no-matrix-normalize  Don't automatically normalize(scale) matrix\n"
+"                       coefficients for the matrix mixer.\n"
+"--chanmap <n1,n2...>   Rearrange input channels to the specified order.\n"
+"                       Example:\n"
+"                         --chanmap 2,1 -> swap L and R.\n"
+"                         --chanmap 2,3,1 -> C+L+R -> L+R+C.\n"
+"--chanmask <n>         Force input channel mask(bitmap).\n"
+"                       Either decimal or hex number with 0x prefix\n"
+"                       can be used.\n"
+"                       When 0 is given, qaac works as if no channel mask is\n"
+"                       present in the source and picks default layout.\n"
+"--no-optimize          Don't optimize MP4 container after encoding.\n"
+"--tmpdir <dirname>     Specify temporary directory. Default is %TMP%\n"
+"-s, --silent           Suppress console messages.\n"
+"--verbose              More verbose console messages.\n"
+"-i, --ignorelength     Assume WAV input and ignore the data chunk length.\n"
+"--threading            Enable multi-threading.\n"
+"-n, --nice             Give lower process priority.\n"
+"--sort-args            Sort filenames given by command line arguments.\n"
+"--text-codepage <n>    Specify text code page of cuesheet/chapter/lyrics.\n"
+"                       Example: 1252 for Latin-1, 65001 for UTF-8.\n"
+"                       Use this when bogus values are written into tags\n"
+"                       due to automatic encoding detection failure.\n"
+"-S, --stat             Save bitrate statistics into file.\n"
+"--log <filename>       Output message to file.\n"
+"\n"
+"Option for output filename generation:\n"
+"--fname-from-tag       Generate filename based on metadata of input.\n"
+"                       By default, output filename will be the same as input\n"
+"                       (only different by the file extension).\n"
+"                       Name generation can be tweaked by --fname-format.\n"
+"--fname-format <string>   Format string for output filename.\n"
+"\n"
+"Option for single output:\n"
+"-o <filename>          Specify output filename\n"
+"--concat               Encodes whole inputs into a single file. \n"
+"                       Requires output filename (with -o)\n"
+"\n"
+"Option for cuesheet input only:\n"
+"--cue-tracks <n[-n][,n[-n]]*>\n"
+"                       Limit extraction to specified tracks.\n"
+"                       Tracks can be specified with comma separated numbers.\n"
+"                       Hyphen can be used to denote range of numbers.\n"
+"                       Tracks non-existent in the cue are just ignored.\n"
+"                       Numbers must be in the range 0-99.\n"
+"                       Example:\n"
+"                         --cue-tracks 1-3,6-9,11\n"
+"                           -> equivalent to --cue-tracks 1,2,3,6,7,8,9,11\n"
+"                         --cue-tracks 2-99\n"
+"                           -> can be used to skip first track (and HTOA)\n"
+"\n"
+"Options for Raw PCM input only:\n"
+"-R, --raw              Raw PCM input.\n"
+"--raw-channels <n>     Number of channels, default 2.\n"
+"--raw-rate     <n>     Sample rate, default 44100.\n"
+"--raw-format   <str>   Sample format, default S16L.\n"
+"                       Sample format spec:\n"
+"                       1st char: S(igned) | U(nsigned) | F(loat)\n"
+"                       2nd part: Bitwidth\n"
+"                       Last part: L(ittle Endian) | B(ig Endian)\n"
+"                       Last part can be omitted, L is assumed by default.\n"
+"                       Cases are ignored. u16b is OK.\n"
+"\n"
 #ifdef QAAC
-        "Options for CoreAudio sample rate converter:\n"
-        "--native-resampler[=line|norm|bats,n]\n"
-        "                       Arguments are optional.\n"
-        "                       Without argument, codec default SRC is used.\n"
-        "                       With argument, dedicated AudioConverter is used for\n"
-        "                       sample rate conversion.\n"
-        "                       '--native-resampler' and arguments must be delimited\n"
-        "                       by a '=' (space is not usable here).\n"
-        "                       Arguments must be delimited by a ','(comma).\n"
-        "                       First argument is sample rate converter complexity,\n"
-        "                       and one of line, norm, bats.\n"
-        "                         line: linear (worst, don't use this)\n"
-        "                         norm: normal\n"
-        "                         bats: mastering (best, but quite sloooow)\n"
-        "                       Second argument is sample rate converter quality,\n"
-        "                       which is an integer between 0-127.\n"
-        "                       Example:\n"
-        "                         --native-resampler\n"
-        "                         --native-resampler=norm,96\n"
-        "\n"
+"Options for CoreAudio sample rate converter:\n"
+"--native-resampler[=line|norm|bats,n]\n"
+"                       Arguments are optional.\n"
+"                       Without argument, codec default SRC is used.\n"
+"                       With argument, dedicated AudioConverter is used for\n"
+"                       sample rate conversion.\n"
+"                       '--native-resampler' and arguments must be delimited\n"
+"                       by a '=' (space is not usable here).\n"
+"                       Arguments must be delimited by a ','(comma).\n"
+"                       First argument is sample rate converter complexity,\n"
+"                       and one of line, norm, bats.\n"
+"                         line: linear (worst, don't use this)\n"
+"                         norm: normal\n"
+"                         bats: mastering (best, but quite sloooow)\n"
+"                       Second argument is sample rate converter quality,\n"
+"                       which is an integer between 0-127.\n"
+"                       Example:\n"
+"                         --native-resampler\n"
+"                         --native-resampler=norm,96\n"
+"\n"
 #endif
-        "Tagging options:\n"
-        " (same value is set to all files, so use with care for multiple files)\n"
-        "--title <string>\n"
-        "--artist <string>\n"
-        "--band <string>       This means \"Album Artist\".\n"
-        "--album <string>\n"
-        "--grouping <string>\n"
-        "--composer <string>\n"
-        "--comment <string>\n"
-        "--genre <string>\n"
-        "--date <string>\n"
-        "--track <number[/total]>\n"
-        "--disk <number[/total]>\n"
-        "--compilation[=0|1]\n"
-        "                      By default, iTunes compilation flag is not set.\n"
-        "                      --compilation or --compilation=1 sets flag on.\n"
-        "                      --compilation=0 is same as default.\n"
-        "--lyrics <filename>\n"
-        "--artwork <filename>\n"
-        "--artwork-frominputfile\n"
-        "                      Artwork is read from Inputfile.\n"
-        "--artwork-size <n>    Specify maximum width or height of artwork in pixels.\n"
-        "                      If specified artwork (with --artwork) is larger than\n"
-        "                      this, artwork is automatically resized.\n"
-        "--chapter <filename>\n"
-        "                      Set chapter from file.\n"
-        "--tag <fcc>:<value>\n"
-        "                      Set iTunes pre-defined tag with fourcc key\n"
-        "                      and value.\n"
-        "                      1) When key starts with U+00A9 (copyright sign),\n"
-        "                         you can use 3 chars starting from the second char\n"
-        "                         instead.\n"
-        "                      2) Some known tags having type other than UTF-8 string\n"
-        "                         are taken care of. Others are just stored as UTF-8\n"
-        "                         string.\n"
-        "--long-tag <key>:<value>\n"
-        "                      Set long tag (iTunes custom metadata) with \n"
-        "                      arbitrary key/value pair. Value is always stored as\n"
-        "                      UTF8 string.\n"
-        );
+"Tagging options:\n"
+" (same value is set to all files, so use with care for multiple files)\n"
+"--title <string>\n"
+"--artist <string>\n"
+"--band <string>       This means \"Album Artist\".\n"
+"--album <string>\n"
+"--grouping <string>\n"
+"--composer <string>\n"
+"--comment <string>\n"
+"--genre <string>\n"
+"--date <string>\n"
+"--track <number[/total]>\n"
+"--disk <number[/total]>\n"
+"--compilation[=0|1]\n"
+"                      By default, iTunes compilation flag is not set.\n"
+"                      --compilation or --compilation=1 sets flag on.\n"
+"                      --compilation=0 is same as default.\n"
+"--lyrics <filename>\n"
+"--artwork <filename>\n"
+"--artwork-frominputfile\n"
+"                      Artwork is read from Inputfile.\n"
+"--artwork-size <n>    Specify maximum width or height of artwork in pixels.\n"
+"                      If specified artwork (with --artwork) is larger than\n"
+"                      this, artwork is automatically resized.\n"
+"--chapter <filename>\n"
+"                      Set chapter from file.\n"
+"--tag <fcc>:<value>\n"
+"                      Set iTunes pre-defined tag with fourcc key\n"
+"                      and value.\n"
+"                      1) When key starts with U+00A9 (copyright sign),\n"
+"                         you can use 3 chars starting from the second char\n"
+"                         instead.\n"
+"                      2) Some known tags having type other than UTF-8 string\n"
+"                         are taken care of. Others are just stored as UTF-8\n"
+"                         string.\n"
+"--long-tag <key>:<value>\n"
+"                      Set long tag (iTunes custom metadata) with \n"
+"                      arbitrary key/value pair. Value is always stored as\n"
+"                      UTF8 string.\n"
+    );
 }
 
 #ifdef QAAC
@@ -358,7 +358,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 {
     int ch, pos;
     while ((ch = wide::getopt_long(argc, argv,
-        short_opts, long_options, 0)) != EOF)
+                                   short_opts, long_options, 0)) != EOF)
     {
         if (ch == 'h')
             return usage(), false;
@@ -378,7 +378,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->method = pos;
             if (std::swscanf(wide::optarg, L"%lf", &this->bitrate) != 1) {
                 std::fputws(L"AAC Bitrate/Quality must be an integer.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
         }
@@ -406,7 +406,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'play') {
             if (this->output_format && !isWaveOut()) {
                 std::fputws(L"--play cannot be specified with encoding mode.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
             this->output_format = 'play';
@@ -414,7 +414,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'peak') {
             if (this->output_format && !isPeak()) {
                 std::fputws(L"--peak cannot be specified with encoding mode.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
             this->output_format = 'peak';
@@ -442,10 +442,10 @@ bool Options::parse(int &argc, wchar_t **&argv)
                         this->native_resampler_quality = n;
                     else if (std::wcslen(tok) == 4)
                         this->native_resampler_complexity =
-                        util::fourcc(strutil::w2us(tok).c_str());
+                            util::fourcc(strutil::w2us(tok).c_str());
                     else {
                         std::fputws(L"Invalid arg for --native-resampler.\n",
-                            stderr);
+                                    stderr);
                         return false;
                     }
                 }
@@ -527,7 +527,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             }
             if (n <= 1 || n > 32) {
                 std::fputws(L"Bits per sample is too low or too high.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
             this->bits_per_sample = n;
@@ -557,7 +557,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
         }
         else if (ch == 'Rrat') {
             if (std::swscanf(wide::optarg, L"%u",
-                &this->raw_sample_rate) != 1) {
+                             &this->raw_sample_rate) != 1) {
                 std::fputws(L"--raw-rate requires an integer.\n", stderr);
                 return false;
             }
@@ -573,45 +573,45 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'gain') {
             if (std::swscanf(wide::optarg, L"%lf", &this->gain) != 1) {
                 std::fputws(L"--gain requires an floating point number.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
         }
         else if (ch == 'drc ') {
             double threshold, ratio, knee, attack, release;
             if (std::swscanf(wide::optarg,
-                L"%lf:%lf:%lf:%lf:%lf",
-                &threshold,
-                &ratio,
-                &knee,
-                &attack,
-                &release) != 5) {
+                             L"%lf:%lf:%lf:%lf:%lf",
+                             &threshold,
+                             &ratio,
+                             &knee,
+                             &attack,
+                             &release) != 5) {
                 std::fputws(L"--drc requires 5 parameters.\n", stderr);
                 return false;
             }
             if (threshold >= 0.0) {
                 std::fputws(L"DRC threshold cannot be positive.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
             if (ratio <= 1.0) {
                 std::fputws(L"DRC ratio has to be greater than 1.0\n",
-                    stderr);
+                            stderr);
                 return false;
             }
             if (knee < 0.0) {
                 std::fputws(L"DRC knee width cannot be negative.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
             if (attack < 0.0) {
                 std::fputws(L"DRC attack time cannot be negative.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
             if (release < 0.0) {
                 std::fputws(L"DRC release time cannot be negative.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
             wchar_t *p = wide::optarg;
@@ -620,7 +620,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 if (p) ++p;
             }
             this->drc_params.push_back(DRCParams(threshold, ratio, knee,
-                attack, release, p));
+                                                 attack, release, p));
         }
         else if (ch == 'limt')
             this->limiter = true;
@@ -639,7 +639,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             }
             if (this->num_priming > 2112) {
                 std::fputws(L"num-priming must not be greater than 2112.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
         }
@@ -654,13 +654,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'txcp') {
             if (std::swscanf(wide::optarg, L"%u", &this->textcp) != 1) {
                 std::fputws(L"--text-codepage requires code page number.\n",
-                    stderr);
+                            stderr);
                 return false;
             }
         }
         else if (ch == 'ctrk') {
             if (!strutil::parse_numeric_ranges(wide::optarg,
-                &this->cue_tracks)) {
+                                               &this->cue_tracks)) {
                 std::fputws(L"Invalid arg for --cue-tracks.\n", stderr);
                 return false;
             }
@@ -775,18 +775,18 @@ bool Options::parse(int &argc, wchar_t **&argv)
     }
     if (this->is_caf && this->is_adts) {
         std::fputws(L"Can't use --caf and --adts at the same time.\n",
-            stderr);
+                    stderr);
         return false;
     }
     if (this->ignore_length && this->is_raw) {
         std::fputws(L"Can't use --ignorelength and --raw at the same time.\n",
-            stderr);
+                    stderr);
         return false;
     }
     if (this->concat && argc > 1 && !this->ofilename &&
         !this->isPeak() && !this->isWaveOut()) {
         std::fputws(L"--concat requires output filename (use -o option).\n",
-            stderr);
+                    stderr);
         return false;
     }
     if ((!isAAC() || isSBR()) && this->num_priming != 2112) {

@@ -3,7 +3,7 @@
 
 #include "iointer.h"
 
-class CompositeSource : public ISeekableSource, public ITagParser {
+class CompositeSource: public ISeekableSource, public ITagParser {
     typedef std::shared_ptr<ISeekableSource> source_t;
     uint32_t m_cur_file;
     int64_t m_position;
@@ -62,7 +62,7 @@ public:
 
     void addSource(const std::shared_ptr<ISeekableSource> &src);
     void addSourceWithChapter(const std::shared_ptr<ISeekableSource> &src,
-        const std::wstring &title);
+                              const std::wstring &title);
     size_t count() const { return m_sources.size(); }
 private:
     std::shared_ptr<ISeekableSource> first() const { return m_sources[0]; }

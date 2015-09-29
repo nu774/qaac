@@ -17,7 +17,7 @@ struct ISource {
     virtual size_t readSamples(void *buffer, size_t nsamples) = 0;
 };
 
-struct ISeekableSource : public ISource {
+struct ISeekableSource: public ISource {
     virtual bool isSeekable() = 0;
     virtual void seekTo(int64_t offset) = 0;
 };
@@ -25,7 +25,7 @@ struct ISeekableSource : public ISource {
 struct ISink {
     virtual ~ISink() {}
     virtual void writeSamples(
-        const void *data, size_t len, size_t nsamples) = 0;
+            const void *data, size_t len, size_t nsamples) = 0;
 };
 
 struct ITagParser {
@@ -40,11 +40,11 @@ struct ITagStore {
     virtual void setTag(const std::string &key, const std::string &value) = 0;
 };
 
-class FilterBase : public ISource {
+class FilterBase: public ISource {
     std::shared_ptr<ISource> m_src;
 public:
     FilterBase() {}
-    FilterBase(const std::shared_ptr<ISource> &src) : m_src(src) {}
+    FilterBase(const std::shared_ptr<ISource> &src): m_src(src) {}
     void setSource(const std::shared_ptr<ISource> &src) { m_src = src; }
     ISource *source() { return m_src.get(); }
     const std::shared_ptr<ISource> &sourcePtr() const { return m_src; }
@@ -67,16 +67,16 @@ public:
 size_t readSamplesFull(ISource *src, void *buffer, size_t nsamples);
 
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
-    std::vector<float> *floatBuffer, size_t nsamples);
+                          std::vector<float> *floatBuffer, size_t nsamples);
 
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
-    float *floatBuffer, size_t nsamples);
+                          float *floatBuffer, size_t nsamples);
 
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
-    std::vector<double> *floatBuffer, size_t nsamples);
+                          std::vector<double> *floatBuffer, size_t nsamples);
 
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
-    double *floatBuffer, size_t nsamples);
+                          double *floatBuffer, size_t nsamples);
 
 #endif
 

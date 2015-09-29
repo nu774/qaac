@@ -5,7 +5,7 @@
 #include "iointer.h"
 #include "dl.h"
 
-struct TtakAudioFormatEx : public TtakAudioFormat {
+struct TtakAudioFormatEx: public TtakAudioFormat {
     TtakBool  HasExtension;
     TtakInt32 ValidBitsPerSample;
     TtakBool  HasSpeakerAssignment;
@@ -33,23 +33,23 @@ public:
     bool loaded() const { return m_dl.loaded(); }
     bool compatible() const { return m_compatible; }
 
-    TtakResult(*GetLibraryVersion)(TtakInt32 *, TtakInt32 *);
+    TtakResult (*GetLibraryVersion)(TtakInt32 *, TtakInt32 *);
     TtakSeekableStreamDecoder
         (*SSD_Create_FromStream)(const TtakStreamIoInterface *, void *,
-            const TtakSSDOptions *, TSSDDamageCallback,
-            void *);
-    void(*SSD_Destroy)(TtakSeekableStreamDecoder);
-    TtakResult(*SSD_GetStreamInfo)(TtakSeekableStreamDecoder,
-        Ttak_str_StreamInfo_V10 *);
-    TtakResult(*SSD_GetStreamInfo_V22)(TtakSeekableStreamDecoder,
-        Ttak_str_StreamInfo_V22 *);
-    TtakResult(*SSD_Seek)(TtakSeekableStreamDecoder, TtakInt64);
-    TtakResult(*SSD_ReadAudio)(TtakSeekableStreamDecoder, void *,
-        TtakInt32, TtakInt32 *);
-    TtakInt64(*SSD_GetReadPos)(TtakSeekableStreamDecoder);
+                                 const TtakSSDOptions *, TSSDDamageCallback,
+                                 void *);
+    void (*SSD_Destroy)(TtakSeekableStreamDecoder);
+    TtakResult (*SSD_GetStreamInfo)(TtakSeekableStreamDecoder,
+                                    Ttak_str_StreamInfo_V10 *);
+    TtakResult (*SSD_GetStreamInfo_V22)(TtakSeekableStreamDecoder,
+                                        Ttak_str_StreamInfo_V22 *);
+    TtakResult (*SSD_Seek)(TtakSeekableStreamDecoder, TtakInt64);
+    TtakResult (*SSD_ReadAudio)(TtakSeekableStreamDecoder, void *,
+                                TtakInt32, TtakInt32 *);
+    TtakInt64 (*SSD_GetReadPos)(TtakSeekableStreamDecoder);
 };
 
-class TakSource : public ISeekableSource, public ITagParser
+class TakSource: public ISeekableSource, public ITagParser
 {
     uint32_t m_block_align;
     uint64_t m_length;

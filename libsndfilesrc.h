@@ -17,19 +17,19 @@ public:
 
     const char *(*version_string)();
     SNDFILE *(*open_virtual)(SF_VIRTUAL_IO*, int, SF_INFO*, void*);
-    int(*close)(SNDFILE *);
+    int (*close)(SNDFILE *);
     const char *(*strerror)(SNDFILE *);
-    int(*command)(SNDFILE *, int, void *, int);
-    sf_count_t(*seek)(SNDFILE *, sf_count_t, int);
+    int (*command)(SNDFILE *, int, void *, int);
+    sf_count_t (*seek)(SNDFILE *, sf_count_t, int);
     /* XXX
      * cheat as void to avoid unnecessary type casting
      */
-    sf_count_t(*readf_int)(SNDFILE *, void *, sf_count_t);
-    sf_count_t(*readf_float)(SNDFILE *, void *, sf_count_t);
-    sf_count_t(*readf_double)(SNDFILE *, void *, sf_count_t);
+    sf_count_t (*readf_int)(SNDFILE *, void *, sf_count_t);
+    sf_count_t (*readf_float)(SNDFILE *, void *, sf_count_t);
+    sf_count_t (*readf_double)(SNDFILE *, void *, sf_count_t);
 };
 
-class LibSndfileSource : public ISeekableSource, public ITagParser
+class LibSndfileSource: public ISeekableSource, public ITagParser
 {
     typedef std::shared_ptr<SNDFILE_tag> handle_t;
     handle_t m_handle;
@@ -40,10 +40,10 @@ class LibSndfileSource : public ISeekableSource, public ITagParser
     std::map<std::string, std::string> m_tags;
     LibSndfileModule m_module;
     AudioStreamBasicDescription m_asbd;
-    sf_count_t(*m_readf)(SNDFILE *, void *, sf_count_t);
+    sf_count_t (*m_readf)(SNDFILE *, void *, sf_count_t);
 public:
     LibSndfileSource(const LibSndfileModule &module,
-        const std::shared_ptr<FILE> &fp);
+                     const std::shared_ptr<FILE> &fp);
     ~LibSndfileSource() { m_handle.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
@@ -53,7 +53,7 @@ public:
     const std::string &getFormatName() const { return m_format_name; }
     const std::vector<uint32_t> *getChannels() const
     {
-        return m_chanmap.size() ? &m_chanmap : 0;
+        return m_chanmap.size() ? &m_chanmap: 0;
     }
     size_t readSamples(void *buffer, size_t nsamples)
     {

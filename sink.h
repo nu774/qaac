@@ -7,7 +7,7 @@
 #include "iointer.h"
 #include "win32util.h"
 
-class MP4SinkBase : public ITagStore {
+class MP4SinkBase: public ITagStore {
 protected:
     std::wstring m_filename;
     MP4FileX m_mp4file;
@@ -20,14 +20,14 @@ protected:
     std::vector<std::vector<char> > m_artworks;
     unsigned m_max_bitrate;
 public:
-    MP4SinkBase(const std::wstring &path, bool temp = false);
+    MP4SinkBase(const std::wstring &path, bool temp=false);
     virtual ~MP4SinkBase() {}
 
     MP4FileX *getFile() { return &m_mp4file; }
     /* Don't automatically close, since close() involves finalizing */
     void close();
-    void updateMaxBitrate(bool finilize = false);
-    void writeBitrates(int avgBitrate = 0);
+    void updateMaxBitrate(bool finilize=false);
+    void writeBitrates(int avgBitrate=0);
     void setTag(const std::string &key, const std::string &value)
     {
         m_tags[key] = value;
@@ -59,7 +59,7 @@ private:
     void writeStringTag(const char *fcc, const std::string &value);
 };
 
-class MP4Sink : public ISink, public MP4SinkBase {
+class MP4Sink: public ISink, public MP4SinkBase {
     uint32_t m_sample_id;
     AudioFilePacketTableInfo m_priming_info;
     int m_gapless_mode;
@@ -70,15 +70,14 @@ public:
         MODE_BOTH = 3,
     };
     MP4Sink(const std::wstring &path, const std::vector<uint8_t> &cookie,
-        bool temp = false);
+            bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
         try {
             m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
-                length, MP4_INVALID_DURATION);
+                                  length, MP4_INVALID_DURATION);
             updateMaxBitrate();
-        }
-        catch (mp4v2::impl::Exception *e) {
+        } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
         }
     }
@@ -94,24 +93,23 @@ public:
     void writeTags();
 };
 
-class ALACSink : public ISink, public MP4SinkBase {
+class ALACSink: public ISink, public MP4SinkBase {
 public:
     ALACSink(const std::wstring &path, const std::vector<uint8_t> &magicCookie,
-        bool temp = false);
+             bool temp=false);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
         try {
             m_mp4file.WriteSample(m_track_id, (const uint8_t *)data,
-                length, nsamples);
+                                  length, nsamples);
             updateMaxBitrate();
-        }
-        catch (mp4v2::impl::Exception *e) {
+        } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
         }
     }
 };
 
-class ADTSSink : public ISink {
+class ADTSSink: public ISink {
     typedef std::shared_ptr<FILE> file_ptr_t;
     file_ptr_t m_fp;
     uint32_t m_sample_rate_index;
@@ -121,7 +119,7 @@ class ADTSSink : public ISink {
 public:
     ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie);
     ADTSSink(const std::shared_ptr<FILE> &fp,
-        const std::vector<uint8_t> &cookie);
+             const std::vector<uint8_t> &cookie);
     void writeSamples(const void *data, size_t length, size_t nsamples);
 private:
     void init(const std::vector<uint8_t> &cookie);

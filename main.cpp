@@ -75,9 +75,8 @@ void load_metadata_files(Options *opts)
     if (opts->chapter_file) {
         try {
             chapters::load_from_file(opts->chapter_file, &opts->chapters,
-                opts->textcp);
-        }
-        catch (const std::exception &e) {
+                                     opts->textcp);
+        } catch (const std::exception &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }
     }
@@ -85,8 +84,7 @@ void load_metadata_files(Options *opts)
         auto tag = opts->tagopts.find(Tag::kLyrics);
         if (tag != opts->tagopts.end())
             tag->second = load_text_file(tag->second.c_str(), opts->textcp);
-    }
-    catch (const std::exception &e) {
+    } catch (const std::exception &e) {
         LOG(L"WARNING: %s\n", errormsg(e).c_str());
     }
     for (size_t i = 0; i < opts->artwork_files.size(); ++i) {
@@ -361,7 +359,7 @@ static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
 }
 
 static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
-    const Options &opts, bool seekable)
+                           const Options &opts, bool seekable)
 {
     std::shared_ptr<ISource> src = chain.back();
     Normalizer *normalizer = new Normalizer(src, seekable);
@@ -370,7 +368,7 @@ static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
     LOG(L"Scanning maximum peak...\n");
     uint64_t n = 0, rc;
     Progress progress(opts.verbose, src->length(),
-        src->getSampleFormat().mSampleRate);
+                      src->getSampleFormat().mSampleRate);
     while (!g_interrupted && (rc = normalizer->process(4096)) > 0) {
         n += rc;
         progress.update(src->getPosition());
@@ -396,8 +394,7 @@ std::shared_ptr<FILE> open_config_file(const wchar_t *file)
             std::wstring pathtry =
                 strutil::format(L"%s\\%s", search_paths[i].c_str(), file);
             return win32::fopen(pathtry, L"r");
-        }
-        catch (...) {
+        } catch (...) {
             if (i == search_paths.size() - 1) throw;
         }
     }
@@ -406,15 +403,14 @@ std::shared_ptr<FILE> open_config_file(const wchar_t *file)
 
 static
 void matrix_from_preset(const Options &opts,
-    std::vector<std::vector<complex_t> > *result)
+                        std::vector<std::vector<complex_t> > *result)
 {
     std::shared_ptr<FILE> fpPtr;
     if (opts.remix_preset) {
         std::wstring path =
             strutil::format(L"matrix\\%s.txt", opts.remix_preset);
         fpPtr = open_config_file(path.c_str());
-    }
-    else
+    } else
         fpPtr = win32::fopen(opts.remix_file, L"r");
     FILE *fp = fpPtr.get();
     int c;
@@ -426,13 +422,11 @@ void matrix_from_preset(const Options &opts,
                 matrix.push_back(row);
                 row.clear();
             }
-        }
-        else if (std::isspace(c)) {
+        } else if (std::isspace(c)) {
             while (c != '\n' && std::isspace(c = std::getc(fp)))
                 ;
             std::ungetc(c, fp);
-        }
-        else if (std::isdigit(c) || c == '-') {
+        } else if (std::isdigit(c) || c == '-') {
             std::ungetc(c, fp);
             double v;
             if (std::fscanf(fp, "%lf", &v) != 1)
@@ -446,8 +440,7 @@ void matrix_from_preset(const Options &opts,
                 std::ungetc(c, fp);
                 row.push_back(complex_t(v, 0.0));
             }
-        }
-        else
+        } else
             throw std::runtime_error("invalid char in matrix preset file");
     }
     if (row.size())
@@ -457,8 +450,8 @@ void matrix_from_preset(const Options &opts,
 
 static void
 mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
-    const Options &opts, uint32_t *channel_layout,
-    bool threading)
+              const Options &opts, uint32_t *channel_layout,
+              bool threading)
 {
     uint32_t nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
     const std::vector<uint32_t> *channels = chain.back()->getChannels();
@@ -477,7 +470,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
         if (!util::is_increasing(mapping.begin(), mapping.end())) {
             std::shared_ptr<ISource>
                 mapper(new ChannelMapper(chain.back(), mapping,
-                    chanmap::getChannelMask(work)));
+                                         chanmap::getChannelMask(work)));
             chain.push_back(mapper);
             channels = chain.back()->getChannels();
         }
@@ -496,8 +489,8 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
             }
             std::shared_ptr<ISource>
                 mixer(new MatrixMixer(chain.back(),
-                    input::factory()->libsoxconvolver,
-                    matrix, !opts.no_matrix_normalize));
+                                      input::factory()->libsoxconvolver,
+                                      matrix, !opts.no_matrix_normalize));
             chain.push_back(mixer);
             channels = 0;
             nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
@@ -507,7 +500,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
     if (opts.chanmap.size()) {
         if (opts.chanmap.size() != nchannels)
             throw std::runtime_error(
-                "nchannels of input and --chanmap spec unmatch");
+                    "nchannels of input and --chanmap spec unmatch");
         std::shared_ptr<ISource>
             mapper(new ChannelMapper(chain.back(), opts.chanmap));
         chain.push_back(mapper);
@@ -602,8 +595,8 @@ select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
 
     if (start > 0 || end > 0)
         src = std::make_shared<TrimmedSource>(src, start,
-            end ? std::max(0LL, end - start)
-            : ~0ULL);
+                                              end ? std::max(0LL, end - start)
+                                                  : ~0ULL);
 
     if (delay > 0) {
         if (opts.verbose > 1 || opts.logfilename)
@@ -611,15 +604,13 @@ select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
                 static_cast<double>(delay) / rate);
         cp->addSource(std::make_shared<TrimmedSource>(ns, 0, delay));
         cp->addSource(src);
-    }
-    else if (delay < 0) {
+    } else if (delay < 0) {
         delay *= -1;
         if (opts.verbose > 1 || opts.logfilename)
             LOG(L"Trim %lld samples (%g seconds)\n", delay,
                 static_cast<double>(delay) / rate);
         cp->addSource(std::make_shared<TrimmedSource>(src, delay, ~0ULL));
-    }
-    else {
+    } else {
         cp->addSource(src);
     }
     return cp;
@@ -644,11 +635,11 @@ std::string pcm_format_str(AudioStreamBasicDescription &asbd)
 }
 
 void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
-    std::vector<std::shared_ptr<ISource> > &chain,
-    const Options &opts, uint32_t *channel_layout,
-    AudioStreamBasicDescription *inputDesc,
-    AudioStreamBasicDescription *outputDesc,
-    bool normalize_pass = false)
+                            std::vector<std::shared_ptr<ISource> > &chain,
+                            const Options &opts, uint32_t *channel_layout,
+                            AudioStreamBasicDescription *inputDesc,
+                            AudioStreamBasicDescription *outputDesc,
+                            bool normalize_pass=false)
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
@@ -664,10 +655,10 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
     if (opts.isAAC() || opts.isALAC()) {
 #ifdef QAAC
-        uint32_t clayout =
+        uint32_t clayout = 
             (opts.isAAC() && !opts.is_caf) ?
-            chanmap::getChannelLayoutForCodec(*channel_layout)
-            : *channel_layout;
+                chanmap::getChannelLayoutForCodec(*channel_layout)
+              : *channel_layout;
 
         if (!codec->isAvailableOutputChannelLayout(clayout))
             throw std::runtime_error("Channel layout not supported");
@@ -687,7 +678,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             throw std::runtime_error("Not supported channel layout for ALAC");
         }
 #endif
-}
+    }
     if (opts.lowpass > 0) {
         if (!input::factory()->libsoxconvolver.loaded())
             LOG(L"WARNING: --lowpass requires libsoxconvolver. LPF disabled\n");
@@ -696,8 +687,8 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 LOG(L"Applying LPF: %dHz\n", opts.lowpass);
             std::shared_ptr<SoxLowpassFilter>
                 f(new SoxLowpassFilter(input::factory()->libsoxconvolver,
-                    chain.back(),
-                    opts.lowpass));
+                                       chain.back(),
+                                       opts.lowpass));
             chain.push_back(f);
         }
     }
@@ -733,13 +724,12 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
             std::shared_ptr<SoxrResampler>
                 resampler(new SoxrResampler(input::factory()->libsoxr,
-                    chain.back(),
-                    oasbd.mSampleRate));
+                                            chain.back(),
+                                            oasbd.mSampleRate));
             if (opts.verbose > 1 || opts.logfilename)
                 LOG(L"Using libsoxr SRC: %hs\n", resampler->engine());
             chain.push_back(resampler);
-        }
-        else {
+        } else {
 #ifndef QAAC
             LOG(L"WARNING: --rate requires libsoxr\n");
             oasbd.mSampleRate = iasbd.mSampleRate;
@@ -756,7 +746,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                     sfmt.mBitsPerChannel < 32)
                 {
                     chain.push_back(std::make_shared<Quantizer>(chain.back(),
-                        32, false, true));
+                                                            32, false, true));
                 }
                 int quality = opts.native_resampler_quality;
                 uint32_t complexity = opts.native_resampler_complexity;
@@ -765,7 +755,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
                 CoreAudioResampler *resampler =
                     new CoreAudioResampler(chain.back(), oasbd.mSampleRate,
-                        bound_quality(quality), complexity);
+                                           bound_quality(quality), complexity);
                 chain.push_back(std::shared_ptr<ISource>(resampler));
                 if (opts.verbose > 1 || opts.logfilename)
                     LOG(L"Using CoreAudio SRC: complexity %hs quality %u\n",
@@ -791,12 +781,12 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         }
         std::shared_ptr<ISource>
             compressor(new Compressor(chain.back(),
-                p.m_threshold,
-                p.m_ratio,
-                p.m_knee_width,
-                p.m_attack,
-                p.m_release,
-                stat_file));
+                                      p.m_threshold,
+                                      p.m_ratio,
+                                      p.m_knee_width,
+                                      p.m_attack,
+                                      p.m_release,
+                                      stat_file));
         chain.push_back(compressor);
     }
     if (normalize_pass) {
@@ -827,10 +817,10 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         if (opts.isAAC())
             LOG(L"WARNING: --bits-per-sample has no effect for AAC\n");
         else if (sbits != opts.bits_per_sample ||
-            !!(sflags & kAudioFormatFlagIsFloat) != is_float) {
+                 !!(sflags & kAudioFormatFlagIsFloat) != is_float) {
             std::shared_ptr<ISource>
                 isrc(new Quantizer(chain.back(), opts.bits_per_sample,
-                    opts.no_dither, is_float));
+                                   opts.no_dither, is_float));
             chain.push_back(isrc);
             if (opts.verbose > 1 || opts.logfilename)
                 LOG(L"Convert to %d bit\n", opts.bits_per_sample);
@@ -841,7 +831,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         if (!(sfmt.mFormatFlags & kAudioFormatFlagIsFloat) ||
             sfmt.mBitsPerChannel != 32)
             chain.push_back(std::make_shared<Quantizer>(chain.back(), 32,
-                false, true));
+                                                        false, true));
     }
     if (threading && (opts.isAAC() || opts.isALAC())) {
         PipedReader *reader = new PipedReader(chain.back());
@@ -885,14 +875,14 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 }
 
 void build_filter_chain(std::shared_ptr<ISeekableSource> src,
-    std::vector<std::shared_ptr<ISource> > &chain,
-    const Options &opts, uint32_t *channel_layout,
-    AudioStreamBasicDescription *inputDesc,
-    AudioStreamBasicDescription *outputDesc)
+                        std::vector<std::shared_ptr<ISource> > &chain,
+                        const Options &opts, uint32_t *channel_layout,
+                        AudioStreamBasicDescription *inputDesc,
+                        AudioStreamBasicDescription *outputDesc)
 {
     chain.push_back(src);
     build_filter_chain_sub(src, chain, opts, channel_layout,
-        inputDesc, outputDesc, opts.normalize);
+                           inputDesc, outputDesc, opts.normalize);
     if (opts.normalize && src->isSeekable()) {
         src->seekTo(0);
         Normalizer *normalizer = dynamic_cast<Normalizer*>(chain.back().get());
@@ -900,9 +890,9 @@ void build_filter_chain(std::shared_ptr<ISeekableSource> src,
         chain.clear();
         chain.push_back(src);
         if (peak > FLT_MIN)
-            chain.push_back(std::make_shared<Scaler>(src, 1.0 / peak));
+            chain.push_back(std::make_shared<Scaler>(src, 1.0/peak));
         build_filter_chain_sub(src, chain, opts, channel_layout,
-            inputDesc, outputDesc, false);
+                               inputDesc, outputDesc, false);
     }
 }
 
@@ -942,7 +932,7 @@ bool accept_tag(const std::string &name)
 
 static
 void set_tags(ISource *src, ISink *sink, const Options &opts,
-    const std::wstring encoder_config)
+              const std::wstring encoder_config)
 {
     ITagStore *tagstore = dynamic_cast<ITagStore*>(sink);
     if (!tagstore)
@@ -1002,8 +992,8 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
 
 static
 void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
-    const std::wstring &ofilename, const Options &opts,
-    AudioStreamBasicDescription &oasbd, uint32_t chanmask)
+                 const std::wstring &ofilename, const Options &opts,
+                 AudioStreamBasicDescription &oasbd, uint32_t chanmask)
 {
     const std::shared_ptr<ISource> src = chain.back();
     const AudioStreamBasicDescription &sf = src->getSampleFormat();
@@ -1016,11 +1006,10 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
         fileptr = win32::fopen(ofilename, L"wb");
         if (!opts.is_caf) {
             sink = std::make_shared<WaveSink>(fileptr.get(), src->length(),
-                sf, chanmask);
-        }
-        else {
+                                              sf, chanmask);
+        } else {
             sink = std::make_shared<CAFSink>(fileptr, oasbd, chanmask,
-                std::vector<uint8_t>());
+                                             std::vector<uint8_t>());
             cafsink = dynamic_cast<CAFSink*>(sink.get());
             set_tags(chain[0].get(), cafsink, opts, L"");
             cafsink->beginWrite();
@@ -1037,13 +1026,12 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
     try {
         size_t nread;
         while (!g_interrupted &&
-            (nread = src->readSamples(&buffer[0], 4096)) > 0) {
+               (nread = src->readSamples(&buffer[0], 4096)) > 0) {
             progress.update(src->getPosition());
             sink->writeSamples(&buffer[0], nread * bpf, nread);
         }
         progress.finish(src->getPosition());
-    }
-    catch (const std::exception &e) {
+    } catch (const std::exception &e) {
         LOG(L"\nERROR: %s\n", errormsg(e).c_str());
     }
 
@@ -1053,8 +1041,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
             wavsink->finishWrite();
         else if (cafsink)
             cafsink->finishWrite(AudioFilePacketTableInfo());
-    }
-    else if (opts.isPeak()) {
+    } else if (opts.isPeak()) {
         PeakSink *p = dynamic_cast<PeakSink *>(sink.get());
         LOG(L"peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
     }
@@ -1062,7 +1049,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
 
 static
 void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
-    const std::wstring &ofilename, const Options &opts)
+                   const std::wstring &ofilename, const Options &opts)
 {
     IEncoderStat *stat = dynamic_cast<IEncoderStat *>(encoder);
     if (opts.chapter_file) {
@@ -1072,8 +1059,7 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
             std::vector<chapters::entry_t> chapters;
             chapters::abs_to_duration(opts.chapters, &chapters, duration);
             sink->setChapters(chapters);
-        }
-        catch (const std::runtime_error &e) {
+        } catch (const std::runtime_error &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }
     }
@@ -1087,10 +1073,10 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
 #ifdef QAAC
 static
 std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
-    const Options &opts,
-    const AudioStreamBasicDescription &asbd,
-    uint32_t channel_layout,
-    const std::vector<uint8_t> &cookie)
+                                 const Options &opts,
+                                 const AudioStreamBasicDescription &asbd,
+                                 uint32_t channel_layout,
+                                 const std::vector<uint8_t> &cookie)
 {
     std::vector<uint8_t> asc;
     if (opts.isAAC())
@@ -1102,7 +1088,7 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
         return std::make_shared<ADTSSink>(ofilename, asc);
     else if (opts.is_caf)
         return std::make_shared<CAFSink>(ofilename, asbd, channel_layout,
-            cookie);
+                                         cookie);
     else if (opts.isALAC())
         return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     else if (opts.isAAC())
@@ -1131,8 +1117,7 @@ std::wstring get_encoder_config(AudioConverterX &converter)
     if (value == kAudioCodecBitRateControlMode_Variable) {
         value = converter.getSoundQualityForVBR();
         s += strutil::format(L" q%d", value);
-    }
-    else {
+    } else {
         value = converter.getEncodeBitRate();
         s += strutil::format(L" %gkbps", value / 1000.0);
     }
@@ -1162,8 +1147,8 @@ void show_available_codec_setttings(UInt32 fmt)
 
             AudioStreamBasicDescription iasbd =
                 cautil::buildASBDForPCM(srates[i].mMinimum,
-                    channels.size(),
-                    32, kAudioFormatFlagIsFloat);
+                                        channels.size(),
+                                        32, kAudioFormatFlagIsFloat);
             AudioStreamBasicDescription oasbd = { 0 };
             oasbd.mFormatID = fmt;
             oasbd.mSampleRate = iasbd.mSampleRate;
@@ -1173,13 +1158,13 @@ void show_available_codec_setttings(UInt32 fmt)
             converter.setInputChannelLayout(acl);
             converter.setOutputChannelLayout(acl);
             converter.setBitRateControlMode(
-                kAudioCodecBitRateControlMode_Constant);
+                    kAudioCodecBitRateControlMode_Constant);
             std::vector<AudioValueRange> bits;
             converter.getApplicableEncodeBitRates(&bits);
 
             std::wprintf(L"%hs %gHz %hs --",
-                fmt == 'aac ' ? "LC" : "HE",
-                srates[i].mMinimum, name.c_str());
+                    fmt == 'aac ' ? "LC" : "HE",
+                    srates[i].mMinimum, name.c_str());
             for (size_t k = 0; k < bits.size(); ++k) {
                 if (!bits[k].mMinimum) continue;
                 int delim = k == 0 ? L' ' : L',';
@@ -1201,9 +1186,9 @@ static
 std::string GetCoreAudioVersion(HMODULE hDll)
 {
     HRSRC hRes = FindResourceExW(hDll,
-        RT_VERSION,
-        MAKEINTRESOURCEW(VS_VERSION_INFO),
-        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
+                                 RT_VERSION,
+                                 MAKEINTRESOURCEW(VS_VERSION_INFO),
+                                 MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
     if (!hRes)
         win32::throw_error("FindResourceExW", GetLastError());
     std::string data;
@@ -1227,7 +1212,7 @@ std::string GetCoreAudioVersion(HMODULE hDll)
         v[1] = LOWORD(vfi.dwFileVersionMS);
         v[2] = HIWORD(vfi.dwFileVersionLS);
         v[3] = LOWORD(vfi.dwFileVersionLS);
-        return strutil::format("%u.%u.%u.%u", v[0], v[1], v[2], v[3]);
+        return strutil::format("%u.%u.%u.%u", v[0],v[1],v[2],v[3]);
     }
     return "";
 }
@@ -1237,12 +1222,12 @@ void setup_aach_codec(HMODULE hDll)
 {
     CFPlugInFactoryFunction aachFactory =
         AutoCast<void>(GetProcAddress(hDll,
-            "ACMP4AACHighEfficiencyEncoderFactory"));
+                "ACMP4AACHighEfficiencyEncoderFactory"));
     if (aachFactory) {
         AudioComponentDescription desc = { 'aenc', 'aach', 0 };
         AudioComponentRegister(&desc,
-            CFSTR("MPEG4 High Efficiency AAC Encoder"),
-            0, aachFactory);
+                CFSTR("MPEG4 High Efficiency AAC Encoder"),
+                0, aachFactory);
     }
 }
 
@@ -1278,12 +1263,11 @@ void set_dll_directories(int verbose)
         std::shared_ptr<HKEY__> hKeyPtr(hKey, RegCloseKey);
         DWORD size;
         HR(RegQueryValueExW(hKey, L"InstallDir", 0, 0, 0, &size));
-        std::vector<wchar_t> vec(size / sizeof(wchar_t));
+        std::vector<wchar_t> vec(size/sizeof(wchar_t));
         HR(RegQueryValueExW(hKey, L"InstallDir", 0, 0,
-            reinterpret_cast<LPBYTE>(&vec[0]), &size));
+                    reinterpret_cast<LPBYTE>(&vec[0]), &size));
         searchPaths = strutil::format(L"%s;%s", &vec[0], searchPaths.c_str());
-    }
-    catch (const std::exception &) {}
+    } catch (const std::exception &) {}
     std::wstring dir = win32::get_module_directory() + L"QTfiles";
 #ifdef _WIN64
     dir += L"64";
@@ -1294,7 +1278,7 @@ void set_dll_directories(int verbose)
 
 static
 void config_aac_codec(AudioConverterX &converter,
-    const Options &opts)
+                      const Options &opts)
 {
     converter.setBitRateControlMode(opts.method);
     double bitrate = opts.bitrate * 1000.0;
@@ -1321,8 +1305,7 @@ void config_aac_codec(AudioConverterX &converter,
     if (opts.method != Options::kTVBR) {
         bitrate = converter.getClosestAvailableBitRate(bitrate);
         converter.setEncodeBitRate(bitrate);
-    }
-    else {
+    } else {
         converter.setSoundQualityForVBR(bound_quality(opts.bitrate));
     }
     converter.setCodecQuality(bound_quality((opts.quality + 1) << 5));
@@ -1336,7 +1319,7 @@ bool insert_pce(uint32_t channel_layout, std::vector<uint8_t> *asc)
 
     BitStream ibs(asc->data(), asc->size());
     BitStream bs;
-    uint32_t obj_type = bs.copy(ibs, 5);
+    uint32_t obj_type = bs.copy(ibs, 5); 
     uint32_t sf_index = bs.copy(ibs, 4);
     uint32_t channel_config = ibs.get(4);
     bs.put(0, 4);
@@ -1409,8 +1392,8 @@ void set_encoding_params(AudioConverterX &converter, ITagStore *store)
 
 static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
-    const std::wstring &ofilename, const Options &opts,
-    const std::shared_ptr<FILE> *adts_fp = 0)
+                 const std::wstring &ofilename, const Options &opts,
+                 const std::shared_ptr<FILE> *adts_fp=0)
 {
     uint32_t channel_layout;
     AudioStreamBasicDescription iasbd, oasbd;
@@ -1444,9 +1427,8 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
             encoder = std::make_shared<CoreAudioEncoder>(converter);
         else
             encoder = std::make_shared<CoreAudioPaddedEncoder>(
-                converter, opts.num_priming);
-    }
-    else
+                                         converter, opts.num_priming);
+    } else
         encoder = std::make_shared<CoreAudioEncoder>(converter);
 
     encoder->setSource(chain.back());
@@ -1455,7 +1437,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
         sink = std::make_shared<ADTSSink>(*adts_fp, cookie);
     else
         sink = open_sink(ofilename, opts, oasbd,
-            channel_layout, cookie);
+                         channel_layout, cookie);
     encoder->setSink(sink);
     if (opts.isAAC()) {
         MP4Sink *mp4sink = dynamic_cast<MP4Sink*>(sink.get());
@@ -1490,7 +1472,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 
 static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
-    const std::wstring &ofilename, const Options &opts)
+        const std::wstring &ofilename, const Options &opts)
 {
     uint32_t channel_layout;
     AudioStreamBasicDescription iasbd, oasbd;
@@ -1509,7 +1491,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::shared_ptr<ISink> sink;
     if (opts.is_caf)
         sink = std::make_shared<CAFSink>(ofilename, oasbd,
-            channel_layout, cookie);
+                                         channel_layout, cookie);
     else
         sink = std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     encoder.setSource(chain.back());
@@ -1570,7 +1552,7 @@ void setup_input_factory(const Options &opts)
 
 static
 void load_cue_sheet(const wchar_t *ifilename, const Options &opts,
-    playlist::Playlist &tracks)
+                    playlist::Playlist &tracks)
 {
     const wchar_t *base_p = PathFindFileNameW(ifilename);
     std::wstring cuedir =
@@ -1581,14 +1563,14 @@ void load_cue_sheet(const wchar_t *ifilename, const Options &opts,
     std::wstringbuf istream(cuetext);
     CueSheet cue;
     cue.parse(&istream);
-    cue.loadTracks(tracks, cuedir,
-        opts.fname_format ? opts.fname_format
-        : L"${tracknumber}${title& }${title}");
+    cue.loadTracks(tracks, cuedir, 
+                   opts.fname_format ? opts.fname_format
+                                     : L"${tracknumber}${title& }${title}");
 }
 
 static
 void load_track(const wchar_t *ifilename, const Options &opts,
-    playlist::Playlist &tracks)
+                playlist::Playlist &tracks)
 {
     const wchar_t *name = L"stdin";
     if (std::wcscmp(ifilename, L"-"))
@@ -1618,7 +1600,7 @@ void load_track(const wchar_t *ifilename, const Options &opts,
 
 static
 void group_tracks_with_formats(const playlist::Playlist &tracks,
-    std::vector<playlist::Playlist> *res)
+                               std::vector<playlist::Playlist> *res)
 {
     if (!tracks.size())
         return;
@@ -1646,13 +1628,13 @@ struct ConsoleTitleSaver {
     wchar_t title[1024];
     ConsoleTitleSaver()
     {
-        GetConsoleTitleW(title, sizeof(title) / sizeof(wchar_t));
+        GetConsoleTitleW(title, sizeof(title)/sizeof(wchar_t));
     }
     ~ConsoleTitleSaver()
     {
         SetConsoleTitleW(title);
     }
-    };
+};
 
 struct COMInitializer {
     COMInitializer()
@@ -1662,7 +1644,7 @@ struct COMInitializer {
     ~COMInitializer()
     {
         CoUninitialize();
-}
+    }
 };
 
 
@@ -1673,8 +1655,8 @@ int wmain1(int argc, wchar_t **argv)
 #endif
 {
 #ifdef _DEBUG
-    //    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF);
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+//    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF);
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_LEAK_CHECK_DF);
 #endif
     Options opts;
 
@@ -1719,7 +1701,7 @@ int wmain1(int argc, wchar_t **argv)
         else {
             std::string ver = GetCoreAudioVersion(hDll);
             encoder_name = strutil::format("%s, CoreAudioToolbox %s",
-                encoder_name.c_str(), ver.c_str());
+                    encoder_name.c_str(), ver.c_str());
             setup_aach_codec(hDll);
             FreeLibrary(hDll);
         }
@@ -1748,9 +1730,9 @@ int wmain1(int argc, wchar_t **argv)
                 TtakInt32 var, comp;
                 factory->libtak.GetLibraryVersion(&var, &comp);
                 LOG(L"tak_deco_lib %u.%u.%u %hs\n",
-                    var >> 16, (var >> 8) & 0xff, var & 0xff,
-                    factory->libtak.compatible() ? "compatible"
-                    : "incompatible");
+                        var >> 16, (var >> 8) & 0xff, var & 0xff,
+                        factory->libtak.compatible() ? "compatible"
+                                                 : "incompatible");
             }
             return 0;
         }
@@ -1821,13 +1803,12 @@ int wmain1(int argc, wchar_t **argv)
                         CueSheet cue;
                         cue.parse(&wsb);
                         tracks.pop_back();
-                        cue.loadTracks(tracks, L"",
-                            opts.fname_format
-                            ? opts.fname_format
-                            : L"${tracknumber}${title& }${title}",
-                            ifilename);
-                    }
-                    catch (...) {}
+                        cue.loadTracks(tracks, L"", 
+                                   opts.fname_format
+                                    ? opts.fname_format
+                                    : L"${tracknumber}${title& }${title}",
+                                    ifilename);
+                    } catch (...) {}
                 } while (0);
             }
         }
@@ -1837,7 +1818,7 @@ int wmain1(int argc, wchar_t **argv)
                 playlist::Track &track = tracks[i];
                 if (opts.cue_tracks.size()) {
                     if (std::find(opts.cue_tracks.begin(),
-                        opts.cue_tracks.end(), track.number)
+                                  opts.cue_tracks.end(), track.number)
                         == opts.cue_tracks.end())
                         continue;
                 }
@@ -1852,12 +1833,11 @@ int wmain1(int argc, wchar_t **argv)
                 src->seekTo(0);
                 encode_file(src, ofilename, opts);
             }
-        }
-        else {
+        } else {
             std::wstring ofilename = get_output_filename(ifilename, opts);
             LOG(L"\n%s\n",
                 ofilename == L"-" ? L"<stdout>"
-                : PathFindFileNameW(ofilename.c_str()));
+                                  : PathFindFileNameW(ofilename.c_str()));
             std::shared_ptr<FILE> adts_fp;
             if (opts.is_adts)
                 adts_fp = win32::fopen(ofilename, L"wb+");
@@ -1865,18 +1845,18 @@ int wmain1(int argc, wchar_t **argv)
             group_tracks_with_formats(tracks, &groups);
             if (!opts.is_adts && groups.size() > 1)
                 throw std::runtime_error("Concatenation of multiple inputs "
-                    "with different sample format is "
-                    "only supported for ADTS output");
+                                         "with different sample format is "
+                                         "only supported for ADTS output");
             std::vector<playlist::Playlist>::const_iterator group;
             playlist::Playlist::const_iterator track;
             for (group = groups.begin();
-            group != groups.end() && !g_interrupted; ++group) {
+                 group != groups.end() && !g_interrupted; ++group) { 
                 std::shared_ptr<CompositeSource> cs
                     = std::make_shared<CompositeSource>();
                 for (track = group->begin(); track != group->end(); ++track) {
                     if (opts.cue_tracks.size()) {
                         if (std::find(opts.cue_tracks.begin(),
-                            opts.cue_tracks.end(), track->number)
+                                      opts.cue_tracks.end(), track->number)
                             == opts.cue_tracks.end())
                             continue;
                     }
@@ -1893,8 +1873,7 @@ int wmain1(int argc, wchar_t **argv)
         }
         if (opts.isWaveOut())
             WaveOutDevice::instance()->close();
-    }
-    catch (const std::exception &e) {
+    } catch (const std::exception &e) {
         if (opts.print_available_formats)
             logger->enable_stderr();
         LOG(L"ERROR: %s\n", errormsg(e).c_str());

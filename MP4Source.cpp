@@ -16,7 +16,7 @@ MP4Edits::editForPosition(int64_t position, int64_t *offset_in_edit) const
     int64_t off = 0;
     size_t  i = 0;
     for (; i < m_edits.size(); ++i) {
-        off = position - acc;
+        off =  position - acc;
         acc += m_edits[i].second;
         if (position < acc)
             break;
@@ -27,10 +27,10 @@ MP4Edits::editForPosition(int64_t position, int64_t *offset_in_edit) const
 
 MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
     : m_position(0),
-    m_position_raw(0),
-    m_current_packet(0),
-    m_scale_shift(0),
-    m_fp(fp)
+      m_position_raw(0),
+      m_current_packet(0),
+      m_scale_shift(0),
+      m_fp(fp)
 {
     try {
         int fd = fileno(m_fp.get());
@@ -49,7 +49,7 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
         const char *type = m_file.GetTrackMediaDataName(m_track_id);
         if (!type)
             throw std::runtime_error("Multiple sample descriptions "
-                "found in input");
+                                     "found in input");
 
         switch (util::fourcc(type).nvalue) {
         case 'alac': setupALAC();       break;
@@ -80,7 +80,7 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
             uint32_t junk, priming, padding;
             uint64_t duration;
             if (std::sscanf(iTunSMPB.c_str(), "%x %x %x %llx",
-                &junk, &priming, &padding, &duration) == 4) {
+                            &junk, &priming, &padding, &duration) == 4) {
                 m_edits.addEntry(priming, duration);
             }
         }
@@ -106,7 +106,7 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
         if (m_scale_shift) m_edits.scaleShift(m_scale_shift);
 
         if (m_iasbd.mFormatID == 'aach' || m_iasbd.mFormatID == 'aacp') {
-            /*
+            /* 
              * When upsampled scale is used in HE-AAC/HE-AACv2 MP4.
              * we assume it is from Nero or FhG. We have to subtract
              * SBR decoder delay counted in ther number of priming samples.
@@ -114,8 +114,7 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
             if (!m_scale_shift)
                 m_edits.shiftMediaOffset(-481 * 2);
         }
-    }
-    catch (mp4v2::impl::Exception *e) {
+    } catch (mp4v2::impl::Exception *e) {
         handle_mp4error(e);
     }
 }
@@ -136,10 +135,10 @@ size_t MP4Source::readSamples(void *buffer, size_t nsamples)
                 m_decoder->decode(m_decode_buffer.write_ptr(), fpp);
             m_position_raw += nframes;
             int64_t trim = std::max(m_position_raw
-                - m_edits.mediaOffset(edit)
-                - m_edits.duration(edit)
-                - getDecoderDelay(),
-                static_cast<int64_t>(0));
+                                    - m_edits.mediaOffset(edit)
+                                    - m_edits.duration(edit)
+                                    - getDecoderDelay(),
+                                    static_cast<int64_t>(0));
             if (trim > 0)
                 nframes -= trim;
             if (nframes > 0)
@@ -150,8 +149,7 @@ size_t MP4Source::readSamples(void *buffer, size_t nsamples)
                 m_decode_buffer.reset();
                 m_start_skip -= nframes;
                 continue;
-            }
-            else if (m_start_skip) {
+            } else if (m_start_skip) {
                 m_decode_buffer.advance(m_start_skip);
                 nframes -= m_start_skip;
                 m_start_skip = 0;
@@ -162,7 +160,7 @@ size_t MP4Source::readSamples(void *buffer, size_t nsamples)
     }
     nsamples = std::min(m_decode_buffer.count(), nsamples);
     std::memcpy(buffer, m_decode_buffer.read(nsamples),
-        nsamples * m_oasbd.mBytesPerFrame);
+                nsamples * m_oasbd.mBytesPerFrame);
     return nsamples;
 }
 
@@ -176,15 +174,15 @@ void MP4Source::seekTo(int64_t count)
     m_decode_buffer.reset();
     m_decoder->reset();
     m_position = count;
-    int64_t  mediapos = m_edits.mediaOffsetForPosition(count);
-    uint32_t fpp = m_iasbd.mFramesPerPacket;
-    int64_t  ipacket = mediapos / fpp;
-    uint32_t preroll = getMaxFrameDependency();
-    m_position_raw = ipacket * fpp;
-    m_current_packet = std::max(0LL, ipacket - preroll);
-    preroll = ipacket - m_current_packet;
+    int64_t  mediapos  = m_edits.mediaOffsetForPosition(count);
+    uint32_t fpp       = m_iasbd.mFramesPerPacket;
+    int64_t  ipacket   = mediapos / fpp;
+    uint32_t preroll   = getMaxFrameDependency();
+    m_position_raw     = ipacket * fpp;
+    m_current_packet   = std::max(0LL, ipacket - preroll);
+    preroll            = ipacket - m_current_packet;
     m_start_skip = mediapos - m_position_raw + getDecoderDelay();
-
+    
     std::vector<uint8_t> v(m_iasbd.mFramesPerPacket * m_oasbd.mBytesPerFrame);
     for (uint32_t i = 0; i < preroll; ++i)
         m_decoder->decode(v.data(), m_iasbd.mFramesPerPacket);
@@ -202,7 +200,7 @@ bool MP4Source::feed(std::vector<uint8_t> *buffer)
     MP4Timestamp dts;
     MP4Duration  duration;
     m_file.ReadSample(m_track_id, m_current_packet + 1, &bp, &size, &dts,
-        &duration);
+                      &duration);
     ++m_current_packet;
     return true;
 }
@@ -215,8 +213,7 @@ void MP4Source::setupALAC()
         alacprop = "mdia.minf.stbl.stsd.alac.wave.alac.decoderConfig";
         chanatom = "mdia.minf.stbl.stsd.alac.wave.chan";
         chanprop = "mdia.minf.stbl.stsd.alac.wave.chan.data";
-    }
-    else {
+    } else {
         alacprop = "mdia.minf.stbl.stsd.alac.alac.decoderConfig";
         chanatom = "mdia.minf.stbl.stsd.alac.chan";
         chanprop = "mdia.minf.stbl.stsd.alac.chan.data";
@@ -242,22 +239,22 @@ void MP4Source::setupALAC()
         throw std::runtime_error("Malformed ALAC magic cookie");
     {
         uint32_t framelen, timescale;
-        std::memcpy(&framelen, &alac[0], 4);
-        framelen = util::b2host32(framelen);
+        std::memcpy(&framelen,  &alac[0], 4);
+        framelen  = util::b2host32(framelen);
         std::memcpy(&timescale, &alac[20], 4);
         timescale = util::b2host32(timescale);
         uint8_t  nchannels = alac[9];
-        uint8_t  bits = alac[5];
+        uint8_t  bits      = alac[5];
         memset(&m_iasbd, 0, sizeof m_iasbd);
         m_iasbd.mSampleRate = timescale;
-        m_iasbd.mFormatID = 'alac';
+        m_iasbd.mFormatID   = 'alac';
         switch (bits) {
         case 16: m_iasbd.mFormatFlags = 1; break;
         case 20: m_iasbd.mFormatFlags = 2; break;
         case 24: m_iasbd.mFormatFlags = 3; break;
         case 32: m_iasbd.mFormatFlags = 4; break;
         }
-        m_iasbd.mFramesPerPacket = framelen;
+        m_iasbd.mFramesPerPacket  = framelen;
         m_iasbd.mChannelsPerFrame = nchannels;
     }
     if (chan.size() >= 12) {
@@ -265,7 +262,7 @@ void MP4Source::setupALAC()
         util::fourcc tag(reinterpret_cast<const char*>(&chan[0]));
         util::fourcc bitmap(reinterpret_cast<const char*>(&chan[4]));
         acl.mChannelLayoutTag = tag;
-        acl.mChannelBitmap = bitmap;
+        acl.mChannelBitmap    = bitmap;
         chanmap::getChannels(&acl, &m_chanmap);
     }
 #ifdef QAAC
@@ -274,7 +271,7 @@ void MP4Source::setupALAC()
     m_decoder = std::make_shared<ALACPacketDecoder>(this, m_iasbd);
 #endif
     m_decoder->setMagicCookie(alac);
-    m_oasbd = m_decoder->getSampleFormat();
+    m_oasbd   = m_decoder->getSampleFormat();
 }
 
 #ifdef QAAC
@@ -326,10 +323,10 @@ void MP4Source::setupMPEG4Audio()
         MPAHeader header(first_frame.data());
         uint32_t layer_tab[] = { 0, '.mp3', '.mp2', '.mp1' };
         memset(&m_iasbd, 0, sizeof m_iasbd);
-        m_iasbd.mSampleRate = header.sample_rate();
-        m_iasbd.mFormatID = layer_tab[header.layer];
-        m_iasbd.mFramesPerPacket = header.samples_per_frame();
-        m_iasbd.mChannelsPerFrame = header.is_mono() ? 1 : 2;
+        m_iasbd.mSampleRate       = header.sample_rate();
+        m_iasbd.mFormatID         = layer_tab[header.layer];
+        m_iasbd.mFramesPerPacket  = header.samples_per_frame();
+        m_iasbd.mChannelsPerFrame = header.is_mono() ? 1 : 2; 
         m_decoder = std::make_shared<CoreAudioPacketDecoder>(this, m_iasbd);
         m_oasbd = m_decoder->getSampleFormat();
         break;
