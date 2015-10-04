@@ -52,40 +52,41 @@ namespace {
         }
         static int32_t read(void *cookie, void *data, int32_t count)
         {
-            int fd = reinterpret_cast<int>(cookie);
+            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
             return util::nread(fd, data, count);
         }
         static uint32_t tell(void *cookie)
         {
-            int fd = reinterpret_cast<int>(cookie);
+            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
             int64_t off = _lseeki64(fd, 0, SEEK_CUR);
             return std::min(off, 0xffffffffLL); // XXX
         }
         static int seek_abs(void *cookie, uint32_t pos)
         {
-            int fd = reinterpret_cast<int>(cookie);
+            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
             return _lseeki64(fd, pos, SEEK_SET) >= 0 ? 0 : -1;
         }
         static int seek(void *cookie, int32_t off, int whence)
         {
-            int fd = reinterpret_cast<int>(cookie);
+            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
             return _lseeki64(fd, off, whence) >= 0 ? 0 : -1;
         }
         static int pushback(void *cookie, int c)
         {
-            int fd = reinterpret_cast<int>(cookie);
+            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
             _lseeki64(fd, -1, SEEK_CUR); // XXX
             return c;
         }
         static uint32_t size(void *cookie)
         {
-            int fd = reinterpret_cast<int>(cookie);
+            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
             int64_t size = _filelengthi64(fd);
             return std::min(size, 0xffffffffLL); // XXX
         }
         static int seekable(void *cookie)
         {
-            return win32::is_seekable(reinterpret_cast<int>(cookie));
+            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
+            return win32::is_seekable(fd);
         }
     };
 }
@@ -102,9 +103,11 @@ WavpackSource::WavpackSource(const WavpackModule &module,
     try { m_cfp = win32::fopen(path + L"c", L"rb"); } catch(...) {}
 
     int flags = OPEN_TAGS | OPEN_NORMALIZE | (m_cfp.get() ? OPEN_WVC : 0);
-    void *ra = reinterpret_cast<void*>(fileno(m_fp.get()));
-    void *rc =
-        m_cfp.get() ? reinterpret_cast<void*>(fileno(m_cfp.get())) : 0;
+    void *ra =
+        reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(m_fp.get())));
+    void *rc = m_cfp.get() ?
+        reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(m_cfp.get())))
+        : 0;
 
     WavpackContext *wpc =
         m_module.OpenFileInputEx(&reader, ra, rc, error, flags, 0);

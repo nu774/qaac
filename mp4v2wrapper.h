@@ -117,17 +117,17 @@ struct MP4FDReadProvider: public MP4FileProvider
          * and substruct by 1 on the succeeding jobs.
          */
         int fd = std::strtol(name, 0, 10);
-        return reinterpret_cast<void*>(fd + 1);
+        return reinterpret_cast<void*>(static_cast<intptr_t>(fd + 1));
     }
     static int seek(void *handle, int64_t pos)
     {
-        int fd = reinterpret_cast<int>(handle) - 1;
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(handle)) - 1;
         return _lseeki64(fd, pos, SEEK_SET) < 0;
     }
     static int read(void *handle, void *buffer, int64_t size, int64_t *nin,
                     int64_t maxChunkSize)
     {
-        int fd = reinterpret_cast<int>(handle) - 1;
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(handle)) - 1;
         *nin = util::nread(fd, buffer, size);
         return *nin < 0;
     }
@@ -137,7 +137,7 @@ struct MP4FDReadProvider: public MP4FileProvider
     }
     static int get_size(void *handle, int64_t *size)
     {
-        int fd = reinterpret_cast<int>(handle) - 1;
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(handle)) - 1;
         *size = _filelengthi64(fd);
         return *size == -1 ? -1 : 0;
     }

@@ -38,8 +38,8 @@ public:
 private:
     Log()
     {
-        long h = _get_osfhandle(_fileno(stderr));
-        m_stderr_type = GetFileType(reinterpret_cast<HANDLE>(h));
+        HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(stderr)));
+        m_stderr_type = GetFileType(h);
     }
 };
 

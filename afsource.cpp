@@ -18,7 +18,7 @@ namespace audiofile {
     OSStatus read(void *cookie, SInt64 pos, UInt32 count, void *data,
             UInt32 *nread)
     {
-        int fd = reinterpret_cast<int>(cookie);
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
         if (_lseeki64(fd, pos, SEEK_SET) != pos)
             return ioErr;
         ssize_t n = util::nread(fd, data, count);
@@ -29,7 +29,8 @@ namespace audiofile {
     }
     SInt64 size(void *cookie)
     {
-        return _filelengthi64(reinterpret_cast<int>(cookie));
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
+        return _filelengthi64(fd);
     }
 
     void fetchTagDictCallback(const void *key, const void *value, void *ctx)
@@ -68,7 +69,7 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
     : m_fp(fp)
 {
     AudioFileID afid;
-    void *ctx = reinterpret_cast<void*>(fileno(fp.get()));
+    void *ctx=reinterpret_cast<void*>(static_cast<intptr_t>(fileno(fp.get())));
     CHECKCA(AudioFileOpenWithCallbacks(ctx, audiofile::read, 0,
                                        audiofile::size, 0, 0, &afid));
     m_af.attach(afid, true);

@@ -69,22 +69,22 @@ struct SFVirtualIOImpl: public SF_VIRTUAL_IO
     }
     static sf_count_t size(void *cookie)
     {
-        int fd = reinterpret_cast<int>(cookie);
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
         return _filelengthi64(fd);
     }
     static sf_count_t seek(sf_count_t off, int whence, void *cookie)
     {
-        int fd = reinterpret_cast<int>(cookie);
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
         return _lseeki64(fd, off, whence);
     }
     static sf_count_t read(void *data, sf_count_t count, void *cookie)
     {
-        int fd = reinterpret_cast<int>(cookie);
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
         return util::nread(fd, data, count);
     }
     static sf_count_t tell(void *cookie)
     {
-        int fd = reinterpret_cast<int>(cookie);
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
         return _lseeki64(fd, 0, SEEK_CUR);
     }
 };
@@ -95,9 +95,9 @@ LibSndfileSource::LibSndfileSource(
 {
     static SFVirtualIOImpl vio;
     SF_INFO info = { 0 };
-    SNDFILE *sf =
-        m_module.open_virtual(&vio, SFM_READ, &info,
-                              reinterpret_cast<void*>(fileno(m_fp.get())));
+    void *cookie =
+        reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(fp.get())));
+    SNDFILE *sf = m_module.open_virtual(&vio, SFM_READ, &info, cookie);
     if (!sf)
         throw std::runtime_error(m_module.strerror(0));
     m_handle.reset(sf, m_module.close);

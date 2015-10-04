@@ -63,22 +63,23 @@ struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
     }
     static TtakBool seekable(void *cookie)
     {
-        return win32::is_seekable(reinterpret_cast<int>(cookie));
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
+        return win32::is_seekable(fd);
     }
     static TtakBool read(void *cookie, void *buf, TtakInt32 n, TtakInt32 *nr)
     {
-        int fd = reinterpret_cast<int>(cookie);
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
         *nr = util::nread(fd, buf, n);
         return *nr >= 0;
     }
     static TtakBool seek(void *cookie, TtakInt64 pos)
     {
-        int fd = reinterpret_cast<int>(cookie);
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
         return _lseeki64(fd, pos, SEEK_SET) == pos;
     }
     static TtakBool size(void *cookie, TtakInt64 *len)
     {
-        int fd = reinterpret_cast<int>(cookie);
+        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
         *len = _filelengthi64(fd);
         return *len >= 0LL;
     }
@@ -89,7 +90,8 @@ TakSource::TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp)
 {
     static TakStreamIoInterfaceImpl io;
     TtakSSDOptions options = { tak_Cpu_Any, 0 };
-    void *ctx = reinterpret_cast<void*>(fileno(m_fp.get()));
+    void *ctx =
+        reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(fp.get())));
     TtakSeekableStreamDecoder ssd =
         m_module.SSD_Create_FromStream(&io, ctx, &options,
                                        staticDamageCallback, this);
