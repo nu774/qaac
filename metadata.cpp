@@ -352,7 +352,7 @@ namespace M4A {
         { "itunes:cmid",                'cmID'                     },
         { "itunes:cnid",                'cnID'                     },
         { "itunes:cpil",                Tag::kCompilation          },
-        { "itunes:geid",                'gnID'                     },
+        { "itunes:geid",                'geID'                     },
         { "itunes:hdvd",                'hdvd'                     },
         { "itunes:keyw",                'keyw'                     },
         { "itunes:pcst",                'pcst'                     },
