@@ -32,8 +32,13 @@ public:
     }
     void vwprintf(const wchar_t *fmt, va_list args)
     {
+        int rc = _vscwprintf(fmt, args);
+        std::vector<wchar_t> buffer(rc + 1);
+        rc = _vsnwprintf(buffer.data(), buffer.size(), fmt, args);
+
+        OutputDebugStringW(buffer.data());
         for (size_t i = 0; i < m_streams.size(); ++i)
-            std::vfwprintf(m_streams[i].get(), fmt, args);
+            std::fputws(buffer.data(), m_streams[i].get());
     }
 private:
     Log()

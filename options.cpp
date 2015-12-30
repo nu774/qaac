@@ -1,4 +1,5 @@
 #include <limits>
+#include <windows.h>
 #include "options.h"
 #include "wgetopt.h"
 #include "metadata.h"
@@ -344,6 +345,12 @@ void usage()
     );
 }
 
+static void complain(const wchar_t *s)
+{
+    std::fputws(s, stderr);
+    OutputDebugStringW(s);
+}
+
 #ifdef QAAC
 static const wchar_t * const short_opts = L"hDo:d:b:r:insRSNAa:V:v:c:q:";
 #endif
@@ -369,49 +376,46 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->outdir = wide::optarg;
         else if (ch < 0xff && (pos = strutil::strindex("cavV", ch)) >= 0) {
             if ((this->output_format && !isAAC()) || this->method != -1) {
-                std::fputws(L"Encoding mode options are exclusive.\n", stderr);
+                complain(L"Encoding mode options are exclusive.\n");
                 return false;
             }
             this->method = pos;
             if (std::swscanf(wide::optarg, L"%lf", &this->bitrate) != 1) {
-                std::fputws(L"AAC Bitrate/Quality must be an integer.\n",
-                            stderr);
+                complain(L"AAC Bitrate/Quality must be an integer.\n");
                 return false;
             }
         }
         else if (ch == 'A') {
             if ((this->output_format && !isALAC()) || this->method != -1) {
-                std::fputws(L"Encoding mode options are exclusive.\n", stderr);
+                complain(L"Encoding mode options are exclusive.\n");
                 return false;
             }
             this->output_format = 'alac';
         }
         else if (ch == 'D') {
             if (this->output_format && !isLPCM()) {
-                std::fputws(L"Encoding mode options are exclusive.\n", stderr);
+                complain(L"Encoding mode options are exclusive.\n");
                 return false;
             }
             this->output_format = 'lpcm';
         }
         else if (ch == 'aach') {
             if (this->output_format && !isAAC()) {
-                std::fputws(L"--he is only available for AAC.\n", stderr);
+                complain(L"--he is only available for AAC.\n");
                 return false;
             }
             this->output_format = 'aach';
         }
         else if (ch == 'play') {
             if (this->output_format && !isWaveOut()) {
-                std::fputws(L"--play cannot be specified with encoding mode.\n",
-                            stderr);
+                complain(L"--play cannot be specified with encoding mode.\n");
                 return false;
             }
             this->output_format = 'play';
         }
         else if (ch == 'peak') {
             if (this->output_format && !isPeak()) {
-                std::fputws(L"--peak cannot be specified with encoding mode.\n",
-                            stderr);
+                complain(L"--peak cannot be specified with encoding mode.\n");
                 return false;
             }
             this->output_format = 'peak';
@@ -420,7 +424,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->is_caf = true;
         else if (ch == 'q') {
             if (std::swscanf(wide::optarg, L"%u", &this->quality) != 1) {
-                std::fputws(L"-q requires an integer.\n", stderr);
+                complain(L"-q requires an integer.\n");
                 return false;
             }
         }
@@ -441,8 +445,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                         this->native_resampler_complexity =
                             util::fourcc(strutil::w2us(tok).c_str());
                     else {
-                        std::fputws(L"Invalid arg for --native-resampler.\n",
-                                    stderr);
+                        complain(L"Invalid arg for --native-resampler.\n");
                         return false;
                     }
                 }
@@ -484,7 +487,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 if (std::swscanf(tok, L"%u", &n) == 1)
                     this->chanmap.push_back(n);
                 else {
-                    std::fputws(L"Invalid arg for --chanmap.\n", stderr);
+                    complain(L"Invalid arg for --chanmap.\n");
                     return false;
                 }
             }
@@ -496,7 +499,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 if (n > high) high = n;
             }
             if (low < 1 || high > this->chanmap.size()) {
-                std::fputws(L"Invalid arg for --chanmap.\n", stderr);
+                complain(L"Invalid arg for --chanmap.\n");
                 return false;
             }
         }
@@ -506,25 +509,24 @@ bool Options::parse(int &argc, wchar_t **&argv)
             else if (!std::wcscmp(wide::optarg, L"auto"))
                 this->rate = 0;
             else if (std::swscanf(wide::optarg, L"%u", &this->rate) != 1) {
-                std::fputws(L"Invalid arg for --rate.\n", stderr);
+                complain(L"Invalid arg for --rate.\n");
                 return false;
             }
         }
         else if (ch == 'lpf ') {
             if (std::swscanf(wide::optarg, L"%u", &this->lowpass) != 1) {
-                std::fputws(L"--lowpass requires an integer.\n", stderr);
+                complain(L"--lowpass requires an integer.\n");
                 return false;
             }
         }
         else if (ch == 'b') {
             uint32_t n;
             if (std::swscanf(wide::optarg, L"%u", &n) != 1) {
-                std::fputws(L"-b requires an integer.\n", stderr);
+                complain(L"-b requires an integer.\n");
                 return false;
             }
             if (n <= 1 || n > 32) {
-                std::fputws(L"Bits per sample is too low or too high.\n",
-                            stderr);
+                complain(L"Bits per sample is too low or too high.\n");
                 return false;
             }
             this->bits_per_sample = n;
@@ -534,32 +536,32 @@ bool Options::parse(int &argc, wchar_t **&argv)
         }
         else if (ch == 'mask') {
             if (std::swscanf(wide::optarg, L"%i", &this->chanmask) != 1) {
-                std::fputws(L"--chanmask requires an integer.\n", stderr);
+                complain(L"--chanmask requires an integer.\n");
                 return false;
             }
         }
         else if (ch == 'Rchn') {
             if (std::swscanf(wide::optarg, L"%u", &this->raw_channels) != 1) {
-                std::fputws(L"--raw-channels requires an integer.\n", stderr);
+                complain(L"--raw-channels requires an integer.\n");
                 return false;
             }
             if (this->raw_channels == 0) {
-                std::fputws(L"Invalid --raw-channels value.\n", stderr);
+                complain(L"Invalid --raw-channels value.\n");
                 return false;
             }
             if (this->raw_channels > 8) {
-                std::fputws(L"--raw-channels too large.\n", stderr);
+                complain(L"--raw-channels too large.\n");
                 return false;
             }
         }
         else if (ch == 'Rrat') {
             if (std::swscanf(wide::optarg, L"%u",
                              &this->raw_sample_rate) != 1) {
-                std::fputws(L"--raw-rate requires an integer.\n", stderr);
+                complain(L"--raw-rate requires an integer.\n");
                 return false;
             }
             if (this->raw_sample_rate == 0) {
-                std::fputws(L"Invalid --raw-rate value.\n", stderr);
+                complain(L"Invalid --raw-rate value.\n");
                 return false;
             }
         }
@@ -569,8 +571,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->alac_fast = true;
         else if (ch == 'gain') {
             if (std::swscanf(wide::optarg, L"%lf", &this->gain) != 1) {
-                std::fputws(L"--gain requires an floating point number.\n",
-                            stderr);
+                complain(L"--gain requires an floating point number.\n");
                 return false;
             }
         }
@@ -583,32 +584,27 @@ bool Options::parse(int &argc, wchar_t **&argv)
                              &knee,
                              &attack,
                              &release) != 5) {
-                std::fputws(L"--drc requires 5 parameters.\n", stderr);
+                complain(L"--drc requires 5 parameters.\n");
                 return false;
             }
             if (threshold >= 0.0) {
-                std::fputws(L"DRC threshold cannot be positive.\n",
-                            stderr);
+                complain(L"DRC threshold cannot be positive.\n");
                 return false;
             }
             if (ratio <= 1.0) {
-                std::fputws(L"DRC ratio has to be greater than 1.0\n",
-                            stderr);
+                complain(L"DRC ratio has to be greater than 1.0\n");
                 return false;
             }
             if (knee < 0.0) {
-                std::fputws(L"DRC knee width cannot be negative.\n",
-                            stderr);
+                complain(L"DRC knee width cannot be negative.\n");
                 return false;
             }
             if (attack < 0.0) {
-                std::fputws(L"DRC attack time cannot be negative.\n",
-                            stderr);
+                complain(L"DRC attack time cannot be negative.\n");
                 return false;
             }
             if (release < 0.0) {
-                std::fputws(L"DRC release time cannot be negative.\n",
-                            stderr);
+                complain(L"DRC release time cannot be negative.\n");
                 return false;
             }
             wchar_t *p = wide::optarg;
@@ -631,12 +627,11 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->num_priming = 0;
         else if (ch == 'encd') {
             if (std::swscanf(wide::optarg, L"%u", &this->num_priming) != 1) {
-                std::fputws(L"Invalid arg for --num-priming.\n", stderr);
+                complain(L"Invalid arg for --num-priming.\n");
                 return false;
             }
             if (this->num_priming > 2112) {
-                std::fputws(L"num-priming must not be greater than 2112.\n",
-                            stderr);
+                complain(L"num-priming must not be greater than 2112.\n");
                 return false;
             }
         }
@@ -644,27 +639,26 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->sort_args = true;
         else if (ch == 'gapm') {
             if (std::swscanf(wide::optarg, L"%u", &this->gapless_mode) != 1) {
-                std::fputws(L"Invalid arg for --gapless-mode.\n", stderr);
+                complain(L"Invalid arg for --gapless-mode.\n");
                 return false;
             }
         }
         else if (ch == 'txcp') {
             if (std::swscanf(wide::optarg, L"%u", &this->textcp) != 1) {
-                std::fputws(L"--text-codepage requires code page number.\n",
-                            stderr);
+                complain(L"--text-codepage requires code page number.\n");
                 return false;
             }
         }
         else if (ch == 'ctrk') {
             if (!strutil::parse_numeric_ranges(wide::optarg,
                                                &this->cue_tracks)) {
-                std::fputws(L"Invalid arg for --cue-tracks.\n", stderr);
+                complain(L"Invalid arg for --cue-tracks.\n");
                 return false;
             }
         }
         else if (ch == 'atsz') {
             if (std::swscanf(wide::optarg, L"%u", &this->artwork_size) != 1) {
-                std::fputws(L"--artwork-size requires an integer.\n", stderr);
+                complain(L"--artwork-size requires an integer.\n");
                 return false;
             }
         }
@@ -678,7 +672,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             else {
                 int n;
                 if (std::swscanf(wide::optarg, L"%d", &n) != 1) {
-                    std::fputws(L"Invalid --compilation option arg.\n", stderr);
+                    complain(L"Invalid --compilation option arg.\n");
                     return false;
                 }
                 this->tagopts[ch] = wide::optarg;
@@ -690,14 +684,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
             wchar_t *value = tokens.rest();
             size_t keylen = std::wcslen(key);
             if (!value || (keylen != 3 && keylen != 4)) {
-                std::fputws(L"Invalid --tag option arg.\n", stderr);
+                complain(L"Invalid --tag option arg.\n");
                 return false;
             }
             uint32_t fcc = (keylen == 3) ? 0xa9 : 0;
             wchar_t wc;
             while ((wc = *key++) != 0) {
                 if (wc != 0xa9 && (wc < 0x20 || wc > 0x7e)) {
-                    std::fputws(L"Bogus util::fourcc for --tag.\n", stderr);
+                    complain(L"Bogus util::fourcc for --tag.\n");
                     return false;
                 }
                 fcc = ((fcc << 8) | wc);
@@ -709,7 +703,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             wchar_t *key = tokens.next();
             wchar_t *value = tokens.rest();
             if (!value) {
-                std::fputws(L"Invalid arg for --long-tag.\n", stderr);
+                complain(L"Invalid arg for --long-tag.\n");
                 return false;
             }
             this->longtags[strutil::w2us(key)] = value;
@@ -732,12 +726,12 @@ bool Options::parse(int &argc, wchar_t **&argv)
         if (wide::optind == 1)
             return usage(), false;
         else {
-            std::fputws(L"Input file name is required.\n", stderr);
+            complain(L"Input file name is required.\n");
             return false;
         }
     }
     if (argc > 1 && this->ofilename && !this->concat) {
-        std::fputws(L"-o is not available for multiple output.\n", stderr);
+        complain(L"-o is not available for multiple output.\n");
         return false;
     }
     if (!this->output_format) {
@@ -748,7 +742,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
 #endif
     }
     if (isSBR() && this->method == kTVBR) {
-        std::fputws(L"TVBR is not available for HE.\n", stderr);
+        complain(L"TVBR is not available for HE.\n");
         return false;
     }
     if (isAAC() && this->method == -1) {
@@ -756,35 +750,32 @@ bool Options::parse(int &argc, wchar_t **&argv)
         this->bitrate = isSBR() ? 0 : 90;
     }
     if (isMP4() && this->ofilename && !std::wcscmp(this->ofilename, L"-")) {
-        std::fputws(L"MP4 piping is not supported.\n", stderr);
+        complain(L"MP4 piping is not supported.\n");
         return false;
     }
     if (!isAAC() && this->is_adts) {
-        std::fputws(L"--adts is only available for AAC.\n", stderr);
+        complain(L"--adts is only available for AAC.\n");
         return false;
     }
     if (!isAAC() && this->quality != -1) {
-        std::fputws(L"-q is only available for AAC.\n", stderr);
+        complain(L"-q is only available for AAC.\n");
         return false;
     }
     if (this->is_caf && this->is_adts) {
-        std::fputws(L"Can't use --caf and --adts at the same time.\n",
-                    stderr);
+        complain(L"Can't use --caf and --adts at the same time.\n");
         return false;
     }
     if (this->ignore_length && this->is_raw) {
-        std::fputws(L"Can't use --ignorelength and --raw at the same time.\n",
-                    stderr);
+        complain(L"Can't use --ignorelength and --raw at the same time.\n");
         return false;
     }
     if (this->concat && argc > 1 && !this->ofilename &&
         !this->isPeak() && !this->isWaveOut()) {
-        std::fputws(L"--concat requires output filename (use -o option).\n",
-                    stderr);
+        complain(L"--concat requires output filename (use -o option).\n");
         return false;
     }
     if ((!isAAC() || isSBR()) && this->num_priming != 2112) {
-        std::fputws(L"--num-priming is only applicable for AAC LC.\n", stderr);
+        complain(L"--num-priming is only applicable for AAC LC.\n");
         return false;
     }
     if (this->quality == -1)

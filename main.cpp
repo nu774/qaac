@@ -1632,6 +1632,9 @@ int wmain(int argc, wchar_t **argv)
 int wmain1(int argc, wchar_t **argv)
 #endif
 {
+    auto cmdline = std::wstring(GetCommandLineW()) + L"\n";
+    OutputDebugStringW(cmdline.c_str());
+
 #ifdef _DEBUG
 //    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF);
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_LEAK_CHECK_DF);
