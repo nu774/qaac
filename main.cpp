@@ -119,7 +119,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
         return std::wstring(L"stdin") + ext;
 
     std::wstring obasename =
-        win32::PathReplaceExtension(PathFindFileNameW(ifilename), ext);
+        win32::PathReplaceExtension(ifilename, ext);
     /*
      * Prefixed pathname starting with \\?\ is required to be canonical
      * full pathname.
@@ -129,6 +129,11 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
     std::wstring ofilename =
         win32::GetFullPathNameX(strutil::format(L"%s/%s", outdir,
                                                 obasename.c_str()));
+
+    std::vector<wchar_t> odir(ofilename.begin(), ofilename.end());
+    wchar_t *pos = PathFindFileNameW(odir.data());
+    *pos = 0;
+    SHCreateDirectoryExW(nullptr, odir.data(), nullptr);
 
     /* test if ifilename and ofilename refer to the same file */
     std::shared_ptr<FILE> ifp, ofp;

@@ -22,19 +22,33 @@ namespace playlist {
                 unsigned n = 0;
                 sscanf(tok.next(), "%u", &n);
                 return strutil::format(L"%02u", n);
-            } else 
-                return strutil::us2w(iter->second);
+            }
+            auto val = strutil::us2w(iter->second);
+            return strutil::strtransform(val, [](wchar_t c)->wchar_t {
+                return std::wcschr(L":/\\?|<>*\"", c) ? L'_' : c;
+            });
         }
     };
 
     std::wstring generateFileName(const std::wstring &spec,
                                   const std::map<std::string, std::string> &tag)
     {
-        auto ofilename = process_template(spec, TagLookup(tag));
-        auto res = strutil::strtransform(ofilename, [](wchar_t c)->wchar_t {
-            return std::wcschr(L":/\\?|<>*\"", c) ? L'_' : c;
-        });
-        if (res.size() > 250) res = res.substr(0, 250);
+        auto spec2 = strutil::strtransform(spec, [](wchar_t c)->wchar_t {
+                                           return c == L'\\' ? L'/' : c;
+                                           });
+        auto res = process_template(spec2, TagLookup(tag));
+        std::vector<std::wstring> comp;
+        strutil::Tokenizer<wchar_t> tokens(res, L"/");
+        wchar_t *tok;
+        while (tok = tokens.next()) {
+            if (wcslen(tok) > 250)
+                tok[250] = 0;
+            comp.push_back(tok);
+        }
+        res.clear();
+        for (size_t i = 0; i < comp.size() - 1; ++i)
+            res += comp[i] + L"/";
+        res += comp[comp.size() - 1];
         return res;
     }
 
