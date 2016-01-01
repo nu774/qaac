@@ -61,6 +61,9 @@ FLACSource::FLACSource(const FLACModule &module,
     TRYFL(m_module.stream_decoder_set_metadata_respond(
                 m_decoder.get(), FLAC__METADATA_TYPE_VORBIS_COMMENT));
 
+    TRYFL(m_module.stream_decoder_set_metadata_respond(
+                m_decoder.get(), FLAC__METADATA_TYPE_PICTURE));
+
     TRYFL((fcc == 'OggS' ? m_module.stream_decoder_init_ogg_stream
                          : m_module.stream_decoder_init_stream)
             (m_decoder.get(),
@@ -189,6 +192,8 @@ void FLACSource::metadataCallback(const FLAC__StreamMetadata *metadata)
         handleStreamInfo(metadata->data.stream_info);
     else if (metadata->type == FLAC__METADATA_TYPE_VORBIS_COMMENT)
         handleVorbisComment(metadata->data.vorbis_comment);
+    else if (metadata->type == FLAC__METADATA_TYPE_PICTURE)
+        handlePicture(metadata->data.picture);
 }
 
 void FLACSource::errorCallback(FLAC__StreamDecoderErrorStatus status)
@@ -229,4 +234,13 @@ void FLACSource::handleVorbisComment(
         }
     }
     TextBasedTag::normalizeTags(tags, &m_tags);
+}
+
+void FLACSource::handlePicture(
+    const FLAC__StreamMetadata_Picture &pic)
+{
+    FLAC__ASSERT(pic.width);
+
+    std::vector<char> vec(pic.data, pic.data + pic.data_length);
+    m_artworks.push_back(vec);
 }

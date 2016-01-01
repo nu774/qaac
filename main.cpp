@@ -947,6 +947,24 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
             if (accept_tag(ssi->first))
                 tagstore->setTag(ssi->first, ssi->second);
         if (mp4sink) {
+            if (opts.artwork_frominputfile) {
+                const std::vector<std::vector<char>> *artworks =
+                    parser->getArtworks();
+                if (artworks) {
+                    for (size_t i = 0; i < artworks->size(); ++i) {
+                        try {
+                            std::vector<char> vec(artworks->at(i));
+                            std::vector<char> vec2(vec);
+                            if (opts.artwork_size)
+                                WICConvertArtwork(&vec[0], vec.size(), opts.artwork_size, &vec2);
+                            mp4sink->addArtwork(vec2);
+                        }
+                        catch (const std::exception &e) {
+                            LOG(L"WARNING: %s\n", errormsg(e).c_str());
+                        }
+                    }
+                }
+            }
             const std::vector<chapters::entry_t> *chapters =
                 parser->getChapters();
             if (chapters)

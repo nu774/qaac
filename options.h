@@ -50,7 +50,7 @@ struct Options {
         print_available_formats(false), alac_fast(false), threading(false),
         concat(false), no_matrix_normalize(false), no_dither(false),
         filename_from_tag(false), sort_args(false),
-        no_smart_padding(false), limiter(false),
+        no_smart_padding(false), limiter(false), artwork_frominputfile(false),
 
         gain(0.0),
 
@@ -112,7 +112,7 @@ struct Options {
          ignore_length, no_optimize, native_resampler, check_only,
          normalize, print_available_formats, alac_fast, threading,
          concat, no_matrix_normalize, no_dither, filename_from_tag,
-         sort_args, no_smart_padding, limiter;
+         sort_args, no_smart_padding, limiter, artwork_frominputfile;
     double bitrate, gain;
 
     uint32_t output_format;

@@ -31,6 +31,7 @@ struct ISink {
 struct ITagParser {
     virtual ~ITagParser() {}
     virtual const std::map<std::string, std::string> &getTags() const = 0;
+    virtual const std::vector<std::vector<char>> *getArtworks() const = 0;
     virtual const std::vector<chapters::entry_t> *getChapters() const = 0;
 };
 

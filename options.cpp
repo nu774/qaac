@@ -79,6 +79,7 @@ static wide::option long_options[] = {
     { L"compilation", optional_argument, 0, Tag::kCompilation },
     { L"lyrics", required_argument, 0, Tag::kLyrics },
     { L"artwork", required_argument, 0, Tag::kArtwork },
+    { L"artwork-frominputfile", no_argument, 0, 'afif' },
     { L"artwork-size", required_argument, 0, 'atsz' },
     { L"chapter", required_argument, 0, 'chap' },
     { L"tag", required_argument, 0, 'tag ' },
@@ -324,6 +325,8 @@ void usage()
 "                      --compilation=0 is same as default.\n"
 "--lyrics <filename>\n"
 "--artwork <filename>\n"
+"--artwork-frominputfile\n"
+"                      Artwork is read from Inputfile.\n"
 "--artwork-size <n>    Specify maximum width or height of artwork in pixels.\n"
 "                      If specified artwork (with --artwork) is larger than\n"
 "                      this, artwork is automatically resized.\n"
@@ -661,6 +664,9 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 complain(L"--artwork-size requires an integer.\n");
                 return false;
             }
+        }
+        else if (ch == 'afif') {
+            this->artwork_frominputfile = true;
         }
         else if (ch == Tag::kArtwork)
             this->artwork_files.push_back(wide::optarg);
