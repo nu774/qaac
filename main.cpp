@@ -947,11 +947,10 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
         for (ssi = tags.begin(); ssi != tags.end(); ++ssi)
             if (accept_tag(ssi->first))
                 tagstore->setTag(ssi->first, ssi->second);
-        if (mp4sink) {
-            const std::vector<chapters::entry_t> *chapters =
-                parser->getChapters();
-            if (chapters)
-                mp4sink->setChapters(*chapters);
+        IChapterParser *cp = dynamic_cast<IChapterParser*>(src);
+        if (cp && mp4sink) {
+            auto &chapters = cp->getChapters();
+            if (chapters.size()) mp4sink->setChapters(chapters);
         }
     }
     tagstore->setTag("encoding application",

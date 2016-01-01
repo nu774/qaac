@@ -62,14 +62,6 @@ public:
         else
             return parser->getTags();
     }
-    const std::vector<chapters::entry_t> * getChapters() const
-    {
-        ITagParser *parser = dynamic_cast<ITagParser*>(m_src.get());
-        if (!parser)
-            return 0;
-        else
-            return parser->getChapters();
-    }
 
     void setRange(uint64_t start, uint64_t duration)
     {

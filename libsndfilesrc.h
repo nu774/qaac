@@ -63,10 +63,6 @@ public:
     void seekTo(int64_t count);
     int64_t getPosition();
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> *getChapters() const
-    {
-        return 0;
-    }
 };
 
 #endif

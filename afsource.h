@@ -14,7 +14,6 @@ class ExtAFSource: public ISeekableSource, public ITagParser
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
-    std::vector<chapters::entry_t> m_chapters;
     std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_iasbd, m_asbd;
 public:
@@ -38,9 +37,5 @@ public:
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> *getChapters() const
-    {
-        return m_chapters.size() ? &m_chapters : 0;
-    }
 };
 #endif

@@ -70,13 +70,16 @@ void CompositeSource::addSourceWithChapter(
     addSource(src);
     std::wstring name(title);
     auto parser = dynamic_cast<ITagParser*>(src.get());
-    if (parser) {
-        auto chaps = parser->getChapters();
-        if (chaps) {
-            std::copy(chaps->begin(), chaps->end(),
+    auto cp = dynamic_cast<IChapterParser*>(src.get());
+    if (cp) {
+        auto &chaps = cp->getChapters();
+        if (chaps.size()) {
+            std::copy(chaps.begin(), chaps.end(),
                       std::back_inserter(m_chapters));
             return;
         }
+    }
+    if (parser) {
         auto tags = parser->getTags();
         if (tags.find("title") != tags.end())
             name = strutil::us2w(tags["title"]);

@@ -51,7 +51,8 @@ public:
     }
 };
 
-class MP4Source: public ISeekableSource, public ITagParser, public IPacketFeeder
+class MP4Source: public ISeekableSource, public ITagParser,
+    public IPacketFeeder, public IChapterParser
 {
     uint32_t m_track_id;
     int64_t  m_position, m_position_raw;
@@ -87,9 +88,9 @@ public:
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> *getChapters() const
+    const std::vector<chapters::entry_t> &getChapters() const
     {
-        return m_chapters.size() ? &m_chapters : 0;
+        return m_chapters;
     }
     bool feed(std::vector<uint8_t> *buffer);
 private:

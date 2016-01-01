@@ -6,7 +6,8 @@
 #include "iointer.h"
 #include "flacmodule.h"
 
-class FLACSource: public ISeekableSource, public ITagParser
+class FLACSource: public ISeekableSource, public ITagParser,
+    public IChapterParser
 {
     typedef std::shared_ptr<FLAC__StreamDecoder> decoder_t;
     bool m_eof;
@@ -39,9 +40,9 @@ public:
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> *getChapters() const
+    const std::vector<chapters::entry_t> &getChapters() const
     {
-        return m_chapters.size() ? &m_chapters : 0;
+        return m_chapters;
     }
 private:
     void close(FLAC__StreamDecoder *decoder)

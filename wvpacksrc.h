@@ -37,7 +37,8 @@ public:
     uint32_t (*UnpackSamples)(WavpackContext *, int32_t *, uint32_t);
 };
 
-class WavpackSource: public ISeekableSource, public ITagParser
+class WavpackSource: public ISeekableSource, public ITagParser,
+    public IChapterParser
 {
     uint64_t m_length;
     std::shared_ptr<void> m_wpc;
@@ -69,9 +70,9 @@ public:
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> *getChapters() const
+    const std::vector<chapters::entry_t> &getChapters() const
     {
-        return m_chapters.size() ? &m_chapters : 0;
+        return m_chapters;
     }
 private:
     bool parseWrapper();

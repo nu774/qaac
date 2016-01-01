@@ -3,7 +3,9 @@
 
 #include "iointer.h"
 
-class CompositeSource: public ISeekableSource, public ITagParser {
+class CompositeSource: public ISeekableSource, public ITagParser,
+        public IChapterParser
+{
     typedef std::shared_ptr<ISeekableSource> source_t;
     uint32_t m_cur_file;
     int64_t m_position;
@@ -42,9 +44,9 @@ public:
         ITagParser *tp = dynamic_cast<ITagParser*>(src.get());
         return tp ? tp->getTags() : m_tags;
     }
-    const std::vector<chapters::entry_t> *getChapters() const
+    const std::vector<chapters::entry_t> &getChapters() const
     {
-        return m_chapters.size() ? &m_chapters : 0;
+        return m_chapters;
     }
     void setTags(const std::map<std::string, std::string> &tags)
     {
