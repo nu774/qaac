@@ -80,12 +80,13 @@ void load_metadata_files(Options *opts)
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }
     }
-    try {
-        auto tag = opts->tagopts.find(Tag::kLyrics);
-        if (tag != opts->tagopts.end())
-            tag->second = load_text_file(tag->second.c_str(), opts->textcp);
-    } catch (const std::exception &e) {
-        LOG(L"WARNING: %s\n", errormsg(e).c_str());
+    for (auto it = opts->ftagopts.begin(); it != opts->ftagopts.end(); ++it) {
+        try {
+            opts->tagopts[it->first] =
+                strutil::w2us(load_text_file(it->second));
+        } catch (const std::exception &e) {
+            LOG(L"WARNING: %s\n", errormsg(e).c_str());
+        }
     }
     for (size_t i = 0; i < opts->artwork_files.size(); ++i) {
         try {
@@ -956,16 +957,14 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
     tagstore->setTag("encoding application",
         strutil::w2us(opts.encoder_name + L", " + encoder_config));
 
-    std::map<uint32_t, std::wstring>::const_iterator uwi;
-    for (uwi = opts.tagopts.begin(); uwi != opts.tagopts.end(); ++uwi) {
+    for (auto uwi = opts.tagopts.begin(); uwi != opts.tagopts.end(); ++uwi) {
         const char *name = M4A::getTagNameFromFourCC(uwi->first);
         if (name)
-            tagstore->setTag(name, strutil::w2us(uwi->second));
+            tagstore->setTag(name, uwi->second);
     }
 
-    std::map<std::string, std::wstring>::const_iterator swi;
-    for (swi = opts.longtags.begin(); swi != opts.longtags.end(); ++swi)
-        tagstore->setTag(swi->first, strutil::w2us(swi->second));
+    for (auto swi = opts.longtags.begin(); swi != opts.longtags.end(); ++swi)
+        tagstore->setTag(swi->first, swi->second);
 
     if (mp4sink) {
         for (size_t i = 0; i < opts.artworks.size(); ++i)

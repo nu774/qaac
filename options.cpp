@@ -83,6 +83,7 @@ static wide::option long_options[] = {
     { L"chapter", required_argument, 0, 'chap' },
     { L"tag", required_argument, 0, 'tag ' },
     { L"long-tag", required_argument, 0, 'ltag' },
+    { L"tag-from-file", required_argument, 0, 'tagf' },
     { 0, 0, 0, 0 }
 };
 static const uint32_t tag_keys[] = {
@@ -338,6 +339,8 @@ void usage()
 "                      2) Some known tags having type other than UTF-8 string\n"
 "                         are taken care of. Others are just stored as UTF-8\n"
 "                         string.\n"
+"--tag-from-file <fcc>:<path>\n"
+"                      Same as above, but value is read from file.\n"
 "--long-tag <key>:<value>\n"
 "                      Set long tag (iTunes custom metadata) with \n"
 "                      arbitrary key/value pair. Value is always stored as\n"
@@ -665,20 +668,22 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == Tag::kArtwork)
             this->artwork_files.push_back(wide::optarg);
         else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end) {
-            if (ch != Tag::kCompilation)
-                this->tagopts[ch] = wide::optarg;
+            if (ch == Tag::kLyrics)
+                this->ftagopts[ch] = wide::optarg;
+            else if (ch != Tag::kCompilation)
+                this->tagopts[ch] = strutil::w2us(wide::optarg);
             else if (!wide::optarg)
-                this->tagopts[ch] = L"1";
+                this->tagopts[ch] = "1";
             else {
                 int n;
                 if (std::swscanf(wide::optarg, L"%d", &n) != 1) {
                     complain(L"Invalid --compilation option arg.\n");
                     return false;
                 }
-                this->tagopts[ch] = wide::optarg;
+                this->tagopts[ch] = strutil::w2us(wide::optarg);
             }
         }
-        else if (ch == 'tag ') {
+        else if (ch == 'tag ' || ch == 'tagf') {
             strutil::Tokenizer<wchar_t> tokens(wide::optarg, L":");
             wchar_t *key = tokens.next();
             wchar_t *value = tokens.rest();
@@ -691,12 +696,17 @@ bool Options::parse(int &argc, wchar_t **&argv)
             wchar_t wc;
             while ((wc = *key++) != 0) {
                 if (wc != 0xa9 && (wc < 0x20 || wc > 0x7e)) {
-                    complain(L"Bogus util::fourcc for --tag.\n");
+                    complain(L"Invalid fourcc for --tag.\n");
                     return false;
                 }
                 fcc = ((fcc << 8) | wc);
             }
-            this->tagopts[fcc] = value;
+            if (fcc == Tag::kArtwork)
+                this->artwork_files.push_back(value);
+            else if (ch == 'tag ')
+                this->tagopts[fcc] = strutil::w2us(value);
+            else
+                this->ftagopts[fcc] = value;
         }
         else if (ch == 'ltag') {
             strutil::Tokenizer<wchar_t> tokens(wide::optarg, L":");
@@ -706,7 +716,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 complain(L"Invalid arg for --long-tag.\n");
                 return false;
             }
-            this->longtags[strutil::w2us(key)] = value;
+            this->longtags[strutil::w2us(key)] = strutil::w2us(value);
         }
         else if (ch == 'chap')
             this->chapter_file = wide::optarg;
