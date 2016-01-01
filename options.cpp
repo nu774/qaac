@@ -80,6 +80,7 @@ static wide::option long_options[] = {
     { L"lyrics", required_argument, 0, Tag::kLyrics },
     { L"artwork", required_argument, 0, Tag::kArtwork },
     { L"artwork-size", required_argument, 0, 'atsz' },
+    { L"copy-artwork", no_argument, 0, 'cpat' },
     { L"chapter", required_argument, 0, 'chap' },
     { L"tag", required_argument, 0, 'tag ' },
     { L"long-tag", required_argument, 0, 'ltag' },
@@ -328,6 +329,8 @@ void usage()
 "--artwork-size <n>    Specify maximum width or height of artwork in pixels.\n"
 "                      If specified artwork (with --artwork) is larger than\n"
 "                      this, artwork is automatically resized.\n"
+"--copy-artwork        Copy front cover art(APIC:type 3) from the source.\n"
+"                      When --artwork is also given, this option is ignored.\n"
 "--chapter <filename>\n"
 "                      Set chapter from file.\n"
 "--tag <fcc>:<value>\n"
@@ -667,6 +670,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
         }
         else if (ch == Tag::kArtwork)
             this->artwork_files.push_back(wide::optarg);
+        else if (ch == 'cpat')
+            this->copy_artwork = true;
         else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end) {
             if (ch == Tag::kLyrics)
                 this->ftagopts[ch] = wide::optarg;

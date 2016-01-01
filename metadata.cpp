@@ -6,6 +6,7 @@
 #include <mpeg/id3v1/id3v1genres.h>
 #include <mpeg/id3v2/id3v2framefactory.h>
 #include <mpeg/id3v2/frames/textidentificationframe.h>
+#include <mpeg/id3v2/frames/attachedpictureframe.h>
 #include "metadata.h"
 #ifdef _WIN32
 #include "win32util.h"
@@ -216,6 +217,15 @@ namespace ID3 {
                 auto k = fields.begin()->toWString();
                 auto v = (++fields.begin())->toWString();
                 tags[strutil::w2us(k)] = strutil::w2us(v);
+            } else if (sID == "APIC") {
+                auto picframe =
+                    dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
+                if (picframe->type() ==
+                    TagLib::ID3v2::AttachedPictureFrame::FrontCover)
+                {
+                    auto pic = picframe->picture();
+                    tags["COVER ART"] = std::string(pic.begin(), pic.end());
+                }
             } else {
                 auto end = known_keys + util::sizeof_array(known_keys);
                 auto key = lookup_by_key(known_keys, end, sID.c_str());
@@ -268,6 +278,7 @@ namespace M4A {
         { 'catg',                     "iTunes:catg"          },
         { 'cmID',                     "iTunes:cmID"          },
         { 'cnID',                     "iTunes:cnID"          },
+        { 'covr',                     "COVER ART"            },
         { 'cpil',                     "iTunes:cpil"          }, 
         { 'cprt',                     "copyright"            }, 
         { 'desc',                     "DESCRIPTION"          }, 
@@ -331,6 +342,7 @@ namespace M4A {
         { "composersortorder",          'soco'                     },
         { "contentgroup",               Tag::kGrouping             },
         { "copyright",                  Tag::kCopyright            },
+        { "coverart",                   Tag::kArtwork              },
         { "date",                       Tag::kDate                 },
         { "description",                'desc'                     },
         { "disc",                       Tag::kDisk                 },
@@ -484,7 +496,7 @@ namespace M4A {
             else
                 return "";
             return strutil::format("%d", v);
-        } else if (data.typeCode == MP4_ITMF_BT_UTF8) {
+        } else {
             char *vp = reinterpret_cast<char*>(value);
             return std::string(vp, vp + data.valueSize);
         }
@@ -509,10 +521,11 @@ namespace M4A {
                 if (v.empty())
                     continue;
                 if (fcc == '----')
-                    result[item.name] = v;
+                    result.insert(std::make_pair(std::string(item.name), v));
                 else {
                     const char *name = getTagNameFromFourCC(fcc);
-                    if (name) result[name] = v;
+                    if (name)
+                        result.insert(std::make_pair(std::string(name), v));
                 }
             }
             tags->swap(result);

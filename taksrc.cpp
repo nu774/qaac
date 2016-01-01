@@ -170,16 +170,27 @@ void TakSource::fetchTags()
 
     std::map<std::string, std::string> tags;
     std::wstring cuesheet;
+    std::string cover;
 
     TagLib::APE::Tag *tag = file.APETag(false);
     const TagLib::APE::ItemListMap &itemListMap = tag->itemListMap();
     TagLib::APE::ItemListMap::ConstIterator it;
     for (it = itemListMap.begin(); it != itemListMap.end(); ++it) {
-        if (it->second.type() != TagLib::APE::Item::Text)
-            continue;
         std::string key = it->first.toCString();
-        std::wstring value = it->second.toString().toWString();
-        tags[key] = strutil::w2us(value);
+        if (it->second.type() == TagLib::APE::Item::Text) {
+            std::wstring value = it->second.toString().toWString();
+            tags[key] = strutil::w2us(value);
+        } else if (it->second.type() == TagLib::APE::Item::Binary) {
+            if (strcasecmp(key.c_str(), "Cover Art (Front)"))
+                continue;
+            TagLib::ByteVector vec = it->second.binaryData();
+            // strip filename\0 at the beginning
+            auto pos = std::find(vec.begin(), vec.end(), '\0');
+            std::rotate(vec.begin(), pos + 1, vec.end());
+            vec.resize(vec.end() - pos - 1);
+            cover.assign(vec.begin(), vec.end());
+        }
     }
     TextBasedTag::normalizeTags(tags, &m_tags);
+    if (cover.size()) m_tags["COVER ART"] = cover;
 }

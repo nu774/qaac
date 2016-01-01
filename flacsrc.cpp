@@ -60,6 +60,8 @@ FLACSource::FLACSource(const FLACModule &module,
                   std::bind1st(std::mem_fun(&FLACSource::close), this));
     TRYFL(m_module.stream_decoder_set_metadata_respond(
                 m_decoder.get(), FLAC__METADATA_TYPE_VORBIS_COMMENT));
+    TRYFL(m_module.stream_decoder_set_metadata_respond(
+                m_decoder.get(), FLAC__METADATA_TYPE_PICTURE));
 
     TRYFL((fcc == 'OggS' ? m_module.stream_decoder_init_ogg_stream
                          : m_module.stream_decoder_init_stream)
@@ -189,6 +191,8 @@ void FLACSource::metadataCallback(const FLAC__StreamMetadata *metadata)
         handleStreamInfo(metadata->data.stream_info);
     else if (metadata->type == FLAC__METADATA_TYPE_VORBIS_COMMENT)
         handleVorbisComment(metadata->data.vorbis_comment);
+    else if (metadata->type == FLAC__METADATA_TYPE_PICTURE)
+        handlePicture(metadata->data.picture);
 }
 
 void FLACSource::errorCallback(FLAC__StreamDecoderErrorStatus status)
@@ -229,4 +233,10 @@ void FLACSource::handleVorbisComment(
         }
     }
     TextBasedTag::normalizeTags(tags, &m_tags);
+}
+
+void FLACSource::handlePicture(const FLAC__StreamMetadata_Picture &pic)
+{
+    if (pic.type == FLAC__STREAM_METADATA_PICTURE_TYPE_FRONT_COVER)
+        m_tags["COVER ART"] = std::string(pic.data, pic.data + pic.data_length);
 }

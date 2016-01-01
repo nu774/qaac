@@ -126,6 +126,7 @@ private:
     void errorCallback(FLAC__StreamDecoderErrorStatus status);
     void handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si);
     void handleVorbisComment(const FLAC__StreamMetadata_VorbisComment &vc);
+    void handlePicture(const FLAC__StreamMetadata_Picture &pic);
 };
 
 #endif

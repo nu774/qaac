@@ -28,10 +28,13 @@ public:
     int (*GetNumChannels)(WavpackContext *);
     uint32_t (*GetNumSamples)(WavpackContext *);
     int (*GetNumTagItems)(WavpackContext *);
+    int (*GetNumBinaryTagItems)(WavpackContext *);
     uint32_t (*GetSampleIndex)(WavpackContext *);
     uint32_t (*GetSampleRate)(WavpackContext *);
     int (*GetTagItem)(WavpackContext *, const char *, char *, int);
+    int (*GetBinaryTagItem)(WavpackContext *, const char *, char *, int);
     int (*GetTagItemIndexed)(WavpackContext *, int, char *, int);
+    int (*GetBinaryTagItemIndexed)(WavpackContext *, int, char *, int);
     void *(*GetWrapperLocation)(void *first_block, uint32_t *size);
     int (*SeekSample)(WavpackContext *, uint32_t);
     uint32_t (*UnpackSamples)(WavpackContext *, int32_t *, uint32_t);

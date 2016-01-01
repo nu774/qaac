@@ -28,10 +28,15 @@ WavpackModule::WavpackModule(const std::wstring &path)
         CHECK(GetNumChannels = m_dl.fetch( "WavpackGetNumChannels"));
         CHECK(GetNumSamples = m_dl.fetch( "WavpackGetNumSamples"));
         CHECK(GetNumTagItems = m_dl.fetch( "WavpackGetNumTagItems"));
+        CHECK(GetNumBinaryTagItems =
+              m_dl.fetch( "WavpackGetNumBinaryTagItems"));
         CHECK(GetSampleIndex = m_dl.fetch( "WavpackGetSampleIndex"));
         CHECK(GetSampleRate = m_dl.fetch( "WavpackGetSampleRate"));
         CHECK(GetTagItem = m_dl.fetch( "WavpackGetTagItem"));
+        CHECK(GetBinaryTagItem = m_dl.fetch( "WavpackGetBinaryTagItem"));
         CHECK(GetTagItemIndexed = m_dl.fetch( "WavpackGetTagItemIndexed"));
+        CHECK(GetBinaryTagItemIndexed =
+              m_dl.fetch( "WavpackGetBinaryTagItemIndexed"));
         CHECK(GetWrapperLocation = m_dl.fetch( "WavpackGetWrapperLocation"));
         CHECK(SeekSample = m_dl.fetch( "WavpackSeekSample"));
         CHECK(UnpackSamples = m_dl.fetch( "WavpackUnpackSamples"));
@@ -195,13 +200,31 @@ void WavpackSource::fetchTags()
     for (int i = 0; i < count; ++i) {
         int size = m_module.GetTagItemIndexed(wpc, i, 0, 0);
         std::vector<char> name(size + 1);
-        m_module.GetTagItemIndexed(wpc, i, &name[0], name.size());
-        size = m_module.GetTagItem(wpc, &name[0], 0, 0);
+        m_module.GetTagItemIndexed(wpc, i, name.data(), name.size());
+        size = m_module.GetTagItem(wpc, name.data(), 0, 0);
         std::vector<char> value(size + 1);
-        m_module.GetTagItem(wpc, &name[0], &value[0], value.size());
-        tags[&name[0]] = &value[0];
+        m_module.GetTagItem(wpc, name.data(), value.data(), value.size());
+        tags[name.data()] = value.data();
     }
     TextBasedTag::normalizeTags(tags, &m_tags);
+
+    count = m_module.GetNumBinaryTagItems(wpc);
+    for (int i = 0; i < count; ++i) {
+        int size = m_module.GetBinaryTagItemIndexed(wpc, i, 0, 0);
+        std::vector<char> name(size + 1);
+        m_module.GetBinaryTagItemIndexed(wpc, i, name.data(), name.size());
+        if (strcasecmp(name.data(), "Cover Art (Front)"))
+            continue;
+        size = m_module.GetBinaryTagItem(wpc, name.data(), 0, 0);
+        std::vector<char> cover;
+        cover.resize(size);
+        m_module.GetBinaryTagItem(wpc, name.data(), cover.data(), size);
+        // strip filename\0 at the beginning
+        auto pos = std::find(cover.begin(), cover.end(), '\0');
+        std::rotate(cover.begin(), pos + 1, cover.end());
+        cover.resize(cover.end() - pos - 1);
+        m_tags["COVER ART"] = std::string(cover.begin(), cover.end());
+    }
 }
 
 size_t WavpackSource::readSamples32(void *buffer, size_t nsamples)

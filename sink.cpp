@@ -200,7 +200,8 @@ void MP4SinkBase::writeTags()
 
         M4A::convertToM4ATags(m_tags, &shortTags, &longTags);
         for (si = shortTags.begin(); si != shortTags.end(); ++si) {
-            if (si->second.size())
+            if (!si->second.size()) continue;
+            if (si->first != Tag::kArtwork)
                 writeShortTag(si->first, si->second);
         }
         for (li = longTags.begin(); li != longTags.end(); ++li) {

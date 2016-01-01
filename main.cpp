@@ -944,13 +944,25 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
     if (parser) {
         const std::map<std::string, std::string> &tags = parser->getTags();
         std::map<std::string, std::string>::const_iterator ssi;
-        for (ssi = tags.begin(); ssi != tags.end(); ++ssi)
-            if (accept_tag(ssi->first))
+        for (ssi = tags.begin(); ssi != tags.end(); ++ssi) {
+            if (!strcasecmp(ssi->first.c_str(), "cover art")) {
+                if (mp4sink && opts.copy_artwork && !opts.artworks.size()) {
+                    std::vector<char> vec(ssi->second.begin(),
+                                          ssi->second.end());
+                    if (opts.artwork_size)
+                        WICConvertArtwork(vec.data(), vec.size(),
+                                          opts.artwork_size, &vec);
+                    mp4sink->addArtwork(vec);
+                }
+            } else if (accept_tag(ssi->first))
                 tagstore->setTag(ssi->first, ssi->second);
-        IChapterParser *cp = dynamic_cast<IChapterParser*>(src);
-        if (cp && mp4sink) {
-            auto &chapters = cp->getChapters();
-            if (chapters.size()) mp4sink->setChapters(chapters);
+        }
+        if (mp4sink) {
+            IChapterParser *cp = dynamic_cast<IChapterParser*>(src);
+            if (cp) {
+                auto &chapters = cp->getChapters();
+                if (chapters.size()) mp4sink->setChapters(chapters);
+            }
         }
     }
     tagstore->setTag("encoding application",
