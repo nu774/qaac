@@ -118,14 +118,9 @@ namespace TextBasedTag {
     {
         std::string sname =
             strutil::slower(strutil::squeeze(std::string(name), " -_"));
-        bool contains_upper =
-            std::any_of(sname.begin(), sname.end(), [](char c) -> bool {
-                            auto uc = static_cast<unsigned char>(c);
-                            return isalpha(uc) && !islower(uc);
-                        });
         auto end = known_keys + util::sizeof_array(known_keys);
         auto found = lookup_by_key(known_keys, end, sname.c_str());
-        return found ? found : contains_upper ? name : strutil::supper(name);
+        return found ? found : strutil::supper(name);
     }
     void normalizeTags(const std::map<std::string, std::string> &src,
                        std::map<std::string, std::string> *dst)
