@@ -1,6 +1,7 @@
 #include <sstream>
 #include <clocale>
 #include <locale>
+#include <regex>
 #include "cuesheet.h"
 #include "metadata.h"
 #include "composite.h"
@@ -181,10 +182,24 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
                 track_source->addSource(src);
             }
         });
+        auto &stags = track_source->getTags();
+        std::regex re("^CUE_TRACK(\\d+)_(.*)$", std::regex_constants::icase);
+        std::smatch match;
+        std::map<std::string, std::string> tags;
+        for (auto it = stags.begin(); it != stags.end(); ++it) {
+            if (std::regex_match(it->first, match, re)) {
+                int tn = atoi(match[1].str().c_str());
+                if (tn == track.number())
+                    tags[match[2].str()] = it->second;
+            } else
+                tags[it->first] = it->second;
+        }
         track.getTags(&track_tags);
-        track_source->setTags(track_tags);
+        for (auto it = track_tags.begin(); it != track_tags.end(); ++it)
+            tags[it->first] = it->second;
+        track_source->setTags(tags);
         std::wstring ofilename =
-            playlist::generateFileName(fname_format, track_tags) + L".stub";
+            playlist::generateFileName(fname_format, tags) + L".stub";
 
         playlist::Track new_track;
         new_track.number = track.number();
