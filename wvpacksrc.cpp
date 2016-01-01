@@ -4,7 +4,6 @@
 #include <wavpack.h>
 #include "strutil.h"
 #include "metadata.h"
-#include "cuesheet.h"
 #include "chanmap.h"
 #include "cautil.h"
 #include "win32util.h"
@@ -195,7 +194,6 @@ void WavpackSource::fetchTags()
     WavpackContext *wpc = m_wpc.get();
 
     int count = m_module.GetNumTagItems(wpc);
-    std::wstring cuesheet;
     std::map<std::string, std::string> tags;
     for (int i = 0; i < count; ++i) {
         int size = m_module.GetTagItemIndexed(wpc, i, 0, 0);

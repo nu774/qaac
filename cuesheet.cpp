@@ -352,17 +352,3 @@ void CueSheet::parseMeta(const std::wstring *args)
     else
         m_meta[args[0]] = args[1];
 }
-
-namespace Cue {
-    void CueSheetToChapters(const std::wstring &cuesheet,
-            double duration,
-            std::vector<chapters::entry_t> *chapters,
-            std::map<std::string, std::string> *meta)
-    {
-        std::wstringbuf strbuf(cuesheet);
-        CueSheet parser;
-        parser.parse(&strbuf);
-        parser.getTags(meta);
-        parser.asChapters(duration, chapters);
-    }
-}

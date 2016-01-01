@@ -4,7 +4,6 @@
 #include "strutil.h"
 #include "win32util.h"
 #include "metadata.h"
-#include "cuesheet.h"
 #include <apefile.h>
 #include <apetag.h>
 #include "taglibhelper.h"
@@ -169,7 +168,6 @@ void TakSource::fetchTags()
     TagLib::APE::File file(&stream, false);
 
     std::map<std::string, std::string> tags;
-    std::wstring cuesheet;
     std::string cover;
 
     TagLib::APE::Tag *tag = file.APETag(false);

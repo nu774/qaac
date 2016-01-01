@@ -2,7 +2,6 @@
 #include "flacsrc.h"
 #include "strutil.h"
 #include "metadata.h"
-#include "cuesheet.h"
 #include "cautil.h"
 #include "win32util.h"
 #include "chanmap.h"
@@ -218,7 +217,6 @@ void FLACSource::handleVorbisComment(
         const FLAC__StreamMetadata_VorbisComment &vc)
 {
     std::map<std::string, std::string> tags;
-    std::wstring cuesheet;
     for (size_t i = 0; i < vc.num_comments; ++i) {
         const char *cs = reinterpret_cast<const char *>(vc.comments[i].entry);
         strutil::Tokenizer<char> tokens(cs, "=");

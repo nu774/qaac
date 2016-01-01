@@ -49,16 +49,13 @@ public:
     TtakInt64 (*SSD_GetReadPos)(TtakSeekableStreamDecoder);
 };
 
-class TakSource: public ISeekableSource, public ITagParser,
-    public IChapterParser
-{
+class TakSource: public ISeekableSource, public ITagParser {
     uint32_t m_block_align;
     uint64_t m_length;
     std::shared_ptr<void> m_decoder;
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
-    std::vector<chapters::entry_t> m_chapters;
     std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
     TakModule m_module;
@@ -79,10 +76,6 @@ public:
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> &getChapters() const
-    {
-        return m_chapters;
-    }
 private:
     void fetchTags();
     static void staticDamageCallback(void *ctx, PtakSSDDamageItem info)

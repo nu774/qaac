@@ -118,10 +118,3 @@ private:
         return 0;
     }
 };
-
-namespace Cue {
-    void CueSheetToChapters(const std::wstring &cuesheet,
-        double duration,
-        std::vector<chapters::entry_t> *chapters,
-        std::map<std::string, std::string> *meta);
-}
