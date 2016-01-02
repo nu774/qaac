@@ -114,6 +114,9 @@ LibSndfileSource::LibSndfileSource(
             break;
         }
     }
+    if (m_format_name == "flac")
+        throw std::runtime_error("Unsupported input format");
+
     uint32_t subformat = info.format & SF_FORMAT_SUBMASK;
     struct format_table_t {
         int subtype;
