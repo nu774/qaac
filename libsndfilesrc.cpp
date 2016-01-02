@@ -1,4 +1,6 @@
 #include "libsndfilesrc.h"
+#include <vorbisfile.h>
+#include "taglibhelper.h"
 #include "win32util.h"
 #include "metadata.h"
 #include "cautil.h"
@@ -134,6 +136,7 @@ LibSndfileSource::LibSndfileSource(
          { SF_FORMAT_ALAC_20, 20, kAudioFormatFlagIsSignedInteger },
          { SF_FORMAT_ALAC_24, 24, kAudioFormatFlagIsSignedInteger },
          { SF_FORMAT_ALAC_32, 32, kAudioFormatFlagIsSignedInteger },
+         { SF_FORMAT_VORBIS,  32, kAudioFormatFlagIsFloat         },
          { 0, 0, 0 }
     }, *p = mapping;
     for (; p->subtype && p->subtype != subformat; ++p)
@@ -162,13 +165,13 @@ LibSndfileSource::LibSndfileSource(
     else
         std::transform(m_chanmap.begin(), m_chanmap.end(),
                        m_chanmap.begin(), convert_chanmap);
-    if (m_format_name == "aiff") {
-        try {
-            ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
-        } catch (...) {}
-    } else if (m_format_name == "caf") {
+
+    if (m_format_name == "aiff")
+        ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
+    else if (m_format_name == "caf")
         CAF::fetchTags(fileno(m_fp.get()), &m_tags);
-    }
+    else if (m_format_name == "oga")
+        fetchVorbisTags();
 }
 
 void LibSndfileSource::seekTo(int64_t count)
@@ -183,4 +186,32 @@ int64_t LibSndfileSource::getPosition()
     if ((pos = m_module.seek(m_handle.get(), 0, SEEK_CUR)) == -1)
         throw std::runtime_error("sf_seek() failed");
     return pos;
+}
+
+void LibSndfileSource::fetchVorbisTags()
+{
+    int fd = fileno(m_fp.get());
+    util::FilePositionSaver _(fd);
+    lseek(fd, 0, SEEK_SET);
+    TagLibX::FDIOStreamReader stream(fd);
+    TagLib::Ogg::Vorbis::File file(&stream, false);
+
+    std::map<std::string, std::string> tags;
+
+    auto tag = file.tag();
+    auto &map = tag->fieldListMap();
+    for (auto it = map.begin(); it != map.end(); ++it) {
+        std::string key = it->first.toCString();
+        std::wstring value = it->second.toString().toWString();
+        tags[key] = strutil::w2us(value);
+    }
+    TextBasedTag::normalizeTags(tags, &m_tags);
+
+    auto pics = tag->pictureList();
+    for (auto it = pics.begin(); it != pics.end(); ++it) {
+        if ((*it)->type() == TagLib::FLAC::Picture::FrontCover) {
+            auto data = (*it)->data();
+            m_tags["COVER ART"] = std::string(data.begin(), data.end());
+        }
+    }
 }
