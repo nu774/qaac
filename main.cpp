@@ -132,6 +132,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
                                                 obasename.c_str()));
 
     std::vector<wchar_t> odir(ofilename.begin(), ofilename.end());
+    odir.push_back(0);
     wchar_t *pos = PathFindFileNameW(odir.data());
     *pos = 0;
     SHCreateDirectoryExW(nullptr, odir.data(), nullptr);
