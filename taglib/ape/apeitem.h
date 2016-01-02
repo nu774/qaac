@@ -91,6 +91,11 @@ namespace TagLib {
       Item &operator=(const Item &item);
 
       /*!
+       * Exchanges the content of this item by the content of \a item.
+       */
+      void swap(Item &item);
+
+      /*!
        * Returns the key.
        */
       String key() const;
@@ -153,7 +158,7 @@ namespace TagLib {
 
       /*!
        * Returns the value as a single string.  In case of multiple strings,
-       * the first is returned.  If the data type is not \a Text, always returns 
+       * the first is returned.  If the data type is not \a Text, always returns
        * an empty String.
        */
       String toString() const;
@@ -164,7 +169,7 @@ namespace TagLib {
 #endif
 
       /*!
-       * Returns the list of text values.  If the data type is not \a Text, always 
+       * Returns the list of text values.  If the data type is not \a Text, always
        * returns an empty StringList.
        */
       StringList values() const;

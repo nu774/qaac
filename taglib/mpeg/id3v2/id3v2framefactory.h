@@ -47,9 +47,9 @@ namespace TagLib {
      * Reimplementing this factory is the key to adding support for frame types
      * not directly supported by TagLib to your application.  To do so you would
      * subclass this factory reimplement createFrame().  Then by setting your
-     * factory to be the default factory in ID3v2::Tag constructor or with
-     * MPEG::File::setID3v2FrameFactory() you can implement behavior that will
-     * allow for new ID3v2::Frame subclasses (also provided by you) to be used.
+     * factory to be the default factory in ID3v2::Tag constructor you can
+     * implement behavior that will allow for new ID3v2::Frame subclasses (also
+     * provided by you) to be used.
      *
      * This implements both <i>abstract factory</i> and <i>singleton</i> patterns
      * of which more information is available on the web and in software design
@@ -66,6 +66,7 @@ namespace TagLib {
     {
     public:
       static FrameFactory *instance();
+
       /*!
        * Create a frame based on \a data.  \a synchSafeInts should only be set
        * false if we are parsing an old tag (v2.3 or older) that does not support
@@ -84,7 +85,7 @@ namespace TagLib {
        * \deprecated Please use the method below that accepts a ID3v2::Header
        * instance in new code.
        */
-      Frame *createFrame(const ByteVector &data, uint version = 4) const;
+      Frame *createFrame(const ByteVector &data, unsigned int version = 4) const;
 
       /*!
        * Create a frame based on \a data.  \a tagHeader should be a valid
@@ -105,7 +106,7 @@ namespace TagLib {
        * Returns the default text encoding for text frames.  If setTextEncoding()
        * has not been explicitly called this will only be used for new text
        * frames.  However, if this value has been set explicitly all frames will be
-       * converted to this type (unless it's explitly set differently for the
+       * converted to this type (unless it's explicitly set differently for the
        * individual frame) when being rendered.
        *
        * \see setDefaultTextEncoding()
@@ -151,18 +152,6 @@ namespace TagLib {
     private:
       FrameFactory(const FrameFactory &);
       FrameFactory &operator=(const FrameFactory &);
-
-      /*!
-       * This method is used internally to convert a frame from ID \a from to ID
-       * \a to.  If the frame matches the \a from pattern and converts the frame
-       * ID in the \a header or simply does nothing if the frame ID does not match.
-       */
-      void convertFrame(const char *from, const char *to,
-                        Frame::Header *header) const;
-
-      void updateGenre(TextIdentificationFrame *frame) const;
-
-      static FrameFactory factory;
 
       class FrameFactoryPrivate;
       FrameFactoryPrivate *d;

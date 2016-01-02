@@ -90,6 +90,9 @@
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\generalencapsulatedobjectframe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\podcastframe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\taglib\mpeg\id3v2\frames\popularimeterframe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -141,6 +144,9 @@
     <ClCompile Include="..\..\taglib\tagunion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\taglib\tagutils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\taglib\toolkit\tpropertymap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -169,6 +175,42 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\taglib\toolkit\trefcounter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\flac\flacfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\flac\flacmetadatablock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\flac\flacpicture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\flac\flacproperties.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\flac\flacunknownmetadatablock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\oggfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\oggpage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\oggpageheader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\xiphcomment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\flac\oggflac.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\vorbis\vorbisfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\vorbis\vorbisproperties.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

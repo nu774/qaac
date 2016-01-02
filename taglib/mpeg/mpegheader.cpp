@@ -23,14 +23,14 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#include <bitset>
-
 #include <tbytevector.h>
 #include <tstring.h>
+#include <tfile.h>
 #include <tdebug.h>
-#include "trefcounter.h"
+#include <trefcounter.h>
 
 #include "mpegheader.h"
+#include "mpegutils.h"
 
 using namespace TagLib;
 
@@ -68,20 +68,27 @@ public:
 // public members
 ////////////////////////////////////////////////////////////////////////////////
 
-MPEG::Header::Header(const ByteVector &data)
+MPEG::Header::Header(const ByteVector &data) :
+  d(new HeaderPrivate())
 {
-  d = new HeaderPrivate;
-  parse(data);
+  debug("MPEG::Header::Header() - This constructor is no longer used.");
 }
 
-MPEG::Header::Header(const Header &h) : d(h.d)
+MPEG::Header::Header(File *file, long offset, bool checkLength) :
+  d(new HeaderPrivate())
+{
+  parse(file, offset, checkLength);
+}
+
+MPEG::Header::Header(const Header &h) :
+  d(h.d)
 {
   d->ref();
 }
 
 MPEG::Header::~Header()
 {
-  if (d->deref())
+  if(d->deref())
     delete d;
 }
 
@@ -162,41 +169,54 @@ MPEG::Header &MPEG::Header::operator=(const Header &h)
 // private members
 ////////////////////////////////////////////////////////////////////////////////
 
-void MPEG::Header::parse(const ByteVector &data)
+void MPEG::Header::parse(File *file, long offset, bool checkLength)
 {
-  if(data.size() < 4 || uchar(data[0]) != 0xff) {
-    debug("MPEG::Header::parse() -- First byte did not match MPEG synch.");
+  file->seek(offset);
+  const ByteVector data = file->readBlock(4);
+
+  if(data.size() < 4) {
+    debug("MPEG::Header::parse() -- data is too short for an MPEG frame header.");
     return;
   }
 
-  std::bitset<32> flags(TAGLIB_CONSTRUCT_BITSET(data.toUInt()));
+  // Check for the MPEG synch bytes.
 
-  // Check for the second byte's part of the MPEG synch
-
-  if(!flags[23] || !flags[22] || !flags[21]) {
-    debug("MPEG::Header::parse() -- Second byte did not match MPEG synch.");
+  if(!firstSyncByte(data[0]) || !secondSynchByte(data[1])) {
+    debug("MPEG::Header::parse() -- MPEG header did not match MPEG synch.");
     return;
   }
 
   // Set the MPEG version
 
-  if(!flags[20] && !flags[19])
+  const int versionBits = (static_cast<unsigned char>(data[1]) >> 3) & 0x03;
+
+  if(versionBits == 0)
     d->version = Version2_5;
-  else if(flags[20] && !flags[19])
+  else if(versionBits == 2)
     d->version = Version2;
-  else if(flags[20] && flags[19])
+  else if(versionBits == 3)
     d->version = Version1;
+  else {
+    debug("MPEG::Header::parse() -- Invalid MPEG version bits.");
+    return;
+  }
 
   // Set the MPEG layer
 
-  if(!flags[18] && flags[17])
-    d->layer = 3;
-  else if(flags[18] && !flags[17])
-    d->layer = 2;
-  else if(flags[18] && flags[17])
-    d->layer = 1;
+  const int layerBits = (static_cast<unsigned char>(data[1]) >> 1) & 0x03;
 
-  d->protectionEnabled = !flags[16];
+  if(layerBits == 1)
+    d->layer = 3;
+  else if(layerBits == 2)
+    d->layer = 2;
+  else if(layerBits == 3)
+    d->layer = 1;
+  else {
+    debug("MPEG::Header::parse() -- Invalid MPEG layer bits.");
+    return;
+  }
+
+  d->protectionEnabled = (static_cast<unsigned char>(data[1] & 0x01) == 0);
 
   // Set the bitrate
 
@@ -213,15 +233,20 @@ void MPEG::Header::parse(const ByteVector &data)
     }
   };
 
-  const int versionIndex = d->version == Version1 ? 0 : 1;
-  const int layerIndex = d->layer > 0 ? d->layer - 1 : 0;
+  const int versionIndex = (d->version == Version1) ? 0 : 1;
+  const int layerIndex   = (d->layer > 0) ? d->layer - 1 : 0;
 
   // The bitrate index is encoded as the first 4 bits of the 3rd byte,
   // i.e. 1111xxxx
 
-  int i = uchar(data[2]) >> 4;
+  const int bitrateIndex = (static_cast<unsigned char>(data[2]) >> 4) & 0x0F;
 
-  d->bitrate = bitrates[versionIndex][layerIndex][i];
+  d->bitrate = bitrates[versionIndex][layerIndex][bitrateIndex];
+
+  if(d->bitrate == 0) {
+    debug("MPEG::Header::parse() -- Invalid bit rate.");
+    return;
+  }
 
   // Set the sample rate
 
@@ -233,9 +258,9 @@ void MPEG::Header::parse(const ByteVector &data)
 
   // The sample rate index is encoded as two bits in the 3nd byte, i.e. xxxx11xx
 
-  i = uchar(data[2]) >> 2 & 0x03;
+  const int samplerateIndex = (static_cast<unsigned char>(data[2]) >> 2) & 0x03;
 
-  d->sampleRate = sampleRates[d->version][i];
+  d->sampleRate = sampleRates[d->version][samplerateIndex];
 
   if(d->sampleRate == 0) {
     debug("MPEG::Header::parse() -- Invalid sample rate.");
@@ -245,20 +270,13 @@ void MPEG::Header::parse(const ByteVector &data)
   // The channel mode is encoded as a 2 bit value at the end of the 3nd byte,
   // i.e. xxxxxx11
 
-  d->channelMode = ChannelMode((uchar(data[3]) & 0xC0) >> 6);
+  d->channelMode = static_cast<ChannelMode>((static_cast<unsigned char>(data[3]) >> 6) & 0x03);
 
   // TODO: Add mode extension for completeness
 
-  d->isOriginal = flags[2];
-  d->isCopyrighted = flags[3];
-  d->isPadded = flags[9];
-
-  // Calculate the frame length
-
-  if(d->layer == 1)
-    d->frameLength = 24000 * 2 * d->bitrate / d->sampleRate + int(d->isPadded);
-  else
-    d->frameLength = 72000 * d->bitrate / d->sampleRate + int(d->isPadded);
+  d->isOriginal    = ((static_cast<unsigned char>(data[3]) & 0x04) != 0);
+  d->isCopyrighted = ((static_cast<unsigned char>(data[3]) & 0x08) != 0);
+  d->isPadded      = ((static_cast<unsigned char>(data[2]) & 0x02) != 0);
 
   // Samples per frame
 
@@ -270,6 +288,40 @@ void MPEG::Header::parse(const ByteVector &data)
   };
 
   d->samplesPerFrame = samplesPerFrame[layerIndex][versionIndex];
+
+  // Calculate the frame length
+
+  static const int paddingSize[3] = { 4, 1, 1 };
+
+  d->frameLength = d->samplesPerFrame * d->bitrate * 125 / d->sampleRate;
+
+  if(d->isPadded)
+    d->frameLength += paddingSize[layerIndex];
+
+  // Check if the frame length has been calculated correctly, or the next frame
+  // synch bytes are right next to the end of this frame.
+
+  // We read some extra bytes to be a bit tolerant.
+
+  if(checkLength) {
+
+    bool nextFrameFound = false;
+
+    file->seek(offset + d->frameLength);
+    const ByteVector nextSynch = file->readBlock(4);
+
+    for(int i = 0; i < static_cast<int>(nextSynch.size()) - 1; ++i) {
+      if(firstSyncByte(nextSynch[i]) && secondSynchByte(nextSynch[i + 1])) {
+        nextFrameFound = true;
+        break;
+      }
+    }
+
+    if(!nextFrameFound) {
+      debug("MPEG::Header::parse() -- Calculated frame length did not match the actual length.");
+      return;
+    }
+  }
 
   // Now that we're done parsing, set this to be a valid frame.
 

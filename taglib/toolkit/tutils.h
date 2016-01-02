@@ -31,10 +31,12 @@
 #ifndef DO_NOT_DOCUMENT  // tell Doxygen not to document this header
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+# include <config.h>
 #endif
 
-#if defined(HAVE_MSC_BYTESWAP)
+#if defined(HAVE_BOOST_BYTESWAP)
+# include <boost/endian/conversion.hpp>
+#elif defined(HAVE_MSC_BYTESWAP)
 # include <stdlib.h>
 #elif defined(HAVE_GLIBC_BYTESWAP)
 # include <byteswap.h>
@@ -44,7 +46,7 @@
 # include <sys/endian.h>
 #endif
 
-#include "tstring.h"
+#include <tstring.h>
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
@@ -53,9 +55,17 @@ namespace TagLib
 {
   namespace Utils
   {
-    inline ushort byteSwap(ushort x)
+
+    /*!
+     * Reverses the order of bytes in an 16-bit integer.
+     */
+    inline unsigned short byteSwap(unsigned short x)
     {
-#if defined(HAVE_GCC_BYTESWAP_16)
+#if defined(HAVE_BOOST_BYTESWAP)
+
+      return boost::endian::endian_reverse(static_cast<uint16_t>(x));
+
+#elif defined(HAVE_GCC_BYTESWAP)
 
       return __builtin_bswap16(x);
 
@@ -82,9 +92,16 @@ namespace TagLib
 #endif
     }
 
-    inline uint byteSwap(uint x)
+    /*!
+     * Reverses the order of bytes in an 32-bit integer.
+     */
+    inline unsigned int byteSwap(unsigned int x)
     {
-#if defined(HAVE_GCC_BYTESWAP_32)
+#if defined(HAVE_BOOST_BYTESWAP)
+
+      return boost::endian::endian_reverse(static_cast<uint32_t>(x));
+
+#elif defined(HAVE_GCC_BYTESWAP)
 
       return __builtin_bswap32(x);
 
@@ -114,9 +131,16 @@ namespace TagLib
 #endif
     }
 
-    inline ulonglong byteSwap(ulonglong x)
+    /*!
+     * Reverses the order of bytes in an 64-bit integer.
+     */
+    inline unsigned long long byteSwap(unsigned long long x)
     {
-#if defined(HAVE_GCC_BYTESWAP_64)
+#if defined(HAVE_BOOST_BYTESWAP)
+
+      return boost::endian::endian_reverse(static_cast<uint64_t>(x));
+
+#elif defined(HAVE_GCC_BYTESWAP)
 
       return __builtin_bswap64(x);
 
@@ -150,6 +174,10 @@ namespace TagLib
 #endif
     }
 
+    /*!
+     * Returns a formatted string just like standard sprintf(), but makes use of
+     * safer functions such as snprintf() if available.
+     */
     inline String formatString(const char *format, ...)
     {
       // Sufficient buffer size for the current internal uses.
@@ -163,11 +191,11 @@ namespace TagLib
       char buf[BufferSize];
       int length;
 
-#if defined(HAVE_SNPRINTF)
+#if defined(HAVE_VSNPRINTF)
 
       length = vsnprintf(buf, BufferSize, format, args);
 
-#elif defined(HAVE_SPRINTF_S)
+#elif defined(HAVE_VSPRINTF_S)
 
       length = vsprintf_s(buf, format, args);
 
@@ -185,32 +213,26 @@ namespace TagLib
 
       va_end(args);
 
-      if(length != -1)
+      if(length > 0)
         return String(buf);
       else
-        return String::null;
+        return String();
     }
 
+    /*!
+     * The types of byte order of the running system.
+     */
     enum ByteOrder
     {
+      //! Little endian systems.
       LittleEndian,
+      //! Big endian systems.
       BigEndian
     };
 
-#ifdef SYSTEM_BYTEORDER
-
-# if SYSTEM_BYTEORDER == 1
-
-    const ByteOrder SystemByteOrder = LittleEndian;
-
-# else
-
-    const ByteOrder SystemByteOrder = BigEndian;
-
-# endif
-
-#else
-
+    /*!
+     * Returns the integer byte order of the system.
+     */
     inline ByteOrder systemByteOrder()
     {
       union {
@@ -225,41 +247,26 @@ namespace TagLib
         return BigEndian;
     }
 
-    const ByteOrder SystemByteOrder = systemByteOrder();
-
-#endif
-
-#ifdef FLOAT_BYTEORDER
-
-# if FLOAT_BYTEORDER == 1
-
-    const ByteOrder FloatByteOrder = LittleEndian;
-
-# else
-
-    const ByteOrder FloatByteOrder = BigEndian;
-
-# endif
-
-#else
-
+    /*!
+     * Returns the IEEE754 byte order of the system.
+     */
     inline ByteOrder floatByteOrder()
     {
-        double bin[] = {
-            // "*TAGLIB*" encoded as a little-endian floating-point number
-            (double) 3.9865557444897601e-105, (double) 0.0
-        };
+      union {
+        double d;
+        char   c;
+      } u;
 
-        char *str = (char*)&bin[0];
-        if(strncmp(&str[1], "TAGLIB", 6) == 0)
-          return LittleEndian;
-        else
-          return BigEndian;
+      // 1.0 is stored in memory like 0x3FF0000000000000 in canonical form.
+      // So the first byte is zero if little endian.
+
+      u.d = 1.0;
+      if(u.c == 0)
+        return LittleEndian;
+      else
+        return BigEndian;
     }
 
-    const ByteOrder FloatByteOrder = floatByteOrder();
-
-#endif
   }
 }
 

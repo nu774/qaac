@@ -50,6 +50,31 @@ public:
   FrameList embeddedFrameList;
 };
 
+namespace {
+
+  // These functions are needed to try to aim for backward compatibility with
+  // an API that previously (unreasonably) required null bytes to be appeneded
+  // at the end of identifiers explicitly by the API user.
+
+  // BIC: remove these
+
+  ByteVector &strip(ByteVector &b)
+  {
+    if(b.endsWith('\0'))
+      b.resize(b.size() - 1);
+    return b;
+  }
+
+  ByteVectorList &strip(ByteVectorList &l)
+  {
+    for(ByteVectorList::Iterator it = l.begin(); it != l.end(); ++it)
+    {
+      strip(*it);
+    }
+    return l;
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // public methods
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,15 +87,17 @@ TableOfContentsFrame::TableOfContentsFrame(const ID3v2::Header *tagHeader, const
   setData(data);
 }
 
-TableOfContentsFrame::TableOfContentsFrame(const ByteVector &eID, const ByteVectorList &ch,
-                                           const FrameList &eF) :
+TableOfContentsFrame::TableOfContentsFrame(const ByteVector &elementID,
+                                           const ByteVectorList &children,
+                                           const FrameList &embeddedFrames) :
     ID3v2::Frame("CTOC")
 {
   d = new TableOfContentsFramePrivate;
-  d->elementID = eID;
-  d->childElements = ch;
-  FrameList l = eF;
-  for(FrameList::ConstIterator it = l.begin(); it != l.end(); ++it)
+  d->elementID = elementID;
+  strip(d->elementID);
+  d->childElements = children;
+
+  for(FrameList::ConstIterator it = embeddedFrames.begin(); it != embeddedFrames.end(); ++it)
     addEmbeddedFrame(*it);
 }
 
@@ -94,7 +121,7 @@ bool TableOfContentsFrame::isOrdered() const
   return d->isOrdered;
 }
 
-TagLib::uint TableOfContentsFrame::entryCount() const
+unsigned int TableOfContentsFrame::entryCount() const
 {
   return d->childElements.size();
 }
@@ -107,8 +134,7 @@ ByteVectorList TableOfContentsFrame::childElements() const
 void TableOfContentsFrame::setElementID(const ByteVector &eID)
 {
   d->elementID = eID;
-  if(eID.at(eID.size() - 1) != char(0))
-    d->elementID.append(char(0));
+  strip(d->elementID);
 }
 
 void TableOfContentsFrame::setIsTopLevel(const bool &t)
@@ -124,16 +150,22 @@ void TableOfContentsFrame::setIsOrdered(const bool &o)
 void TableOfContentsFrame::setChildElements(const ByteVectorList &l)
 {
   d->childElements = l;
+  strip(d->childElements);
 }
 
 void TableOfContentsFrame::addChildElement(const ByteVector &cE)
 {
   d->childElements.append(cE);
+  strip(d->childElements);
 }
 
 void TableOfContentsFrame::removeChildElement(const ByteVector &cE)
 {
   ByteVectorList::Iterator it = d->childElements.find(cE);
+
+  if(it == d->childElements.end())
+    it = d->childElements.find(cE + ByteVector("\0"));
+
   d->childElements.erase(it);
 }
 
@@ -182,7 +214,7 @@ void TableOfContentsFrame::removeEmbeddedFrames(const ByteVector &id)
 
 String TableOfContentsFrame::toString() const
 {
-  return String::null;
+  return String();
 }
 
 PropertyMap TableOfContentsFrame::asProperties() const
@@ -229,7 +261,7 @@ TableOfContentsFrame *TableOfContentsFrame::findTopLevel(const ID3v2::Tag *tag) 
 
 void TableOfContentsFrame::parseFields(const ByteVector &data)
 {
-  TagLib::uint size = data.size();
+  unsigned int size = data.size();
   if(size < 6) {
     debug("A CTOC frame must contain at least 6 bytes (1 byte element ID terminated by "
           "null, 1 byte flags, 1 byte entry count and 1 byte child element ID terminated "
@@ -237,22 +269,24 @@ void TableOfContentsFrame::parseFields(const ByteVector &data)
     return;
   }
 
-  int pos = 0, embPos = 0;
+  int pos = 0;
+  unsigned int embPos = 0;
   d->elementID = readStringField(data, String::Latin1, &pos).data(String::Latin1);
-  d->elementID.append(char(0));
   d->isTopLevel = (data.at(pos) & 2) > 0;
   d->isOrdered = (data.at(pos++) & 1) > 0;
-  TagLib::uint entryCount = data.at(pos++);
-  for(TagLib::uint i = 0; i < entryCount; i++)
-  {
+  unsigned int entryCount = data.at(pos++);
+  for(unsigned int i = 0; i < entryCount; i++) {
     ByteVector childElementID = readStringField(data, String::Latin1, &pos).data(String::Latin1);
-    childElementID.append(char(0));
     d->childElements.append(childElementID);
   }
 
   size -= pos;
+
+  if(size < header()->size())
+    return;
+
   while(embPos < size - header()->size()) {
-    Frame *frame = FrameFactory::instance()->createFrame(data.mid(pos + embPos), d->tagHeader);
+    Frame *frame = FrameFactory::instance()->createFrame(data.mid(pos + embPos), (d->tagHeader != 0));
 
     if(!frame)
       return;
@@ -273,6 +307,7 @@ ByteVector TableOfContentsFrame::renderFields() const
   ByteVector data;
 
   data.append(d->elementID);
+  data.append('\0');
   char flags = 0;
   if(d->isTopLevel)
     flags += 2;
@@ -283,6 +318,7 @@ ByteVector TableOfContentsFrame::renderFields() const
   ByteVectorList::ConstIterator it = d->childElements.begin();
   while(it != d->childElements.end()) {
     data.append(*it);
+    data.append('\0');
     it++;
   }
   FrameList l = d->embeddedFrameList;

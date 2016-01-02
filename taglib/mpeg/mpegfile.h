@@ -173,7 +173,7 @@ namespace TagLib {
        * This is the same as calling save(AllTags);
        *
        * If you would like more granular control over the content of the tags,
-       * with the concession of generality, use paramaterized save call below.
+       * with the concession of generality, use parameterized save call below.
        *
        * \see save(int tags)
        */
@@ -301,6 +301,8 @@ namespace TagLib {
        *
        * \note This will also invalidate pointers to the ID3 and APE tags
        * as their memory will be freed.
+       *
+       * \note This will update the file immediately.
        */
       bool strip(int tags = AllTags);
 
@@ -311,6 +313,8 @@ namespace TagLib {
        *
        * If \a freeMemory is true the ID3 and APE tags will be deleted and
        * pointers to them will be invalidated.
+       *
+       * \note This will update the file immediately.
        */
       // BIC: merge with the method above
       bool strip(int tags, bool freeMemory);
@@ -319,6 +323,7 @@ namespace TagLib {
        * Set the ID3v2::FrameFactory to something other than the default.
        *
        * \see ID3v2FrameFactory
+       * \deprecated This value should be passed in via the constructor
        */
       void setID3v2FrameFactory(const ID3v2::FrameFactory *factory);
 
@@ -369,17 +374,8 @@ namespace TagLib {
       File(const File &);
       File &operator=(const File &);
 
-      void read(bool readProperties, Properties::ReadStyle propertiesStyle);
-      long findID3v2(long offset);
-      long findID3v1();
-      void findAPE();
-
-      /*!
-       * MPEG frames can be recognized by the bit pattern 11111111 111, so the
-       * first byte is easy to check for, however checking to see if the second byte
-       * starts with \e 111 is a bit more tricky, hence this member function.
-       */
-      static bool secondSynchByte(char byte);
+      void read(bool readProperties);
+      long findID3v2();
 
       class FilePrivate;
       FilePrivate *d;

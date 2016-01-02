@@ -29,8 +29,8 @@
 #include "taglib_config.h"
 
 #define TAGLIB_MAJOR_VERSION 1
-#define TAGLIB_MINOR_VERSION 9
-#define TAGLIB_PATCH_VERSION 1
+#define TAGLIB_MINOR_VERSION 10
+#define TAGLIB_PATCH_VERSION 0
 
 #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 1))
 #define TAGLIB_IGNORE_MISSING_DESTRUCTOR _Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
@@ -60,20 +60,20 @@ namespace TagLib {
 
   class String;
 
+  // These integer types are deprecated. Do not use them.
+
   typedef wchar_t            wchar;   // Assumed to be sufficient to store a UTF-16 char.
   typedef unsigned char      uchar;
   typedef unsigned short     ushort;
   typedef unsigned int       uint;
+  typedef unsigned long      ulong;
   typedef unsigned long long ulonglong;
-
-  // long/ulong can be either 32-bit or 64-bit wide.
-  typedef unsigned long  ulong;
 
   /*!
    * Unfortunately std::wstring isn't defined on some systems, (i.e. GCC < 3)
    * so I'm providing something here that should be constant.
    */
-  typedef std::basic_string<wchar> wstring;
+  typedef std::basic_string<wchar_t> wstring;
 }
 
 /*!
@@ -94,7 +94,7 @@ namespace TagLib {
  * - Full support for unicode and internationalized tags.
  * - Dual <a href="http://www.mozilla.org/MPL/MPL-1.1.html">MPL</a> and
  *   <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL</a> licenses.
- * - No external toolkit dependancies.
+ * - No external toolkit dependencies.
  *
  * \section why Why TagLib?
  *

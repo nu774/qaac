@@ -85,8 +85,8 @@ namespace TagLib {
        * Single entry of time stamp and lyrics text.
        */
       struct SynchedText {
-        SynchedText(uint ms, String str) : time(ms), text(str) {}
-        uint time;
+        SynchedText(unsigned int ms, String str) : time(ms), text(str) {}
+        unsigned int time;
         String text;
       };
 
@@ -197,7 +197,7 @@ namespace TagLib {
       /*!
        * Sets the description of the synchronized lyrics frame to \a s.
        *
-       * \see decription()
+       * \see description()
        */
       void setDescription(const String &s);
 

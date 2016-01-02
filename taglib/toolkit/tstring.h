@@ -41,7 +41,12 @@
  * \note consider conversion via usual char-by-char for loop to avoid UTF16->UTF8->UTF16
  * conversion happening in the background
  */
+
+#if defined(QT_VERSION) && (QT_VERSION >= 0x040000)
+#define QStringToTString(s) TagLib::String(s.toUtf8().data(), TagLib::String::UTF8)
+#else
 #define QStringToTString(s) TagLib::String(s.utf8().data(), TagLib::String::UTF8)
+#endif
 
 /*!
  * \relates TagLib::String
@@ -52,6 +57,7 @@
  * conversion happening in the background
  *
  */
+
 #define TStringToQString(s) QString::fromUtf8(s.toCString(true))
 
 namespace TagLib {
@@ -80,8 +86,8 @@ namespace TagLib {
   public:
 
 #ifndef DO_NOT_DOCUMENT
-    typedef std::basic_string<wchar>::iterator Iterator;
-    typedef std::basic_string<wchar>::const_iterator ConstIterator;
+    typedef TagLib::wstring::iterator Iterator;
+    typedef TagLib::wstring::const_iterator ConstIterator;
 #endif
 
     /**
@@ -191,7 +197,8 @@ namespace TagLib {
 
     /*!
      * Returns a deep copy of this String as a wstring.  The returned string is
-     * encoded in UTF-16 (without BOM/CPU byte order).
+     * encoded in UTF-16 (without BOM/CPU byte order), not UTF-32 even if wchar_t
+     * is 32-bit wide.
      *
      * \see toCWString()
      */
@@ -220,7 +227,7 @@ namespace TagLib {
     /*!
      * Returns a standard C-style (null-terminated) wide character version of
      * this String.  The returned string is encoded in UTF-16 (without BOM/CPU byte
-     * order).
+     * order), not UTF-32 even if wchar_t is 32-bit wide.
      *
      * The returned string is still owned by this String and should not be deleted
      * by the user.
@@ -284,13 +291,18 @@ namespace TagLib {
      * Extract a substring from this string starting at \a position and
      * continuing for \a n characters.
      */
-    String substr(uint position, uint n = 0xffffffff) const;
+    String substr(unsigned int position, unsigned int n = 0xffffffff) const;
 
     /*!
      * Append \a s to the current string and return a reference to the current
      * string.
      */
     String &append(const String &s);
+
+    /*!
+     * Clears the string.
+     */
+    String &clear();
 
     /*!
      * Returns an upper case version of the string.
@@ -302,12 +314,12 @@ namespace TagLib {
     /*!
      * Returns the size of the string.
      */
-    uint size() const;
+    unsigned int size() const;
 
     /*!
      * Returns the length of the string.  Equivalent to size().
      */
-    uint length() const;
+    unsigned int length() const;
 
     /*!
      * Returns true if the string is empty.
@@ -320,9 +332,14 @@ namespace TagLib {
      * Returns true if this string is null -- i.e. it is a copy of the
      * String::null string.
      *
-     * \note A string can be empty and not null.
+     * \note A string can be empty and not null.  So do not use this method to
+     * check if the string is empty.
+     *
      * \see isEmpty()
+     *
+     * \deprecated
      */
+     // BIC: remove
     bool isNull() const;
 
     /*!
@@ -349,7 +366,7 @@ namespace TagLib {
     /*!
      * Convert the string to an integer.
      *
-     * If the conversion was successfull, it sets the value of \a *ok to
+     * If the conversion was successful, it sets the value of \a *ok to
      * true and returns the integer. Otherwise it sets \a *ok to false
      * and the result is undefined.
      */
@@ -378,12 +395,12 @@ namespace TagLib {
     /*!
      * Returns a reference to the character at position \a i.
      */
-    wchar &operator[](int i);
+    wchar_t &operator[](int i);
 
     /*!
      * Returns a const reference to the character at position \a i.
      */
-    const wchar &operator[](int i) const;
+    const wchar_t &operator[](int i) const;
 
     /*!
      * Compares each character of the String with each character of \a s and
@@ -488,15 +505,26 @@ namespace TagLib {
     String &operator=(const ByteVector &v);
 
     /*!
+     * Exchanges the content of the String by the content of \a s.
+     */
+    void swap(String &s);
+
+    /*!
      * To be able to use this class in a Map, this operator needed to be
-     * implemented.  Returns true if \a s is less than this string in a bytewise
+     * implemented.  Returns true if \a s is less than this string in a byte-wise
      * comparison.
      */
     bool operator<(const String &s) const;
 
     /*!
      * A null string provided for convenience.
+     *
+     * \warning Do not modify this variable.  It will mess up the internal state
+     * of TagLib.
+     *
+     * \deprecated
      */
+     // BIC: remove
     static String null;
 
   protected:
@@ -508,37 +536,6 @@ namespace TagLib {
     void detach();
 
   private:
-    /*!
-     * Converts a \e Latin-1 string into \e UTF-16(without BOM/CPU byte order)
-     * and copies it to the internal buffer.
-     */
-    void copyFromLatin1(const char *s, size_t length);
-
-    /*!
-     * Converts a \e UTF-8 string into \e UTF-16(without BOM/CPU byte order)
-     * and copies it to the internal buffer.
-     */
-    void copyFromUTF8(const char *s, size_t length);
-
-    /*!
-     * Converts a \e UTF-16 (with BOM), UTF-16LE or UTF16-BE string into
-     * \e UTF-16(without BOM/CPU byte order) and copies it to the internal buffer.
-     */
-    void copyFromUTF16(const wchar_t *s, size_t length, Type t);
-
-    /*!
-     * Converts a \e UTF-16 (with BOM), UTF-16LE or UTF16-BE string into
-     * \e UTF-16(without BOM/CPU byte order) and copies it to the internal buffer.
-     */
-    void copyFromUTF16(const char *s, size_t length, Type t);
-
-    /*!
-     * Indicates which byte order of UTF-16 is used to store strings internally.
-     *
-     * \note \e String::UTF16BE or \e String::UTF16LE
-     */
-    static const Type WCharByteOrder;
-
     class StringPrivate;
     StringPrivate *d;
   };

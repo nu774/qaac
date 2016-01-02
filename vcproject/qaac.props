@@ -8,11 +8,7 @@
   </PropertyGroup>
   <PropertyGroup Label="UserMacros">
     <mp4v2Includes>..\..\mp4v2;..\..\mp4v2\include</mp4v2Includes>
-    <taglibIncludes>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\ape;..\..\taglib\mpeg;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff</taglibIncludes>
-  </PropertyGroup>
-  <PropertyGroup Label="UserMacros">
-    <mp4v2Includes>..\..\mp4v2;..\..\mp4v2\include</mp4v2Includes>
-    <taglibIncludes>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\ape;..\..\taglib\mpeg;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff</taglibIncludes>
+    <taglibIncludes>..\..\taglib\;..\..\taglib\toolkit;..\..\taglib\ape;..\..\taglib\mpeg;..\..\taglib\mpeg\id3v1;..\..\taglib\mpeg\id3v2;..\..\taglib\mpeg\id3v1;..\..\taglib\riff;..\..\taglib\riff\aiff;..\..\taglib\flac;..\..\taglib\ogg;..\..\taglib\ogg\flac;..\..\taglib\ogg\vorbis</taglibIncludes>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="mp4v2Includes">

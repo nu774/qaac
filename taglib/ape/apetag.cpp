@@ -23,7 +23,7 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#ifdef __SUNPRO_CC
+#if defined(__SUNPRO_CC) && (__SUNPRO_CC < 0x5130)
 // Sun Studio finds multiple specializations of Map because
 // it considers specializations with and without class types
 // to be different; this define forces Map to use only the
@@ -46,14 +46,14 @@ using namespace APE;
 class APE::Tag::TagPrivate
 {
 public:
-  TagPrivate() : file(0), footerLocation(-1), tagLength(0) {}
+  TagPrivate() :
+    file(0),
+    footerLocation(0) {}
 
-  TagLib::File *file;
+  File *file;
   long footerLocation;
-  long tagLength;
 
   Footer footer;
-
   ItemListMap itemListMap;
 };
 
@@ -61,14 +61,16 @@ public:
 // public methods
 ////////////////////////////////////////////////////////////////////////////////
 
-APE::Tag::Tag() : TagLib::Tag()
+APE::Tag::Tag() :
+  TagLib::Tag(),
+  d(new TagPrivate())
 {
-  d = new TagPrivate;
 }
 
-APE::Tag::Tag(TagLib::File *file, long footerLocation) : TagLib::Tag()
+APE::Tag::Tag(TagLib::File *file, long footerLocation) :
+  TagLib::Tag(),
+  d(new TagPrivate())
 {
-  d = new TagPrivate;
   d->file = file;
   d->footerLocation = footerLocation;
 
@@ -88,46 +90,46 @@ ByteVector APE::Tag::fileIdentifier()
 String APE::Tag::title() const
 {
   if(d->itemListMap["TITLE"].isEmpty())
-    return String::null;
+    return String();
   return d->itemListMap["TITLE"].values().toString();
 }
 
 String APE::Tag::artist() const
 {
   if(d->itemListMap["ARTIST"].isEmpty())
-    return String::null;
+    return String();
   return d->itemListMap["ARTIST"].values().toString();
 }
 
 String APE::Tag::album() const
 {
   if(d->itemListMap["ALBUM"].isEmpty())
-    return String::null;
+    return String();
   return d->itemListMap["ALBUM"].values().toString();
 }
 
 String APE::Tag::comment() const
 {
   if(d->itemListMap["COMMENT"].isEmpty())
-    return String::null;
+    return String();
   return d->itemListMap["COMMENT"].values().toString();
 }
 
 String APE::Tag::genre() const
 {
   if(d->itemListMap["GENRE"].isEmpty())
-    return String::null;
+    return String();
   return d->itemListMap["GENRE"].values().toString();
 }
 
-TagLib::uint APE::Tag::year() const
+unsigned int APE::Tag::year() const
 {
   if(d->itemListMap["YEAR"].isEmpty())
     return 0;
   return d->itemListMap["YEAR"].toString().toInt();
 }
 
-TagLib::uint APE::Tag::track() const
+unsigned int APE::Tag::track() const
 {
   if(d->itemListMap["TRACK"].isEmpty())
     return 0;
@@ -159,7 +161,7 @@ void APE::Tag::setGenre(const String &s)
   addValue("GENRE", s, true);
 }
 
-void APE::Tag::setYear(uint i)
+void APE::Tag::setYear(unsigned int i)
 {
   if(i <= 0)
     removeItem("YEAR");
@@ -167,7 +169,7 @@ void APE::Tag::setYear(uint i)
     addValue("YEAR", String::number(i), true);
 }
 
-void APE::Tag::setTrack(uint i)
+void APE::Tag::setTrack(unsigned int i)
 {
   if(i <= 0)
     removeItem("TRACK");
@@ -175,14 +177,18 @@ void APE::Tag::setTrack(uint i)
     addValue("TRACK", String::number(i), true);
 }
 
-// conversions of tag keys between what we use in PropertyMap and what's usual
-// for APE tags
-static const TagLib::uint keyConversionsSize = 5; //usual,         APE
-static const char *keyConversions[][2] =  {{"TRACKNUMBER", "TRACK"       },
-                                           {"DATE",        "YEAR"        },
-                                           {"ALBUMARTIST", "ALBUM ARTIST"},
-                                           {"DISCNUMBER",  "DISC"        },
-                                           {"REMIXER",     "MIXARTIST"   }};
+namespace
+{
+  // conversions of tag keys between what we use in PropertyMap and what's usual
+  // for APE tags
+  //                                    usual,         APE
+  const char *keyConversions[][2] =  {{"TRACKNUMBER", "TRACK"       },
+                                      {"DATE",        "YEAR"        },
+                                      {"ALBUMARTIST", "ALBUM ARTIST"},
+                                      {"DISCNUMBER",  "DISC"        },
+                                      {"REMIXER",     "MIXARTIST"   }};
+  const size_t keyConversionsSize = sizeof(keyConversions) / sizeof(keyConversions[0]);
+}
 
 PropertyMap APE::Tag::properties() const
 {
@@ -192,14 +198,16 @@ PropertyMap APE::Tag::properties() const
     String tagName = it->first.upper();
     // if the item is Binary or Locator, or if the key is an invalid string,
     // add to unsupportedData
-    if(it->second.type() != Item::Text || tagName.isNull())
+    if(it->second.type() != Item::Text || tagName.isEmpty()) {
       properties.unsupportedData().append(it->first);
+    }
     else {
       // Some tags need to be handled specially
-      for(uint i = 0; i < keyConversionsSize; ++i)
+      for(size_t i = 0; i < keyConversionsSize; ++i) {
         if(tagName == keyConversions[i][1])
           tagName = keyConversions[i][0];
-        properties[tagName].append(it->second.toStringList());
+      }
+      properties[tagName].append(it->second.toStringList());
     }
   }
   return properties;
@@ -217,7 +225,7 @@ PropertyMap APE::Tag::setProperties(const PropertyMap &origProps)
   PropertyMap properties(origProps); // make a local copy that can be modified
 
   // see comment in properties()
-  for(uint i = 0; i < keyConversionsSize; ++i)
+  for(size_t i = 0; i < keyConversionsSize; ++i)
     if(properties.contains(keyConversions[i][0])) {
       properties.insert(keyConversions[i][1], properties[keyConversions[i][0]]);
       properties.erase(keyConversions[i][0]);
@@ -229,7 +237,7 @@ PropertyMap APE::Tag::setProperties(const PropertyMap &origProps)
   for(; remIt != itemListMap().end(); ++remIt) {
     String key = remIt->first.upper();
     // only remove if a) key is valid, b) type is text, c) key not contained in new properties
-    if(!key.isNull() && remIt->second.type() == APE::Item::Text && !properties.contains(key))
+    if(!key.isEmpty() && remIt->second.type() == APE::Item::Text && !properties.contains(key))
       toRemove.append(remIt->first);
   }
 
@@ -244,7 +252,7 @@ PropertyMap APE::Tag::setProperties(const PropertyMap &origProps)
     if(!checkKey(tagName))
       invalid.insert(it->first, it->second);
     else if(!(itemListMap().contains(tagName)) || !(itemListMap()[tagName].values() == it->second)) {
-      if(it->second.size() == 0)
+      if(it->second.isEmpty())
         removeItem(tagName);
       else {
         StringList::ConstIterator valueIt = it->second.begin();
@@ -284,9 +292,7 @@ const APE::ItemListMap& APE::Tag::itemListMap() const
 
 void APE::Tag::removeItem(const String &key)
 {
-  Map<const String, Item>::Iterator it = d->itemListMap.find(key.upper());
-  if(it != d->itemListMap.end())
-    d->itemListMap.erase(it);
+  d->itemListMap.erase(key.upper());
 }
 
 void APE::Tag::addValue(const String &key, const String &value, bool replace)
@@ -337,7 +343,7 @@ void APE::Tag::read()
     d->footer.setData(d->file->readBlock(Footer::size()));
 
     if(d->footer.tagSize() <= Footer::size() ||
-       d->footer.tagSize() > uint(d->file->length()))
+       d->footer.tagSize() > static_cast<unsigned long>(d->file->length()))
       return;
 
     d->file->seek(d->footerLocation + Footer::size() - d->footer.tagSize());
@@ -348,15 +354,11 @@ void APE::Tag::read()
 ByteVector APE::Tag::render() const
 {
   ByteVector data;
-  uint itemCount = 0;
+  unsigned int itemCount = 0;
 
-  {
-    for(Map<const String, Item>::ConstIterator it = d->itemListMap.begin();
-        it != d->itemListMap.end(); ++it)
-    {
-      data.append(it->second.render());
-      itemCount++;
-    }
+  for(ItemListMap::ConstIterator it = d->itemListMap.begin(); it != d->itemListMap.end(); ++it) {
+    data.append(it->second.render());
+    itemCount++;
   }
 
   d->footer.setItemCount(itemCount);
@@ -373,9 +375,9 @@ void APE::Tag::parse(const ByteVector &data)
   if(data.size() < 11)
     return;
 
-  uint pos = 0;
+  unsigned int pos = 0;
 
-  for(uint i = 0; i < d->footer.itemCount() && pos <= data.size() - 11; i++) {
+  for(unsigned int i = 0; i < d->footer.itemCount() && pos <= data.size() - 11; i++) {
     APE::Item item;
     item.parse(data.mid(pos));
 
