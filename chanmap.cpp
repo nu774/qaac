@@ -305,6 +305,9 @@ void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result)
     std::transform(cs.begin(), cs.end(), cs.begin(),
                    [&](uint32_t c) -> uint32_t {
                         switch (c) {
+                        case kAudioChannelLabel_Mono:
+                            c = kAudioChannelLabel_Center;
+                            break;
                         case kAudioChannelLabel_Left:
                         case kAudioChannelLabel_Right:
                             if (!(bitmap & 0x3) && (bitmap & 0xc))
