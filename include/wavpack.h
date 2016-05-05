@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////
 //                           **** WAVPACK ****                            //
 //                  Hybrid Lossless Wavefile Compressor                   //
-//              Copyright (c) 1998 - 2006 Conifer Software.               //
+//                Copyright (c) 1998 - 2016 David Bryant.                 //
 //                          All Rights Reserved.                          //
 //      Distributed under the BSD Software License (see license.txt)      //
 ////////////////////////////////////////////////////////////////////////////
@@ -48,12 +48,12 @@ typedef struct {
 #define ChunkHeaderFormat "4L"
 
 typedef struct {
-    unsigned short FormatTag, NumChannels;
+    uint16_t FormatTag, NumChannels;
     uint32_t SampleRate, BytesPerSecond;
-    unsigned short BlockAlign, BitsPerSample;
-    unsigned short cbSize, ValidBitsPerSample;
+    uint16_t BlockAlign, BitsPerSample;
+    uint16_t cbSize, ValidBitsPerSample;
     int32_t ChannelMask;
-    unsigned short SubFormat;
+    uint16_t SubFormat;
     char GUID [14];
 } WaveHeader;
 
@@ -69,7 +69,7 @@ typedef struct {
 typedef struct {
     char ckID [4];
     uint32_t ckSize;
-    short version;
+    int16_t version;
     unsigned char track_no, index_no;
     uint32_t total_samples, block_index, block_samples, flags, crc;
 } WavpackHeader;
@@ -156,12 +156,13 @@ typedef struct {
     int qmode, flags, xmode, num_channels, float_norm_exp;
     int32_t block_samples, extra_flags, sample_rate, channel_mask;
     unsigned char md5_checksum [16], md5_read;
-    int num_tag_strings;
-    char **tag_strings;
+    int num_tag_strings;                // this field is not used
+    char **tag_strings;                 // this field is not used
 } WavpackConfig;
 
 #define CONFIG_HYBRID_FLAG      8       // hybrid mode
 #define CONFIG_JOINT_STEREO     0x10    // joint stereo
+#define CONFIG_CROSS_DECORR     0x20    // no-delay cross decorrelation
 #define CONFIG_HYBRID_SHAPE     0x40    // noise shape (hybrid mode only)
 #define CONFIG_FAST_FLAG        0x200   // fast mode
 #define CONFIG_HIGH_FLAG        0x800   // high quality mode
@@ -181,6 +182,16 @@ typedef struct {
 #define CONFIG_PAIR_UNDEF_CHANS 0x20000000 // encode undefined channels in stereo pairs
 #define CONFIG_OPTIMIZE_MONO    0x80000000 // optimize for mono streams posing as stereo
 
+#define QMODE_BIG_ENDIAN        0x1     // big-endian data format (opposite of WAV format)
+#define QMODE_SIGNED_BYTES      0x2     // 8-bit audio data is signed (opposite of WAV format)
+#define QMODE_UNSIGNED_WORDS    0x4     // audio data (other than 8-bit) is unsigned (opposite of WAV format)
+
+#define QMODE_ADOBE_MODE        0x100   // user specified Adobe mode
+#define QMODE_NO_STORE_WRAPPER  0x200   // user specified to not store audio file wrapper (RIFF, CAFF, etc.)
+#define QMODE_CHANS_UNASSIGNED  0x400   // user specified "..." in --channel-order option
+#define QMODE_IGNORE_LENGTH     0x800   // user specified to ignore length in file header
+#define QMODE_RAW_PCM           0x1000  // user specified raw PCM format (no header present)
+
 ////////////// Callbacks used for reading & writing WavPack streams //////////
 
 typedef struct {
@@ -196,11 +207,25 @@ typedef struct {
     int32_t (*write_bytes)(void *id, void *data, int32_t bcount);
 } WavpackStreamReader;
 
+// Extended version of structure for handling large files and added
+// functionality for truncating and closing files
+
+typedef struct {
+    int32_t (*read_bytes)(void *id, void *data, int32_t bcount);
+    int32_t (*write_bytes)(void *id, void *data, int32_t bcount);
+    int64_t (*get_pos)(void *id);                               // new signature for large files
+    int (*set_pos_abs)(void *id, int64_t pos);                  // new signature for large files
+    int (*set_pos_rel)(void *id, int64_t delta, int mode);      // new signature for large files
+    int (*push_back_byte)(void *id, int c);
+    int64_t (*get_length)(void *id);                            // new signature for large files
+    int (*can_seek)(void *id);
+    int (*truncate_here)(void *id);                             // new function to truncate file at current position
+    int (*close)(void *id);                                     // new function to close file
+} WavpackStreamReader64;
+
 typedef int (*WavpackBlockOutput)(void *id, void *data, int32_t bcount);
 
 //////////////////////////// function prototypes /////////////////////////////
-
-// Note: See wputils.c sourcecode for descriptions for using these functions.
 
 typedef void WavpackContext;
 
@@ -208,6 +233,7 @@ typedef void WavpackContext;
 extern "C" {
 #endif
 
+WavpackContext *WavpackOpenFileInputEx64 (WavpackStreamReader64 *reader, void *wv_id, void *wvc_id, char *error, int flags, int norm_offset);
 WavpackContext *WavpackOpenFileInputEx (WavpackStreamReader *reader, void *wv_id, void *wvc_id, char *error, int flags, int norm_offset);
 WavpackContext *WavpackOpenFileInput (const char *infilename, char *error, int flags, int norm_offset);
 
@@ -219,6 +245,7 @@ WavpackContext *WavpackOpenFileInput (const char *infilename, char *error, int f
 #define OPEN_STREAMING  0x20    // "streaming" mode blindly unpacks blocks
                                 // w/o regard to header file position info
 #define OPEN_EDIT_TAGS  0x40    // allow editing of tags
+#define OPEN_FILE_UTF8  0x80    // assume filenames are UTF-8 encoded, not ANSI (Windows only)
 
 int WavpackGetMode (WavpackContext *wpc);
 
@@ -239,6 +266,7 @@ int WavpackGetMode (WavpackContext *wpc);
 
 char *WavpackGetErrorMessage (WavpackContext *wpc);
 int WavpackGetVersion (WavpackContext *wpc);
+char *WavpackGetFileExtension (WavpackContext *wpc);
 uint32_t WavpackUnpackSamples (WavpackContext *wpc, int32_t *buffer, uint32_t samples);
 uint32_t WavpackGetNumSamples (WavpackContext *wpc);
 uint32_t WavpackGetSampleIndex (WavpackContext *wpc);
@@ -260,6 +288,7 @@ void WavpackFreeWrapper (WavpackContext *wpc);
 void WavpackSeekTrailingWrapper (WavpackContext *wpc);
 double WavpackGetProgress (WavpackContext *wpc);
 uint32_t WavpackGetFileSize (WavpackContext *wpc);
+int64_t WavpackGetFileSize64 (WavpackContext *wpc);
 double WavpackGetRatio (WavpackContext *wpc);
 double WavpackGetAverageBitrate (WavpackContext *wpc, int count_wvc);
 double WavpackGetInstantBitrate (WavpackContext *wpc);
@@ -277,6 +306,7 @@ int WavpackWriteTag (WavpackContext *wpc);
 WavpackContext *WavpackOpenFileOutput (WavpackBlockOutput blockout, void *wv_id, void *wvc_id);
 int WavpackSetConfiguration (WavpackContext *wpc, WavpackConfig *config, uint32_t total_samples);
 int WavpackAddWrapper (WavpackContext *wpc, void *data, uint32_t bcount);
+int WavpackAddWrapperEx (WavpackContext *wpc, char *extension, void *data, uint32_t bcount);
 int WavpackStoreMD5Sum (WavpackContext *wpc, unsigned char data [16]);
 int WavpackPackInit (WavpackContext *wpc);
 int WavpackPackSamples (WavpackContext *wpc, int32_t *sample_buffer, uint32_t sample_count);
@@ -289,6 +319,8 @@ void WavpackFloatNormalize (int32_t *values, int32_t num_values, int delta_exp);
 
 void WavpackLittleEndianToNative (void *data, char *format);
 void WavpackNativeToLittleEndian (void *data, char *format);
+void WavpackBigEndianToNative (void *data, char *format);
+void WavpackNativeToBigEndian (void *data, char *format);
 
 uint32_t WavpackGetLibraryVersion (void);
 const char *WavpackGetLibraryVersionString (void);

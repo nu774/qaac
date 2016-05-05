@@ -20,6 +20,7 @@ WavpackModule::WavpackModule(const std::wstring &path)
         CHECK(GetLibraryVersionString =
               m_dl.fetch( "WavpackGetLibraryVersionString"));
         CHECK(OpenFileInputEx = m_dl.fetch( "WavpackOpenFileInputEx"));
+        OpenFileInputEx64 = m_dl.fetch( "WavpackOpenFileInputEx64");
         CHECK(CloseFile = m_dl.fetch( "WavpackCloseFile"));
         CHECK(GetBitsPerSample = m_dl.fetch( "WavpackGetBitsPerSample"));
         CHECK(GetChannelMask = m_dl.fetch( "WavpackGetChannelMask"));
@@ -44,55 +45,58 @@ WavpackModule::WavpackModule(const std::wstring &path)
     }
 }
 
-namespace {
-    struct WavpackStreamReaderImpl: public WavpackStreamReader
+namespace wavpack {
+    static inline int fd(void *cookie)
     {
-        WavpackStreamReaderImpl()
-        {
-            static WavpackStreamReader t = {
-                read, tell, seek_abs, seek, pushback, size, seekable, 0/*write*/
-            };
-            std::memcpy(this, &t, sizeof(WavpackStreamReader));
-        }
-        static int32_t read(void *cookie, void *data, int32_t count)
-        {
-            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-            return util::nread(fd, data, count);
-        }
-        static uint32_t tell(void *cookie)
-        {
-            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-            int64_t off = _lseeki64(fd, 0, SEEK_CUR);
-            return std::min(off, 0xffffffffLL); // XXX
-        }
-        static int seek_abs(void *cookie, uint32_t pos)
-        {
-            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-            return _lseeki64(fd, pos, SEEK_SET) >= 0 ? 0 : -1;
-        }
-        static int seek(void *cookie, int32_t off, int whence)
-        {
-            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-            return _lseeki64(fd, off, whence) >= 0 ? 0 : -1;
-        }
-        static int pushback(void *cookie, int c)
-        {
-            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-            _lseeki64(fd, -1, SEEK_CUR); // XXX
-            return c;
-        }
-        static uint32_t size(void *cookie)
-        {
-            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-            int64_t size = _filelengthi64(fd);
-            return std::min(size, 0xffffffffLL); // XXX
-        }
-        static int seekable(void *cookie)
-        {
-            int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-            return win32::is_seekable(fd);
-        }
-    };
+        return static_cast<int>(reinterpret_cast<intptr_t>(cookie));
+    }
+    static int32_t read(void *cookie, void *data, int32_t count)
+    {
+        return util::nread(fd(cookie), data, count);
+    }
+    static int64_t tell(void *cookie)
+    {
+        return _lseeki64(fd(cookie), 0, SEEK_CUR);
+    }
+    static uint32_t tell32(void *cookie)
+    {
+        int64_t off = tell(cookie);
+        return off > 0xffffffffLL ? -1 : off;
+    }
+    static int seek(void *cookie, int64_t off, int whence)
+    {
+        return _lseeki64(fd(cookie), off, whence) >= 0 ? 0 : -1;
+    }
+    static int seek32(void *cookie, int32_t off, int whence)
+    {
+        return seek(cookie, off, whence);
+    }
+    static int seek_abs(void *cookie, int64_t pos)
+    {
+        return seek(cookie, pos, SEEK_SET);
+    }
+    static int seek_abs32(void *cookie, uint32_t pos)
+    {
+        return seek_abs(cookie, pos);
+    }
+    static int pushback(void *cookie, int c)
+    {
+        seek(cookie, -1, SEEK_CUR); // XXX
+        return c;
+    }
+    static int64_t size(void *cookie)
+    {
+        return _filelengthi64(fd(cookie));
+    }
+    static uint32_t size32(void *cookie)
+    {
+        int64_t sz = size(cookie);
+        return sz > 0xffffffffLL ? -1 : sz;
+    }
+    static int seekable(void *cookie)
+    {
+        return win32::is_seekable(fd(cookie));
+    }
 }
 
 WavpackSource::WavpackSource(const WavpackModule &module,
@@ -100,9 +104,15 @@ WavpackSource::WavpackSource(const WavpackModule &module,
     : m_module(module)
 {
     char error[0x100];
-    /* wavpack doesn't copy WavpackStreamReader into their context, therefore
-     * must be kept in the memory */
-    static WavpackStreamReaderImpl reader;
+    static WavpackStreamReader reader32 = {
+        wavpack::read, wavpack::tell32, wavpack::seek_abs32, wavpack::seek32,
+        wavpack::pushback, wavpack::size32, wavpack::seekable, nullptr
+    };
+    static WavpackStreamReader64 reader64 = {
+        wavpack::read, nullptr, wavpack::tell, wavpack::seek_abs,
+        wavpack::seek, wavpack::pushback, wavpack::size, wavpack::seekable,
+        nullptr, nullptr
+    };
     m_fp = win32::fopen(path, L"rb");
     try { m_cfp = win32::fopen(path + L"c", L"rb"); } catch(...) {}
 
@@ -113,8 +123,11 @@ WavpackSource::WavpackSource(const WavpackModule &module,
         reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(m_cfp.get())))
         : 0;
 
-    WavpackContext *wpc =
-        m_module.OpenFileInputEx(&reader, ra, rc, error, flags, 0);
+    WavpackContext *wpc = nullptr;
+    if (m_module.OpenFileInputEx64)
+        wpc = m_module.OpenFileInputEx64(&reader64, ra, rc, error, flags, 0);
+    else
+        wpc = m_module.OpenFileInputEx(&reader32, ra, rc, error, flags, 0);
     if (!wpc)
         throw std::runtime_error("WavpackOpenFileInputEx() failed");
     m_wpc.reset(wpc, m_module.CloseFile);
@@ -135,9 +148,7 @@ WavpackSource::WavpackSource(const WavpackModule &module,
     else
         m_readSamples = &WavpackSource::readSamples32;
 
-    uint64_t duration = m_module.GetNumSamples(wpc);
-    if (duration == 0xffffffff) duration = ~0ULL;
-    m_length = duration;
+    m_length = m_module.GetNumSamples(wpc);
 
     unsigned mask = m_module.GetChannelMask(wpc);
     chanmap::getChannels(mask, &m_chanmap, m_asbd.mChannelsPerFrame);

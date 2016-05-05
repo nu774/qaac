@@ -21,6 +21,8 @@ public:
     const char *(*GetLibraryVersionString)();
     WavpackContext *(*OpenFileInputEx)(void *, void *, void *, char *, int,
                                        int);
+    WavpackContext *(*OpenFileInputEx64)(void *, void *, void *, char *, int,
+                                       int);
     WavpackContext *(*CloseFile)(WavpackContext *);
     int (*GetBitsPerSample)(WavpackContext *);
     int (*GetChannelMask)(WavpackContext *);
