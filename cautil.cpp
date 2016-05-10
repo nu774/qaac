@@ -236,7 +236,7 @@ namespace cautil {
         bs.advance(1); // extensionFlag
         const char *ch_layout_tab[] = {
             "",
-            "\x01",
+            "\x03",
             "\x01\x02",
             "\x03\x01\x02",
             "\x03\x01\x02\x09",
