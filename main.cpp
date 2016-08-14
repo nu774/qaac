@@ -1323,8 +1323,8 @@ bool insert_pce(uint32_t channel_layout, std::vector<uint8_t> *asc)
     bs.put(obj_type, 2);
     bs.put(sf_index, 4);
     bs.put(2, 4); /* num_front_channel_elements */
-    bs.put(1, 4); /* num_side_channel_elements  */
-    bs.put(1, 4); /* num_back_channel_elements  */
+    bs.put(0, 4); /* num_side_channel_elements  */
+    bs.put(2, 4); /* num_back_channel_elements  */
     bs.put(1, 2); /* num_lfe_channel_elements   */
     bs.put(0, 3); /* num_assoc_data_elements    */
     bs.put(0, 4); /* num_valid_cc_elements      */
@@ -1337,8 +1337,8 @@ bool insert_pce(uint32_t channel_layout, std::vector<uint8_t> *asc)
     bs.put(1, 1); /* front_element_is_cpe */
     bs.put(0, 4); /* front_element_tag_select */
     /* Ls+Rs */
-    bs.put(1, 1); /* side_element_is_cpe */
-    bs.put(1, 4); /* side_element_tag_select */
+    bs.put(1, 1); /* back_element_is_cpe */
+    bs.put(1, 4); /* back_element_tag_select */
     /* Rls+Rrs */
     bs.put(1, 1); /* back_element_is_cpe */
     bs.put(2, 4); /* back_element_tag_select */
