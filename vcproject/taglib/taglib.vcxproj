@@ -84,6 +84,7 @@
     <ClCompile Include="..\..\taglib\toolkit\trefcounter.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tstring.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tstringlist.cpp" />
+    <ClCompile Include="..\..\taglib\toolkit\tzlib.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\unicode.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

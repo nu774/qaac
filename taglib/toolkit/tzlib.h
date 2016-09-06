@@ -1,5 +1,5 @@
 /***************************************************************************
-    copyright            : (C) 2015 by Tsuda Kageyu
+    copyright            : (C) 2016 by Tsuda Kageyu
     email                : tsuda.kageyu@gmail.com
  ***************************************************************************/
 
@@ -23,38 +23,29 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#ifndef TAGLIB_MPEGUTILS_H
-#define TAGLIB_MPEGUTILS_H
+#ifndef TAGLIB_TZLIB_H
+#define TAGLIB_TZLIB_H
+
+#include <tbytevector.h>
 
 // THIS FILE IS NOT A PART OF THE TAGLIB API
 
 #ifndef DO_NOT_DOCUMENT  // tell Doxygen not to document this header
 
-namespace TagLib
-{
-  namespace MPEG
-  {
-    namespace
-    {
+namespace TagLib {
 
-      /*!
-       * MPEG frames can be recognized by the bit pattern 11111111 111, so the
-       * first byte is easy to check for, however checking to see if the second byte
-       * starts with \e 111 is a bit more tricky, hence these functions.
-       */
-      inline bool firstSyncByte(unsigned char byte)
-      {
-        return (byte == 0xFF);
-      }
+  namespace zlib {
 
-      inline bool secondSynchByte(unsigned char byte)
-      {
-        // 0xFF is possible in theory, but it's very unlikely be a header.
+     /*!
+      * Returns whether or not zlib is installed and ready to use.
+      */
+     bool isAvailable();
 
-        return (byte != 0xFF && ((byte & 0xE0) == 0xE0));
-      }
+     /*!
+      * Decompress \a data by zlib.
+      */
+     ByteVector decompress(const ByteVector &data);
 
-    }
   }
 }
 
