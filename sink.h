@@ -117,7 +117,8 @@ class ADTSSink: public ISink {
     bool m_seekable;
     std::vector<uint8_t> m_pce_data;
 public:
-    ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie);
+    ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie,
+             bool append=false);
     ADTSSink(const std::shared_ptr<FILE> &fp,
              const std::vector<uint8_t> &cookie);
     void writeSamples(const void *data, size_t length, size_t nsamples);

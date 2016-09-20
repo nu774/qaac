@@ -506,8 +506,10 @@ ALACSink::ALACSink(const std::wstring &path,
     }
 }
 
-ADTSSink::ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie)
-    : m_fp(win32::fopen(path, L"wb"))
+ADTSSink::ADTSSink(const std::wstring &path,
+                   const std::vector<uint8_t> &cookie,
+                   bool append)
+    : m_fp(win32::fopen(path, append ? L"ab" : L"wb"))
 {
     init(cookie);
 }

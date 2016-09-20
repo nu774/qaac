@@ -1076,10 +1076,11 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     if (opts.isAAC())
         cautil::parseMagicCookieAAC(cookie, &asc);
 
-    if (ofilename != L"-") win32::fopen(ofilename, L"w");
-
+    if (opts.isMP4()) {
+        std::shared_ptr<FILE> _ = win32::fopen(ofilename, L"wb");
+    }
     if (opts.is_adts)
-        return std::make_shared<ADTSSink>(ofilename, asc);
+        return std::make_shared<ADTSSink>(ofilename, asc, opts.concat);
     else if (opts.is_caf)
         return std::make_shared<CAFSink>(ofilename, asbd, channel_layout,
                                          cookie);
@@ -1386,8 +1387,7 @@ void set_encoding_params(AudioConverterX &converter, ITagStore *store)
 
 static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
-                 const std::wstring &ofilename, const Options &opts,
-                 const std::shared_ptr<FILE> *adts_fp=0)
+                 const std::wstring &ofilename, const Options &opts)
 {
     uint32_t channel_layout;
     AudioStreamBasicDescription iasbd, oasbd;
@@ -1427,11 +1427,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 
     encoder->setSource(chain.back());
     std::shared_ptr<ISink> sink;
-    if (adts_fp && adts_fp->get())
-        sink = std::make_shared<ADTSSink>(*adts_fp, cookie);
-    else
-        sink = open_sink(ofilename, opts, oasbd,
-                         channel_layout, cookie);
+    sink = open_sink(ofilename, opts, oasbd, channel_layout, cookie);
     encoder->setSink(sink);
     if (opts.isAAC()) {
         MP4Sink *mp4sink = dynamic_cast<MP4Sink*>(sink.get());
@@ -1835,9 +1831,9 @@ int wmain1(int argc, wchar_t **argv)
             LOG(L"\n%s\n",
                 ofilename == L"-" ? L"<stdout>"
                                   : PathFindFileNameW(ofilename.c_str()));
-            std::shared_ptr<FILE> adts_fp;
-            if (opts.is_adts)
-                adts_fp = win32::fopen(ofilename, L"wb+");
+            if (opts.is_adts) {
+                std::shared_ptr<FILE> _ = win32::fopen(ofilename, L"wb+");
+            }
             std::vector<playlist::Playlist> groups;
             group_tracks_with_formats(tracks, &groups);
             if (!opts.is_adts && groups.size() > 1)
@@ -1861,11 +1857,7 @@ int wmain1(int argc, wchar_t **argv)
                 }
                 std::shared_ptr<ISeekableSource> src(select_timeline(cs, opts));
                 src->seekTo(0);
-#ifdef REFALAC
                 encode_file(src, ofilename, opts);
-#else
-                encode_file(src, ofilename, opts, &adts_fp);
-#endif
             }
         }
         if (opts.isWaveOut())
