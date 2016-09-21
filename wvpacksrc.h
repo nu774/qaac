@@ -29,9 +29,11 @@ public:
     int (*GetMode)(WavpackContext *);
     int (*GetNumChannels)(WavpackContext *);
     uint32_t (*GetNumSamples)(WavpackContext *);
+    int64_t (*GetNumSamples64)(WavpackContext *);
     int (*GetNumTagItems)(WavpackContext *);
     int (*GetNumBinaryTagItems)(WavpackContext *);
     uint32_t (*GetSampleIndex)(WavpackContext *);
+    int64_t (*GetSampleIndex64)(WavpackContext *);
     uint32_t (*GetSampleRate)(WavpackContext *);
     int (*GetTagItem)(WavpackContext *, const char *, char *, int);
     int (*GetBinaryTagItem)(WavpackContext *, const char *, char *, int);
@@ -39,6 +41,7 @@ public:
     int (*GetBinaryTagItemIndexed)(WavpackContext *, int, char *, int);
     void *(*GetWrapperLocation)(void *first_block, uint32_t *size);
     int (*SeekSample)(WavpackContext *, uint32_t);
+    int (*SeekSample64)(WavpackContext *, int64_t);
     uint32_t (*UnpackSamples)(WavpackContext *, int32_t *, uint32_t);
 };
 

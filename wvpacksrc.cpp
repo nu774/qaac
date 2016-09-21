@@ -27,10 +27,12 @@ WavpackModule::WavpackModule(const std::wstring &path)
         CHECK(GetMode = m_dl.fetch( "WavpackGetMode"));
         CHECK(GetNumChannels = m_dl.fetch( "WavpackGetNumChannels"));
         CHECK(GetNumSamples = m_dl.fetch( "WavpackGetNumSamples"));
+        GetNumSamples64 = m_dl.fetch( "WavpackGetNumSamples64");
         CHECK(GetNumTagItems = m_dl.fetch( "WavpackGetNumTagItems"));
         CHECK(GetNumBinaryTagItems =
               m_dl.fetch( "WavpackGetNumBinaryTagItems"));
         CHECK(GetSampleIndex = m_dl.fetch( "WavpackGetSampleIndex"));
+        GetSampleIndex64 = m_dl.fetch( "WavpackGetSampleIndex64");
         CHECK(GetSampleRate = m_dl.fetch( "WavpackGetSampleRate"));
         CHECK(GetTagItem = m_dl.fetch( "WavpackGetTagItem"));
         CHECK(GetBinaryTagItem = m_dl.fetch( "WavpackGetBinaryTagItem"));
@@ -39,6 +41,7 @@ WavpackModule::WavpackModule(const std::wstring &path)
               m_dl.fetch( "WavpackGetBinaryTagItemIndexed"));
         CHECK(GetWrapperLocation = m_dl.fetch( "WavpackGetWrapperLocation"));
         CHECK(SeekSample = m_dl.fetch( "WavpackSeekSample"));
+        SeekSample64 = m_dl.fetch( "WavpackSeekSample64");
         CHECK(UnpackSamples = m_dl.fetch( "WavpackUnpackSamples"));
     } catch (...) {
         m_dl.reset();
@@ -148,7 +151,8 @@ WavpackSource::WavpackSource(const WavpackModule &module,
     else
         m_readSamples = &WavpackSource::readSamples32;
 
-    m_length = m_module.GetNumSamples(wpc);
+    m_length = m_module.GetNumSamples64 ? m_module.GetNumSamples64(wpc)
+                                        : m_module.GetNumSamples(wpc);
 
     unsigned mask = m_module.GetChannelMask(wpc);
     chanmap::getChannels(mask, &m_chanmap, m_asbd.mChannelsPerFrame);
@@ -158,13 +162,15 @@ WavpackSource::WavpackSource(const WavpackModule &module,
 
 void WavpackSource::seekTo(int64_t count)
 {
-    if (!m_module.SeekSample(m_wpc.get(), static_cast<int32_t>(count)))
-        throw std::runtime_error("WavpackSeekSample()");
+    int rc = m_module.SeekSample64 ? m_module.SeekSample64(m_wpc.get(), count)
+                                   : m_module.SeekSample(m_wpc.get(), count);
+    if (!rc) throw std::runtime_error("WavpackSeekSample()");
 }
 
 int64_t WavpackSource::getPosition()
 {
-    return m_module.GetSampleIndex(m_wpc.get());
+    return m_module.GetSampleIndex64 ? m_module.GetSampleIndex64(m_wpc.get())
+                                     : m_module.GetSampleIndex(m_wpc.get());
 }
 
 bool WavpackSource::parseWrapper()
