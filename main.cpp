@@ -1321,7 +1321,7 @@ bool insert_pce(uint32_t channel_layout, std::vector<uint8_t> *asc)
     bs.copy(ibs, 3);
 
     bs.put(0, 4); /* element_instance_tag */
-    bs.put(obj_type, 2);
+    bs.put(1, 2); /* profile: LC */
     bs.put(sf_index, 4);
     bs.put(2, 4); /* num_front_channel_elements */
     bs.put(0, 4); /* num_side_channel_elements  */
