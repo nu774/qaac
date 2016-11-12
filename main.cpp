@@ -1686,7 +1686,7 @@ int wmain1(int argc, wchar_t **argv)
         std::string encoder_name;
         encoder_name = strutil::format(PROGNAME " %s", get_qaac_version());
 #ifdef QAAC
-        __pfnDliFailureHook2 = DllImportHook;
+        decltype(__pfnDliNotifyHook2) __pfnDliFailureHook2 = DllImportHook;
         set_dll_directories(opts.verbose);
         HMODULE hDll = LoadLibraryW(L"CoreAudioToolbox.dll");
         if (!hDll)
