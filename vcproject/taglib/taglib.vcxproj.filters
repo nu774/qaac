@@ -204,13 +204,16 @@
     <ClCompile Include="..\..\taglib\ogg\xiphcomment.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\taglib\ogg\flac\oggflac.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\taglib\ogg\vorbis\vorbisfile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\taglib\ogg\vorbis\vorbisproperties.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\flac\oggflacfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\toolkit\tzlib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
