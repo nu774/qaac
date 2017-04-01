@@ -41,7 +41,8 @@
   </ImportGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4018;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <AdditionalIncludeDirectories>..\..\mp4v2;..\..\mp4v2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MP4V2_USE_STATIC_LIB;WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>

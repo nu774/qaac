@@ -41,7 +41,8 @@
   </ImportGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4018;4244;4267;4838;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>

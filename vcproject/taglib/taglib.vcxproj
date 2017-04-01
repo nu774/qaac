@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -110,7 +110,8 @@
   </ImportGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PreprocessorDefinitions>TAGLIB_STATIC;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(taglibIncludes)</AdditionalIncludeDirectories>
