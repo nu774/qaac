@@ -25,7 +25,7 @@
 #include "mixer.h"
 #include "Quantizer.h"
 #include "scaler.h"
-#include "limiter.h"
+#include "Limiter.h"
 #include "pipedreader.h"
 #include "TrimmedSource.h"
 #include "chanmap.h"

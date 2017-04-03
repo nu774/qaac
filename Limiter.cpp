@@ -1,4 +1,4 @@
-#include "limiter.h"
+#include "Limiter.h"
 
 namespace {
     template <typename T> T clip(T x, T low, T high)
