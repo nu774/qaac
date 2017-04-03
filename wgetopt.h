@@ -72,7 +72,7 @@ int getopt_long_only(int, wchar_t * const *, const wchar_t *,
 #define _GETOPT_DECLARED
 int  getopt(int, wchar_t * const [], const wchar_t *);
 
-extern wchar_t *optarg;         /* getopt(3) external variables */
+extern const wchar_t *optarg;         /* getopt(3) external variables */
 extern int optind, opterr, optopt;
 #endif
 #ifndef _OPTRESET_DECLARED

@@ -613,7 +613,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 complain(L"DRC release time cannot be negative.\n");
                 return false;
             }
-            wchar_t *p = wide::optarg;
+            const wchar_t *p = wide::optarg;
             for (int i = 0; i < 5; ++i) {
                 p = wcschr(p, L':');
                 if (p) ++p;
