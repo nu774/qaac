@@ -235,11 +235,10 @@ class Progress {
     Timer m_timer;
     bool m_console_visible;
     DWORD m_stderr_type;
-    int m_last_percent;
 public:
     Progress(bool verbosity, uint64_t total, uint32_t rate)
         : m_disp(100, verbosity), m_verbose(verbosity),
-          m_total(total), m_rate(rate), m_last_percent(0)
+          m_total(total), m_rate(rate)
     {
         HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(stderr)));
         m_stderr_type = GetFileType(h);
@@ -1313,9 +1312,9 @@ bool insert_pce(uint32_t channel_layout, std::vector<uint8_t> *asc)
 
     BitStream ibs(asc->data(), asc->size());
     BitStream bs;
-    uint32_t obj_type = bs.copy(ibs, 5); 
+    bs.copy(ibs, 5);  /* obj_type */
     uint32_t sf_index = bs.copy(ibs, 4);
-    uint32_t channel_config = ibs.get(4);
+    ibs.get(4);   /* channel_config */
     bs.put(0, 4);
     bs.copy(ibs, 3);
 

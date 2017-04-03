@@ -106,8 +106,6 @@ TakSource::TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp)
             reinterpret_cast<Ttak_str_StreamInfo_V10*>(&info);
         TRYTAK(m_module.SSD_GetStreamInfo(ssd, p));
     }
-    uint32_t type =
-        info.Audio.SampleBits == 8 ? 0 : kAudioFormatFlagIsSignedInteger;
     uint32_t bits = info.Audio.HasExtension ? info.Audio.ValidBitsPerSample
                                             : info.Audio.SampleBits;
     m_asbd = cautil::buildASBDForPCM2(info.Audio.SampleRate,

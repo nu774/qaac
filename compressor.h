@@ -8,7 +8,6 @@
 class Compressor: public FilterBase {
     const double m_threshold;
     const double m_slope;
-    const double m_knee_width;
     const double m_attack;
     const double m_release;
 

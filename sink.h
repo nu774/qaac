@@ -60,7 +60,6 @@ private:
 };
 
 class MP4Sink: public ISink, public MP4SinkBase {
-    uint32_t m_sample_id;
     AudioFilePacketTableInfo m_priming_info;
     int m_gapless_mode;
 public:

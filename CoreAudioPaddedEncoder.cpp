@@ -56,7 +56,6 @@ void CoreAudioPaddedEncoder::extrapolate0()
 {
     unsigned nchannels = getInputDescription().mChannelsPerFrame;
     unsigned bpf = getInputDescription().mBytesPerFrame;
-    unsigned shift = (getOutputDescription().mFormatID == 'aach') ? 1 : 0;
     unsigned fpp = getOutputDescription().mFramesPerPacket;
     unsigned nsamples = fpp / 2;
     unsigned padding = (getOutputDescription().mFormatID == 'aac ')

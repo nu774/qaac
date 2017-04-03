@@ -30,7 +30,6 @@ SoxLowpassFilter::SoxLowpassFilter(const SoXConvolverModule &module,
 
 size_t SoxLowpassFilter::readSamples(void *buffer, size_t nsamples)
 {
-    unsigned nchannels = m_asbd.mChannelsPerFrame;
     size_t ilen = 0, olen = 0;
     do {
         if (m_buffer.count() == 0) {

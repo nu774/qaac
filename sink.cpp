@@ -28,7 +28,7 @@ size_t parseDecSpecificConfig(const std::vector<uint8_t> &config,
         16000, 12000, 11025, 8000, 7350, 0, 0, 0
     };
     BitStream bs(const_cast<uint8_t*>(&config[0]), config.size());
-    unsigned objtype = bs.get(5);
+    bs.get(5); // objtype
     *sampling_rate_index = bs.get(4);
     if (*sampling_rate_index == 15)
         *sampling_rate = bs.get(24);
@@ -426,7 +426,7 @@ void MP4SinkBase::writeStringTag(const char *fcc, const std::string &value)
 MP4Sink::MP4Sink(const std::wstring &path,
                  const std::vector<uint8_t> &config,
                  bool temp)
-        : MP4SinkBase(path, temp), m_sample_id(0),
+        : MP4SinkBase(path, temp),
           m_gapless_mode(MODE_ITUNSMPB)
 {
     std::memset(&m_priming_info, 0, sizeof m_priming_info);

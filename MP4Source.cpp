@@ -278,7 +278,6 @@ void MP4Source::setupALAC()
 void MP4Source::setupMPEG4Audio()
 {
     uint8_t object_type = m_file.GetTrackEsdsObjectTypeId(m_track_id);
-    uint32_t codec = 0;
     /*
      * 0x40: MPEG-4
      * 0x67: MPEG-2 AAC
