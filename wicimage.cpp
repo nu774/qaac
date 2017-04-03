@@ -108,7 +108,7 @@ bool WICConvertArtwork(const void *data, size_t size, unsigned maxSize,
     HR(sink->Commit());
     HR(encoder->Commit());
 
-    LARGE_INTEGER li = { 0 };
+    LARGE_INTEGER li = {{ 0 }};
     ULARGE_INTEGER ui;
     HR(ostream->Seek(li, STREAM_SEEK_END, &ui));
     std::vector<char> vec(ui.LowPart);

@@ -29,7 +29,7 @@ void WaveOutDevice::open(const AudioStreamBasicDescription &format,
 	m_events[i] = CreateEventW(0, 1, 1, 0); /* initially set. */
     }
 
-    WAVEFORMATEXTENSIBLE wfex = { 0 };
+    WAVEFORMATEXTENSIBLE wfex = {{ 0 }};
     WAVEFORMATEX &wfx = wfex.Format;
     wfx.cbSize = sizeof wfx;
     if (format.mChannelsPerFrame > 2 || format.mBitsPerChannel > 16 ||

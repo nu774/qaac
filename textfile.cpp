@@ -29,7 +29,7 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     if (FAILED(hr)) win32::throw_error(path, hr);
     std::shared_ptr<IStream> streamPtr(stream, F::release);
 
-    LARGE_INTEGER li = { 0 };
+    LARGE_INTEGER li = {{ 0 }};
     ULARGE_INTEGER ui;
     HR(stream->Seek(li, STREAM_SEEK_END, &ui));
     if (!ui.QuadPart)
