@@ -10,11 +10,10 @@
 #endif
 #include "strutil.h"
 
-template <typename T>
 class AutoCast {
-    T *m_pointer;
+    FARPROC m_pointer;
 public:
-    AutoCast(T *p): m_pointer(p) {}
+    AutoCast(FARPROC p): m_pointer(p) {}
     template <typename U>
     operator U*() { return reinterpret_cast<U*>(m_pointer); }
 };
@@ -39,9 +38,9 @@ public:
     }
     bool loaded() const { return m_module.get() != 0; }
     void reset() { m_module.reset(); }
-    AutoCast<void> fetch(const char *name)
+    AutoCast fetch(const char *name)
     {
-        return AutoCast<void>(GetProcAddress(m_module.get(), name));
+        return AutoCast(GetProcAddress(m_module.get(), name));
     }
 };
 #else

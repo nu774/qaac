@@ -1216,8 +1216,7 @@ static
 void setup_aach_codec(HMODULE hDll)
 {
     CFPlugInFactoryFunction aachFactory =
-        AutoCast<void>(GetProcAddress(hDll,
-                "ACMP4AACHighEfficiencyEncoderFactory"));
+        AutoCast(GetProcAddress(hDll, "ACMP4AACHighEfficiencyEncoderFactory"));
     if (aachFactory) {
         AudioComponentDescription desc = { 'aenc', 'aach', 0 };
         AudioComponentRegister(&desc,
