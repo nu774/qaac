@@ -15,8 +15,8 @@ public:
         const AudioStreamBasicDescription &asbd = source->getSampleFormat();
         unsigned bits = 32;
         if (asbd.mBitsPerChannel > 32
-            || (asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
-               asbd.mBitsPerChannel > 24)
+            || ((asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
+                asbd.mBitsPerChannel > 24))
             bits = 64;
 
         m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,

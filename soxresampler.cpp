@@ -9,8 +9,8 @@ SoxrResampler::SoxrResampler(const SOXRModule &module,
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     unsigned bits = 32;
     if (asbd.mBitsPerChannel > 32
-        || (asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
-           asbd.mBitsPerChannel > 24)
+        || ((asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
+            asbd.mBitsPerChannel > 24))
         bits = 64;
     m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
                                      bits, kAudioFormatFlagIsFloat);

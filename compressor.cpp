@@ -33,8 +33,8 @@ Compressor::Compressor(const std::shared_ptr<ISource> &src,
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     unsigned bits = 32;
     if (asbd.mBitsPerChannel > 32
-        || (asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
-           asbd.mBitsPerChannel > 24)
+        || ((asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
+            asbd.mBitsPerChannel > 24))
         bits = 64;
     m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
                                      bits, kAudioFormatFlagIsFloat);
