@@ -69,7 +69,7 @@ namespace win32 {
         HANDLE hMap = CreateFileMappingW(hFile, 0, PAGE_READONLY, 0, 0, 0);
         DWORD err = GetLastError();
         CloseHandle(hFile);
-        if (hMap <= 0) throw_error("CreateFileMapping", err);
+        if (!hMap) throw_error("CreateFileMapping", err);
         char *view =
             reinterpret_cast<char*>( MapViewOfFile(hMap, FILE_MAP_READ,
                                                    0, 0, 0));
