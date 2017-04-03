@@ -100,7 +100,7 @@ void CueTrack::getTags(std::map<std::string, std::string> *tags) const
     std::map<std::string, std::string> result;
     m_cuesheet->getTags(&result);
     std::for_each(m_meta.begin(), m_meta.end(),
-                  [&](const decltype(*m_meta.begin()) &tag) {
+                  [&](decltype(*m_meta.begin()) &tag) {
                       auto key = strutil::w2us(tag.first);
                       if (key == "PERFORMER")
                           key = "artist";
@@ -239,7 +239,7 @@ void CueSheet::getTags(std::map<std::string, std::string> *tags) const
 {
     std::map<std::string, std::string> result;
     std::for_each(m_meta.begin(), m_meta.end(),
-                  [&](const decltype(*m_meta.begin()) &tag) {
+                  [&](decltype(*m_meta.begin()) &tag) {
         std::string key = strutil::w2us(tag.first);
         std::string val = strutil::w2us(tag.second);
 

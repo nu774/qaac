@@ -52,7 +52,7 @@ void CompositeSource::addSource(const std::shared_ptr<ISeekableSource> &src)
     auto tags = parser->getTags();
     bool is_empty = m_tags.empty();
     std::for_each(tags.begin(), tags.end(),
-                  [&](const decltype(*tags.begin()) &kv) {
+                  [&](decltype(*tags.begin()) &kv) {
                       if (is_empty)
                           m_tags[kv.first] = kv.second;
                       else {
