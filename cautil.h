@@ -11,7 +11,7 @@
 #include "CoreAudio/CoreAudioTypes.h"
 #include "util.h"
 
-#define FOURCC(a,b,c,d) (((a)<<24)|((b)<<16)|((c)<<8)|(d))
+#define FOURCC(a,b,c,d) ((uint8_t(a)<<24)|(uint8_t(b)<<16)|(uint8_t(c)<<8)|(d))
 
 typedef std::shared_ptr<const __CFString> CFStringPtr;
 typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;
