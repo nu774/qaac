@@ -29,7 +29,7 @@ struct Options {
     enum { kCBR, kABR, kCVBR, kTVBR };
 
     Options() :
-        method(-1), bitrate(-1.0), quality(-1),
+        method(-1), quality(-1),
 
         rate(-1), verbose(1), lowpass(0), native_resampler_quality(-1),
         chanmask(-1), num_priming(2112),
@@ -52,7 +52,7 @@ struct Options {
         filename_from_tag(false), sort_args(false),
         no_smart_padding(false), limiter(false), copy_artwork(false),
 
-        gain(0.0),
+        bitrate(-1.0), gain(0.0),
 
         output_format(0)
     {}
@@ -105,7 +105,8 @@ struct Options {
     uint32_t bits_per_sample, raw_channels, raw_sample_rate,
              artwork_size, native_resampler_complexity, textcp,
              gapless_mode;
-    wchar_t *ofilename, *outdir, *raw_format, *fname_format, *chapter_file,
+    const wchar_t
+            *ofilename, *outdir, *raw_format, *fname_format, *chapter_file,
             *logfilename, *remix_preset, *remix_file, *tmpdir,
             *start, *end, *delay;
     bool is_raw, is_adts, is_caf, save_stat, nice, native_chanmapper,

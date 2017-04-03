@@ -29,8 +29,8 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
     : m_position(0),
       m_position_raw(0),
       m_current_packet(0),
-      m_scale_shift(0),
-      m_fp(fp)
+      m_fp(fp),
+      m_scale_shift(0)
 {
     try {
         int fd = fileno(m_fp.get());

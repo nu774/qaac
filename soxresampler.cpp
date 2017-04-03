@@ -4,7 +4,7 @@
 SoxrResampler::SoxrResampler(const SOXRModule &module,
                              const std::shared_ptr<ISource> &src,
                              unsigned rate)
-    : FilterBase(src), m_module(module), m_position(0)
+    : FilterBase(src), m_position(0), m_module(module)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     unsigned bits = 32;

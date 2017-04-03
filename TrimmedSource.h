@@ -11,13 +11,13 @@ class TrimmedSource: public ISeekableSource, public ITagParser {
     std::map<std::string, std::string> m_emptyTags;
 public:
     TrimmedSource(const std::shared_ptr<ISeekableSource> &src)
-        : m_src(src), m_position(0)
+        : m_position(0), m_src(src)
     {
         setRange(0, m_src->length());
     }
     TrimmedSource(const std::shared_ptr<ISeekableSource> &src,
                  uint64_t start, uint64_t duration)
-        : m_src(src), m_position(0)
+        : m_position(0), m_src(src)
     {
         setRange(start, duration);
     }

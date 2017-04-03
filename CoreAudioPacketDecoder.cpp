@@ -4,8 +4,7 @@
 CoreAudioPacketDecoder::
 CoreAudioPacketDecoder(IPacketFeeder *feeder,
                        const AudioStreamBasicDescription & asbd)
-    : m_feeder(feeder),
-      m_iasbd(asbd)
+    : m_iasbd(asbd), m_feeder(feeder)
 {
     bool is_float = false;
     int valid_bits;

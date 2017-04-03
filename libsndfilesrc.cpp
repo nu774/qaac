@@ -93,7 +93,7 @@ struct SFVirtualIOImpl: public SF_VIRTUAL_IO
 
 LibSndfileSource::LibSndfileSource(
         const LibSndfileModule &module, const std::shared_ptr<FILE> &fp)
-    : m_module(module), m_fp(fp)
+    : m_fp(fp), m_module(module)
 {
     static SFVirtualIOImpl vio;
     SF_INFO info = { 0 };

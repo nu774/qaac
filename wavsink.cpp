@@ -24,8 +24,8 @@ WaveSink::WaveSink(FILE *fp,
                    uint64_t duration,
                    const AudioStreamBasicDescription &asbd,
                    uint32_t chanmask)
-        : m_file(fp), m_bytes_written(0), m_closed(false), m_fact(false),
-          m_seekable(false), m_chanmask(chanmask), m_asbd(asbd)
+        : m_file(fp), m_closed(false), m_seekable(false), m_fact(false),
+          m_chanmask(chanmask), m_bytes_written(0), m_asbd(asbd)
 {
     m_seekable = win32::is_seekable(fileno(fp));
     std::string header = buildHeader();

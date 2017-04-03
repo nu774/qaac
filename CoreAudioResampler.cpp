@@ -7,8 +7,8 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
     : FilterBase(src),
       m_quality(quality),
       m_complexity(complexity),
-      m_rate(rate),
-      m_position(0)
+      m_position(0),
+      m_rate(rate)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
