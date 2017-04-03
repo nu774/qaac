@@ -38,7 +38,6 @@ void MP4FreeAtom::Read()
 
 void MP4FreeAtom::Write()
 {
-    bool use64 = (GetSize() > (0xFFFFFFFF - 8));
     BeginWrite();
 #if 1
     for (uint64_t ix = 0; ix < GetSize(); ix++) {
