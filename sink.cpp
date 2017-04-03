@@ -67,6 +67,7 @@ namespace t {
         case FILEMODE_READ: m = L"rb"; break;
         case FILEMODE_MODIFY: m = L"rb+"; break;
         case FILEMODE_CREATE: m = L"wb"; break;
+        case FILEMODE_UNDEFINED: break;
         }
         return win32::wfopenx(strutil::us2w(name).c_str(), m);
     }
