@@ -148,7 +148,7 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
                               : static_cast<MP4FileProvider*>(&cprovider),
                          1, // add_ftypes
                          0, // add_iods
-                         "M4A ", // majorBrand
+                         const_cast<char*>("M4A "), // majorBrand
                          0, // minorVersion
                          const_cast<char**>(compatibleBrands),
                          util::sizeof_array(compatibleBrands));

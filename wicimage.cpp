@@ -61,7 +61,7 @@ static
 void SetJpegEncodingQuality(IPropertyBag2 *props, float quality)
 {
     PROPBAG2 option = { 0 };
-    option.pstrName = L"ImageQuality";
+    option.pstrName = const_cast<LPOLESTR>(L"ImageQuality");
     VARIANT value;
     VariantInit(&value);
     value.vt = VT_R4;
