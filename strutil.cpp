@@ -8,7 +8,7 @@ namespace strutil {
 
         if (!strp || !(tok = *strp))
             return 0;
-        if (s = std::strpbrk(tok, sep)) {
+        if ((s = std::strpbrk(tok, sep))) {
             *s = 0;
             *strp = s + 1;
         } else
@@ -21,7 +21,7 @@ namespace strutil {
 
         if (!strp || !(tok = *strp))
             return 0;
-        if (s = std::wcspbrk(tok, sep)) {
+        if ((s = std::wcspbrk(tok, sep))) {
             *s = 0;
             *strp = s + 1;
         } else

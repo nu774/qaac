@@ -40,7 +40,7 @@ namespace playlist {
         std::vector<std::wstring> comp;
         strutil::Tokenizer<wchar_t> tokens(res, L"/");
         wchar_t *tok;
-        while (tok = tokens.next()) {
+        while ((tok = tokens.next())) {
             if (wcslen(tok) > 250)
                 tok[250] = 0;
             comp.push_back(tok);

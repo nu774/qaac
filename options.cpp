@@ -443,7 +443,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             if (wide::optarg) {
                 strutil::Tokenizer<wchar_t> tokens(wide::optarg, L",");
                 wchar_t *tok;
-                while (tok = tokens.next()) {
+                while ((tok = tokens.next())) {
                     int n;
                     if (std::swscanf(tok, L"%u", &n) == 1)
                         this->native_resampler_quality = n;

@@ -34,7 +34,7 @@ namespace chapters {
         double s = 0.0;
         strutil::Tokenizer<wchar_t> tokens(str, L"\n");
         wchar_t *tok;
-        while (tok = tokens.next()) {
+        while ((tok = tokens.next())) {
             if (*tok && tok[0] == L'#')
                 continue;
             if (std::swscanf(tok, tfmt, &h, &m, &s) == 3) {
