@@ -93,9 +93,9 @@ struct AudioChannelLayout
 };
 typedef struct AudioChannelLayout AudioChannelLayout;
 
+#define kAudioChannelLabel_Unknown 0xFFFFFFFF,   // unknown or unspecified other use
 enum
 {
-    kAudioChannelLabel_Unknown                  = 0xFFFFFFFF,   // unknown or unspecified other use
     kAudioChannelLabel_Unused                   = 0,            // channel is present, but has no intended use or destination
     kAudioChannelLabel_UseCoordinates           = 100,          // channel is described by the mCoordinates fields.
 
@@ -180,6 +180,7 @@ enum
 
 #define AudioChannelLayoutTag_GetNumberOfChannels(layoutTag) ((UInt32)((layoutTag) & 0x0000FFFF))
 
+#define kAudioChannelLayoutTag_Unknown 0xFFFF0000
 enum
 {
     kAudioChannelLayoutTag_UseChannelDescriptions   = (0L<<16) | 0,     // use the array of AudioChannelDescriptions to define the mapping.
@@ -304,7 +305,6 @@ enum
     kAudioChannelLayoutTag_AC3_3_1_1                = (154L<<16) | 5,                       // L C R Cs LFE
 
     kAudioChannelLayoutTag_DiscreteInOrder          = (147L<<16) | 0,                       // needs to be ORed with the actual number of channels  
-    kAudioChannelLayoutTag_Unknown                  = 0xFFFF0000                            // needs to be ORed with the actual number of channels  
 };
 
 enum
