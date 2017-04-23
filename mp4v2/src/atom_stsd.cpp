@@ -57,6 +57,7 @@ MP4StsdAtom::MP4StsdAtom(MP4File &file)
     ExpectChildAtom("alac", Optional, Many);
     ExpectChildAtom("text", Optional, Many);
     ExpectChildAtom("ac-3", Optional, Many);
+    ExpectChildAtom("fLaC", Optional, Many);
 }
 
 void MP4StsdAtom::Read()

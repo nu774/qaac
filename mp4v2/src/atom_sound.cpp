@@ -54,6 +54,8 @@ MP4SoundAtom::MP4SoundAtom(MP4File &file, const char *atomid)
     } else if (ATOMID(atomid) == ATOMID("alac")) {
         ExpectChildAtom("alac", Optional, Optional);
         //AddProperty( new MP4BytesProperty(*this, "alacInfo", 36));
+    } else if (ATOMID(atomid) == ATOMID("fLaC")) {
+        ExpectChildAtom("dfLa", Optional, Optional);
     }
 }
 

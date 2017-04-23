@@ -869,6 +869,8 @@ MP4Atom::factory( MP4File &file, MP4Atom* parent, const char* type )
                 return new MP4FtypAtom(file);
             if( ATOMID(type) == ATOMID("ftab") )
                 return new MP4FtabAtom(file);
+            if( ATOMID(type) == ATOMID("fLaC") )
+                return new MP4SoundAtom(file, type);
             break;
 
         case 'g':
