@@ -30,7 +30,7 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
       m_position_raw(0),
       m_current_packet(0),
       m_fp(fp),
-      m_scale_shift(0)
+      m_time_ratio(1.0)
 {
     try {
         int fd = fileno(m_fp.get());
@@ -100,18 +100,18 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
         if (!m_edits.count())
             m_edits.addEntry(0, m_file.GetTrackDuration(m_track_id));
 
-        if (m_iasbd.mSampleRate == m_file.GetTrackTimeScale(m_track_id) * 2)
-            m_scale_shift = 1;
-
-        if (m_scale_shift) m_edits.scaleShift(m_scale_shift);
-
+        uint32_t timescale = m_file.GetTrackTimeScale(m_track_id);
+        if (m_oasbd.mSampleRate != timescale) {
+            m_time_ratio = m_oasbd.mSampleRate / timescale;
+            m_edits.scaleShift(m_time_ratio);
+        }
         if (m_iasbd.mFormatID == 'aach' || m_iasbd.mFormatID == 'aacp') {
             /* 
              * When upsampled scale is used in HE-AAC/HE-AACv2 MP4.
              * we assume it is from Nero or FhG. We have to subtract
              * SBR decoder delay counted in ther number of priming samples.
              */
-            if (!m_scale_shift)
+            if (m_time_ratio == 1.0)
                 m_edits.shiftMediaOffset(-481 * 2);
         }
     } catch (mp4v2::impl::Exception *e) {
@@ -121,7 +121,6 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
 
 size_t MP4Source::readSamples(void *buffer, size_t nsamples)
 {
-    unsigned fpp = m_iasbd.mFramesPerPacket;
     int64_t off;
     unsigned edit = m_edits.editForPosition(m_position, &off);
 
@@ -129,10 +128,14 @@ size_t MP4Source::readSamples(void *buffer, size_t nsamples)
         if (m_position > 0 && off == 0)
             seekTo(m_position);
 
+        if (m_current_packet >= m_file.GetTrackNumberOfSamples(m_track_id))
+            return 0;
         for (;;) {
-            m_decode_buffer.reserve(fpp);
-            ssize_t nframes =
-                m_decoder->decode(m_decode_buffer.write_ptr(), fpp);
+            MP4Duration delta =
+                m_file.GetSampleDuration(m_track_id, m_current_packet + 1);
+            ssize_t nframes = static_cast<ssize_t>(delta * m_time_ratio + .5);
+            m_decode_buffer.reserve(nframes);
+            nframes = m_decoder->decode(m_decode_buffer.write_ptr(), nframes);
             m_position_raw += nframes;
             int64_t trim = std::max(m_position_raw
                                     - m_edits.mediaOffset(edit)
@@ -168,24 +171,33 @@ void MP4Source::seekTo(int64_t count)
 {
     if (count >= length()) {
         m_position = length();
-        m_current_packet = m_file.GetTrackNumberOfSamples(m_track_id) + 1;
+        m_current_packet = m_file.GetTrackNumberOfSamples(m_track_id);
         return;
     }
     m_decode_buffer.reset();
     m_decoder->reset();
     m_position = count;
     int64_t  mediapos  = m_edits.mediaOffsetForPosition(count);
-    uint32_t fpp       = m_iasbd.mFramesPerPacket;
-    int64_t  ipacket   = mediapos / fpp;
+    MP4Timestamp time  = static_cast<MP4Timestamp>(mediapos / m_time_ratio +.5);
+    int64_t  ipacket   = m_file.GetSampleIdFromTime(m_track_id, time) - 1;
+    time               = m_file.GetSampleTime(m_track_id, ipacket + 1);
+    m_position_raw     = static_cast<int64_t>(time * m_time_ratio + .5);
     uint32_t preroll   = getMaxFrameDependency();
-    m_position_raw     = ipacket * fpp;
     m_current_packet   = std::max(0LL, ipacket - preroll);
     preroll            = ipacket - m_current_packet;
-    m_start_skip = mediapos - m_position_raw + getDecoderDelay();
+    m_start_skip       = mediapos - m_position_raw + getDecoderDelay();
     
-    std::vector<uint8_t> v(m_iasbd.mFramesPerPacket * m_oasbd.mBytesPerFrame);
-    for (uint32_t i = 0; i < preroll; ++i)
-        m_decoder->decode(v.data(), m_iasbd.mFramesPerPacket);
+    MP4Duration maxdelta = 0;
+    for (uint32_t i = 0; i < preroll; ++i) {
+        MP4Duration delta =
+            m_file.GetSampleDuration(m_track_id, m_current_packet + i + 1);
+        delta = static_cast<MP4Duration>(delta * m_time_ratio + .5);
+        if (delta > maxdelta) maxdelta = delta;
+    }
+    std::vector<uint8_t> v(maxdelta * m_oasbd.mBytesPerFrame);
+    for (uint32_t i = 0; i < preroll; ++i) {
+        m_decoder->decode(v.data(), maxdelta);
+    }
 }
 
 bool MP4Source::feed(std::vector<uint8_t> *buffer)
