@@ -95,6 +95,7 @@ public:
     bool feed(std::vector<uint8_t> *buffer);
 private:
     void setupALAC();
+    void setupFLAC();
     void setupMPEG4Audio();
     unsigned getMaxFrameDependency();
     unsigned getDecoderDelay();
