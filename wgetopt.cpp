@@ -70,7 +70,7 @@ static wchar_t *rcsid = "$OpenBSD: getopt_long.c,v 1.16 2004/02/04 18:17:25 mill
 #include <wchar.h>
 #include "wgetopt.h"
 
-namespace wide {
+namespace getopt {
 
 #define GNU_COMPATIBLE      /* Be more compatible, configure's use us! */
 

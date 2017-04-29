@@ -4,7 +4,7 @@
 #include "wgetopt.h"
 #include "metadata.h"
 
-static wide::option long_options[] = {
+static getopt::option long_options[] = {
 #ifdef QAAC
     { L"formats", no_argument, 0, 'fmts' },
     { L"abr", required_argument, 0, 'a' },
@@ -367,7 +367,7 @@ static const wchar_t * const short_opts = L"hDo:d:b:r:insRSNA";
 bool Options::parse(int &argc, wchar_t **&argv)
 {
     int ch, pos;
-    while ((ch = wide::getopt_long(argc, argv,
+    while ((ch = getopt::getopt_long(argc, argv,
                                    short_opts, long_options, 0)) != EOF)
     {
         if (ch == 'h')
@@ -377,16 +377,16 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'fmts')
             this->print_available_formats = true;
         else if (ch == 'o')
-            this->ofilename = wide::optarg;
+            this->ofilename = getopt::optarg;
         else if (ch == 'd')
-            this->outdir = wide::optarg;
+            this->outdir = getopt::optarg;
         else if (ch < 0xff && (pos = strutil::strindex("cavV", ch)) >= 0) {
             if ((this->output_format && !isAAC()) || this->method != -1) {
                 complain(L"Encoding mode options are exclusive.\n");
                 return false;
             }
             this->method = pos;
-            if (std::swscanf(wide::optarg, L"%lf", &this->bitrate) != 1) {
+            if (std::swscanf(getopt::optarg, L"%lf", &this->bitrate) != 1) {
                 complain(L"AAC Bitrate/Quality must be an integer.\n");
                 return false;
             }
@@ -429,19 +429,19 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'caff')
             this->is_caf = true;
         else if (ch == 'q') {
-            if (std::swscanf(wide::optarg, L"%u", &this->quality) != 1) {
+            if (std::swscanf(getopt::optarg, L"%u", &this->quality) != 1) {
                 complain(L"-q requires an integer.\n");
                 return false;
             }
         }
         else if (ch == 'log ')
-            this->logfilename = wide::optarg;
+            this->logfilename = getopt::optarg;
         else if (ch == 'nspd')
             this->no_smart_padding = true;
         else if (ch == 'nsrc') {
             this->native_resampler = true;
-            if (wide::optarg) {
-                strutil::Tokenizer<wchar_t> tokens(wide::optarg, L",");
+            if (getopt::optarg) {
+                strutil::Tokenizer<wchar_t> tokens(getopt::optarg, L",");
                 wchar_t *tok;
                 while ((tok = tokens.next())) {
                     int n;
@@ -480,13 +480,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'cat ')
             this->concat = true;
         else if (ch == 'nfmt')
-            this->fname_format = wide::optarg;
+            this->fname_format = getopt::optarg;
         else if (ch == 'tmpd')
-            this->tmpdir = wide::optarg;
+            this->tmpdir = getopt::optarg;
         else if (ch == 'nmxn')
             this->no_matrix_normalize = true;
         else if (ch == 'cmap') {
-            strutil::Tokenizer<wchar_t> tokens(wide::optarg, L",");
+            strutil::Tokenizer<wchar_t> tokens(getopt::optarg, L",");
             wchar_t *tok;
             while ((tok = tokens.next()) != 0) {
                 unsigned n;
@@ -510,24 +510,24 @@ bool Options::parse(int &argc, wchar_t **&argv)
             }
         }
         else if (ch == 'r') {
-            if (!std::wcscmp(wide::optarg, L"keep"))
+            if (!std::wcscmp(getopt::optarg, L"keep"))
                 this->rate = -1;
-            else if (!std::wcscmp(wide::optarg, L"auto"))
+            else if (!std::wcscmp(getopt::optarg, L"auto"))
                 this->rate = 0;
-            else if (std::swscanf(wide::optarg, L"%u", &this->rate) != 1) {
+            else if (std::swscanf(getopt::optarg, L"%u", &this->rate) != 1) {
                 complain(L"Invalid arg for --rate.\n");
                 return false;
             }
         }
         else if (ch == 'lpf ') {
-            if (std::swscanf(wide::optarg, L"%u", &this->lowpass) != 1) {
+            if (std::swscanf(getopt::optarg, L"%u", &this->lowpass) != 1) {
                 complain(L"--lowpass requires an integer.\n");
                 return false;
             }
         }
         else if (ch == 'b') {
             uint32_t n;
-            if (std::swscanf(wide::optarg, L"%u", &n) != 1) {
+            if (std::swscanf(getopt::optarg, L"%u", &n) != 1) {
                 complain(L"-b requires an integer.\n");
                 return false;
             }
@@ -541,13 +541,13 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->no_dither = true;
         }
         else if (ch == 'mask') {
-            if (std::swscanf(wide::optarg, L"%i", &this->chanmask) != 1) {
+            if (std::swscanf(getopt::optarg, L"%i", &this->chanmask) != 1) {
                 complain(L"--chanmask requires an integer.\n");
                 return false;
             }
         }
         else if (ch == 'Rchn') {
-            if (std::swscanf(wide::optarg, L"%u", &this->raw_channels) != 1) {
+            if (std::swscanf(getopt::optarg, L"%u", &this->raw_channels) != 1) {
                 complain(L"--raw-channels requires an integer.\n");
                 return false;
             }
@@ -561,7 +561,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             }
         }
         else if (ch == 'Rrat') {
-            if (std::swscanf(wide::optarg, L"%u",
+            if (std::swscanf(getopt::optarg, L"%u",
                              &this->raw_sample_rate) != 1) {
                 complain(L"--raw-rate requires an integer.\n");
                 return false;
@@ -572,18 +572,18 @@ bool Options::parse(int &argc, wchar_t **&argv)
             }
         }
         else if (ch == 'Rfmt')
-            this->raw_format = wide::optarg;
+            this->raw_format = getopt::optarg;
         else if (ch == 'afst')
             this->alac_fast = true;
         else if (ch == 'gain') {
-            if (std::swscanf(wide::optarg, L"%lf", &this->gain) != 1) {
+            if (std::swscanf(getopt::optarg, L"%lf", &this->gain) != 1) {
                 complain(L"--gain requires an floating point number.\n");
                 return false;
             }
         }
         else if (ch == 'drc ') {
             double threshold, ratio, knee, attack, release;
-            if (std::swscanf(wide::optarg,
+            if (std::swscanf(getopt::optarg,
                              L"%lf:%lf:%lf:%lf:%lf",
                              &threshold,
                              &ratio,
@@ -613,7 +613,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 complain(L"DRC release time cannot be negative.\n");
                 return false;
             }
-            const wchar_t *p = wide::optarg;
+            const wchar_t *p = getopt::optarg;
             for (int i = 0; i < 5; ++i) {
                 p = wcschr(p, L':');
                 if (p) ++p;
@@ -624,15 +624,15 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'limt')
             this->limiter = true;
         else if (ch == 'from')
-            this->start = wide::optarg;
+            this->start = getopt::optarg;
         else if (ch == 'end ')
-            this->end = wide::optarg;
+            this->end = getopt::optarg;
         else if (ch == 'dlay')
-            this->delay = wide::optarg;
+            this->delay = getopt::optarg;
         else if (ch == 'ndly')
             this->num_priming = 0;
         else if (ch == 'encd') {
-            if (std::swscanf(wide::optarg, L"%u", &this->num_priming) != 1) {
+            if (std::swscanf(getopt::optarg, L"%u", &this->num_priming) != 1) {
                 complain(L"Invalid arg for --num-priming.\n");
                 return false;
             }
@@ -644,52 +644,52 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'soar')
             this->sort_args = true;
         else if (ch == 'gapm') {
-            if (std::swscanf(wide::optarg, L"%u", &this->gapless_mode) != 1) {
+            if (std::swscanf(getopt::optarg, L"%u", &this->gapless_mode) != 1) {
                 complain(L"Invalid arg for --gapless-mode.\n");
                 return false;
             }
         }
         else if (ch == 'txcp') {
-            if (std::swscanf(wide::optarg, L"%u", &this->textcp) != 1) {
+            if (std::swscanf(getopt::optarg, L"%u", &this->textcp) != 1) {
                 complain(L"--text-codepage requires code page number.\n");
                 return false;
             }
         }
         else if (ch == 'ctrk') {
-            if (!strutil::parse_numeric_ranges(wide::optarg,
+            if (!strutil::parse_numeric_ranges(getopt::optarg,
                                                &this->cue_tracks)) {
                 complain(L"Invalid arg for --cue-tracks.\n");
                 return false;
             }
         }
         else if (ch == 'atsz') {
-            if (std::swscanf(wide::optarg, L"%u", &this->artwork_size) != 1) {
+            if (std::swscanf(getopt::optarg, L"%u", &this->artwork_size) != 1) {
                 complain(L"--artwork-size requires an integer.\n");
                 return false;
             }
         }
         else if (ch == Tag::kArtwork)
-            this->artwork_files.push_back(wide::optarg);
+            this->artwork_files.push_back(getopt::optarg);
         else if (ch == 'cpat')
             this->copy_artwork = true;
         else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end) {
             if (ch == Tag::kLyrics)
-                this->ftagopts[ch] = wide::optarg;
+                this->ftagopts[ch] = getopt::optarg;
             else if (ch != Tag::kCompilation)
-                this->tagopts[ch] = strutil::w2us(wide::optarg);
-            else if (!wide::optarg)
+                this->tagopts[ch] = strutil::w2us(getopt::optarg);
+            else if (!getopt::optarg)
                 this->tagopts[ch] = "1";
             else {
                 int n;
-                if (std::swscanf(wide::optarg, L"%d", &n) != 1) {
+                if (std::swscanf(getopt::optarg, L"%d", &n) != 1) {
                     complain(L"Invalid --compilation option arg.\n");
                     return false;
                 }
-                this->tagopts[ch] = strutil::w2us(wide::optarg);
+                this->tagopts[ch] = strutil::w2us(getopt::optarg);
             }
         }
         else if (ch == 'tag ' || ch == 'tagf') {
-            strutil::Tokenizer<wchar_t> tokens(wide::optarg, L":");
+            strutil::Tokenizer<wchar_t> tokens(getopt::optarg, L":");
             wchar_t *key = tokens.next();
             wchar_t *value = tokens.rest();
             size_t keylen = std::wcslen(key);
@@ -714,7 +714,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 this->ftagopts[fcc] = value;
         }
         else if (ch == 'ltag') {
-            strutil::Tokenizer<wchar_t> tokens(wide::optarg, L":");
+            strutil::Tokenizer<wchar_t> tokens(getopt::optarg, L":");
             wchar_t *key = tokens.next();
             wchar_t *value = tokens.rest();
             if (!value) {
@@ -724,21 +724,21 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->longtags[strutil::w2us(key)] = strutil::w2us(value);
         }
         else if (ch == 'chap')
-            this->chapter_file = wide::optarg;
+            this->chapter_file = getopt::optarg;
         else if (ch == 'mixp')
-            this->remix_preset = wide::optarg;
+            this->remix_preset = getopt::optarg;
         else if (ch == 'mixm')
-            this->remix_file = wide::optarg;
+            this->remix_file = getopt::optarg;
         else if (ch == 'fftg')
             this->filename_from_tag = true;
         else
             return false;
     }
-    argc -= wide::optind;
-    argv += wide::optind;
+    argc -= getopt::optind;
+    argv += getopt::optind;
 
     if (!argc && !this->check_only && !this->print_available_formats) {
-        if (wide::optind == 1)
+        if (getopt::optind == 1)
             return usage(), false;
         else {
             complain(L"Input file name is required.\n");
