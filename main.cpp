@@ -1861,7 +1861,7 @@ int wmain1(int argc, wchar_t **argv)
             }
         }
         if (opts.isWaveOut())
-            WaveOutDevice::instance()->close();
+            WaveOutDevice::instance().close();
     } catch (const std::exception &e) {
         if (opts.print_available_formats)
             logger->enable_stderr();

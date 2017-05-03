@@ -19,10 +19,10 @@ class WaveOutDevice {
     AudioStreamBasicDescription m_asbd;
     uint32_t m_chanmask;
 public:
-    static WaveOutDevice *instance()
+    static WaveOutDevice &instance()
     {
-        static WaveOutDevice *x = new WaveOutDevice();
-        return x;
+        static WaveOutDevice self;
+        return self;
     }
     void open(const AudioStreamBasicDescription &asbd, uint32_t chanmask);
     void writeSamples(const void *data, size_t length, size_t nsamples);
@@ -34,6 +34,9 @@ private:
         memset(m_events, 0, sizeof m_events);
         memset(&m_asbd, 0, sizeof m_asbd);
     }
+    WaveOutDevice(const WaveOutDevice&);
+    WaveOutDevice& operator=(const WaveOutDevice&);
+
     static void CALLBACK
         staticWaveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance,
                           DWORD_PTR dwParam1, DWORD_PTR dwParam2)
@@ -45,14 +48,16 @@ private:
 };
 
 class WaveOutSink: public ISink {
+    WaveOutDevice& m_device;
 public:
     WaveOutSink(const AudioStreamBasicDescription &format, uint32_t chanmask)
+        : m_device(WaveOutDevice::instance())
     {
-        WaveOutDevice::instance()->open(format, chanmask);
+        m_device.open(format, chanmask);
     }
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
-        WaveOutDevice::instance()->writeSamples(data, length, nsamples);
+        m_device.writeSamples(data, length, nsamples);
     }
 };
 
