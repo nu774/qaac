@@ -429,8 +429,7 @@ void matrix_from_preset(const Options &opts,
 
 static void
 mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
-              const Options &opts, uint32_t *channel_layout,
-              bool threading)
+              const Options &opts, uint32_t *channel_layout)
 {
     uint32_t nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
     const std::vector<uint32_t> *channels = chain.back()->getChannels();
@@ -601,7 +600,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     if (opts.isAAC() || opts.isALAC())
         codec.reset(new AudioCodecX(opts.output_format));
 #endif
-    mapped_source(chain, opts, channel_layout, threading);
+    mapped_source(chain, opts, channel_layout);
 
     if (opts.isAAC() || opts.isALAC()) {
 #ifdef QAAC
