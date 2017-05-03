@@ -4,11 +4,11 @@
 #include <regex>
 #include "cuesheet.h"
 #include "metadata.h"
-#include "composite.h"
-#include "nullsource.h"
+#include "CompositeSource.h"
+#include "NullSource.h"
 #include "TrimmedSource.h"
 #include "expand.h"
-#include "inputfactory.h"
+#include "InputFactory.h"
 #include "playlist.h"
 
 static inline

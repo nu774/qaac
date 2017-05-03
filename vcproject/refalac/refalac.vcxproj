@@ -49,7 +49,7 @@
       <DisableSpecificWarnings>4018;4091;4267;4838;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;REFALAC;NO_COREAUDIO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -85,12 +85,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\alacenc.cpp" />
-    <ClCompile Include="..\..\ALACPacketDecoder.cpp" />
+    <ClCompile Include="..\..\input\ALACPacketDecoder.cpp" />
+    <ClCompile Include="..\..\input\InputFactory.cpp" />
+    <ClCompile Include="..\..\input\MP4Source.cpp" />
+    <ClCompile Include="..\..\ALACEncoderX.cpp" />
     <ClCompile Include="..\..\cautil.cpp" />
-    <ClCompile Include="..\..\inputfactory.cpp" />
     <ClCompile Include="..\..\main.cpp" />
-    <ClCompile Include="..\..\MP4Source.cpp" />
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\version.cpp" />
   </ItemGroup>

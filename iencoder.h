@@ -4,7 +4,8 @@
 #include <memory>
 #include <vector>
 #include "CoreAudioToolbox.h"
-#include "iointer.h"
+#include "ISource.h"
+#include "ISink.h"
 
 struct IEncoder {
     virtual ~IEncoder() {}

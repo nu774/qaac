@@ -4,7 +4,6 @@
 #include <vector>
 #include <map>
 #include "util.h"
-#include "iointer.h"
 #include "playlist.h"
 
 template <typename CharT>

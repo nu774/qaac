@@ -58,7 +58,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4018;4091;4244;4267;4838;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;QAAC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -108,17 +108,17 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\afsource.cpp" />
+    <ClCompile Include="..\..\input\CoreAudioPacketDecoder.cpp" />
+    <ClCompile Include="..\..\input\ExtAFSource.cpp" />
+    <ClCompile Include="..\..\input\MP4Source.cpp" />
+    <ClCompile Include="..\..\input\MPAHeader.cpp" />
+    <ClCompile Include="..\..\input\InputFactory.cpp" />
+    <ClCompile Include="..\..\filters\CoreAudioResampler.cpp" />
     <ClCompile Include="..\..\cautil.cpp" />
     <ClCompile Include="..\..\CoreAudioEncoder.cpp" />
-    <ClCompile Include="..\..\CoreAudioPacketDecoder.cpp" />
     <ClCompile Include="..\..\CoreAudioPaddedEncoder.cpp" />
-    <ClCompile Include="..\..\CoreAudioResampler.cpp" />
-    <ClCompile Include="..\..\inputfactory.cpp" />
     <ClCompile Include="..\..\lpc.c" />
     <ClCompile Include="..\..\main.cpp" />
-    <ClCompile Include="..\..\MP4Source.cpp" />
-    <ClCompile Include="..\..\MPAHeader.cpp" />
     <ClCompile Include="..\..\options.cpp" />
     <ClCompile Include="..\..\version.cpp" />
   </ItemGroup>

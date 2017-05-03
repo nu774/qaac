@@ -1,7 +1,7 @@
 #ifndef RANGEDSOURCE_H
 #define RANGEDSOURCE_H
 
-#include "iointer.h"
+#include "ISource.h"
 
 class TrimmedSource: public ISeekableSource, public ITagParser {
     uint64_t m_start;

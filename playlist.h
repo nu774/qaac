@@ -6,7 +6,7 @@
 #include <map>
 #include <memory>
 #include <stdint.h>
-#include "iointer.h"
+#include "ISource.h"
 
 namespace playlist {
     struct Track {

@@ -2,7 +2,6 @@
 #define METADATA_H
 
 #include <iterator>
-#include "iointer.h"
 #include "mp4v2wrapper.h"
 #include "cautil.h"
 #include "CoreAudio/AudioFile.h"

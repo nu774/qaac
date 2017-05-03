@@ -44,7 +44,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4018;4244;4267;4838;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalIncludeDirectories>..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -68,45 +68,46 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\avssrc.cpp" />
+    <ClCompile Include="..\..\input\AvisynthSource.cpp" />
+    <ClCompile Include="..\..\input\FLACModule.cpp" />
+    <ClCompile Include="..\..\input\FLACPacketDecoder.cpp" />
+    <ClCompile Include="..\..\input\FLACSource.cpp" />
+    <ClCompile Include="..\..\input\LibSndfileSource.cpp" />
+    <ClCompile Include="..\..\input\RawSource.cpp" />
+    <ClCompile Include="..\..\input\TakSource.cpp" />
+    <ClCompile Include="..\..\input\WaveSource.cpp" />
+    <ClCompile Include="..\..\input\WavpackSource.cpp" />
+    <ClCompile Include="..\..\filters\ChannelMapper.cpp" />
+    <ClCompile Include="..\..\filters\Compressor.cpp" />
+    <ClCompile Include="..\..\filters\Limiter.cpp" />
+    <ClCompile Include="..\..\filters\MatrixMixer.cpp" />
+    <ClCompile Include="..\..\filters\Normalizer.cpp" />
+    <ClCompile Include="..\..\filters\PipedReader.cpp" />
+    <ClCompile Include="..\..\filters\Quantizer.cpp" />
+    <ClCompile Include="..\..\filters\SoXConvolverModule.cpp" />
+    <ClCompile Include="..\..\filters\SoxLowpassFilter.cpp" />
+    <ClCompile Include="..\..\filters\SOXRModule.cpp" />
+    <ClCompile Include="..\..\filters\SoxrResampler.cpp" />
+    <ClCompile Include="..\..\output\CAFSink.cpp" />
+    <ClCompile Include="..\..\output\sink.cpp" />
+    <ClCompile Include="..\..\output\WaveOutSink.cpp" />
+    <ClCompile Include="..\..\output\WaveSink.cpp" />
     <ClCompile Include="..\..\bitstream.cpp" />
-    <ClCompile Include="..\..\cafsink.cpp" />
     <ClCompile Include="..\..\chanmap.cpp" />
     <ClCompile Include="..\..\chapters.cpp" />
-    <ClCompile Include="..\..\composite.cpp" />
-    <ClCompile Include="..\..\compressor.cpp" />
+    <ClCompile Include="..\..\CompositeSource.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
-    <ClCompile Include="..\..\flacmodule.cpp" />
-    <ClCompile Include="..\..\FlacPacketDecoder.cpp" />
-    <ClCompile Include="..\..\flacsrc.cpp" />
-    <ClCompile Include="..\..\iointer.cpp" />
-    <ClCompile Include="..\..\libsndfilesrc.cpp" />
-    <ClCompile Include="..\..\limiter.cpp" />
+    <ClCompile Include="..\..\ISource.cpp" />
     <ClCompile Include="..\..\logging.cpp" />
     <ClCompile Include="..\..\metadata.cpp" />
-    <ClCompile Include="..\..\mixer.cpp" />
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />
-    <ClCompile Include="..\..\normalize.cpp" />
-    <ClCompile Include="..\..\pipedreader.cpp" />
     <ClCompile Include="..\..\playlist.cpp" />
-    <ClCompile Include="..\..\Quantizer.cpp" />
-    <ClCompile Include="..\..\rawsource.cpp" />
-    <ClCompile Include="..\..\sink.cpp" />
-    <ClCompile Include="..\..\soxcmodule.cpp" />
-    <ClCompile Include="..\..\soxlpf.cpp" />
-    <ClCompile Include="..\..\soxresampler.cpp" />
-    <ClCompile Include="..\..\soxrmodule.cpp" />
     <ClCompile Include="..\..\strutil.cpp" />
-    <ClCompile Include="..\..\taksrc.cpp" />
     <ClCompile Include="..\..\textfile.cpp" />
     <ClCompile Include="..\..\util.cpp" />
-    <ClCompile Include="..\..\waveoutsink.cpp" />
-    <ClCompile Include="..\..\wavsink.cpp" />
-    <ClCompile Include="..\..\wavsource.cpp" />
     <ClCompile Include="..\..\wgetopt.cpp" />
     <ClCompile Include="..\..\wicimage.cpp" />
     <ClCompile Include="..\..\win32util.cpp" />
-    <ClCompile Include="..\..\wvpacksrc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\mp4v2\mp4v2.vcxproj">
