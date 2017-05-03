@@ -20,6 +20,15 @@
 #include "util.h"
 
 namespace win32 {
+    class Timer {
+        DWORD m_ticks;
+    public:
+        Timer() { m_ticks = GetTickCount(); };
+        double ellapsed() {
+            return (static_cast<double>(GetTickCount()) - m_ticks) / 1000.0;
+        }
+    };
+
     void throw_error(const std::wstring& msg, DWORD error);
 
     inline void throw_error(const std::string& msg, DWORD error)

@@ -216,6 +216,27 @@ namespace util {
         return 20 * std::log10(scale);
     }
 
+    bool parse_timespec(const wchar_t *spec, double sample_rate,
+                        int64_t *result);
+
+    inline void seconds_to_HMS(double seconds, int *h, int *m, int *s,
+                               int *millis)
+    {
+        *h = seconds / 3600;
+        seconds -= *h * 3600;
+        *m = seconds / 60;
+        seconds -= *m * 60;
+        *s = seconds;
+        *millis = (seconds - *s) * 1000;
+    }
+
+    inline std::wstring format_seconds(double seconds)
+    {
+        int h, m, s, millis;
+        seconds_to_HMS(seconds, &h, &m, &s, &millis);
+        return h ? strutil::format(L"%d:%02d:%02d.%03d", h, m, s, millis)
+                 : strutil::format(L"%d:%02d.%03d", m, s, millis);
+    }
 }
 
 #define CHECKCRT(expr) \

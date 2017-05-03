@@ -165,35 +165,6 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
     return win32::PathReplaceExtension(ofilename, tl.c_str());
 }
 
-static
-void secondsToHMS(double seconds, int *h, int *m, int *s, int *millis)
-{
-    *h = seconds / 3600;
-    seconds -= *h * 3600;
-    *m = seconds / 60;
-    seconds -= *m * 60;
-    *s = seconds;
-    *millis = (seconds - *s) * 1000;
-}
-
-static
-std::wstring formatSeconds(double seconds)
-{
-    int h, m, s, millis;
-    secondsToHMS(seconds, &h, &m, &s, &millis);
-    return h ? strutil::format(L"%d:%02d:%02d.%03d", h, m, s, millis)
-             : strutil::format(L"%d:%02d.%03d", m, s, millis);
-}
-
-class Timer {
-    DWORD m_ticks;
-public:
-    Timer() { m_ticks = GetTickCount(); };
-    double ellapsed() {
-        return (static_cast<double>(GetTickCount()) - m_ticks) / 1000.0;
-    }
-};
-
 class PeriodicDisplay {
     uint32_t m_interval;
     uint32_t m_last_tick_title;
@@ -238,7 +209,7 @@ class Progress {
     uint64_t m_total;
     uint32_t m_rate;
     std::wstring m_tstamp;
-    Timer m_timer;
+    win32::Timer m_timer;
     bool m_console_visible;
     DWORD m_stderr_type;
 public:
@@ -250,7 +221,7 @@ public:
         m_stderr_type = GetFileType(h);
         m_console_visible = IsWindowVisible(GetConsoleWindow());
         if (total != ~0ULL)
-            m_tstamp = formatSeconds(static_cast<double>(total) / rate);
+            m_tstamp = util::format_seconds(static_cast<double>(total) / rate);
     }
     void update(uint64_t current)
     {
@@ -263,13 +234,13 @@ public:
         double speed = ellapsed ? seconds/ellapsed : 0.0;
         if (m_total == ~0ULL)
             m_disp.put(strutil::format(L"\r%s (%.1fx)   ",
-                formatSeconds(seconds).c_str(), speed));
+                util::format_seconds(seconds).c_str(), speed));
         else {
             std::wstring msg =
                 strutil::format(L"\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
-                                percent, formatSeconds(seconds).c_str(),
+                                percent, util::format_seconds(seconds).c_str(),
                                 m_tstamp.c_str(), speed,
-                                formatSeconds(eta).c_str());
+                                util::format_seconds(eta).c_str());
             m_disp.put(msg);
         }
     }
@@ -279,7 +250,7 @@ public:
         if (m_verbose) fputwc('\n', stderr);
         double ellapsed = m_timer.ellapsed();
         LOG(L"%lld/%lld samples processed in %s\n",
-            current, m_total, formatSeconds(ellapsed).c_str());
+            current, m_total, util::format_seconds(ellapsed).c_str());
     }
 };
 
@@ -554,34 +525,6 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
 }
 
 static
-bool parse_timespec(const wchar_t *spec, double sample_rate, int64_t *result)
-{
-    int hh, mm, s, ff, sign = 1;
-    wchar_t a, b;
-    double ss;
-    if (!spec || !*spec)
-        return false;
-    if (std::swscanf(spec, L"%lld%c%c", result, &a, &b) == 2 && a == L's')
-        return true;
-    if (spec[0] == L'-') {
-        sign = -1;
-        ++spec;
-    }
-    if (std::swscanf(spec, L"%d:%d:%d%c%c", &mm, &s, &ff, &a, &b) == 4 &&
-        a == L'f')
-        ss = mm * 60 + s + ff / 75.0;
-    else if (std::swscanf(spec, L"%d:%d:%lf%c", &hh, &mm, &ss, &a) == 3)
-        ss = ss + ((hh * 60.0) + mm) * 60.0;
-    else if (std::swscanf(spec, L"%d:%lf%c", &mm, &ss, &a) == 2)
-        ss = ss + mm * 60.0;
-    else if (std::swscanf(spec, L"%lf%c", &ss, &a) != 1)
-        return false;
-
-    *result = sign * static_cast<int64_t>(sample_rate * ss + .5);
-    return true;
-}
-
-static
 std::shared_ptr<ISeekableSource>
 select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
 {
@@ -590,11 +533,11 @@ select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
     int64_t start = 0, end = 0, delay = 0;
     if (!opts.start && !opts.end && !opts.delay)
         return src;
-    if (opts.start && !parse_timespec(opts.start, rate, &start))
+    if (opts.start && !util::parse_timespec(opts.start, rate, &start))
         throw std::runtime_error("Invalid time spec for --start");
-    if (opts.end   && !parse_timespec(opts.end, rate, &end))
+    if (opts.end   && !util::parse_timespec(opts.end, rate, &end))
         throw std::runtime_error("Invalid time spec for --end");
-    if (opts.delay && !parse_timespec(opts.delay, rate, &delay))
+    if (opts.delay && !util::parse_timespec(opts.delay, rate, &delay))
         throw std::runtime_error("Invalid time spec for --delay");
 
     std::shared_ptr<CompositeSource> cp(new CompositeSource());
