@@ -1222,56 +1222,6 @@ void config_aac_codec(AudioConverterX &converter,
 }
 
 static
-bool insert_pce(uint32_t channel_layout, std::vector<uint8_t> *asc)
-{
-    if (channel_layout != chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear)
-        return false;
-
-    BitStream ibs(asc->data(), asc->size());
-    BitStream bs;
-    bs.copy(ibs, 5);  /* obj_type */
-    uint32_t sf_index = bs.copy(ibs, 4);
-    ibs.get(4);   /* channel_config */
-    bs.put(0, 4);
-    bs.copy(ibs, 3);
-
-    bs.put(0, 4); /* element_instance_tag */
-    bs.put(1, 2); /* profile: LC */
-    bs.put(sf_index, 4);
-    bs.put(2, 4); /* num_front_channel_elements */
-    bs.put(0, 4); /* num_side_channel_elements  */
-    bs.put(2, 4); /* num_back_channel_elements  */
-    bs.put(1, 2); /* num_lfe_channel_elements   */
-    bs.put(0, 3); /* num_assoc_data_elements    */
-    bs.put(0, 4); /* num_valid_cc_elements      */
-    bs.put(0, 3); /* mono_mixdown, stereo_mixdown, matrix_mixdown */
-
-    /* C */
-    bs.put(0, 1); /* front_element_is_cpe */
-    bs.put(0, 4); /* front_element_tag_select */
-    /* L+R */
-    bs.put(1, 1); /* front_element_is_cpe */
-    bs.put(0, 4); /* front_element_tag_select */
-    /* Ls+Rs */
-    bs.put(1, 1); /* back_element_is_cpe */
-    bs.put(1, 4); /* back_element_tag_select */
-    /* Rls+Rrs */
-    bs.put(1, 1); /* back_element_is_cpe */
-    bs.put(2, 4); /* back_element_tag_select */
-    /* LFE */
-    bs.put(0, 4); /* lfe_elementtag_select */
-    bs.byteAlign();
-
-    size_t len = bs.position() / 8;
-    std::vector<uint8_t> result(asc->size() + len);
-    std::memcpy(result.data(), bs.data(), len);
-    if (asc->size() > 2)
-        std::memcpy(&result[len], asc->data() + 2, asc->size() - 2);
-    asc->swap(result);
-    return true;
-}
-
-static
 void set_encoding_params(AudioConverterX &converter, ITagStore *store)
 {
     UInt32 mode = converter.getBitRateControlMode();
@@ -1327,11 +1277,12 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 
     std::shared_ptr<CoreAudioEncoder> encoder;
     if (opts.isAAC()) {
-        std::vector<uint8_t> asc;
-        cautil::parseMagicCookieAAC(cookie, &asc);
-        if (insert_pce(channel_layout, &asc))
+        if (channel_layout == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
+            std::vector<uint8_t> asc;
+            cautil::parseMagicCookieAAC(cookie, &asc);
+            cautil::insert71RearPCEToASC(&asc);
             cautil::replaceASCInMagicCookie(&cookie, asc);
-
+        }
         if (opts.no_smart_padding)
             encoder = std::make_shared<CoreAudioEncoder>(converter);
         else

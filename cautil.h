@@ -103,6 +103,8 @@ namespace cautil {
     void parseASC(const std::vector<uint8_t> &asc,
                   AudioStreamBasicDescription *asbd,
                   std::vector<uint32_t> *channels);
+
+    void insert71RearPCEToASC(std::vector<uint8_t> *asc);
 }
 
 #endif
