@@ -1093,36 +1093,6 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
 }
 
 static
-std::wstring get_encoder_config(AudioConverterX &converter)
-{
-    std::wstring s;
-    AudioStreamBasicDescription asbd;
-    converter.getOutputStreamDescription(&asbd);
-    UInt32 codec = asbd.mFormatID;
-    if (codec == 'aac ')
-        s = L"AAC-LC Encoder";
-    else if (codec == 'aach')
-        s = L"AAC-HE Encoder";
-    else
-        s = L"Apple Lossless Encoder";
-    if (codec != 'aac ' && codec != 'aach')
-        return s;
-    UInt32 value = converter.getBitRateControlMode();
-    const wchar_t * strategies[] = { L"CBR", L"ABR", L"CVBR", L"TVBR" };
-    s += strutil::format(L", %s", strategies[value]);
-    if (value == kAudioCodecBitRateControlMode_Variable) {
-        value = converter.getSoundQualityForVBR();
-        s += strutil::format(L" q%d", value);
-    } else {
-        value = converter.getEncodeBitRate();
-        s += strutil::format(L" %gkbps", value / 1000.0);
-    }
-    value = converter.getCodecQuality();
-    s += strutil::format(L", Quality %d", value);
-    return s;
-}
-
-static
 void show_available_codec_setttings(UInt32 fmt)
 {
     AudioCodecX codec(fmt);
@@ -1407,7 +1377,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     converter.setOutputChannelLayout(acl);
     if (opts.isAAC()) config_aac_codec(converter, opts);
 
-    std::wstring encoder_config = get_encoder_config(converter);
+    std::wstring encoder_config = strutil::us2w(converter.getConfigAsString());
     LOG(L"%s\n", encoder_config.c_str());
     std::vector<uint8_t> cookie;
     converter.getCompressionMagicCookie(&cookie);
