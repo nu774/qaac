@@ -1509,8 +1509,6 @@ const char *get_qaac_version();
 static
 void setup_input_factory(const Options &opts)
 {
-    input::InputFactory *factory = input::factory();
-
     LibSndfileModule::instance().load(L"libsndfile-1.dll");
     FLACModule::instance().load(L"libFLAC_dynamic.dll");
     if (!FLACModule::instance().loaded())
@@ -1535,9 +1533,9 @@ void setup_input_factory(const Options &opts)
     if (opts.is_raw) {
         AudioStreamBasicDescription asbd;
         getRawFormat(opts, &asbd);
-        factory->setRawFormat(asbd);
+        InputFactory::instance().setRawFormat(asbd);
     }
-    factory->setIgnoreLength(opts.ignore_length);
+    InputFactory::instance().setIgnoreLength(opts.ignore_length);
 }
 
 static
@@ -1569,7 +1567,7 @@ void load_track(const wchar_t *ifilename, const Options &opts,
     const wchar_t *ext = PathFindExtensionW(name);
     std::wstring title(name, ext);
 
-    auto src(input::factory()->open(ifilename));
+    auto src(InputFactory::instance().open(ifilename));
     auto parser = dynamic_cast<ITagParser*>(src.get());
     if (parser) {
         auto meta = parser->getTags();
@@ -1703,7 +1701,6 @@ int wmain1(int argc, wchar_t **argv)
         if (!opts.print_available_formats)
             LOG(L"%s\n", opts.encoder_name.c_str());
 
-        std::unique_ptr<input::InputFactory>factory(input::factory());
         setup_input_factory(opts);
 
         if (opts.check_only) {

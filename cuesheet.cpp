@@ -167,11 +167,11 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
                 if (src.get())
                     src.reset(new NullSource(src->getSampleFormat()));
             } else if (embedder_fname) {
-                src = input::factory()->open(embedder_fname);
+                src = InputFactory::instance().open(embedder_fname);
             } else {
                 std::wstring ifilename =
                     win32::PathCombineX(cuedir, seg.m_filename);
-                src = input::factory()->open(ifilename.c_str());
+                src = InputFactory::instance().open(ifilename.c_str());
             }
             if (src.get()) {
                 double rate = src->getSampleFormat().mSampleRate;
