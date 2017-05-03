@@ -6,9 +6,16 @@
 
 class FLACModule {
     DL m_dl;
-public:
+private:
     FLACModule() {}
-    explicit FLACModule(const std::wstring &path);
+    FLACModule(const FLACModule&);
+    FLACModule& operator=(const FLACModule&);
+public:
+    static FLACModule &instance() {
+        static FLACModule self;
+        return self;
+    }
+    bool load(const std::wstring &path);
     bool loaded() const { return m_dl.loaded(); }
 
     const char *VERSION_STRING;
@@ -50,7 +57,6 @@ public:
     FLAC__bool (*stream_decoder_get_decode_position)(FLAC__StreamDecoder *,
                                                      FLAC__uint64*);
     FLAC__bool (*stream_decoder_reset)(FLAC__StreamDecoder *);
-
 };
 
 #endif

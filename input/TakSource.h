@@ -27,9 +27,16 @@ struct Ttak_str_StreamInfo_V22 {
 class TakModule {
     DL m_dl;
     bool m_compatible;
+private:
+    TakModule(): m_compatible(false) {}
+    TakModule(const TakModule&);
+    TakModule& operator=(const TakModule&);
 public:
-    TakModule() {}
-    explicit TakModule(const std::wstring &path);
+    static TakModule &instance() {
+        static TakModule self;
+        return self;
+    }
+    bool load(const std::wstring &path);
     bool loaded() const { return m_dl.loaded(); }
     bool compatible() const { return m_compatible; }
 
@@ -58,9 +65,9 @@ class TakSource: public ISeekableSource, public ITagParser {
     std::map<std::string, std::string> m_tags;
     std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
-    TakModule m_module;
+    TakModule &m_module;
 public:
-    TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp);
+    TakSource(const std::shared_ptr<FILE> &fp);
     ~TakSource() { m_decoder.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const

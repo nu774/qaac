@@ -12,11 +12,10 @@
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
-TakModule::TakModule(const std::wstring &path)
-    : m_dl(path), m_compatible(false)
+bool TakModule::load(const std::wstring &path)
 {
-    if (!m_dl.loaded())
-        return;
+    if (!m_dl.load(path))
+        return false;
     try {
         CHECK(GetLibraryVersion = m_dl.fetch("tak_GetLibraryVersion"));
         CHECK(SSD_Create_FromStream = m_dl.fetch("tak_SSD_Create_FromStream"));
@@ -30,8 +29,10 @@ TakModule::TakModule(const std::wstring &path)
         GetLibraryVersion(&ver, &comp);
         m_compatible = (comp <= tak_InterfaceVersion
                         && tak_InterfaceVersion <= ver);
+        return true;
     } catch (...) {
         m_dl.reset();
+        return false;
     }
 }
 
@@ -84,11 +85,14 @@ struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
     }
 };
 
-TakSource::TakSource(const TakModule &module, const std::shared_ptr<FILE> &fp)
-    : m_fp(fp), m_module(module)
+TakSource::TakSource(const std::shared_ptr<FILE> &fp)
+    : m_fp(fp), m_module(TakModule::instance())
 {
     static TakStreamIoInterfaceImpl io;
     TtakSSDOptions options = { tak_Cpu_Any, 0 };
+
+    if (!m_module.loaded() || !m_module.compatible())
+        throw std::runtime_error("TAK module not loaded");
     void *ctx =
         reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(fp.get())));
     TtakSeekableStreamDecoder ssd =

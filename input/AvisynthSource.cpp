@@ -3,10 +3,9 @@
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
-AvisynthModule::AvisynthModule(const std::wstring &path)
-    : m_dl(path)
+bool AvisynthModule::load(const std::wstring &path)
 {
-    if (!m_dl.loaded()) return;
+    if (!m_dl.load(path)) return false;
     try {
         CHECK(create_script_environment =
               m_dl.fetch("avs_create_script_environment"));
@@ -19,17 +18,19 @@ AvisynthModule::AvisynthModule(const std::wstring &path)
         CHECK(release_clip = m_dl.fetch("avs_release_clip"));
         CHECK(release_value = m_dl.fetch("avs_release_value"));
         CHECK(take_clip = m_dl.fetch("avs_take_clip"));
+        return true;
     } catch (...) {
         m_dl.reset();
+        return false;
     }
 }
 
 
-AvisynthSource::AvisynthSource(const AvisynthModule &module,
-                               const std::wstring &path)
+AvisynthSource::AvisynthSource(const std::wstring &path)
     : m_position(0),
-      m_module(module)
+      m_module(AvisynthModule::instance())
 {
+    if (!m_module.loaded()) throw std::runtime_error("Avisynth not loaded");
     AVS_ScriptEnvironment *env = m_module.create_script_environment(2);
     m_script_env = std::shared_ptr<AVS_ScriptEnvironment>(env,
                                           m_module.delete_script_environment);

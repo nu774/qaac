@@ -3,6 +3,7 @@
 #include <locale>
 #include <regex>
 #include "cuesheet.h"
+#include "win32util.h"
 #include "metadata.h"
 #include "CompositeSource.h"
 #include "NullSource.h"

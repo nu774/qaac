@@ -11,11 +11,9 @@ class SoxLowpassFilter: public FilterBase {
     util::FIFO<float> m_buffer;
     std::shared_ptr<lsx_convolver_t> m_convolver;
     AudioStreamBasicDescription m_asbd;
-    SoXConvolverModule m_module;
+    SoXConvolverModule &m_module;
 public:
-    SoxLowpassFilter(const SoXConvolverModule &module,
-                     const std::shared_ptr<ISource> &src,
-                     unsigned Fp);
+    SoxLowpassFilter(const std::shared_ptr<ISource> &src, unsigned Fp);
     ~SoxLowpassFilter() { m_convolver.reset(); }
     const AudioStreamBasicDescription &getSampleFormat() const
     {

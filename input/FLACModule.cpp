@@ -3,10 +3,9 @@
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!!!"); } \
     while (0)
 
-FLACModule::FLACModule(const std::wstring &path)
-    : m_dl(path)
+bool FLACModule::load(const std::wstring &path)
 {
-    if (!m_dl.loaded()) return;
+    if (!m_dl.load(path)) return false;
     try {
         void *vp;
         CHECK(vp = m_dl.fetch("FLAC__VERSION_STRING"));
@@ -34,7 +33,9 @@ FLACModule::FLACModule(const std::wstring &path)
               m_dl.fetch("FLAC__stream_decoder_get_decode_position"));
         CHECK(stream_decoder_reset =
               m_dl.fetch("FLAC__stream_decoder_reset"));
+        return true;
     } catch (...) {
         m_dl.reset();
+        return false;
     }
 }

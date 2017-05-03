@@ -1,13 +1,7 @@
 #ifndef INPUTFACTORY_H
 #define INPUTFACTORY_H
 
-#include "FLACModule.h"
-#include "WavpackSource.h"
-#include "TakSource.h"
-#include "LibSndfileSource.h"
-#include "SOXRModule.h"
-#include "SoXConvolverModule.h"
-#include "AvisynthSource.h"
+#include "ISource.h"
 
 namespace input {
     class InputFactory {
@@ -33,13 +27,6 @@ namespace input {
         {
             m_ignore_length = cond;
         }
-        FLACModule libflac;
-        WavpackModule libwavpack;
-        TakModule libtak;
-        LibSndfileModule libsndfile;
-        SOXRModule libsoxr;
-        SoXConvolverModule libsoxconvolver;
-        AvisynthModule avisynth;
     };
 
     inline InputFactory *factory() { return InputFactory::getInstance(); }

@@ -12,10 +12,9 @@
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
-WavpackModule::WavpackModule(const std::wstring &path)
-    : m_dl(path)
+bool WavpackModule::load(const std::wstring &path)
 {
-    if (!m_dl.loaded()) return;
+    if (!m_dl.load(path)) return false;
     try {
         CHECK(GetLibraryVersionString =
               m_dl.fetch( "WavpackGetLibraryVersionString"));
@@ -43,8 +42,10 @@ WavpackModule::WavpackModule(const std::wstring &path)
         CHECK(SeekSample = m_dl.fetch( "WavpackSeekSample"));
         SeekSample64 = m_dl.fetch( "WavpackSeekSample64");
         CHECK(UnpackSamples = m_dl.fetch( "WavpackUnpackSamples"));
+        return true;
     } catch (...) {
         m_dl.reset();
+        return false;
     }
 }
 
@@ -102,9 +103,8 @@ namespace wavpack {
     }
 }
 
-WavpackSource::WavpackSource(const WavpackModule &module,
-                             const std::wstring &path)
-    : m_module(module)
+WavpackSource::WavpackSource(const std::wstring &path)
+    : m_module(WavpackModule::instance())
 {
     char error[0x100];
     static WavpackStreamReader reader32 = {
@@ -116,6 +116,7 @@ WavpackSource::WavpackSource(const WavpackModule &module,
         wavpack::seek, wavpack::pushback, wavpack::size, wavpack::seekable,
         nullptr, nullptr
     };
+    if (!m_module.loaded()) throw std::runtime_error("libwavpack not loaded");
     m_fp = win32::fopen(path, L"rb");
     try { m_cfp = win32::fopen(path + L"c", L"rb"); } catch(...) {}
 

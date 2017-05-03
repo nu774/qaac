@@ -27,16 +27,16 @@ namespace flac {
 }
 #define TRYFL(expr) (void)(flac::try__((expr), #expr))
 
-FLACSource::FLACSource(const FLACModule &module,
-                       const std::shared_ptr<FILE> &fp):
+FLACSource::FLACSource(const std::shared_ptr<FILE> &fp):
     m_eof(false),
     m_giveup(false),
     m_initialize_done(false),
     m_length(0),
     m_position(0),
     m_fp(fp),
-    m_module(module)
+    m_module(FLACModule::instance())
 {
+    if (!m_module.loaded()) throw std::runtime_error("libFLAC not loaded");
     char buffer[33];
     util::check_eof(util::nread(fileno(m_fp.get()), buffer, 33) == 33);
     if (std::memcmp(buffer, "ID3", 3) == 0) {

@@ -13,9 +13,16 @@ typedef void WavpackContext;
 
 class WavpackModule {
     DL m_dl;
-public:
+private:
     WavpackModule() {}
-    explicit WavpackModule(const std::wstring &path);
+    WavpackModule(const WavpackModule&);
+    WavpackModule& operator=(const WavpackModule&);
+public:
+    static WavpackModule &instance() {
+        static WavpackModule self;
+        return self;
+    }
+    bool load(const std::wstring &path);
     bool loaded() const { return m_dl.loaded(); }
 
     const char *(*GetLibraryVersionString)();
@@ -55,9 +62,9 @@ class WavpackSource: public ISeekableSource, public ITagParser
     std::vector<uint8_t> m_pivot;
     size_t (WavpackSource::*m_readSamples)(void *, size_t);
     AudioStreamBasicDescription m_asbd;
-    WavpackModule m_module;
+    WavpackModule &m_module;
 public:
-    WavpackSource(const WavpackModule &module, const std::wstring &path);
+    WavpackSource(const std::wstring &path);
     ~WavpackSource() { m_wpc.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const

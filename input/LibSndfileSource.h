@@ -10,9 +10,16 @@ struct HINSTANCE__;
 
 class LibSndfileModule {
     DL m_dl;
-public:
+private:
     LibSndfileModule() {}
-    LibSndfileModule(const std::wstring &path);
+    LibSndfileModule(const LibSndfileModule&);
+    LibSndfileModule& operator=(const LibSndfileModule&);
+public:
+    static LibSndfileModule &instance() {
+        static LibSndfileModule self;
+        return self;
+    }
+    bool load(const std::wstring &path);
     bool loaded() const { return m_dl.loaded(); }
 
     const char *(*version_string)();
@@ -38,12 +45,11 @@ class LibSndfileSource: public ISeekableSource, public ITagParser
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
-    LibSndfileModule m_module;
+    LibSndfileModule &m_module;
     AudioStreamBasicDescription m_asbd;
     sf_count_t (*m_readf)(SNDFILE *, void *, sf_count_t);
 public:
-    LibSndfileSource(const LibSndfileModule &module,
-                     const std::shared_ptr<FILE> &fp);
+    LibSndfileSource(const std::shared_ptr<FILE> &fp);
     ~LibSndfileSource() { m_handle.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const

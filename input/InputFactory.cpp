@@ -10,6 +10,7 @@
 #include "WaveSource.h"
 #include "WavpackSource.h"
 #include "MP4Source.h"
+#include "AvisynthSource.h"
 
 namespace input {
     std::shared_ptr<ISeekableSource> InputFactory::open(const wchar_t *path)
@@ -27,8 +28,8 @@ namespace input {
             m_sources[path] = src;
             return src;
         }
-        if (avisynth.loaded() && strutil::wslower(ext) == L".avs")
-            return std::make_shared<AvisynthSource>(avisynth, path);
+        if (strutil::wslower(ext) == L".avs")
+            return std::make_shared<AvisynthSource>(path);
 
 #define TRY_MAKE_SHARED(type, ...) \
         do { \
@@ -45,22 +46,15 @@ namespace input {
         TRY_MAKE_SHARED(WaveSource, fp, m_ignore_length);
         if (!win32::is_seekable(fileno(fp.get())))
             throw std::runtime_error("Not available input file format");
-        if (libflac.loaded())
-            TRY_MAKE_SHARED(FLACSource, libflac, fp);
 
-        if (libwavpack.loaded())
-            TRY_MAKE_SHARED(WavpackSource, libwavpack, path);
-
-        if (libtak.loaded() && libtak.compatible())
-            TRY_MAKE_SHARED(TakSource, libtak, fp);
-
+        TRY_MAKE_SHARED(FLACSource, fp);
+        TRY_MAKE_SHARED(WavpackSource, path);
+        TRY_MAKE_SHARED(TakSource, fp);
         TRY_MAKE_SHARED(MP4Source, fp);
 #ifdef QAAC
         TRY_MAKE_SHARED(ExtAFSource, fp);
 #endif
-        if (libsndfile.loaded())
-            TRY_MAKE_SHARED(LibSndfileSource, libsndfile, fp);
-
+        TRY_MAKE_SHARED(LibSndfileSource, fp);
         throw std::runtime_error("Not available input file format");
     }
 }

@@ -40,11 +40,10 @@ uint32_t convert_chanmap(uint32_t value)
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
-LibSndfileModule::LibSndfileModule(const std::wstring &path)
-    : m_dl(path)
+bool LibSndfileModule::load(const std::wstring &path)
 {
-    if (!m_dl.loaded())
-        return;
+    if (!m_dl.load(path))
+        return false;
     try {
         CHECK(version_string = m_dl.fetch("sf_version_string"));
         CHECK(open_virtual = m_dl.fetch("sf_open_virtual"));
@@ -56,8 +55,10 @@ LibSndfileModule::LibSndfileModule(const std::wstring &path)
         CHECK(readf_float = m_dl.fetch("sf_readf_float"));
         CHECK(readf_double = m_dl.fetch("sf_readf_double"));
         CHECK(close = m_dl.fetch("sf_close"));
+        return true;
     } catch (...) {
         m_dl.reset();
+        return false;
     }
 }
 
@@ -91,12 +92,13 @@ struct SFVirtualIOImpl: public SF_VIRTUAL_IO
     }
 };
 
-LibSndfileSource::LibSndfileSource(
-        const LibSndfileModule &module, const std::shared_ptr<FILE> &fp)
-    : m_fp(fp), m_module(module)
+LibSndfileSource::LibSndfileSource(const std::shared_ptr<FILE> &fp)
+    : m_fp(fp), m_module(LibSndfileModule::instance())
 {
     static SFVirtualIOImpl vio;
     SF_INFO info = { 0 };
+
+    if (!m_module.loaded()) throw std::runtime_error("libsndfile not loaded");
     void *cookie =
         reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(fp.get())));
     SNDFILE *sf = m_module.open_virtual(&vio, SFM_READ, &info, cookie);

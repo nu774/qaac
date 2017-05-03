@@ -75,13 +75,12 @@ static double calcGain(double *coefs, size_t numcoefs)
 }
 
 MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
-                         const SoXConvolverModule &module,
                          const std::vector<std::vector<complex_t> > &spec,
                          bool normalize)
     : FilterBase(source),
       m_position(0),
       m_matrix(spec),
-      m_module(module)
+      m_module(SoXConvolverModule::instance())
 {
     const AudioStreamBasicDescription &fmt = source->getSampleFormat();
     uint32_t shiftMask;

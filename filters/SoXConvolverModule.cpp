@@ -3,10 +3,9 @@
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!!!"); } \
     while (0)
 
-SoXConvolverModule::SoXConvolverModule(const std::wstring &path)
-    : m_dl(path)
+bool SoXConvolverModule::load(const std::wstring &path)
 {
-    if (!m_dl.loaded()) return;
+    if (!m_dl.load(path)) return false;
     try {
         CHECK(version = m_dl.fetch("lsx_convolver_version_string"));
         CHECK(create = m_dl.fetch("lsx_convolver_create"));
@@ -15,8 +14,10 @@ SoXConvolverModule::SoXConvolverModule(const std::wstring &path)
         CHECK(process_ni = m_dl.fetch("lsx_convolver_process_ni"));
         CHECK(design_lpf = m_dl.fetch("lsx_design_lpf"));
         CHECK(free = m_dl.fetch("lsx_free"));
+        return true;
     } catch (...) {
         m_dl.reset();
+        return false;
     }
 }
 

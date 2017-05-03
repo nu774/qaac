@@ -1,10 +1,9 @@
 #include "SoxrResampler.h"
 #include "cautil.h"
 
-SoxrResampler::SoxrResampler(const SOXRModule &module,
-                             const std::shared_ptr<ISource> &src,
+SoxrResampler::SoxrResampler(const std::shared_ptr<ISource> &src,
                              unsigned rate)
-    : FilterBase(src), m_position(0), m_module(module)
+    : FilterBase(src), m_position(0), m_module(SOXRModule::instance())
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     unsigned bits = 32;

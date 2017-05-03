@@ -36,6 +36,11 @@
 #include "Compressor.h"
 #include "metadata.h"
 #include "wicimage.h"
+#include "FLACModule.h"
+#include "LibSndfileSource.h"
+#include "TakSource.h"
+#include "WavpackSource.h"
+#include "AvisynthSource.h"
 #ifdef REFALAC
 #include "ALACEncoderX.h"
 #endif
@@ -480,7 +485,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
     }
     // remix
     if (opts.remix_preset || opts.remix_file) {
-        if (!input::factory()->libsoxconvolver.loaded())
+        if (!SoXConvolverModule::instance().loaded())
             LOG(L"WARNING: mixer requires libsoxconvolver. Mixing disabled\n");
         else {
             std::vector<std::vector<complex_t> > matrix;
@@ -492,7 +497,6 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
             }
             std::shared_ptr<ISource>
                 mixer(new MatrixMixer(chain.back(),
-                                      input::factory()->libsoxconvolver,
                                       matrix, !opts.no_matrix_normalize));
             chain.push_back(mixer);
             channels = 0;
@@ -683,15 +687,13 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 #endif
     }
     if (opts.lowpass > 0) {
-        if (!input::factory()->libsoxconvolver.loaded())
+        if (!SoXConvolverModule::instance().loaded())
             LOG(L"WARNING: --lowpass requires libsoxconvolver. LPF disabled\n");
         else {
             if (opts.verbose > 1 || opts.logfilename)
                 LOG(L"Applying LPF: %dHz\n", opts.lowpass);
             std::shared_ptr<SoxLowpassFilter>
-                f(new SoxLowpassFilter(input::factory()->libsoxconvolver,
-                                       chain.back(),
-                                       opts.lowpass));
+                f(new SoxLowpassFilter(chain.back(), opts.lowpass));
             chain.push_back(f);
         }
     }
@@ -723,11 +725,10 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     }
 #endif
     if (oasbd.mSampleRate != iasbd.mSampleRate) {
-        if (!opts.native_resampler && input::factory()->libsoxr.loaded()) {
+        if (!opts.native_resampler && SOXRModule::instance().loaded()) {
             LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
             std::shared_ptr<SoxrResampler>
-                resampler(new SoxrResampler(input::factory()->libsoxr,
-                                            chain.back(),
+                resampler(new SoxrResampler(chain.back(),
                                             oasbd.mSampleRate));
             if (opts.verbose > 1 || opts.logfilename)
                 LOG(L"Using libsoxr SRC: %hs\n", resampler->engine());
@@ -1510,28 +1511,26 @@ void setup_input_factory(const Options &opts)
 {
     input::InputFactory *factory = input::factory();
 
-    factory->libsndfile = LibSndfileModule(L"libsndfile-1.dll");
-    factory->libflac = FLACModule(L"libFLAC_dynamic.dll");
-    if (!factory->libflac.loaded())
-        factory->libflac = FLACModule(L"libFLAC.dll");
-    if (!factory->libflac.loaded())
-        factory->libflac = FLACModule(L"libFLAC-8.dll");
-    factory->libwavpack = WavpackModule(L"wavpackdll.dll");
-    if (!factory->libwavpack.loaded())
-        factory->libwavpack = WavpackModule(L"libwavpack-1.dll");
-    factory->libtak = TakModule(L"tak_deco_lib.dll");
+    LibSndfileModule::instance().load(L"libsndfile-1.dll");
+    FLACModule::instance().load(L"libFLAC_dynamic.dll");
+    if (!FLACModule::instance().loaded())
+        FLACModule::instance().load(L"libFLAC.dll");
+    if (!FLACModule::instance().loaded())
+        FLACModule::instance().load(L"libFLAC-8.dll");
+    if (!WavpackModule::instance().load(L"wavpackdll.dll"))
+        WavpackModule::instance().load(L"libwavpack-1.dll");
+    TakModule::instance().load(L"tak_deco_lib.dll");
 #ifdef _WIN64
-    factory->libsoxr = SOXRModule(L"libsoxr64.dll");
-    if (!factory->libsoxr.loaded())
+    if (!SOXRModule::instance().load(L"libsoxr64.dll"))
 #endif
-        factory->libsoxr = SOXRModule(L"libsoxr.dll");
+        SOXRModule::instance().load(L"libsoxr.dll");
 
 #ifdef _WIN64
-    factory->libsoxconvolver = SoXConvolverModule(L"libsoxconvolver64.dll");
+    SoXConvolverModule::instance().load(L"libsoxconvolver64.dll");
 #else
-    factory->libsoxconvolver = SoXConvolverModule(L"libsoxconvolver.dll");
+    SoXConvolverModule::instance().load(L"libsoxconvolver.dll");
 #endif
-    factory->avisynth = AvisynthModule(L"avisynth.dll");
+    AvisynthModule::instance().load(L"avisynth.dll");
 
     if (opts.is_raw) {
         AudioStreamBasicDescription asbd;
@@ -1708,25 +1707,25 @@ int wmain1(int argc, wchar_t **argv)
         setup_input_factory(opts);
 
         if (opts.check_only) {
-            if (factory->libsoxconvolver.loaded())
+            if (SoXConvolverModule::instance().loaded())
                 LOG(L"libsoxconvolver %hs\n",
-                    factory->libsoxconvolver.version());
-            if (factory->libsoxr.loaded())
-                LOG(L"%hs\n", factory->libsoxr.version());
-            if (factory->libsndfile.loaded())
-                LOG(L"%hs\n", factory->libsndfile.version_string());
-            if (factory->libflac.loaded())
-                LOG(L"libFLAC %hs\n", factory->libflac.VERSION_STRING);
-            if (factory->libwavpack.loaded())
+                    SoXConvolverModule::instance().version());
+            if (SOXRModule::instance().loaded())
+                LOG(L"%hs\n", SOXRModule::instance().version());
+            if (LibSndfileModule::instance().loaded())
+                LOG(L"%hs\n", LibSndfileModule::instance().version_string());
+            if (FLACModule::instance().loaded())
+                LOG(L"libFLAC %hs\n", FLACModule::instance().VERSION_STRING);
+            if (WavpackModule::instance().loaded())
                 LOG(L"wavpackdll %hs\n",
-                    factory->libwavpack.GetLibraryVersionString());
-            if (factory->libtak.loaded()) {
+                    WavpackModule::instance().GetLibraryVersionString());
+            if (TakModule::instance().loaded()) {
                 TtakInt32 var, comp;
-                factory->libtak.GetLibraryVersion(&var, &comp);
+                TakModule::instance().GetLibraryVersion(&var, &comp);
                 LOG(L"tak_deco_lib %u.%u.%u %hs\n",
                         var >> 16, (var >> 8) & 0xff, var & 0xff,
-                        factory->libtak.compatible() ? "compatible"
-                                                 : "incompatible");
+                        TakModule::instance().compatible() ? "compatible"
+                                                          : "incompatible");
             }
             return 0;
         }

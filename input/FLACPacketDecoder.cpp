@@ -10,10 +10,10 @@ namespace {
 }
 #define TRYFL(expr) (void)(try__((expr), #expr))
 
-FLACPacketDecoder::FLACPacketDecoder(IPacketFeeder *feeder,
-                                     const FLACModule &module)
-    : m_feeder(feeder), m_module(module)
+FLACPacketDecoder::FLACPacketDecoder(IPacketFeeder *feeder)
+    : m_feeder(feeder), m_module(FLACModule::instance())
 {
+    if (!m_module.loaded()) throw std::runtime_error("libFLAC not loaded");
     memset(&m_iasbd, 0, sizeof(m_iasbd));
     memset(&m_oasbd, 0, sizeof(m_oasbd));
 

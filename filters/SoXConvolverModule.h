@@ -6,9 +6,16 @@
 
 class SoXConvolverModule {
     DL m_dl;
-public:
+private:
     SoXConvolverModule() {}
-    explicit SoXConvolverModule(const std::wstring &path);
+    SoXConvolverModule(const SoXConvolverModule&);
+    SoXConvolverModule& operator=(const SoXConvolverModule&);
+public:
+    static SoXConvolverModule &instance() {
+        static SoXConvolverModule self;
+        return self;
+    }
+    bool load(const std::wstring &path);
     bool loaded() const { return m_dl.loaded(); }
 
     const char *(*version)();

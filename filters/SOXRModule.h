@@ -6,9 +6,16 @@
 
 class SOXRModule {
     DL m_dl;
-public:
+private:
     SOXRModule() {}
-    explicit SOXRModule(const std::wstring &path);
+    SOXRModule(const SOXRModule&);
+    SOXRModule& operator=(const SOXRModule&);
+public:
+    static SOXRModule &instance() {
+        static SOXRModule self;
+        return self;
+    }
+    bool load(const std::wstring &path);
     bool loaded() const { return m_dl.loaded(); }
 
     const char *(*version)();

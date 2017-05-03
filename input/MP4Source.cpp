@@ -9,7 +9,6 @@
 #include "ALACPacketDecoder.h"
 #endif
 #include "FLACPacketDecoder.h"
-#include "InputFactory.h"
 
 unsigned
 MP4Edits::editForPosition(int64_t position, int64_t *offset_in_edit) const
@@ -291,9 +290,6 @@ void MP4Source::setupALAC()
 
 void MP4Source::setupFLAC()
 {
-    if (!input::factory()->libflac.loaded())
-        throw std::runtime_error("Not supported input codec");
-
     const char *dfLaprop = "mdia.minf.stbl.stsd.fLaC.dfLa.data";
     std::vector<uint8_t> dfLa;
     {
@@ -304,7 +300,7 @@ void MP4Source::setupFLAC()
         MP4Free(value);
     }
     m_decoder =
-        std::make_shared<FLACPacketDecoder>(this, input::factory()->libflac);
+        std::make_shared<FLACPacketDecoder>(this);
     m_decoder->setMagicCookie(dfLa);
     m_iasbd = ((FLACPacketDecoder*)m_decoder.get())->getInputFormat();
     m_oasbd = m_decoder->getSampleFormat();

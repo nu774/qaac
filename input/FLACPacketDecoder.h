@@ -15,9 +15,9 @@ class FLACPacketDecoder: public IPacketDecoder {
     std::vector<uint8_t> m_feed_buffer;
     util::FIFO<uint8_t> m_packet_buffer;
     util::FIFO<int32_t> m_decode_buffer;
-    FLACModule m_module;
+    FLACModule &m_module;
 public:
-    FLACPacketDecoder(IPacketFeeder *feeder, const FLACModule &module);
+    FLACPacketDecoder(IPacketFeeder *feeder);
     ~FLACPacketDecoder()
     {
         m_decoder.reset();

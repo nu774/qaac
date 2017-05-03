@@ -20,9 +20,9 @@ class FLACSource: public ISeekableSource, public ITagParser
     std::map<std::string, std::string> m_tags;
     util::FIFO<int32_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
-    FLACModule m_module;
+    FLACModule &m_module;
 public:
-    FLACSource(const FLACModule &module, const std::shared_ptr<FILE> &fp);
+    FLACSource(const std::shared_ptr<FILE> &fp);
     ~FLACSource() { m_decoder.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const

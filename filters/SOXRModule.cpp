@@ -3,10 +3,9 @@
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!!!"); } \
     while (0)
 
-SOXRModule::SOXRModule(const std::wstring &path)
-    : m_dl(path)
+bool SOXRModule::load(const std::wstring &path)
 {
-    if (!m_dl.loaded()) return;
+    if (!m_dl.load(path)) return false;
     try {
         CHECK(version = m_dl.fetch("soxr_version"));
         CHECK(create = m_dl.fetch("soxr_create"));
@@ -17,7 +16,9 @@ SOXRModule::SOXRModule(const std::wstring &path)
         CHECK(quality_spec = m_dl.fetch("soxr_quality_spec"));
         CHECK(runtime_spec = m_dl.fetch("soxr_runtime_spec"));
         CHECK(io_spec = m_dl.fetch("soxr_io_spec"));
+        return true;
     } catch (...) {
         m_dl.reset();
+        return false;
     }
 }
