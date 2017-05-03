@@ -1,4 +1,5 @@
 #include "CoreAudioResampler.h"
+#include "cautil.h"
 
 CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
                                        int rate,

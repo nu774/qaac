@@ -1,4 +1,5 @@
 #include "CoreAudioEncoder.h"
+#include "cautil.h"
 
 CoreAudioEncoder::CoreAudioEncoder(AudioConverterX &converter)
     : m_converter(converter),
