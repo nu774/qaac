@@ -308,13 +308,13 @@ namespace cautil {
                 }
                 nside_channels += nback_channels;
                 if (nside_channels > 1) {
-                    v.push_back(10);
-                    v.push_back(11);
+                    v.push_back(5);
+                    v.push_back(6);
                     nside_channels -= 2;
                 }
                 if (nside_channels > 1) {
-                    v.push_back(5);
-                    v.push_back(6);
+                    v.push_back(33);
+                    v.push_back(34);
                     nside_channels -= 2;
                 }
                 if (nside_channels & 1) {
