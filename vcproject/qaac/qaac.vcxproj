@@ -115,6 +115,7 @@
     <ClCompile Include="..\..\input\InputFactory.cpp" />
     <ClCompile Include="..\..\filters\CoreAudioResampler.cpp" />
     <ClCompile Include="..\..\AudioConverterX.cpp" />
+    <ClCompile Include="..\..\AudioConverterXX.cpp" />
     <ClCompile Include="..\..\cautil.cpp" />
     <ClCompile Include="..\..\CoreAudioEncoder.cpp" />
     <ClCompile Include="..\..\CoreAudioPaddedEncoder.cpp" />

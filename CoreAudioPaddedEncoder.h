@@ -15,7 +15,7 @@ class CoreAudioPaddedEncoder: public CoreAudioEncoder {
     size_t (CoreAudioPaddedEncoder::*m_read)(void *, size_t);
     void (CoreAudioPaddedEncoder::*m_write)(const void *, size_t, size_t);
 public:
-    CoreAudioPaddedEncoder(AudioConverterX &converter,
+    CoreAudioPaddedEncoder(AudioConverterXX &converter,
                            uint32_t num_priming=2112);
     AudioFilePacketTableInfo getGaplessInfo();
 protected:

@@ -49,10 +49,6 @@ public:
     void setSoundQualityForVBR(UInt32 value);
     UInt32 getCodecQuality();
     void setCodecQuality(UInt32 value);
-
-    // helpers
-    double getClosestAvailableBitRate(double value);
-    std::string getConfigAsString();
 };
 
 #endif

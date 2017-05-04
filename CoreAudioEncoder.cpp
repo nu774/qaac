@@ -1,7 +1,7 @@
 #include "CoreAudioEncoder.h"
 #include "cautil.h"
 
-CoreAudioEncoder::CoreAudioEncoder(AudioConverterX &converter)
+CoreAudioEncoder::CoreAudioEncoder(AudioConverterXX &converter)
     : m_converter(converter),
       m_variable_packet_len(false)
 {

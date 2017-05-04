@@ -567,7 +567,7 @@ select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
 
 #ifdef QAAC
 static
-void config_aac_codec(AudioConverterX &converter, const Options &opts);
+void config_aac_codec(AudioConverterXX &converter, const Options &opts);
 
 inline uint32_t bound_quality(uint32_t n)
 {
@@ -658,7 +658,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 chanmap::getChannelLayoutForCodec(*channel_layout);
             AudioStreamBasicDescription iiasbd = iasbd;
             iiasbd.mSampleRate = closest_rate;
-            AudioConverterX converter(iasbd, oasbd);
+            AudioConverterXX converter(iasbd, oasbd);
             converter.setInputChannelLayout(acl);
             converter.setOutputChannelLayout(acl);
             config_aac_codec(converter, opts);
@@ -1062,7 +1062,7 @@ void show_available_codec_setttings(UInt32 fmt)
             oasbd.mSampleRate = iasbd.mSampleRate;
             oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
 
-            AudioConverterX converter(iasbd, oasbd);
+            AudioConverterXX converter(iasbd, oasbd);
             converter.setInputChannelLayout(acl);
             converter.setOutputChannelLayout(acl);
             converter.setBitRateControlMode(
@@ -1186,7 +1186,7 @@ void set_dll_directories(int verbose)
 }
 
 static
-void config_aac_codec(AudioConverterX &converter,
+void config_aac_codec(AudioConverterXX &converter,
                       const Options &opts)
 {
     converter.setBitRateControlMode(opts.method);
@@ -1221,7 +1221,7 @@ void config_aac_codec(AudioConverterX &converter,
 }
 
 static
-void set_encoding_params(AudioConverterX &converter, ITagStore *store)
+void set_encoding_params(AudioConverterXX &converter, ITagStore *store)
 {
     UInt32 mode = converter.getBitRateControlMode();
     UInt32 bitrate = converter.getEncodeBitRate();
@@ -1262,7 +1262,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
         decode_file(chain, ofilename, opts, oasbd, channel_layout);
         return;
     }
-    AudioConverterX converter(iasbd, oasbd);
+    AudioConverterXX converter(iasbd, oasbd);
     AudioChannelLayout acl = { 0 };
     acl.mChannelLayoutTag = chanmap::getChannelLayoutForCodec(channel_layout);
     converter.setInputChannelLayout(acl);

@@ -2,11 +2,11 @@
 #define CoreAudioEncoder_H
 
 #include "CoreAudioToolbox.h"
-#include "AudioConverterX.h"
+#include "AudioConverterXX.h"
 #include "IEncoder.h"
 
 class CoreAudioEncoder: public IEncoder, public IEncoderStat {
-    AudioConverterX m_converter;
+    AudioConverterXX m_converter;
     bool m_requires_packet_desc;
     bool m_variable_packet_len;
     std::shared_ptr<ISource> m_src;
@@ -17,13 +17,13 @@ class CoreAudioEncoder: public IEncoder, public IEncoderStat {
     AudioStreamBasicDescription m_input_desc, m_output_desc;
     EncoderStat m_stat;
 public:
-    CoreAudioEncoder(AudioConverterX &converter);
+    CoreAudioEncoder(AudioConverterXX &converter);
     virtual ~CoreAudioEncoder() {};
     void setSource(const std::shared_ptr<ISource> &source) { m_src = source; }
     void setSink(const std::shared_ptr<ISink> &sink) { m_sink = sink; }
     uint32_t encodeChunk(UInt32 npackets);
     virtual AudioFilePacketTableInfo getGaplessInfo();
-    AudioConverterX getConverter() { return m_converter; }
+    AudioConverterXX &getConverter() { return m_converter; }
     ISource *src() { return m_src.get(); }
     const AudioStreamBasicDescription &getInputDescription() const
     {

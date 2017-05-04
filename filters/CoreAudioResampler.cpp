@@ -28,7 +28,7 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
 void CoreAudioResampler::init()
 {
     const AudioStreamBasicDescription &asbd = source()->getSampleFormat();
-    m_converter = AudioConverterX(asbd, m_asbd);
+    m_converter = AudioConverterXX(asbd, m_asbd);
     m_converter.setSampleRateConverterQuality(m_quality);
     m_converter.setSampleRateConverterComplexity(m_complexity);
     m_encoder.reset(new CoreAudioEncoder(m_converter));

@@ -3,7 +3,7 @@ extern "C" {
 #include "lpc.h"
 }
 
-CoreAudioPaddedEncoder::CoreAudioPaddedEncoder(AudioConverterX &converter,
+CoreAudioPaddedEncoder::CoreAudioPaddedEncoder(AudioConverterXX &converter,
                                                uint32_t num_priming)
     : CoreAudioEncoder(converter),
       m_num_priming(num_priming),
