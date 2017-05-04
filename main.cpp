@@ -1599,13 +1599,10 @@ int wmain1(int argc, wchar_t **argv)
         const wchar_t *ifilename = 0;
 
         if (opts.sort_args) {
-            struct Sorter {
-                static bool cmp(const wchar_t *a, const wchar_t *b)
-                {
-                    return std::wcscmp(a, b) < 0;
-                }
-            };
-            std::sort(&argv[0], &argv[argc], Sorter::cmp);
+            std::sort(&argv[0], &argv[argc],
+                      [](const wchar_t *a, const wchar_t *b) {
+                          return std::wcscmp(a, b) < 0;
+                      });
         }
         for (int i = 0; i < argc; ++i) {
             ifilename = argv[i];

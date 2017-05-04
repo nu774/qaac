@@ -20,11 +20,10 @@ public:
     DL() {}
     DL(HMODULE handle, bool own=true)
     {
-        struct noop { static void call(HMODULE x) {} };
         if (own)
             m_module.reset(handle, FreeLibrary);
         else
-            m_module.reset(handle, noop::call);
+            m_module.reset(handle, [](HMODULE){});
     }
     bool load(const std::wstring &path)
     {

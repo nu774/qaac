@@ -18,16 +18,13 @@ void throwIfError(HRESULT expr, const char *msg)
 
 std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
 {
-    struct F {
-        static void release(IUnknown *x) {  x->Release(); }
-    };
-
     IStream *stream;
     HRESULT hr = SHCreateStreamOnFileW(path.c_str(),
                                        STGM_READ | STGM_SHARE_DENY_WRITE,
                                        &stream);
     if (FAILED(hr)) win32::throw_error(path, hr);
-    std::shared_ptr<IStream> streamPtr(stream, F::release);
+    auto release_func = [](IUnknown *x) { x->Release(); };
+    std::shared_ptr<IStream> streamPtr(stream, release_func);
 
     LARGE_INTEGER li = {{ 0 }};
     ULARGE_INTEGER ui;
@@ -43,7 +40,7 @@ std::wstring load_text_file(const std::wstring &path, uint32_t codepage)
     IMultiLanguage2 *mlang;
     HR(CoCreateInstance(CLSID_CMultiLanguage, 0, CLSCTX_INPROC_SERVER,
                 IID_IMultiLanguage2, (void**)(&mlang)));
-    std::shared_ptr<IMultiLanguage2> mlangPtr(mlang, F::release);
+    std::shared_ptr<IMultiLanguage2> mlangPtr(mlang, release_func);
 
     if (!codepage) {
         DetectEncodingInfo encoding[5];

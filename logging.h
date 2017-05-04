@@ -17,9 +17,8 @@ public:
     bool is_enabled() { return m_streams.size() != 0; }
     void enable_stderr()
     {
-        struct Lambda { static void call(FILE*) {} };
         if (m_stderr_type != FILE_TYPE_UNKNOWN)
-            m_streams.push_back(std::shared_ptr<FILE>(stderr, Lambda::call));
+            m_streams.push_back(std::shared_ptr<FILE>(stderr, [](FILE*){}));
     }
     void enable_file(const wchar_t *filename)
     {

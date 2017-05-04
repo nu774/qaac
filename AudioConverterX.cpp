@@ -13,10 +13,10 @@ AudioConverterX::AudioConverterX(const AudioStreamBasicDescription &iasbd,
 }
 void AudioConverterX::attach(AudioConverterRef converter, bool takeOwn)
 {
-    struct F {
-        static OSStatus dispose(AudioConverterRef) { return 0; }
-    };
-    m_converter.reset(converter, takeOwn ? AudioConverterDispose : F::dispose);
+    if (takeOwn)
+        m_converter.reset(converter, AudioConverterDispose);
+    else
+        m_converter.reset(converter, [](AudioConverterRef){});
 }
 
 UInt32 AudioConverterX::getSampleRateConverterComplexity()

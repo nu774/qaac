@@ -15,10 +15,10 @@ public:
     }
     void attach(ExtAudioFileRef file, bool takeOwn)
     {
-        struct F {
-            static OSStatus dispose(ExtAudioFileRef) { return 0; }
-        };
-        m_file.reset(file, takeOwn ? ExtAudioFileDispose : F::dispose);
+        if (takeOwn)
+            m_file.reset(file, ExtAudioFileDispose);
+        else
+            m_file.reset(file, [](ExtAudioFileRef){});
     }
     operator ExtAudioFileRef() { return m_file.get(); }
 

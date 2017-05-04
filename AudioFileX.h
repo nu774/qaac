@@ -133,10 +133,10 @@ public:
     }
     void attach(AudioFileID file, bool takeOwn)
     {
-        struct F {
-            static OSStatus dispose(AudioFileID af) { return 0; }
-        };
-        m_file.reset(file, takeOwn ? AudioFileClose : F::dispose);
+        if (takeOwn)
+            m_file.reset(file, AudioFileClose);
+        else
+            m_file.reset(file, [](AudioFileID){});
     }
     operator AudioFileID() { return m_file.get(); }
     void close() { m_file.reset(); }

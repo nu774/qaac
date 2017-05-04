@@ -25,13 +25,14 @@ public:
     }
     void attach(AudioCodec codec, bool takeOwn)
     {
-        typedef OSStatus (*disposer_t)(AudioCodec);
-        struct F {
-            static OSStatus dispose(AudioCodec) { return 0; }
+        auto dispose = [](AudioCodec x) {
+            auto y = reinterpret_cast<AudioComponentInstance>(x);
+            AudioComponentInstanceDispose(y);
         };
-        disposer_t acdispose =
-            reinterpret_cast<disposer_t>(AudioComponentInstanceDispose);
-        m_codec.reset(codec, takeOwn ? acdispose : F::dispose);
+        if (takeOwn)
+            m_codec.reset(codec, dispose);
+        else
+            m_codec.reset(codec, [](AudioCodec) {});
     }
     operator AudioCodec() { return m_codec.get(); }
 

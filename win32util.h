@@ -113,14 +113,14 @@ namespace win32 {
     inline std::shared_ptr<FILE> fopen(const std::wstring &path,
                                        const wchar_t *mode)
     {
-        struct noop { static void call(FILE*) {} };
+        auto noop_close = [](FILE *){};
         if (path != L"-")
             return std::shared_ptr<FILE>(wfopenx(path.c_str(), mode),
                                          std::fclose);
         else if (std::wcschr(mode, L'r'))
-            return std::shared_ptr<FILE>(stdin, noop::call);
+            return std::shared_ptr<FILE>(stdin, noop_close);
         else
-            return std::shared_ptr<FILE>(stdout, noop::call);
+            return std::shared_ptr<FILE>(stdout, noop_close);
     }
 
     inline bool is_seekable(int fd)
