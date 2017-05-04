@@ -15,6 +15,7 @@ public:
     {}
     double getClosestAvailableBitRate(double value);
     std::string getConfigAsString();
+    std::string getEncodingParamsTag();
 };
 
 #endif

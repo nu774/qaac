@@ -2,6 +2,7 @@
 #include <limits>
 #include <cmath>
 #include "CoreAudio/AudioCodec.h"
+#include "CoreAudio/AudioComponent.h"
 #include "cautil.h"
 
 double AudioConverterXX::getClosestAvailableBitRate(double value)
@@ -50,3 +51,30 @@ std::string AudioConverterXX::getConfigAsString()
     return s;
 }
 
+std::string AudioConverterXX::getEncodingParamsTag()
+{
+    UInt32 mode = getBitRateControlMode();
+    UInt32 bitrate = getEncodeBitRate();
+    AudioStreamBasicDescription asbd;
+    getOutputStreamDescription(&asbd);
+    UInt32 codec = asbd.mFormatID;
+    AudioComponentDescription cd = { 'aenc', codec, 'appl', 0, 0 };
+    auto ac = AudioComponentFindNext(nullptr, &cd);
+    UInt32 vers = 0;
+    AudioComponentGetVersion(ac, &vers);
+
+    char buf[32] = "vers\0\0\0\1acbf\0\0\0\0brat\0\0\0\0cdcv\0\0\0";
+    buf[12] = mode >> 24;
+    buf[13] = mode >> 16;
+    buf[14] = mode >> 8;
+    buf[15] = mode;
+    buf[20] = bitrate >> 24;
+    buf[21] = bitrate >> 16;
+    buf[22] = bitrate >> 8;
+    buf[23] = bitrate;
+    buf[28] = vers >> 24;
+    buf[29] = vers >> 16;
+    buf[30] = vers >> 8;
+    buf[31] = vers;
+    return std::string(buf, buf + 32);
+}

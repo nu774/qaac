@@ -1221,35 +1221,6 @@ void config_aac_codec(AudioConverterXX &converter,
 }
 
 static
-void set_encoding_params(AudioConverterXX &converter, ITagStore *store)
-{
-    UInt32 mode = converter.getBitRateControlMode();
-    UInt32 bitrate = converter.getEncodeBitRate();
-    AudioStreamBasicDescription asbd;
-    converter.getOutputStreamDescription(&asbd);
-    UInt32 codec = asbd.mFormatID;
-    AudioComponentDescription cd = { 'aenc', codec, 'appl', 0, 0 };
-    auto ac = AudioComponentFindNext(nullptr, &cd);
-    UInt32 vers = 0;
-    AudioComponentGetVersion(ac, &vers);
-
-    char buf[32] = "vers\0\0\0\1acbf\0\0\0\0brat\0\0\0\0cdcv\0\0\0";
-    buf[12] = mode >> 24;
-    buf[13] = mode >> 16;
-    buf[14] = mode >> 8;
-    buf[15] = mode;
-    buf[20] = bitrate >> 24;
-    buf[21] = bitrate >> 16;
-    buf[22] = bitrate >> 8;
-    buf[23] = bitrate;
-    buf[28] = vers >> 24;
-    buf[29] = vers >> 16;
-    buf[30] = vers >> 8;
-    buf[31] = vers;
-    store->setTag("Encoding Params", std::string(buf, buf + 32));
-}
-
-static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
                  const std::wstring &ofilename, const Options &opts)
 {
@@ -1296,8 +1267,10 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     encoder->setSink(sink);
     if (opts.isAAC()) {
         MP4Sink *mp4sink = dynamic_cast<MP4Sink*>(sink.get());
-        if (mp4sink)
-            set_encoding_params(converter, mp4sink);
+        if (mp4sink) {
+            std::string params = converter.getEncodingParamsTag();
+            mp4sink->setTag("Encoding Params", params);
+        }
     }
     set_tags(src.get(), sink.get(), opts, encoder_config);
     CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
