@@ -121,6 +121,9 @@
     <ClCompile Include="..\..\CompositeSource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\configfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\playlist.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

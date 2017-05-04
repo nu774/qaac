@@ -41,6 +41,7 @@
 #include "TakSource.h"
 #include "WavpackSource.h"
 #include "AvisynthSource.h"
+#include "configfile.h"
 #ifdef REFALAC
 #include "ALACEncoderX.h"
 #endif
@@ -357,76 +358,6 @@ static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
     return normalizer->getPeak();
 }
 
-static
-std::shared_ptr<FILE> open_config_file(const wchar_t *file)
-{
-    std::vector<std::wstring> search_paths;
-    const wchar_t *home = _wgetenv(L"HOME");
-    if (home)
-        search_paths.push_back(strutil::format(L"%s\\%s", home, L".qaac"));
-    wchar_t path[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathW(0, CSIDL_APPDATA, 0, 0, path)))
-        search_paths.push_back(strutil::format(L"%s\\%s", path, L"qaac"));
-    search_paths.push_back(win32::get_module_directory());
-    for (size_t i = 0; i < search_paths.size(); ++i) {
-        try {
-            std::wstring pathtry =
-                strutil::format(L"%s\\%s", search_paths[i].c_str(), file);
-            return win32::fopen(pathtry, L"r");
-        } catch (...) {
-            if (i == search_paths.size() - 1) throw;
-        }
-    }
-    return 0;
-}
-
-static
-void matrix_from_preset(const Options &opts,
-                        std::vector<std::vector<complex_t> > *result)
-{
-    std::shared_ptr<FILE> fpPtr;
-    if (opts.remix_preset) {
-        std::wstring path =
-            strutil::format(L"matrix\\%s.txt", opts.remix_preset);
-        fpPtr = open_config_file(path.c_str());
-    } else
-        fpPtr = win32::fopen(opts.remix_file, L"r");
-    FILE *fp = fpPtr.get();
-    int c;
-    std::vector<std::vector<complex_t> > matrix;
-    std::vector<complex_t> row;
-    while ((c = std::getc(fp)) != EOF) {
-        if (c == '\n') {
-            if (row.size()) {
-                matrix.push_back(row);
-                row.clear();
-            }
-        } else if (std::isspace(c)) {
-            while (c != '\n' && std::isspace(c = std::getc(fp)))
-                ;
-            std::ungetc(c, fp);
-        } else if (std::isdigit(c) || c == '-') {
-            std::ungetc(c, fp);
-            double v;
-            if (std::fscanf(fp, "%lf", &v) != 1)
-                throw std::runtime_error("invalid matrix preset file");
-            c = std::getc(fp);
-            if (std::strchr("iIjJ", c))
-                row.push_back(complex_t(0.0, v));
-            else if (std::strchr("kK", c))
-                row.push_back(complex_t(0.0, -v));
-            else {
-                std::ungetc(c, fp);
-                row.push_back(complex_t(v, 0.0));
-            }
-        } else
-            throw std::runtime_error("invalid char in matrix preset file");
-    }
-    if (row.size())
-        matrix.push_back(row);
-    result->swap(matrix);
-}
-
 static void
 mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
               const Options &opts, uint32_t *channel_layout)
@@ -459,7 +390,10 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
             LOG(L"WARNING: mixer requires libsoxconvolver. Mixing disabled\n");
         else {
             std::vector<std::vector<complex_t> > matrix;
-            matrix_from_preset(opts, &matrix);
+            if (opts.remix_file)
+                loadRemixerMatrixFromFile(opts.remix_file, &matrix);
+            else
+                loadRemixerMatrixFromPreset(opts.remix_preset, &matrix);
             if (opts.verbose > 1 || opts.logfilename) {
                 LOG(L"Matrix mixer: %uch -> %uch\n",
                     static_cast<uint32_t>(matrix[0].size()),

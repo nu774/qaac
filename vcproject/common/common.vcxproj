@@ -96,6 +96,7 @@
     <ClCompile Include="..\..\chanmap.cpp" />
     <ClCompile Include="..\..\chapters.cpp" />
     <ClCompile Include="..\..\CompositeSource.cpp" />
+    <ClCompile Include="..\..\configfile.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\ISource.cpp" />
     <ClCompile Include="..\..\logging.cpp" />
