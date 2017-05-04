@@ -10,12 +10,16 @@ bool WICConvertArtwork(const void *data, size_t size, unsigned maxSize,
 #endif
 
 #ifdef _MSC_VER
+#include <stdint.h>
 #include <stdexcept>
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include <comdef.h>
+#pragma warning(push)
+#pragma warning(disable:4005)
 #include <wincodec.h>
+#pragma warning(pop)
 #include "util.h"
 #include "win32util.h"
 #include "wicimage.h"
