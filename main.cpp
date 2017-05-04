@@ -257,7 +257,6 @@ public:
 
 static
 void do_encode(IEncoder *encoder, const std::wstring &ofilename,
-               const std::vector<std::shared_ptr<ISource> > &chain,
                const Options &opts)
 {
     typedef std::shared_ptr<std::FILE> file_t;
@@ -269,7 +268,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 
-    std::shared_ptr<ISource> src = chain.back();
+    ISource *src = encoder->src();
     Progress progress(opts.verbose, src->length(),
                       src->getSampleFormat().mSampleRate);
     try {
@@ -1161,7 +1160,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     if (cafsink)
         cafsink->beginWrite();
 
-    do_encode(encoder.get(), ofilename, chain, opts);
+    do_encode(encoder.get(), ofilename, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder->overallBitrate());
 
     AudioFilePacketTableInfo pti = { 0 };
@@ -1213,7 +1212,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     if (cafsink)
         cafsink->beginWrite();
 
-    do_encode(&encoder, ofilename, chain, opts);
+    do_encode(&encoder, ofilename, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
 
     MP4SinkBase *mp4sinkbase = dynamic_cast<MP4SinkBase*>(sink.get());
