@@ -20,14 +20,6 @@ namespace chanmap {
     uint32_t defaultChannelMask(uint32_t nchannels);
     uint32_t AACLayoutFromBitmap(uint32_t bitmap);
     void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result);
-
-    inline uint32_t getChannelLayoutForCodec(uint32_t layout_tag)
-    {
-        if (layout_tag == kAudioChannelLayoutTag_AAC_7_1_Rear)
-            return kAudioChannelLayoutTag_MPEG_7_1_B;
-        else
-            return layout_tag;
-    }
 }
 
 #endif

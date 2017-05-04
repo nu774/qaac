@@ -4,6 +4,77 @@
 #include "CoreAudio/AudioCodec.h"
 #include "CoreAudio/AudioComponent.h"
 #include "cautil.h"
+#include "chanmap.h"
+
+const UInt32 AAC_7_1_Rear_Tag = chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear;
+
+void AudioConverterXX::getCompressionMagicCookie(std::vector<uint8_t> *result)
+{
+    BaseT::getCompressionMagicCookie(result);
+    if (isOutputAAC() && m_OutputChannelLayoutTag == AAC_7_1_Rear_Tag) {
+        std::vector<uint8_t> asc;
+        cautil::parseMagicCookieAAC(*result, &asc);
+        cautil::insert71RearPCEToASC(&asc);
+        cautil::replaceASCInMagicCookie(result, asc);
+    }
+}
+
+void AudioConverterXX::
+getInputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
+{
+    if (!isOutputAAC() || m_InputChannelLayoutTag != AAC_7_1_Rear_Tag)
+        BaseT::getInputChannelLayout(result);
+    else {
+        auto acl =
+            std::shared_ptr<AudioChannelLayout>(new AudioChannelLayout);
+        acl->mChannelLayoutTag = m_InputChannelLayoutTag;
+        result->swap(acl);
+    }
+}
+
+void AudioConverterXX::setInputChannelLayout(const AudioChannelLayout &acl)
+{
+    if (!isOutputAAC() || acl.mChannelLayoutTag != AAC_7_1_Rear_Tag)
+        BaseT::setInputChannelLayout(acl);
+    else {
+        m_InputChannelLayoutTag = acl.mChannelLayoutTag;
+        AudioChannelLayout acl2 = { 0 };
+        acl2.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_7_1_B;
+        BaseT::setInputChannelLayout(acl2);
+    }
+}
+
+void AudioConverterXX::
+getOutputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
+{
+    if (!isOutputAAC() || m_OutputChannelLayoutTag != AAC_7_1_Rear_Tag)
+        BaseT::getOutputChannelLayout(result);
+    else {
+        auto acl =
+            std::shared_ptr<AudioChannelLayout>(new AudioChannelLayout);
+        acl->mChannelLayoutTag = m_OutputChannelLayoutTag;
+        result->swap(acl);
+    }
+}
+
+void AudioConverterXX::setOutputChannelLayout(const AudioChannelLayout &acl)
+{
+    if (!isOutputAAC() || acl.mChannelLayoutTag != AAC_7_1_Rear_Tag)
+        BaseT::setOutputChannelLayout(acl);
+    else {
+        m_OutputChannelLayoutTag = acl.mChannelLayoutTag;
+        AudioChannelLayout acl2 = { 0 };
+        acl2.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_7_1_B;
+        BaseT::setOutputChannelLayout(acl2);
+    }
+}
+
+bool AudioConverterXX::isOutputAAC()
+{
+    AudioStreamBasicDescription asbd;
+    getOutputStreamDescription(&asbd);
+    return (asbd.mFormatID == 'aac ' || asbd.mFormatID == 'aach');
+}
 
 double AudioConverterXX::getClosestAvailableBitRate(double value)
 {
@@ -31,7 +102,7 @@ void AudioConverterXX::configAACCodec(UInt32 bitrateControlMode, double bitrate,
     setCodecQuality(std::min(codecQuality, qmax));
 
     if (bitrateControlMode == kAudioCodecBitRateControlMode_Variable)
-        setSoundQualityForVBR(std::min(static_cast<UInt32>(bitrate + .5), qmax));
+        setSoundQualityForVBR(std::min(UInt32(bitrate + .5), qmax));
     else {
         if (bitrate == 0.0) // request maximum available bitrate
             bitrate = 1000.0 * 1000.0 * 1000.0; // set big enough value
@@ -46,7 +117,8 @@ void AudioConverterXX::configAACCodec(UInt32 bitrateControlMode, double bitrate,
             std::shared_ptr<AudioChannelLayout> layout;
             getOutputChannelLayout(&layout);
 
-            double srate = oasbd.mSampleRate ? oasbd.mSampleRate : iasbd.mSampleRate;
+            double srate = oasbd.mSampleRate ? oasbd.mSampleRate
+                                             : iasbd.mSampleRate;
             unsigned nchannels = oasbd.mChannelsPerFrame;
             switch (layout->mChannelLayoutTag) {
             case kAudioChannelLayoutTag_MPEG_5_1_D:

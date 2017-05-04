@@ -30,14 +30,16 @@ public:
     void setPrimeMethod(UInt32 value);
     void getPrimeInfo(AudioConverterPrimeInfo *result);
     void setPrimeInfo(const AudioConverterPrimeInfo &info);
-    void getCompressionMagicCookie(std::vector<uint8_t> *result);
+    virtual void getCompressionMagicCookie(std::vector<uint8_t> *result);
     void setDecompressionMagicCookie(const std::vector<uint8_t> &cookie);
     UInt32 getEncodeBitRate();
     void setEncodeBitRate(UInt32 value);
+    virtual
     void getInputChannelLayout(std::shared_ptr<AudioChannelLayout> *result);
-    void setInputChannelLayout(const AudioChannelLayout &value);
+    virtual void setInputChannelLayout(const AudioChannelLayout &value);
+    virtual
     void getOutputChannelLayout(std::shared_ptr<AudioChannelLayout> *result);
-    void setOutputChannelLayout(const AudioChannelLayout &value);
+    virtual void setOutputChannelLayout(const AudioChannelLayout &value);
     void getApplicableEncodeBitRates(std::vector<AudioValueRange> *result);
     void getApplicableEncodeSampleRates(std::vector<AudioValueRange> *result);
     void getInputStreamDescription(AudioStreamBasicDescription *result);

@@ -527,13 +527,12 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
     if (opts.isAAC() || opts.isALAC()) {
 #ifdef QAAC
-        uint32_t clayout = 
-            (opts.isAAC() && !opts.is_caf) ?
-                chanmap::getChannelLayoutForCodec(*channel_layout)
-              : *channel_layout;
-
-        if (!codec->isAvailableOutputChannelLayout(clayout))
+        if (*channel_layout == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
+            if (opts.is_caf || opts.isALAC())
+                throw std::runtime_error("Channel layout not supported");
+        } else if (!codec->isAvailableOutputChannelLayout(*channel_layout)) {
             throw std::runtime_error("Channel layout not supported");
+        }
 #endif
 #ifdef REFALAC
         switch (*channel_layout) {
@@ -577,8 +576,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             oasbd.mSampleRate = closest_rate;
         else {
             AudioChannelLayout acl = { 0 };
-            acl.mChannelLayoutTag =
-                chanmap::getChannelLayoutForCodec(*channel_layout);
+            acl.mChannelLayoutTag = *channel_layout;
             AudioStreamBasicDescription iiasbd = iasbd;
             iiasbd.mSampleRate = closest_rate;
             AudioConverterXX converter(iasbd, oasbd);
@@ -1125,7 +1123,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     }
     AudioConverterXX converter(iasbd, oasbd);
     AudioChannelLayout acl = { 0 };
-    acl.mChannelLayoutTag = chanmap::getChannelLayoutForCodec(channel_layout);
+    acl.mChannelLayoutTag = channel_layout;
     converter.setInputChannelLayout(acl);
     converter.setOutputChannelLayout(acl);
     if (opts.isAAC()) {
@@ -1139,12 +1137,6 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 
     std::shared_ptr<CoreAudioEncoder> encoder;
     if (opts.isAAC()) {
-        if (channel_layout == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
-            std::vector<uint8_t> asc;
-            cautil::parseMagicCookieAAC(cookie, &asc);
-            cautil::insert71RearPCEToASC(&asc);
-            cautil::replaceASCInMagicCookie(&cookie, asc);
-        }
         if (opts.no_smart_padding)
             encoder = std::make_shared<CoreAudioEncoder>(converter);
         else
