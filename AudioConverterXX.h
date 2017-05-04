@@ -14,6 +14,8 @@ public:
         : AudioConverterX(iasbd, oasbd)
     {}
     double getClosestAvailableBitRate(double value);
+    void configAACCodec(UInt32 bitrateControlMode, double bitrate,
+                        UInt32 codecQuality);
     std::string getConfigAsString();
     std::string getEncodingParamsTag();
 };

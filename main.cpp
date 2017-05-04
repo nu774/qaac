@@ -565,17 +565,6 @@ select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
     return cp;
 }
 
-#ifdef QAAC
-static
-void config_aac_codec(AudioConverterXX &converter, const Options &opts);
-
-inline uint32_t bound_quality(uint32_t n)
-{
-    return std::min(n, static_cast<uint32_t>(kAudioConverterQuality_Max));
-}
-
-#endif
-
 std::string pcm_format_str(AudioStreamBasicDescription &asbd)
 {
     const char *stype[] = { "int", "float" };
@@ -661,7 +650,8 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             AudioConverterXX converter(iasbd, oasbd);
             converter.setInputChannelLayout(acl);
             converter.setOutputChannelLayout(acl);
-            config_aac_codec(converter, opts);
+            int32_t quality = (opts.quality + 1) << 5;
+            converter.configAACCodec(opts.method, opts.bitrate, quality);
             converter.getOutputStreamDescription(&oasbd);
         }
     }
@@ -698,10 +688,11 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 uint32_t complexity = opts.native_resampler_complexity;
                 if (quality == -1) quality = kAudioConverterQuality_Medium;
                 if (!complexity) complexity = 'norm';
+                quality = std::min(quality, (int)kAudioConverterQuality_Max);
 
                 CoreAudioResampler *resampler =
                     new CoreAudioResampler(chain.back(), oasbd.mSampleRate,
-                                           bound_quality(quality), complexity);
+                                           quality, complexity);
                 chain.push_back(std::shared_ptr<ISource>(resampler));
                 if (opts.verbose > 1 || opts.logfilename)
                     LOG(L"Using CoreAudio SRC: complexity %hs quality %u\n",
@@ -1186,41 +1177,6 @@ void set_dll_directories(int verbose)
 }
 
 static
-void config_aac_codec(AudioConverterXX &converter,
-                      const Options &opts)
-{
-    converter.setBitRateControlMode(opts.method);
-    double bitrate = opts.bitrate * 1000.0;
-    if (bitrate == 0.0)
-        bitrate = 1000.0 * 1000.0 * 1000.0;
-    else if (bitrate < 8000.0) {
-        bitrate /= 1000.0;
-        AudioStreamBasicDescription iasbd, oasbd;
-        converter.getInputStreamDescription(&iasbd);
-        converter.getOutputStreamDescription(&oasbd);
-        std::shared_ptr<AudioChannelLayout> layout;
-        converter.getOutputChannelLayout(&layout);
-
-        double rate = oasbd.mSampleRate ? oasbd.mSampleRate : iasbd.mSampleRate;
-        unsigned nchannels = oasbd.mChannelsPerFrame;
-        switch (layout->mChannelLayoutTag) {
-        case kAudioChannelLayoutTag_MPEG_5_1_D:
-        case kAudioChannelLayoutTag_AAC_6_1:
-        case kAudioChannelLayoutTag_MPEG_7_1_B:
-            --nchannels;
-        }
-        bitrate *= nchannels * rate;
-    }
-    if (opts.method != Options::kTVBR) {
-        bitrate = converter.getClosestAvailableBitRate(bitrate);
-        converter.setEncodeBitRate(bitrate);
-    } else {
-        converter.setSoundQualityForVBR(bound_quality(opts.bitrate));
-    }
-    converter.setCodecQuality(bound_quality((opts.quality + 1) << 5));
-}
-
-static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
                  const std::wstring &ofilename, const Options &opts)
 {
@@ -1238,8 +1194,10 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     acl.mChannelLayoutTag = chanmap::getChannelLayoutForCodec(channel_layout);
     converter.setInputChannelLayout(acl);
     converter.setOutputChannelLayout(acl);
-    if (opts.isAAC()) config_aac_codec(converter, opts);
-
+    if (opts.isAAC()) {
+        int32_t quality = (opts.quality + 1) << 5;
+        converter.configAACCodec(opts.method, opts.bitrate, quality);
+    }
     std::wstring encoder_config = strutil::us2w(converter.getConfigAsString());
     LOG(L"%s\n", encoder_config.c_str());
     std::vector<uint8_t> cookie;

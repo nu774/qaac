@@ -22,6 +22,44 @@ double AudioConverterXX::getClosestAvailableBitRate(double value)
     return pick;
 }
 
+void AudioConverterXX::configAACCodec(UInt32 bitrateControlMode, double bitrate,
+                                      UInt32 codecQuality)
+{
+    const UInt32 qmax = kAudioConverterQuality_Max;
+
+    setBitRateControlMode(bitrateControlMode);
+    setCodecQuality(std::min(codecQuality, qmax));
+
+    if (bitrateControlMode == kAudioCodecBitRateControlMode_Variable)
+        setSoundQualityForVBR(std::min(static_cast<UInt32>(bitrate + .5), qmax));
+    else {
+        if (bitrate == 0.0) // request maximum available bitrate
+            bitrate = 1000.0 * 1000.0 * 1000.0; // set big enough value
+        else if (bitrate >= 8000) // in bps
+            ;
+        else if (bitrate >= 8.0) // in kbps
+            bitrate *= 1000.0;
+        else { // bits per sample
+            AudioStreamBasicDescription iasbd, oasbd;
+            getInputStreamDescription(&iasbd);
+            getOutputStreamDescription(&oasbd);
+            std::shared_ptr<AudioChannelLayout> layout;
+            getOutputChannelLayout(&layout);
+
+            double srate = oasbd.mSampleRate ? oasbd.mSampleRate : iasbd.mSampleRate;
+            unsigned nchannels = oasbd.mChannelsPerFrame;
+            switch (layout->mChannelLayoutTag) {
+            case kAudioChannelLayoutTag_MPEG_5_1_D:
+            case kAudioChannelLayoutTag_AAC_6_1:
+            case kAudioChannelLayoutTag_MPEG_7_1_B:
+                --nchannels;
+            }
+            bitrate *= nchannels * srate;
+        }
+        setEncodeBitRate(getClosestAvailableBitRate(bitrate));
+    }
+}
+
 std::string AudioConverterXX::getConfigAsString()
 {
     std::string s;
