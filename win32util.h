@@ -133,5 +133,7 @@ namespace win32 {
     char *load_with_mmap(const wchar_t *path, uint64_t *size);
 
     int create_named_pipe(const wchar_t *path);
+
+    std::string get_dll_version_for_locale(HMODULE hDll, WORD langid);
 }
 #endif

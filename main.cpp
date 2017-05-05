@@ -1003,41 +1003,6 @@ void show_available_aac_settings()
 }
 
 static
-std::string GetCoreAudioVersion(HMODULE hDll)
-{
-    HRSRC hRes = FindResourceExW(hDll,
-                                 RT_VERSION,
-                                 MAKEINTRESOURCEW(VS_VERSION_INFO),
-                                 MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US));
-    if (!hRes)
-        win32::throw_error("FindResourceExW", GetLastError());
-    std::string data;
-    {
-        DWORD cbres = SizeofResource(hDll, hRes);
-        HGLOBAL hMem = LoadResource(hDll, hRes);
-        if (hMem) {
-            char *pc = static_cast<char*>(LockResource(hMem));
-            if (cbres && pc)
-                data.assign(pc, cbres);
-            FreeResource(hMem);
-        }
-    }
-    // find dwSignature of VS_FIXEDFILEINFO
-    size_t pos = data.find("\xbd\x04\xef\xfe");
-    if (pos != std::string::npos) {
-        VS_FIXEDFILEINFO vfi;
-        std::memcpy(&vfi, data.c_str() + pos, sizeof vfi);
-        WORD v[4];
-        v[0] = HIWORD(vfi.dwFileVersionMS);
-        v[1] = LOWORD(vfi.dwFileVersionMS);
-        v[2] = HIWORD(vfi.dwFileVersionLS);
-        v[3] = LOWORD(vfi.dwFileVersionLS);
-        return strutil::format("%u.%u.%u.%u", v[0],v[1],v[2],v[3]);
-    }
-    return "";
-}
-
-static
 void setup_aach_codec(HMODULE hDll)
 {
     CFPlugInFactoryFunction aachFactory =
@@ -1395,9 +1360,10 @@ int wmain1(int argc, wchar_t **argv)
         if (!hDll)
             win32::throw_error("CoreAudioToolbox.dll", GetLastError());
         else {
-            std::string ver = GetCoreAudioVersion(hDll);
+            WORD langid_us = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+            std::string ver = win32::get_dll_version_for_locale(hDll, langid_us);
             encoder_name = strutil::format("%s, CoreAudioToolbox %s",
-                    encoder_name.c_str(), ver.c_str());
+                                           encoder_name.c_str(), ver.c_str());
             setup_aach_codec(hDll);
             FreeLibrary(hDll);
         }
