@@ -218,8 +218,7 @@ public:
         : m_disp(100, verbosity), m_verbose(verbosity),
           m_total(total), m_rate(rate)
     {
-        HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(stderr)));
-        m_stderr_type = GetFileType(h);
+        m_stderr_type = GetFileType(win32::get_handle(_fileno(stderr)));
         m_console_visible = IsWindowVisible(GetConsoleWindow());
         if (total != ~0ULL)
             m_tstamp = util::format_seconds(static_cast<double>(total) / rate);

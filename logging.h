@@ -42,8 +42,7 @@ public:
 private:
     Log()
     {
-        HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(stderr)));
-        m_stderr_type = GetFileType(h);
+        m_stderr_type = GetFileType(win32::get_handle(_fileno(stderr)));
     }
 };
 

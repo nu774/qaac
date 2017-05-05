@@ -123,9 +123,17 @@ namespace win32 {
             return std::shared_ptr<FILE>(stdout, noop_close);
     }
 
+    inline HANDLE get_handle(int fd)
+    {
+        return reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+    }
+    inline bool is_seekable(HANDLE fh)
+    {
+        return GetFileType(fh) == FILE_TYPE_DISK;
+    }
     inline bool is_seekable(int fd)
     {
-        return GetFileType((HANDLE)_get_osfhandle(fd)) == FILE_TYPE_DISK;
+        return is_seekable(get_handle(fd));
     }
 
     FILE *tmpfile(const wchar_t *prefix);
