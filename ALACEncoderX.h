@@ -40,6 +40,22 @@ public:
     uint64_t framesWritten() const { return m_stat.framesWritten(); }
     double currentBitrate() const { return m_stat.currentBitrate(); }
     double overallBitrate() const { return m_stat.overallBitrate(); }
+
+    static bool isAvailableOutputChannelLayout(uint32_t channel_layout_tag)
+    {
+        switch (channel_layout_tag) {
+        case kAudioChannelLayoutTag_Mono:
+        case kAudioChannelLayoutTag_Stereo:
+        case kAudioChannelLayoutTag_AAC_3_0:
+        case kAudioChannelLayoutTag_AAC_4_0:
+        case kAudioChannelLayoutTag_AAC_5_0:
+        case kAudioChannelLayoutTag_AAC_5_1:
+        case kAudioChannelLayoutTag_AAC_6_1:
+        case kAudioChannelLayoutTag_AAC_7_1:
+            return true;
+        }
+        return false;
+    }
 };
 
 #endif

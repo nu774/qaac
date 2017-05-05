@@ -529,19 +529,8 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         }
 #endif
 #ifdef REFALAC
-        switch (*channel_layout) {
-        case kAudioChannelLayoutTag_Mono:
-        case kAudioChannelLayoutTag_Stereo:
-        case kAudioChannelLayoutTag_AAC_3_0:
-        case kAudioChannelLayoutTag_AAC_4_0:
-        case kAudioChannelLayoutTag_AAC_5_0:
-        case kAudioChannelLayoutTag_AAC_5_1:
-        case kAudioChannelLayoutTag_AAC_6_1:
-        case kAudioChannelLayoutTag_AAC_7_1:
-            break;
-        default:
+        if (!ALACEncoderX::isAvailableOutputChannelLayout(*channel_layout))
             throw std::runtime_error("Not supported channel layout for ALAC");
-        }
 #endif
     }
     if (opts.lowpass > 0) {
