@@ -152,14 +152,7 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
     } catch (...) {
         return ofilename;
     }
-    BY_HANDLE_FILE_INFORMATION ibhi = { 0 }, obhi = { 0 };
-    HANDLE ih = reinterpret_cast<HANDLE>(_get_osfhandle(fileno(ifp.get())));
-    HANDLE oh = reinterpret_cast<HANDLE>(_get_osfhandle(fileno(ofp.get())));
-    GetFileInformationByHandle(ih, &ibhi);
-    GetFileInformationByHandle(oh, &obhi);
-    if (ibhi.dwVolumeSerialNumber != obhi.dwVolumeSerialNumber ||
-        ibhi.nFileIndexHigh != obhi.nFileIndexHigh ||
-        ibhi.nFileIndexLow != obhi.nFileIndexLow)
+    if (!win32::is_same_file(_fileno(ifp.get()), _fileno(ofp.get())))
         return ofilename;
 
     std::wstring tl = strutil::format(L"_%s", ext);

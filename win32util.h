@@ -143,5 +143,12 @@ namespace win32 {
     int create_named_pipe(const wchar_t *path);
 
     std::string get_dll_version_for_locale(HMODULE hDll, WORD langid);
+
+    bool is_same_file(HANDLE ha, HANDLE hb);
+
+    inline bool is_same_file(int fda, int fdb)
+    {
+        return is_same_file(get_handle(fda), get_handle(fdb));
+    }
 }
 #endif

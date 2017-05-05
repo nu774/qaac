@@ -123,4 +123,15 @@ namespace win32 {
         }
         return "";
     }
+
+    bool is_same_file(HANDLE ha, HANDLE hb)
+    {
+        BY_HANDLE_FILE_INFORMATION bhfia, bhfib;
+
+        if (!GetFileInformationByHandle(ha, &bhfia)) return false;
+        if (!GetFileInformationByHandle(hb, &bhfib)) return false;
+        return bhfia.dwVolumeSerialNumber == bhfib.dwVolumeSerialNumber
+            && bhfia.nFileIndexHigh == bhfib.nFileIndexHigh
+            && bhfia.nFileIndexLow == bhfib.nFileIndexLow;
+    }
 }
