@@ -8,10 +8,10 @@
 
 std::shared_ptr<FILE> openConfigFile(const wchar_t *file);
 
-void loadRemixerMatrixFromFile(const wchar_t *path,
-                               std::vector<std::vector<complex_t> > *result);
+std::vector<std::vector<complex_t>>
+loadRemixerMatrixFromFile(const wchar_t *path);
 
-void loadRemixerMatrixFromPreset(const wchar_t *preset_name,
-                                 std::vector<std::vector<complex_t> > *result);
+std::vector<std::vector<complex_t>>
+loadRemixerMatrixFromPreset(const wchar_t *preset_name);
 
 #endif

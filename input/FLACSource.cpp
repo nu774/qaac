@@ -225,12 +225,12 @@ void FLACSource::handleVorbisComment(
         if (strcasecmp(key, "waveformatextensible_channel_mask") == 0) {
             unsigned mask = 0;
             if (sscanf(value, "%i", &mask) == 1)
-                chanmap::getChannels(mask, &m_chanmap);
+                m_chanmap = chanmap::getChannels(mask);
         } else if (value) {
             tags[key] = value;
         }
     }
-    TextBasedTag::normalizeTags(tags, &m_tags);
+    m_tags = TextBasedTag::normalizeTags(tags);
 }
 
 void FLACSource::handlePicture(const FLAC__StreamMetadata_Picture &pic)

@@ -27,8 +27,8 @@ std::shared_ptr<FILE> openConfigFile(const wchar_t *file)
 }
 
 static
-void loadRemixerMatrix(std::shared_ptr<FILE> fileptr,
-                       std::vector<std::vector<complex_t> > *result)
+std::vector<std::vector<complex_t>>
+loadRemixerMatrix(std::shared_ptr<FILE> fileptr)
 {
     FILE *fp = fileptr.get();
     int c;
@@ -63,19 +63,19 @@ void loadRemixerMatrix(std::shared_ptr<FILE> fileptr,
     }
     if (row.size())
         matrix.push_back(row);
-    result->swap(matrix);
+    return matrix;
 }
 
-void loadRemixerMatrixFromFile(const wchar_t *path,
-                               std::vector<std::vector<complex_t> > *result)
+std::vector<std::vector<complex_t>>
+loadRemixerMatrixFromFile(const wchar_t *path)
 {
-    loadRemixerMatrix(win32::fopen(path, L"r"), result);
+    return loadRemixerMatrix(win32::fopen(path, L"r"));
 }
 
-void loadRemixerMatrixFromPreset(const wchar_t *preset_name,
-                                 std::vector<std::vector<complex_t> > *result)
+std::vector<std::vector<complex_t>>
+loadRemixerMatrixFromPreset(const wchar_t *preset_name)
 {
     std::wstring path = strutil::format(L"matrix\\%s.txt", preset_name);
-    loadRemixerMatrix(openConfigFile(path.c_str()), result);
+    return loadRemixerMatrix(openConfigFile(path.c_str()));
 }
 

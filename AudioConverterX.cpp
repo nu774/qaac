@@ -63,11 +63,14 @@ void AudioConverterX::setPrimeMethod(UInt32 value)
                                       kAudioConverterPrimeMethod,
                                       sizeof value, &value));
 }
-void AudioConverterX::getPrimeInfo(AudioConverterPrimeInfo *result)
+AudioConverterPrimeInfo AudioConverterX::getPrimeInfo()
 {
+    AudioConverterPrimeInfo result;
     UInt32 size = sizeof(AudioConverterPrimeInfo);
     CHECKCA(AudioConverterGetProperty(m_converter.get(),
-                                      kAudioConverterPrimeInfo, &size, result));
+                                      kAudioConverterPrimeInfo,
+                                      &size, &result));
+    return result;
 }
 void AudioConverterX::setPrimeInfo(const AudioConverterPrimeInfo &info)
 {
@@ -75,7 +78,7 @@ void AudioConverterX::setPrimeInfo(const AudioConverterPrimeInfo &info)
                                       kAudioConverterPrimeInfo,
                                       sizeof(info), &info));
 }
-void AudioConverterX::getCompressionMagicCookie(std::vector<uint8_t> *result)
+std::vector<uint8_t> AudioConverterX::getCompressionMagicCookie()
 {
     UInt32 size;
     Boolean writable;
@@ -83,15 +86,14 @@ void AudioConverterX::getCompressionMagicCookie(std::vector<uint8_t> *result)
                 kAudioConverterCompressionMagicCookie, &size, &writable));
     std::vector<uint8_t> vec(size / sizeof(uint8_t));
     CHECKCA(AudioConverterGetProperty(m_converter.get(),
-            kAudioConverterCompressionMagicCookie, &size, &vec[0]));
-    result->swap(vec);
+            kAudioConverterCompressionMagicCookie, &size, vec.data()));
+    return vec;
 }
-void AudioConverterX::
-setDecompressionMagicCookie(const std::vector<uint8_t> &cookie)
+void AudioConverterX::setDecompressionMagicCookie(const std::vector<uint8_t> &v)
 {
     CHECKCA(AudioConverterSetProperty(m_converter.get(),
             kAudioConverterDecompressionMagicCookie,
-            cookie.size(), cookie.data()));
+            v.size(), v.data()));
 }
 UInt32 AudioConverterX::getEncodeBitRate()
 {
@@ -107,19 +109,18 @@ void AudioConverterX::setEncodeBitRate(UInt32 value)
                                       kAudioConverterEncodeBitRate,
                                       sizeof value, &value));
 }
-void AudioConverterX::
-getInputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
+std::shared_ptr<AudioChannelLayout> AudioConverterX::getInputChannelLayout()
 {
     UInt32 size;
     Boolean writable;
     CHECKCA(AudioConverterGetPropertyInfo(m_converter.get(),
                 kAudioConverterInputChannelLayout, &size, &writable));
     std::shared_ptr<AudioChannelLayout>
-        acl(reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
+        acl(static_cast<AudioChannelLayout*>(std::malloc(size)),
             std::free);
     CHECKCA(AudioConverterGetProperty(m_converter.get(),
             kAudioConverterInputChannelLayout, &size, acl.get()));
-    result->swap(acl);
+    return acl;
 }
 void AudioConverterX::setInputChannelLayout(const AudioChannelLayout &value)
 {
@@ -127,19 +128,18 @@ void AudioConverterX::setInputChannelLayout(const AudioChannelLayout &value)
     CHECKCA(AudioConverterSetProperty(m_converter.get(),
             kAudioConverterInputChannelLayout, size, &value));
 }
-void AudioConverterX::
-getOutputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
+std::shared_ptr<AudioChannelLayout> AudioConverterX::getOutputChannelLayout()
 {
     UInt32 size;
     Boolean writable;
     CHECKCA(AudioConverterGetPropertyInfo(m_converter.get(),
                 kAudioConverterOutputChannelLayout, &size, &writable));
     std::shared_ptr<AudioChannelLayout> acl(
-        reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
+        static_cast<AudioChannelLayout*>(std::malloc(size)),
         std::free);
     CHECKCA(AudioConverterGetProperty(m_converter.get(),
             kAudioConverterOutputChannelLayout, &size, acl.get()));
-    result->swap(acl);
+    return acl;
 }
 void AudioConverterX::setOutputChannelLayout(const AudioChannelLayout &value)
 {
@@ -147,8 +147,7 @@ void AudioConverterX::setOutputChannelLayout(const AudioChannelLayout &value)
     CHECKCA(AudioConverterSetProperty(m_converter.get(),
             kAudioConverterOutputChannelLayout, size, &value));
 }
-void AudioConverterX::
-getApplicableEncodeBitRates(std::vector<AudioValueRange> *result)
+std::vector<AudioValueRange> AudioConverterX::getApplicableEncodeBitRates()
 {
     UInt32 size;
     Boolean writable;
@@ -156,11 +155,10 @@ getApplicableEncodeBitRates(std::vector<AudioValueRange> *result)
                 kAudioConverterApplicableEncodeBitRates, &size, &writable));
     std::vector<AudioValueRange> vec(size / sizeof(AudioValueRange));
     CHECKCA(AudioConverterGetProperty(m_converter.get(),
-            kAudioConverterApplicableEncodeBitRates, &size, &vec[0]));
-    result->swap(vec);
+            kAudioConverterApplicableEncodeBitRates, &size, vec.data()));
+    return vec;
 }
-void AudioConverterX::
-getApplicableEncodeSampleRates(std::vector<AudioValueRange> *result)
+std::vector<AudioValueRange> AudioConverterX::getApplicableEncodeSampleRates()
 {
     UInt32 size;
     Boolean writable;
@@ -169,24 +167,26 @@ getApplicableEncodeSampleRates(std::vector<AudioValueRange> *result)
                 &size, &writable));
     std::vector<AudioValueRange> vec(size / sizeof(AudioValueRange));
     CHECKCA(AudioConverterGetProperty(m_converter.get(),
-            kAudioConverterApplicableEncodeSampleRates, &size, &vec[0]));
-    result->swap(vec);
+            kAudioConverterApplicableEncodeSampleRates, &size, vec.data()));
+    return vec;
 }
-void AudioConverterX::
-getInputStreamDescription(AudioStreamBasicDescription *result)
+AudioStreamBasicDescription AudioConverterX::getInputStreamDescription()
 {
-    UInt32 size = sizeof(*result);
+    AudioStreamBasicDescription result;
+    UInt32 size = sizeof(result);
     CHECKCA(AudioConverterGetProperty(m_converter.get(),
                 kAudioConverterCurrentInputStreamDescription,
-                &size, result));
+                &size, &result));
+    return result;
 }
-void AudioConverterX::
-getOutputStreamDescription(AudioStreamBasicDescription *result)
+AudioStreamBasicDescription AudioConverterX::getOutputStreamDescription()
 {
-    UInt32 size = sizeof(*result);
+    AudioStreamBasicDescription result;
+    UInt32 size = sizeof(result);
     CHECKCA(AudioConverterGetProperty(m_converter.get(),
                 kAudioConverterCurrentOutputStreamDescription,
-                &size, result));
+                &size, &result));
+    return result;
 }
 UInt32 AudioConverterX::getMaximumOutputPacketSize()
 {

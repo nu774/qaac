@@ -8,27 +8,27 @@
 
 const UInt32 AAC_7_1_Rear_Tag = chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear;
 
-void AudioConverterXX::getCompressionMagicCookie(std::vector<uint8_t> *result)
+std::vector<uint8_t> AudioConverterXX::getCompressionMagicCookie()
 {
-    BaseT::getCompressionMagicCookie(result);
+    auto cookie = BaseT::getCompressionMagicCookie();
     if (isOutputAAC() && m_OutputChannelLayoutTag == AAC_7_1_Rear_Tag) {
-        std::vector<uint8_t> asc;
-        cautil::parseMagicCookieAAC(*result, &asc);
+        auto asc = cautil::parseMagicCookieAAC(cookie);
         cautil::insert71RearPCEToASC(&asc);
-        cautil::replaceASCInMagicCookie(result, asc);
+        cautil::replaceASCInMagicCookie(&cookie, asc);
     }
+    return cookie;
 }
 
-void AudioConverterXX::
-getInputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
+std::shared_ptr<AudioChannelLayout> AudioConverterXX::getInputChannelLayout()
 {
     if (!isOutputAAC() || m_InputChannelLayoutTag != AAC_7_1_Rear_Tag)
-        BaseT::getInputChannelLayout(result);
+        return BaseT::getInputChannelLayout();
     else {
         auto acl =
             std::shared_ptr<AudioChannelLayout>(new AudioChannelLayout);
+        memset(acl.get(), 0, sizeof(AudioChannelLayout));
         acl->mChannelLayoutTag = m_InputChannelLayoutTag;
-        result->swap(acl);
+        return acl;
     }
 }
 
@@ -44,16 +44,16 @@ void AudioConverterXX::setInputChannelLayout(const AudioChannelLayout &acl)
     }
 }
 
-void AudioConverterXX::
-getOutputChannelLayout(std::shared_ptr<AudioChannelLayout> *result)
+std::shared_ptr<AudioChannelLayout> AudioConverterXX::getOutputChannelLayout()
 {
     if (!isOutputAAC() || m_OutputChannelLayoutTag != AAC_7_1_Rear_Tag)
-        BaseT::getOutputChannelLayout(result);
+        return BaseT::getOutputChannelLayout();
     else {
         auto acl =
             std::shared_ptr<AudioChannelLayout>(new AudioChannelLayout);
+        memset(acl.get(), 0, sizeof(AudioChannelLayout));
         acl->mChannelLayoutTag = m_OutputChannelLayoutTag;
-        result->swap(acl);
+        return acl;
     }
 }
 
@@ -71,15 +71,13 @@ void AudioConverterXX::setOutputChannelLayout(const AudioChannelLayout &acl)
 
 bool AudioConverterXX::isOutputAAC()
 {
-    AudioStreamBasicDescription asbd;
-    getOutputStreamDescription(&asbd);
+    auto asbd = getOutputStreamDescription();
     return (asbd.mFormatID == 'aac ' || asbd.mFormatID == 'aach');
 }
 
 double AudioConverterXX::getClosestAvailableBitRate(double value)
 {
-    std::vector<AudioValueRange> rates;
-    getApplicableEncodeBitRates(&rates);
+    auto rates = getApplicableEncodeBitRates();
     double distance = std::numeric_limits<double>::max();
     double pick = 0;
     for (auto it = rates.begin(); it != rates.end(); ++it) {
@@ -111,12 +109,9 @@ void AudioConverterXX::configAACCodec(UInt32 bitrateControlMode, double bitrate,
         else if (bitrate >= 8.0) // in kbps
             bitrate *= 1000.0;
         else { // bits per sample
-            AudioStreamBasicDescription iasbd, oasbd;
-            getInputStreamDescription(&iasbd);
-            getOutputStreamDescription(&oasbd);
-            std::shared_ptr<AudioChannelLayout> layout;
-            getOutputChannelLayout(&layout);
-
+            auto iasbd = getInputStreamDescription();
+            auto oasbd = getOutputStreamDescription();
+            auto layout = getOutputChannelLayout();
             double srate = oasbd.mSampleRate ? oasbd.mSampleRate
                                              : iasbd.mSampleRate;
             unsigned nchannels = oasbd.mChannelsPerFrame;
@@ -135,8 +130,7 @@ void AudioConverterXX::configAACCodec(UInt32 bitrateControlMode, double bitrate,
 std::string AudioConverterXX::getConfigAsString()
 {
     std::string s;
-    AudioStreamBasicDescription asbd;
-    getOutputStreamDescription(&asbd);
+    auto asbd = getOutputStreamDescription();
     UInt32 codec = asbd.mFormatID;
     if (codec == 'aac ')
         s = "AAC-LC Encoder";
@@ -165,8 +159,7 @@ std::string AudioConverterXX::getEncodingParamsTag()
 {
     UInt32 mode = getBitRateControlMode();
     UInt32 bitrate = getEncodeBitRate();
-    AudioStreamBasicDescription asbd;
-    getOutputStreamDescription(&asbd);
+    auto asbd = getOutputStreamDescription();
     UInt32 codec = asbd.mFormatID;
     AudioComponentDescription cd = { 'aenc', codec, 'appl', 0, 0 };
     auto ac = AudioComponentFindNext(nullptr, &cd);

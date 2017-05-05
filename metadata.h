@@ -46,13 +46,13 @@ namespace Tag {
 
 namespace TextBasedTag {
     std::string normalizeTagName(const char *name);
-    void normalizeTags(const std::map<std::string, std::string> &src,
-                       std::map<std::string, std::string> *dst);
+    std::map<std::string, std::string>
+        normalizeTags(const std::map<std::string, std::string> &src);
 }
 
 namespace ID3 {
-    void fetchAiffID3Tags(int fd, std::map<std::string, std::string> *result);
-    void fetchMPEGID3Tags(int fd, std::map<std::string, std::string> *result);
+    std::map<std::string, std::string> fetchAiffID3Tags(int fd);
+    std::map<std::string, std::string> fetchMPEGID3Tags(int fd);
 }
 
 namespace M4A {
@@ -62,13 +62,13 @@ namespace M4A {
                           std::map<uint32_t, std::string> *shortTags,
                           std::map<std::string, std::string> *longTags);
 
-    void fetchTags(MP4FileX &file, std::map<std::string, std::string> *tags);
+    std::map<std::string, std::string> fetchTags(MP4FileX &file);
 }
 
 namespace CAF {
-    void fetchTags(const std::vector<uint8_t> &info,
-                   std::map<std::string, std::string> *dict);
-    bool fetchTags(int fd, std::map<std::string, std::string> *tags);
+    std::map<std::string, std::string>
+        fetchTags(const std::vector<uint8_t> &info);
+    std::map<std::string, std::string> fetchTags(int fd);
 }
 
 const char * const iTunSMPB_template = " 00000000 %08X %08X %08X%08X "

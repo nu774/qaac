@@ -62,7 +62,7 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
         }
 
         m_decode_buffer.set_unit(m_oasbd.mBytesPerFrame);
-        M4A::fetchTags(m_file, &m_tags);
+        m_tags = M4A::fetchTags(m_file);
         if (m_file.GetTimeScale() >= m_file.GetTrackTimeScale(m_track_id)) {
             if (m_file.FindTrackAtom(m_track_id, "edts.elst")) {
                 uint32_t nedits = m_file.GetTrackNumberOfEdits(m_track_id);
@@ -277,7 +277,7 @@ void MP4Source::setupALAC()
         util::fourcc bitmap(reinterpret_cast<const char*>(&chan[4]));
         acl.mChannelLayoutTag = tag;
         acl.mChannelBitmap    = bitmap;
-        chanmap::getChannels(&acl, &m_chanmap);
+        m_chanmap = chanmap::getChannels(&acl);
     }
 #ifdef QAAC
     m_decoder = std::make_shared<CoreAudioPacketDecoder>(this, m_iasbd);
@@ -320,7 +320,7 @@ void MP4Source::setupMPEG4Audio()
     case 0x40:
     case 0x67:
     {
-        std::vector<uint8_t> magic_cookie, asc;
+        std::vector<uint8_t> magic_cookie;
         {
             mp4v2::impl::MP4Atom *esds =
                 m_file.FindTrackAtom(m_track_id, "mdia.minf.stbl.stsd.*.esds");
@@ -332,7 +332,7 @@ void MP4Source::setupMPEG4Audio()
             std::copy(p + 12, p + size, std::back_inserter(magic_cookie));
             MP4Free(p);
         }
-        cautil::parseMagicCookieAAC(magic_cookie, &asc);
+        auto asc = cautil::parseMagicCookieAAC(magic_cookie);
         cautil::parseASC(asc, &m_iasbd, &m_chanmap);
         if (m_iasbd.mFormatID != 'aac ' &&
             m_iasbd.mFormatID != 'aach' &&

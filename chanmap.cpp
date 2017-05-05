@@ -53,18 +53,17 @@ uint32_t getChannelMask(const std::vector<uint32_t>& channels)
                            });
 }
 
-void getChannels(uint32_t bitmap, std::vector<uint32_t> *result,
-                 uint32_t limit)
+std::vector<uint32_t> getChannels(uint32_t bitmap, uint32_t limit)
 {
     std::vector<uint32_t> channels;
     for (unsigned i = 0; i < 32 && channels.size() < limit; ++i) {
         if (bitmap & (1<<i))
             channels.push_back(i + 1);
     }
-    result->swap(channels);
+    return channels;
 }
 
-void getChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
+std::vector<uint32_t> getChannels(const AudioChannelLayout *acl)
 {
     std::vector<uint32_t> channels;
     uint32_t bitmap = 0;
@@ -72,13 +71,13 @@ void getChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
 
     switch (acl->mChannelLayoutTag) {
     case kAudioChannelLayoutTag_UseChannelBitmap:
-        bitmap = acl->mChannelBitmap; break;
+        return getChannels(acl->mChannelBitmap);
     case kAudioChannelLayoutTag_UseChannelDescriptions:
     {
         const AudioChannelDescription *desc = acl->mChannelDescriptions;
         for (size_t i = 0; i < acl->mNumberChannelDescriptions; ++i)
             channels.push_back(desc[i].mChannelLabel);
-        break;
+        return channels;
     }
     /* 1ch */
     case kAudioChannelLayoutTag_Mono:
@@ -189,25 +188,22 @@ void getChannels(const AudioChannelLayout *acl, std::vector<uint32_t> *result)
         throw std::runtime_error("Unsupported channel layout");
     }
 
-    if (bitmap)
-        getChannels(bitmap, &channels);
-    else if (layout)
-        while (*layout) channels.push_back(*layout++);
-
-    result->swap(channels);
+    while (*layout) channels.push_back(*layout++);
+    return channels;
 }
 
-void convertFromAppleLayout(std::vector<uint32_t> *channels)
+std::vector<uint32_t>
+convertFromAppleLayout(const std::vector<uint32_t> &channels)
 {
-    if (!std::count_if(channels->begin(), channels->end(),
+    if (!std::count_if(channels.begin(), channels.end(),
                        [](uint32_t c) {
                            return c > 18;
                        }))
-        return;
+        return channels;
 
-    std::vector<uint32_t> v(channels->size());
-    std::transform(channels->begin(), channels->end(), v.begin(),
-                   [](uint32_t x) ->uint32_t {
+    std::vector<uint32_t> v(channels.size());
+    std::transform(channels.begin(), channels.end(), v.begin(),
+                   [](uint32_t x) -> uint32_t {
                        switch (x) {
                        case kAudioChannelLabel_Mono:
                            return kAudioChannelLabel_Center;
@@ -237,19 +233,18 @@ void convertFromAppleLayout(std::vector<uint32_t> *channels)
                         };
                         return c;
                    });
-    channels->swap(v);
+    return v;
 }
 
-void getMappingToUSBOrder(const std::vector<uint32_t> &channels,
-                          std::vector<uint32_t> *result)
+std::vector<uint32_t>
+getMappingToUSBOrder(const std::vector<uint32_t> &channels)
 {
     std::vector<uint32_t> index(channels.size());
-    unsigned i = 0;
-    std::generate(index.begin(), index.end(), [&](){ return ++i; });
+    std::iota(index.begin(), index.end(), 1);
     std::sort(index.begin(), index.end(), [&](uint32_t a, uint32_t b) {
                   return channels[a-1] < channels[b-1];
               });
-    result->swap(index);
+    return index;
 }
 
 uint32_t defaultChannelMask(const uint32_t nchannels)
@@ -292,13 +287,11 @@ uint32_t AACLayoutFromBitmap(uint32_t bitmap)
     throw std::runtime_error("No channel mapping to AAC defined");
 }
 
-void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result)
+std::vector<uint32_t> getMappingToAAC(uint32_t bitmap)
 {
     AudioChannelLayout aacLayout = { 0 };
     aacLayout.mChannelLayoutTag = AACLayoutFromBitmap(bitmap);
-
-    std::vector<uint32_t> cs, mapping;
-    getChannels(&aacLayout, &cs);
+    auto cs = getChannels(&aacLayout);
     /*
      * rewrite channels in pre-defined AAC channel layout to match with
      * input channel bitmap
@@ -327,9 +320,9 @@ void getMappingToAAC(uint32_t bitmap, std::vector<uint32_t> *result)
                         return c;
                   });
     assert(getChannelMask(cs) == bitmap);
-    getMappingToUSBOrder(cs, &mapping);
-    getMappingToUSBOrder(mapping, &mapping);
-    result->swap(mapping);
+    auto mapping = getMappingToUSBOrder(cs);
+    mapping = getMappingToUSBOrder(mapping);
+    return mapping;
 }
 
 } // namespace

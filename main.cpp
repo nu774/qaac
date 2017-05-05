@@ -81,8 +81,8 @@ void load_metadata_files(Options *opts)
 {
     if (opts->chapter_file) {
         try {
-            chapters::load_from_file(opts->chapter_file, &opts->chapters,
-                                     opts->textcp);
+            opts->chapters = chapters::load_from_file(opts->chapter_file,
+                                                      opts->textcp);
         } catch (const std::exception &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }
@@ -286,7 +286,7 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
 }
 
 static
-void getRawFormat(const Options &opts, AudioStreamBasicDescription *result)
+AudioStreamBasicDescription getRawFormat(const Options &opts)
 {
     int bits;
     unsigned char c_type, c_endian = 'L';
@@ -314,7 +314,7 @@ void getRawFormat(const Options &opts, AudioStreamBasicDescription *result)
                                 bits, type_tab[itype]);
     if (iendian)
         asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
-    *result = asbd;
+    return asbd;
 }
 
 static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
@@ -370,11 +370,9 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
                 chanmap::getChannelNames(*channels).c_str());
         }
         // reorder to Microsoft (USB) order
-        work.assign(channels->begin(), channels->end());
-        chanmap::convertFromAppleLayout(&work);
+        work = chanmap::convertFromAppleLayout(*channels);
         channels = &work;
-        std::vector<uint32_t> mapping;
-        chanmap::getMappingToUSBOrder(*channels, &mapping);
+        auto mapping = chanmap::getMappingToUSBOrder(*channels);
         if (!util::is_increasing(mapping.begin(), mapping.end())) {
             std::shared_ptr<ISource>
                 mapper(new ChannelMapper(chain.back(), mapping,
@@ -390,9 +388,9 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
         else {
             std::vector<std::vector<complex_t> > matrix;
             if (opts.remix_file)
-                loadRemixerMatrixFromFile(opts.remix_file, &matrix);
+                matrix = loadRemixerMatrixFromFile(opts.remix_file);
             else
-                loadRemixerMatrixFromPreset(opts.remix_preset, &matrix);
+                matrix = loadRemixerMatrixFromPreset(opts.remix_preset);
             if (opts.verbose > 1 || opts.logfilename) {
                 LOG(L"Matrix mixer: %uch -> %uch\n",
                     static_cast<uint32_t>(matrix[0].size()),
@@ -429,8 +427,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
     *channel_layout = chanmask;
     if (chanmask) {
         if (opts.isLPCM() && opts.verbose > 1) {
-            std::vector<uint32_t> vec;
-            chanmap::getChannels(chanmask, &vec);
+            auto vec = chanmap::getChannels(chanmask);
             LOG(L"Output layout: %hs\n",
                 chanmap::getChannelNames(vec).c_str());
         }
@@ -438,8 +435,7 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
     if (opts.isAAC() || opts.isALAC()) {
         // construct mapped channel layout to AAC/ALAC order
         *channel_layout = chanmap::AACLayoutFromBitmap(chanmask);
-        std::vector<uint32_t> aacmap;
-        chanmap::getMappingToAAC(chanmask, &aacmap);
+        auto aacmap = chanmap::getMappingToAAC(chanmask);
         if (aacmap.size() &&
             !util::is_increasing(aacmap.begin(), aacmap.end())) {
             std::shared_ptr<ISource>
@@ -447,10 +443,9 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
             chain.push_back(mapper);
         }
         if (opts.verbose > 1) {
-            std::vector<uint32_t> vec;
             AudioChannelLayout acl = { 0 };
             acl.mChannelLayoutTag = *channel_layout;
-            chanmap::getChannels(&acl, &vec);
+            auto vec = chanmap::getChannels(&acl);
             LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
         }
     }
@@ -583,7 +578,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             converter.setOutputChannelLayout(acl);
             int32_t quality = (opts.quality + 1) << 5;
             converter.configAACCodec(opts.method, opts.bitrate, quality);
-            converter.getOutputStreamDescription(&oasbd);
+            oasbd = converter.getOutputStreamDescription();
         }
     }
 #endif
@@ -915,8 +910,7 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
         try {
             double duration = stat->samplesRead() /
                 encoder->getInputDescription().mSampleRate;
-            std::vector<chapters::entry_t> chapters;
-            chapters::abs_to_duration(opts.chapters, &chapters, duration);
+            auto chapters = chapters::abs_to_duration(opts.chapters, duration);
             sink->setChapters(chapters);
         } catch (const std::runtime_error &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
@@ -939,7 +933,7 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
 {
     std::vector<uint8_t> asc;
     if (opts.isAAC())
-        cautil::parseMagicCookieAAC(cookie, &asc);
+        asc = cautil::parseMagicCookieAAC(cookie);
 
     if (opts.isMP4()) {
         std::shared_ptr<FILE> _ = win32::fopen(ofilename, L"wb");
@@ -960,10 +954,8 @@ static
 void show_available_codec_setttings(UInt32 fmt)
 {
     AudioCodecX codec(fmt);
-    std::vector<AudioValueRange> srates;
-    codec.getAvailableOutputSampleRates(&srates);
-    std::vector<UInt32> tags;
-    codec.getAvailableOutputChannelLayoutTags(&tags);
+    auto srates = codec.getAvailableOutputSampleRates();
+    auto tags = codec.getAvailableOutputChannelLayoutTags();
 
     for (size_t i = 0; i < srates.size(); ++i) {
         if (srates[i].mMinimum == 0) continue;
@@ -971,8 +963,7 @@ void show_available_codec_setttings(UInt32 fmt)
             if (tags[j] == 0) continue;
             AudioChannelLayout acl = { 0 };
             acl.mChannelLayoutTag = tags[j];
-            std::vector<uint32_t> channels;
-            chanmap::getChannels(&acl, &channels);
+            auto channels = chanmap::getChannels(&acl);
             std::string name = chanmap::getChannelNames(channels);
 
             AudioStreamBasicDescription iasbd =
@@ -989,8 +980,7 @@ void show_available_codec_setttings(UInt32 fmt)
             converter.setOutputChannelLayout(acl);
             converter.setBitRateControlMode(
                     kAudioCodecBitRateControlMode_Constant);
-            std::vector<AudioValueRange> bits;
-            converter.getApplicableEncodeBitRates(&bits);
+            auto bits = converter.getApplicableEncodeBitRates();
 
             std::wprintf(L"%hs %gHz %hs --",
                     fmt == 'aac ' ? "LC" : "HE",
@@ -1131,8 +1121,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     }
     std::wstring encoder_config = strutil::us2w(converter.getConfigAsString());
     LOG(L"%s\n", encoder_config.c_str());
-    std::vector<uint8_t> cookie;
-    converter.getCompressionMagicCookie(&cookie);
+    auto cookie = converter.getCompressionMagicCookie();
 
     std::shared_ptr<CoreAudioEncoder> encoder;
     if (opts.isAAC()) {
@@ -1196,8 +1185,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     }
     ALACEncoderX encoder(iasbd);
     encoder.setFastMode(opts.alac_fast);
-    std::vector<uint8_t> cookie;
-    encoder.getMagicCookie(&cookie);
+    auto cookie = encoder.getMagicCookie();
 
     std::shared_ptr<ISink> sink;
     if (opts.is_caf)
@@ -1250,9 +1238,7 @@ void setup_input_factory(const Options &opts)
     AvisynthModule::instance().load(L"avisynth.dll");
 
     if (opts.is_raw) {
-        AudioStreamBasicDescription asbd;
-        getRawFormat(opts, &asbd);
-        InputFactory::instance().setRawFormat(asbd);
+        InputFactory::instance().setRawFormat(getRawFormat(opts));
     }
     InputFactory::instance().setIgnoreLength(opts.ignore_length);
 }

@@ -62,11 +62,11 @@ uint32_t ALACEncoderX::encodeChunk(UInt32 npackets)
     return n;
 }
 
-void ALACEncoderX::getMagicCookie(std::vector<uint8_t> *cookie)
+std::vector<uint8_t> ALACEncoderX::getMagicCookie()
 {
     uint32_t size =
         m_encoder->GetMagicCookieSize(m_odesc.asbd.mChannelsPerFrame);
     std::vector<uint8_t> vec(size);
-    m_encoder->GetMagicCookie(&vec[0], &size);
-    cookie->swap(vec);
+    m_encoder->GetMagicCookie(vec.data(), &size);
+    return vec;
 }

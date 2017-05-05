@@ -3,10 +3,10 @@
 
 CoreAudioEncoder::CoreAudioEncoder(AudioConverterXX &converter)
     : m_converter(converter),
-      m_variable_packet_len(false)
+      m_variable_packet_len(false),
+      m_input_desc(converter.getInputStreamDescription()),
+      m_output_desc(converter.getOutputStreamDescription())
 {
-    m_converter.getInputStreamDescription(&m_input_desc);
-    m_converter.getOutputStreamDescription(&m_output_desc);
     m_stat.setBasicDescription(m_output_desc);
     {
         UInt32 res;
@@ -62,8 +62,7 @@ uint32_t CoreAudioEncoder::encodeChunk(UInt32 npackets)
 
 AudioFilePacketTableInfo CoreAudioEncoder::getGaplessInfo()
 {
-    AudioConverterPrimeInfo pinfo = { 0 };
-    m_converter.getPrimeInfo(&pinfo);
+    auto pinfo = m_converter.getPrimeInfo();
     AudioFilePacketTableInfo ptinfo = { 0 };
     ptinfo.mPrimingFrames = pinfo.leadingFrames;
     ptinfo.mRemainderFrames = pinfo.trailingFrames;

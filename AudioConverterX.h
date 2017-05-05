@@ -28,22 +28,20 @@ public:
     void setSampleRateConverterQuality(UInt32 quality);
     UInt32 getPrimeMethod();
     void setPrimeMethod(UInt32 value);
-    void getPrimeInfo(AudioConverterPrimeInfo *result);
+    AudioConverterPrimeInfo getPrimeInfo();
     void setPrimeInfo(const AudioConverterPrimeInfo &info);
-    virtual void getCompressionMagicCookie(std::vector<uint8_t> *result);
+    virtual std::vector<uint8_t> getCompressionMagicCookie();
     void setDecompressionMagicCookie(const std::vector<uint8_t> &cookie);
     UInt32 getEncodeBitRate();
     void setEncodeBitRate(UInt32 value);
-    virtual
-    void getInputChannelLayout(std::shared_ptr<AudioChannelLayout> *result);
+    virtual std::shared_ptr<AudioChannelLayout> getInputChannelLayout();
     virtual void setInputChannelLayout(const AudioChannelLayout &value);
-    virtual
-    void getOutputChannelLayout(std::shared_ptr<AudioChannelLayout> *result);
+    virtual std::shared_ptr<AudioChannelLayout> getOutputChannelLayout();
     virtual void setOutputChannelLayout(const AudioChannelLayout &value);
-    void getApplicableEncodeBitRates(std::vector<AudioValueRange> *result);
-    void getApplicableEncodeSampleRates(std::vector<AudioValueRange> *result);
-    void getInputStreamDescription(AudioStreamBasicDescription *result);
-    void getOutputStreamDescription(AudioStreamBasicDescription *result);
+    std::vector<AudioValueRange> getApplicableEncodeBitRates();
+    std::vector<AudioValueRange> getApplicableEncodeSampleRates();
+    AudioStreamBasicDescription getInputStreamDescription();
+    AudioStreamBasicDescription getOutputStreamDescription();
     UInt32 getMaximumOutputPacketSize();
     UInt32 getBitRateControlMode();
     void setBitRateControlMode(UInt32 value);

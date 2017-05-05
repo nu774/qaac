@@ -37,7 +37,7 @@ public:
     operator AudioCodec() { return m_codec.get(); }
 
     // property accessor
-    void getAvailableInputSampleRates(std::vector<AudioValueRange> *result)
+    std::vector<AudioValueRange> getAvailableInputSampleRates()
     {
         UInt32 size;
         Boolean writable;
@@ -47,10 +47,10 @@ public:
         std::vector<AudioValueRange> vec(size / sizeof(AudioValueRange));
         CHECKCA(AudioCodecGetProperty(m_codec.get(),
                 kAudioCodecPropertyAvailableInputSampleRates,
-                &size, &vec[0]));
-        result->swap(vec);
+                &size, vec.data()));
+        return vec;
     }
-    void getAvailableOutputSampleRates(std::vector<AudioValueRange> *result)
+    std::vector<AudioValueRange> getAvailableOutputSampleRates()
     {
         UInt32 size;
         Boolean writable;
@@ -60,10 +60,10 @@ public:
         std::vector<AudioValueRange> vec(size / sizeof(AudioValueRange));
         CHECKCA(AudioCodecGetProperty(m_codec.get(),
                 kAudioCodecPropertyAvailableOutputSampleRates,
-                &size, &vec[0]));
-        result->swap(vec);
+                &size, vec.data()));
+        return vec;
     }
-    void getAvailableOutputChannelLayoutTags(std::vector<UInt32> *result)
+    std::vector<UInt32> getAvailableOutputChannelLayoutTags()
     {
         UInt32 size;
         Boolean writable;
@@ -73,8 +73,8 @@ public:
         std::vector<UInt32> vec(size/sizeof(UInt32));
         CHECKCA(AudioCodecGetProperty(m_codec.get(),
                 kAudioCodecPropertyAvailableOutputChannelLayoutTags,
-                &size, &vec[0]));
-        result->swap(vec);
+                &size, vec.data()));
+        return vec;
     }
     bool getIsInitialized()
     {
@@ -84,7 +84,7 @@ public:
                 kAudioCodecPropertyIsInitialized, &size, &value));
         return !!value;
     }
-    void getApplicableBitRateRange(std::vector<AudioValueRange> *result)
+    std::vector<AudioValueRange> getApplicableBitRateRange()
     {
         UInt32 size;
         Boolean writable;
@@ -93,26 +93,23 @@ public:
                 &size, &writable));
         std::vector<AudioValueRange> vec(size / sizeof(AudioValueRange));
         CHECKCA(AudioCodecGetProperty(m_codec.get(),
-                kAudioCodecPropertyApplicableBitRateRange, &size, &vec[0]));
-        result->swap(vec);
+                kAudioCodecPropertyApplicableBitRateRange, &size, vec.data()));
+        return vec;
     }
 
     // helpers
     bool isAvailableOutputChannelLayout(UInt32 tag)
     {
-        std::vector<UInt32> tags;
-        getAvailableOutputChannelLayoutTags(&tags);
+        auto tags = getAvailableOutputChannelLayoutTags();
         return std::find(tags.begin(), tags.end(), tag) != tags.end();
     }
 
     double getClosestAvailableOutputSampleRate(double value)
     {
-        std::vector<AudioValueRange> rates;
-        getAvailableOutputSampleRates(&rates);
+        auto rates = getAvailableOutputSampleRates();
         double distance = DBL_MAX;
         double pick = value;
-        std::vector<AudioValueRange>::const_iterator it = rates.begin();
-        for (; it != rates.end(); ++it) {
+        for (auto it = rates.begin(); it != rates.end(); ++it) {
             if (!it->mMinimum && !it->mMaximum)
                 continue;
             if (it->mMinimum <= value && value <= it->mMaximum)

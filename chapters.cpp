@@ -22,9 +22,8 @@ namespace chapters {
         chapters.push_back(std::make_pair(sname, stamp));
     }
 
-    void load_from_file(const std::wstring &path,
-                        std::vector<abs_entry_t> *chapters,
-                        uint32_t codepage)
+    std::vector<abs_entry_t> load_from_file(const std::wstring &path,
+                                            uint32_t codepage)
     {
         std::vector<abs_entry_t> chaps;
 
@@ -50,12 +49,12 @@ namespace chapters {
                     h = hh, m = mm, s = ss;
             }
         }
-        chapters->swap(chaps);
+        return chaps;
     }
 
-    void abs_to_duration(const std::vector<abs_entry_t> abs_ents,
-                         std::vector<entry_t> *dur_ents,
-                         double total_duration)
+    std::vector<entry_t>
+        abs_to_duration(const std::vector<abs_entry_t> abs_ents,
+                        double total_duration)
     {
         std::vector<entry_t> chapters;
         // convert from absolute timestamp to duration
@@ -65,7 +64,7 @@ namespace chapters {
             double span = end - abs_ents[i].second;
             chapters.push_back(std::make_pair(abs_ents[i].first, span));
         }
-        dur_ents->swap(chapters);
+        return chapters;
     }
 }
 

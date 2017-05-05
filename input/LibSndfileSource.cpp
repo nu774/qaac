@@ -169,9 +169,9 @@ LibSndfileSource::LibSndfileSource(const std::shared_ptr<FILE> &fp)
                        m_chanmap.begin(), convert_chanmap);
 
     if (m_format_name == "aiff")
-        ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
+        m_tags = ID3::fetchAiffID3Tags(fileno(m_fp.get()));
     else if (m_format_name == "caf")
-        CAF::fetchTags(fileno(m_fp.get()), &m_tags);
+        m_tags = CAF::fetchTags(fileno(m_fp.get()));
     else if (m_format_name == "oga")
         fetchVorbisTags();
 }
@@ -207,7 +207,7 @@ void LibSndfileSource::fetchVorbisTags()
         std::wstring value = it->second.toString().toWString();
         tags[key] = strutil::w2us(value);
     }
-    TextBasedTag::normalizeTags(tags, &m_tags);
+    m_tags = TextBasedTag::normalizeTags(tags);
 
     auto pics = tag->pictureList();
     for (auto it = pics.begin(); it != pics.end(); ++it) {

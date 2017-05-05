@@ -191,6 +191,6 @@ void TakSource::fetchTags()
             cover.assign(vec.begin(), vec.end());
         }
     }
-    TextBasedTag::normalizeTags(tags, &m_tags);
+    m_tags = TextBasedTag::normalizeTags(tags);
     if (cover.size()) m_tags["COVER ART"] = cover;
 }

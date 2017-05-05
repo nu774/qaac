@@ -21,25 +21,25 @@ namespace afutil {
                                        &cfsr, &size, &type));
         return type;
     }
-    inline void getReadableTypes(std::vector<uint32_t> *result)
+    inline std::vector<UInt32> getReadableTypes()
     {
         UInt32 size;
         CHECKCA(AudioFileGetGlobalInfoSize(kAudioFileGlobalInfo_ReadableTypes,
                                            0, 0, &size));
-        std::vector<uint32_t> vec(size / sizeof(uint32_t));
+        std::vector<UInt32> vec(size / sizeof(UInt32));
         CHECKCA(AudioFileGetGlobalInfo(kAudioFileGlobalInfo_ReadableTypes,
-                                       0, 0, &size, &vec[0]));
-        result->swap(vec);
+                                       0, 0, &size, vec.data()));
+        return vec;
     }
-    inline void getWritableTypes(std::vector<uint32_t> *result)
+    inline std::vector<UInt32> getWritableTypes()
     {
         UInt32 size;
         CHECKCA(AudioFileGetGlobalInfoSize(kAudioFileGlobalInfo_WritableTypes,
                                            0, 0, &size));
-        std::vector<uint32_t> vec(size / sizeof(uint32_t));
+        std::vector<UInt32> vec(size / sizeof(UInt32));
         CHECKCA(AudioFileGetGlobalInfo(kAudioFileGlobalInfo_WritableTypes,
-                                       0, 0, &size, &vec[0]));
-        result->swap(vec);
+                                       0, 0, &size, vec.data()));
+        return vec;
     }
     inline std::wstring getFileTypeName(uint32_t type)
     {
@@ -50,8 +50,7 @@ namespace afutil {
         CFStringPtr _(name, CFRelease);
         return cautil::CF2W(name);
     }
-    inline void getExtensionsForType(uint32_t type,
-                                     std::vector<std::wstring> *vec)
+    inline std::vector<std::wstring> getExtensionsForType(uint32_t type)
     {
         CFArrayRef aref;
         UInt32 size = sizeof(aref);
@@ -65,22 +64,21 @@ namespace afutil {
                 static_cast<CFStringRef>(CFArrayGetValueAtIndex(aref, i));
             result.push_back(cautil::CF2W(value));
         }
-        vec->swap(result);
+        return result;
     }
-    inline void getAvailableFormatIDs(uint32_t type,
-                                      std::vector<uint32_t> *result)
+    inline std::vector<UInt32> getAvailableFormatIDs(uint32_t type)
     {
         UInt32 size;
         CHECKCA(AudioFileGetGlobalInfoSize(
                    kAudioFileGlobalInfo_AvailableFormatIDs,
                    sizeof(type), &type, &size));
-        std::vector<uint32_t> vec(size / sizeof(uint32_t));
+        std::vector<UInt32> vec(size / sizeof(UInt32));
         CHECKCA(AudioFileGetGlobalInfo(kAudioFileGlobalInfo_AvailableFormatIDs,
-                                       sizeof(type), &type, &size, &vec[0]));
-        result->swap(vec);
+                                       sizeof(type), &type, &size, vec.data()));
+        return vec;
     }
-    inline std::wstring
-        getASBDFormatName(const AudioStreamBasicDescription &asbd)
+    inline
+    std::wstring getASBDFormatName(const AudioStreamBasicDescription &asbd)
     {
         CFStringRef s;
         UInt32 size = sizeof(s);
@@ -99,27 +97,26 @@ namespace afutil {
         }
         return ws;
     }
-    inline void id3TagToDictinary(const void *data, size_t size,
-                                  CFDictionaryPtr *dict)
+    inline CFDictionaryPtr id3TagToDictinary(const void *data, size_t size)
     {
         UInt32 k = kAudioFormatProperty_ID3TagToDictionary;
         CFDictionaryRef dref;
         UInt32 osize = sizeof dref;
         CHECKCA(AudioFormatGetProperty(k, size, data, &osize, &dref));
         CFDictionaryPtr dp(dref, CFRelease);
-        dict->swap(dp);
+        return dp;
     }
-    inline void getChannelLayoutForTag(uint32_t tag,
-                                       std::shared_ptr<AudioChannelLayout> *p)
+    inline
+    std::shared_ptr<AudioChannelLayout> getChannelLayoutForTag(uint32_t tag)
     {
         UInt32 k = kAudioFormatProperty_ChannelLayoutForTag;
         UInt32 size;
         CHECKCA(AudioFormatGetPropertyInfo(k, sizeof(tag), &tag, &size));
         std::shared_ptr<AudioChannelLayout>
-            acl(reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
+            acl(static_cast<AudioChannelLayout*>(std::malloc(size)),
                 std::free);
         CHECKCA(AudioFormatGetProperty(k, sizeof(tag), &tag, &size, acl.get()));
-        p->swap(acl);
+        return acl;
     }
 }
 
@@ -150,11 +147,13 @@ public:
                     kAudioFilePropertyFileFormat, &size, &value));
         return value;
     }
-    void getDataFormat(AudioStreamBasicDescription *result)
+    AudioStreamBasicDescription getDataFormat()
     {
+        AudioStreamBasicDescription result;
         UInt32 size = sizeof(AudioStreamBasicDescription);
         CHECKCA(AudioFileGetProperty(m_file.get(),
-                    kAudioFilePropertyDataFormat, &size, result));
+                    kAudioFilePropertyDataFormat, &size, &result));
+        return result;
     }
     uint64_t getAudioDataPacketCount()
     {
@@ -165,12 +164,14 @@ public:
                     &size, &value));
         return value;
     }
-    void getPacketTableInfo(AudioFilePacketTableInfo *result)
+    AudioFilePacketTableInfo getPacketTableInfo()
     {
+        AudioFilePacketTableInfo result;
         UInt32 size = sizeof(AudioFilePacketTableInfo);
         CHECKCA(AudioFileGetProperty(m_file.get(),
                                      kAudioFilePropertyPacketTableInfo,
-                                     &size, result));
+                                     &size, &result));
+        return result;
     }
     void setPacketTableInfo(const AudioFilePacketTableInfo &info)
     {
@@ -179,18 +180,18 @@ public:
                                      sizeof(AudioFilePacketTableInfo),
                                      &info));
     }
-    void getChannelLayout(std::shared_ptr<AudioChannelLayout> *layout)
+    std::shared_ptr<AudioChannelLayout> getChannelLayout()
     {
         UInt32 size;
         UInt32 writable;
         CHECKCA(AudioFileGetPropertyInfo(m_file.get(),
                     kAudioFilePropertyChannelLayout, &size, &writable));
         std::shared_ptr<AudioChannelLayout> acl(
-            reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
+            static_cast<AudioChannelLayout*>(std::malloc(size)),
             std::free);
         CHECKCA(AudioFileGetProperty(m_file.get(),
                 kAudioFilePropertyChannelLayout, &size, acl.get()));
-        layout->swap(acl);
+        return acl;
     }
     void setChannelLayout(const AudioChannelLayout &layout)
     {
@@ -200,22 +201,21 @@ public:
                                      size,
                                      &layout));
     }
-    void getMagicCookieData(std::vector<uint8_t> *cookie)
+    std::vector<uint8_t> getMagicCookieData()
     {
         UInt32 size;
         UInt32 writable;
+        std::vector<uint8_t> vec;
         CHECKCA(AudioFileGetPropertyInfo(m_file.get(),
                                          kAudioFilePropertyMagicCookieData,
                                          &size, &writable));
         if (size > 0) {
-            std::vector<uint8_t> vec(size);
+            vec.resize(size);
             CHECKCA(AudioFileGetProperty(m_file.get(),
                                          kAudioFilePropertyMagicCookieData,
-                                         &size, &vec[0]));
-            cookie->swap(vec);
-        } else {
-            cookie->clear();
+                                         &size, vec.data()));
         }
+        return vec;
     }
     void setMagicCookieData(const uint8_t *cookie, size_t size)
     {
@@ -259,15 +259,15 @@ public:
                                      &size, &len));
         return len;
     }
-    void getInfoDictionary(CFDictionaryPtr *dict)
+    CFDictionaryPtr getInfoDictionary()
     {
         CFDictionaryRef dictref;
-        UInt32 size = sizeof dict;
+        UInt32 size = sizeof(dictref);
         CHECKCA(AudioFileGetProperty(m_file.get(),
                     kAudioFilePropertyInfoDictionary,
                     &size, &dictref));
         CFDictionaryPtr newdic(dictref, CFRelease);
-        dict->swap(newdic);
+        return newdic;
     }
     void setInfoDictionary(CFDictionaryRef dict)
     {
@@ -275,21 +275,21 @@ public:
                                      kAudioFilePropertyInfoDictionary,
                                      sizeof(dict), &dict));
     }
-    void getUserData(uint32_t fcc, uint32_t index, std::vector<uint8_t> *res)
+    std::vector<uint8_t> getUserData(uint32_t fcc, uint32_t index)
     {
         UInt32 size;
         CHECKCA(AudioFileGetUserDataSize(m_file.get(), fcc, index, &size));
         std::vector<uint8_t> vec(size);
         CHECKCA(AudioFileGetUserData(m_file.get(), fcc, index, &size,
-                                     &vec[0]));
-        res->swap(vec);
+                                     vec.data()));
+        return vec;
     }
     void setUserData(uint32_t fcc, uint32_t index, const void *data,
                      size_t size)
     {
         CHECKCA(AudioFileSetUserData(m_file.get(), fcc, index, size, data));
     }
-    void getFormatList(std::vector<AudioFormatListItem> *result)
+    std::vector<AudioFormatListItem> getFormatList()
     {
         UInt32 size;
         UInt32 writable;
@@ -300,8 +300,8 @@ public:
         std::vector<AudioFormatListItem> vec(count);
         CHECKCA(AudioFileGetProperty(m_file.get(),
                                      kAudioFilePropertyFormatList,
-                                     &size, &vec[0]));
-        result->swap(vec);
+                                     &size, vec.data()));
+        return vec;
     }
     uint32_t getBitrate()
     {

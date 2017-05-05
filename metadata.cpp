@@ -123,8 +123,8 @@ namespace TextBasedTag {
         auto found = lookup_by_key(known_keys, end, sname.c_str());
         return found ? found : strutil::supper(name);
     }
-    void normalizeTags(const std::map<std::string, std::string> &src,
-                       std::map<std::string, std::string> *dst)
+    std::map<std::string, std::string>
+        normalizeTags(const std::map<std::string, std::string> &src)
     {
         std::map<std::string, std::string> result;
         unsigned track = 0, track_total = 0;
@@ -158,7 +158,7 @@ namespace TextBasedTag {
             else
                 result["DISC NUMBER"] = strutil::format("%u", disc);
         }
-        dst->swap(result);
+        return result;
     }
 }
 
@@ -199,8 +199,7 @@ namespace ID3 {
         { "TSRC", "ISRC"                        },
         { "TSST", "SET SUBTITLE"                },
     };
-    void fetchID3v2Tags(TagLib::ID3v2::Tag *tag,
-                        std::map<std::string, std::string> *result)
+    std::map<std::string, std::string> fetchID3v2Tags(TagLib::ID3v2::Tag *tag)
     {
         std::map<std::string, std::string> tags;
 
@@ -233,18 +232,18 @@ namespace ID3 {
                     tags[key] = strutil::w2us(frame->toString().toWString());
             }
         });
-        TextBasedTag::normalizeTags(tags, result);
+        return TextBasedTag::normalizeTags(tags);
     }
-    void fetchAiffID3Tags(int fd, std::map<std::string, std::string> *result)
+    std::map<std::string, std::string> fetchAiffID3Tags(int fd)
     {
         util::FilePositionSaver _(fd);
         lseek(fd, 0, SEEK_SET);
         TagLibX::FDIOStreamReader stream(fd);
         TagLib::RIFF::AIFF::File file(&stream, false);
         auto tag = file.tag();
-        fetchID3v2Tags(tag, result);
+        return fetchID3v2Tags(tag);
     }
-    void fetchMPEGID3Tags(int fd, std::map<std::string, std::string> *result)
+    std::map<std::string, std::string> fetchMPEGID3Tags(int fd)
     {
         util::FilePositionSaver _(fd);
         lseek(fd, 0, SEEK_SET);
@@ -253,7 +252,7 @@ namespace ID3 {
                                 TagLib::ID3v2::FrameFactory::instance(),
                                 false);
         auto tag = file.ID3v2Tag();
-        fetchID3v2Tags(tag, result);
+        return fetchID3v2Tags(tag);
     }
 }
 
@@ -408,14 +407,14 @@ namespace M4A {
                 ? entry->fcc : 0;
     }
 
-    void putNumberPair(std::map<uint32_t, std::string> *result,
+    void putNumberPair(std::map<uint32_t, std::string> *dst,
                        uint32_t fcc, unsigned number, unsigned total)
     {
         if (number) {
             if (total)
-                (*result)[fcc] = strutil::format("%u/%u", number, total);
+                (*dst)[fcc] = strutil::format("%u/%u", number, total);
             else
-                (*result)[fcc] = strutil::format("%u", number);
+                (*dst)[fcc] = strutil::format("%u", number);
         }
     }
     void convertToM4ATags(const std::map<std::string, std::string> &src,
@@ -503,12 +502,12 @@ namespace M4A {
         return "";
     }
 
-    void fetchTags(MP4FileX &file, std::map<std::string, std::string> *tags)
+    std::map<std::string, std::string> fetchTags(MP4FileX &file)
     {
         std::map<std::string, std::string> result;
         try {
             auto iL = mp4v2::impl::itmf::genericGetItems(file);
-            if (!iL) return;
+            if (!iL) return result;
             std::shared_ptr<MP4ItmfItemList>
                 _(iL, mp4v2::impl::itmf::genericItemListFree);
             for (size_t i = 0; i < iL->size; ++i) {
@@ -528,10 +527,10 @@ namespace M4A {
                         result.insert(std::make_pair(std::string(name), v));
                 }
             }
-            tags->swap(result);
         } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
         }
+        return result;
     }
 }
 
@@ -543,11 +542,12 @@ namespace CAF {
             return 0;
         return util::b2host64(size);
     }
-    bool get_info(int fd, std::vector<uint8_t> *info)
+    std::vector<uint8_t> get_info(int fd)
     {
+        std::vector<uint8_t> buf;
         util::FilePositionSaver _(fd);
         if (_lseeki64(fd, 8, SEEK_SET) != 8)
-            return false;
+            return buf;
         uint64_t chunk_size;
         char chunk_name[4];
         while ((chunk_size = next_chunk(fd, chunk_name)) > 0) {
@@ -555,22 +555,21 @@ namespace CAF {
                 if (_lseeki64(fd, chunk_size, SEEK_CUR) < 0)
                     break;
             } else {
-                std::vector<uint8_t> buf(chunk_size);
+                buf.resize(chunk_size);
                 if (util::nread(fd, &buf[0], buf.size()) != buf.size())
                     break;
-                info->swap(buf);
-                return true;
+                return buf;
             }
         }
-        return false;
+        return buf;
     }
-    void fetchTags(const std::vector<uint8_t> &info,
-                   std::map<std::string, std::string> *dict)
+    std::map<std::string, std::string>
+        fetchTags(const std::vector<uint8_t> &info)
     {
-        if (info.size() < 5)
-            return;
-        // inside of info tag is delimited with NUL char.
         std::map<std::string, std::string> result;
+        if (info.size() < 5)
+            return result;
+        // inside of info tag is delimited with NUL char.
         std::vector<std::string> tokens;
         {
             const char *infop = reinterpret_cast<const char*>(info.data()) + 4;
@@ -582,14 +581,13 @@ namespace CAF {
         }
         for (size_t i = 0; i < tokens.size() >> 1; ++i)
             result[tokens[2 * i]] = tokens[2 * i + 1];
-        TextBasedTag::normalizeTags(result, dict);
+        return TextBasedTag::normalizeTags(result);
     }
-    bool fetchTags(int fd, std::map<std::string, std::string> *dict)
+    std::map<std::string, std::string> fetchTags(int fd)
     {
-        std::vector<uint8_t> info;
-        if (!get_info(fd, &info) || info.size() < 4)
-            return false;
-        fetchTags(info, dict);
-        return true;
+        auto info = get_info(fd);
+        if (info.size() < 4)
+            return std::map<std::string, std::string>();
+        return fetchTags(info);
     }
 }

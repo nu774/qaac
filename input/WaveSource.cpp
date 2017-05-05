@@ -211,7 +211,7 @@ void WaveSource::fmt(size_t size)
         read16le(&wValidBitsPerSample);
         read32le(&dwChannelMask);
         if (dwChannelMask > 0 && util::bitcount(dwChannelMask) >= nChannels)
-            chanmap::getChannels(dwChannelMask, &m_chanmap, nChannels);
+            m_chanmap = chanmap::getChannels(dwChannelMask, nChannels);
 
         util::check_eof(util::nread(fd(), &guid, sizeof guid) == sizeof guid);
         skip((size - 39) & ~1);

@@ -157,7 +157,7 @@ WavpackSource::WavpackSource(const std::wstring &path)
                                         : m_module.GetNumSamples(wpc);
 
     unsigned mask = m_module.GetChannelMask(wpc);
-    chanmap::getChannels(mask, &m_chanmap, m_asbd.mChannelsPerFrame);
+    m_chanmap = chanmap::getChannels(mask, m_asbd.mChannelsPerFrame);
 
     fetchTags();
 }
@@ -223,7 +223,7 @@ void WavpackSource::fetchTags()
         m_module.GetTagItem(wpc, name.data(), value.data(), value.size());
         tags[name.data()] = value.data();
     }
-    TextBasedTag::normalizeTags(tags, &m_tags);
+    m_tags = TextBasedTag::normalizeTags(tags);
 
     count = m_module.GetNumBinaryTagItems(wpc);
     for (int i = 0; i < count; ++i) {

@@ -96,10 +96,9 @@ void CueTrack::addSegment(const CueSegment &seg)
     m_segments.push_back(seg);
 }
 
-void CueTrack::getTags(std::map<std::string, std::string> *tags) const
+std::map<std::string, std::string> CueTrack::getTags() const
 {
-    std::map<std::string, std::string> result;
-    m_cuesheet->getTags(&result);
+    auto result = m_cuesheet->getTags();
     std::for_each(m_meta.begin(), m_meta.end(),
                   [&](decltype(*m_meta.begin()) &tag) {
                       auto key = strutil::w2us(tag.first);
@@ -109,7 +108,7 @@ void CueTrack::getTags(std::map<std::string, std::string> *tags) const
                   });
     result["track number"]
         = strutil::format("%u/%u", number(), m_cuesheet->count());
-    TextBasedTag::normalizeTags(result, tags);
+    return TextBasedTag::normalizeTags(result);
 }
 
 void CueSheet::parse(std::wstreambuf *src)
@@ -161,7 +160,6 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
     std::shared_ptr<ISeekableSource> src;
     std::for_each(begin(), end(), [&](const CueTrack &track) {
         std::shared_ptr<CompositeSource> track_source(new CompositeSource());
-        std::map<std::string, std::string> track_tags;
         std::for_each(track.begin(), track.end(), [&](const CueSegment &seg) {
             if (seg.m_filename == L"__GAP__") {
                 if (src.get())
@@ -195,7 +193,7 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
             } else
                 tags[it->first] = it->second;
         }
-        track.getTags(&track_tags);
+        auto track_tags = track.getTags();
         for (auto it = track_tags.begin(); it != track_tags.end(); ++it)
             tags[it->first] = it->second;
         track_source->setTags(tags);
@@ -211,32 +209,7 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
     });
 }
 
-void CueSheet::asChapters(double duration,
-                          std::vector<chapters::entry_t> *chapters) const
-{
-    if (m_has_multiple_files)
-        throw std::runtime_error("Multiple FILE in embedded cuesheet");
-
-    std::vector<chapters::entry_t> chaps;
-    unsigned tbeg, tend, last_end = 0;
-    std::for_each(begin(), end(), [&](const CueTrack &track) {
-        tbeg = track.begin()->m_begin;
-        tend = track.begin()->m_end;
-        double track_duration;
-        if (tend != ~0U)
-            track_duration = (tend - tbeg) / 75.0;
-        else
-            track_duration = duration - (last_end / 75.0);
-        std::wstring title = track.name();
-        if (title == L"")
-            title = strutil::format(L"Track %02d", track.number()); 
-        chaps.push_back(std::make_pair(title, track_duration));
-        last_end = tend;
-    });
-    chapters->swap(chaps);
-}
-
-void CueSheet::getTags(std::map<std::string, std::string> *tags) const
+std::map<std::string, std::string> CueSheet::getTags() const
 {
     std::map<std::string, std::string> result;
     std::for_each(m_meta.begin(), m_meta.end(),
@@ -252,7 +225,7 @@ void CueSheet::getTags(std::map<std::string, std::string> *tags) const
         else
             result[key] = val;
     });
-    TextBasedTag::normalizeTags(result, tags);
+    return TextBasedTag::normalizeTags(result);
 }
 
 void CueSheet::validate()

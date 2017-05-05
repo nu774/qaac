@@ -57,7 +57,7 @@ public:
     {
         m_meta[key] = value;
     }
-    void getTags(std::map<std::string, std::string> *tags) const;
+    std::map<std::string, std::string> getTags() const;
 
     iterator begin() { return m_segments.begin(); }
     iterator end() { return m_segments.end(); }
@@ -85,9 +85,7 @@ public:
                     const std::wstring &cuedir,
                     const std::wstring &fname_format,
                     const wchar_t *embedder_fname=0);
-    void asChapters(double duration, /* total duration in sec. */
-                    std::vector<chapters::entry_t> *chapters) const;
-    void getTags(std::map<std::string, std::string> *tags) const;
+    std::map<std::string, std::string> getTags() const;
 
     unsigned count() const { return m_tracks.size(); }
     iterator begin() { return m_tracks.begin(); }

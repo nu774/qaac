@@ -27,12 +27,10 @@ public:
     {}
 
     // overrides to support AAC 7.1ch rear encoding
-    virtual void getCompressionMagicCookie(std::vector<uint8_t> *result);
-    virtual
-    void getInputChannelLayout(std::shared_ptr<AudioChannelLayout> *result);
+    virtual std::vector<uint8_t> getCompressionMagicCookie();
+    virtual std::shared_ptr<AudioChannelLayout> getInputChannelLayout();
     virtual void setInputChannelLayout(const AudioChannelLayout &value);
-    virtual
-    void getOutputChannelLayout(std::shared_ptr<AudioChannelLayout> *result);
+    virtual std::shared_ptr<AudioChannelLayout> getOutputChannelLayout();
     virtual void setOutputChannelLayout(const AudioChannelLayout &value);
 
     //utilities

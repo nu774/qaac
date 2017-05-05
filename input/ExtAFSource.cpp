@@ -45,23 +45,20 @@ namespace audiofile {
         (*tag)[strutil::w2us(wskey)] = strutil::w2us(wsval);
     }
 
-    void fetchTags(AudioFileX &af, FILE *fp,
-                   std::map<std::string, std::string> *result)
+    std::map<std::string, std::string> fetchTags(AudioFileX &af, FILE *fp)
     {
         std::map<std::string, std::string> tags;
 
         if (af.getFileFormat() == 'caff') {
-            std::vector<uint8_t> data;
-            af.getUserData('info', 0, &data);
-            CAF::fetchTags(data, &tags);
+            auto data = af.getUserData('info', 0);
+            tags = CAF::fetchTags(data);
         } else {
-            CFDictionaryPtr dict;
-            af.getInfoDictionary(&dict);
+            auto dict = af.getInfoDictionary();
             if (dict.get())
                 CFDictionaryApplyFunction(dict.get(), fetchTagDictCallback,
                                           &tags);
         }
-        TextBasedTag::normalizeTags(tags, result);
+        return TextBasedTag::normalizeTags(tags);
     }
 }
 
@@ -78,8 +75,7 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
     CHECKCA(ExtAudioFileWrapAudioFileID(m_af, false, &eaf));
     m_eaf.attach(eaf, true);
 
-    std::vector<AudioFormatListItem> aflist;
-    m_af.getFormatList(&aflist);
+    auto aflist = m_af.getFormatList();
     m_iasbd = aflist[0].mASBD;
     if (m_iasbd.mFormatID != 'lpcm' && m_iasbd.mFormatID != 'alac' &&
         m_iasbd.mFormatID != '.mp3' && m_iasbd.mFormatID != 'aac ' &&
@@ -115,10 +111,9 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
     }
     m_eaf.setClientDataFormat(m_asbd);
 
-    std::shared_ptr<AudioChannelLayout> acl;
     try {
-        m_af.getChannelLayout(&acl);
-        chanmap::getChannels(acl.get(), &m_chanmap);
+        auto acl = m_af.getChannelLayout();
+        m_chanmap = chanmap::getChannels(acl.get());
     } catch (...) {}
 
     /* Let AudioFile scan the file and generate index in case of MP3. 
@@ -130,17 +125,16 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
     int64_t length = m_af.getAudioDataPacketCount() * m_iasbd.mFramesPerPacket;
 
     if (fcc == kAudioFileAIFFType || fcc == kAudioFileAIFCType)
-        ID3::fetchAiffID3Tags(fileno(m_fp.get()), &m_tags);
+        m_tags = ID3::fetchAiffID3Tags(fileno(m_fp.get()));
     else if (fcc == kAudioFileMP3Type)
-        ID3::fetchMPEGID3Tags(fileno(m_fp.get()), &m_tags);
+        m_tags = ID3::fetchMPEGID3Tags(fileno(m_fp.get()));
     else {
         try {
-            audiofile::fetchTags(m_af, m_fp.get(), &m_tags);
+            m_tags = audiofile::fetchTags(m_af, m_fp.get());
         } catch (...) {}
     }
     try {
-        AudioFilePacketTableInfo ptinfo = { 0 };
-        m_af.getPacketTableInfo(&ptinfo);
+        auto ptinfo = m_af.getPacketTableInfo();
         int64_t total =
             ptinfo.mNumberValidFrames + ptinfo.mPrimingFrames +
             ptinfo.mRemainderFrames;

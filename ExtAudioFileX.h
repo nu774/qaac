@@ -32,12 +32,14 @@ public:
                                         &size, &value));
         return value;
     }
-    void getClientDataFormat(AudioStreamBasicDescription *result)
+    AudioStreamBasicDescription getClientDataFormat()
     {
+        AudioStreamBasicDescription result;
         UInt32 size = sizeof(AudioStreamBasicDescription);
         CHECKCA(ExtAudioFileGetProperty(m_file.get(),
                                         kExtAudioFileProperty_ClientDataFormat,
-                                        &size, result));
+                                        &size, &result));
+        return result;
     }
     void setClientDataFormat(const AudioStreamBasicDescription &desc)
     {
@@ -45,38 +47,40 @@ public:
                                         kExtAudioFileProperty_ClientDataFormat,
                                         sizeof(desc), &desc));
     }
-    void getFileDataFormat(AudioStreamBasicDescription *result)
+    AudioStreamBasicDescription getFileDataFormat()
     {
+        AudioStreamBasicDescription result;
         UInt32 size = sizeof(AudioStreamBasicDescription);
         CHECKCA(ExtAudioFileGetProperty(m_file.get(),
                                         kExtAudioFileProperty_FileDataFormat,
-                                        &size, result));
+                                        &size, &result));
+        return result;
     }
-    void getClientChannelLayout(std::shared_ptr<AudioChannelLayout> *layout)
+    std::shared_ptr<AudioChannelLayout> getClientChannelLayout()
     {
         UInt32 size;
         Boolean writable;
         CHECKCA(ExtAudioFileGetPropertyInfo(m_file.get(),
                 kExtAudioFileProperty_ClientChannelLayout, &size, &writable));
         std::shared_ptr<AudioChannelLayout> acl(
-            reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
+            static_cast<AudioChannelLayout*>(std::malloc(size)),
             std::free);
         CHECKCA(ExtAudioFileGetProperty(m_file.get(),
                 kExtAudioFileProperty_ClientChannelLayout, &size, acl.get()));
-        layout->swap(acl);
+        return acl;
     }
-    void getFileChannelLayout(std::shared_ptr<AudioChannelLayout> *layout)
+    std::shared_ptr<AudioChannelLayout> getFileChannelLayout()
     {
         UInt32 size;
         Boolean writable;
         CHECKCA(ExtAudioFileGetPropertyInfo(m_file.get(),
                 kExtAudioFileProperty_FileChannelLayout, &size, &writable));
         std::shared_ptr<AudioChannelLayout> acl(
-            reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
+            static_cast<AudioChannelLayout*>(std::malloc(size)),
             std::free);
         CHECKCA(ExtAudioFileGetProperty(m_file.get(),
                 kExtAudioFileProperty_FileChannelLayout, &size, acl.get()));
-        layout->swap(acl);
+        return acl;
     }
     AudioConverterRef getAudioConverter()
     {

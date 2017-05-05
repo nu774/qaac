@@ -103,8 +103,7 @@ namespace cautil {
         }
         return 0;
     }
-    void parseMagicCookieAAC(const std::vector<uint8_t> &cookie,
-                             std::vector<uint8_t> *decSpecificConfig)
+    std::vector<uint8_t> parseMagicCookieAAC(const std::vector<uint8_t> &cookie)
     {
         /*
          * QT's "Magic Cookie" for AAC is just an esds descripter.
@@ -148,11 +147,8 @@ namespace cautil {
                 break;
             case 5: // decSpecificConfig
                 {
-                    std::vector<uint8_t> vec(size);
-                    std::memcpy(&vec[0], q, size);
-                    decSpecificConfig->swap(vec);
+                    return std::vector<uint8_t>(q, q + size);
                 }
-                return;
             default:
                 q += size;
             }
