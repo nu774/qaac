@@ -411,14 +411,14 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
     int chanmask = opts.chanmask;
     if (chanmask < 0)
         chanmask = channels ? chanmap::getChannelMask(*channels) : 0;
-    if (!chanmask && !opts.isLPCM()) {
+    if (!chanmask && !opts.isLPCM() && !opts.isPeak()) {
         if (opts.verbose >1 || opts.logfilename)
             LOG(L"Using default channel layout.\n");
         chanmask = chanmap::defaultChannelMask(nchannels);
     }
     *channel_layout = chanmask;
     if (chanmask) {
-        if (opts.isLPCM() && opts.verbose > 1) {
+        if ((opts.isLPCM() || opts.isWaveOut()) && opts.verbose > 1) {
             auto vec = chanmap::getChannels(chanmask);
             LOG(L"Output layout: %hs\n",
                 chanmap::getChannelNames(vec).c_str());
@@ -689,7 +689,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         LOG(L"Format: %hs -> %hs\n",
             pcm_format_str(sasbd).c_str(), pcm_format_str(iasbd).c_str());
 
-    if (opts.isLPCM())
+    if (!opts.isAAC() && !opts.isALAC())
         oasbd = iasbd;
     else if (opts.isAAC())
         oasbd.mFramesPerPacket = opts.isSBR() ? 2048 : 1024;
