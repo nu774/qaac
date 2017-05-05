@@ -27,7 +27,7 @@ void CAFSink::beginWrite()
 {
     write("caff\0\001\0\0", 8);
     desc();
-    if (m_asbd.mChannelsPerFrame > 2)
+    if (m_channel_layout)
         chan();
     if (m_magic_cookie.size())
         kuki();
