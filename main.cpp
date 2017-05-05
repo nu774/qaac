@@ -828,7 +828,7 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
 static
 void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
                  const std::wstring &ofilename, const Options &opts,
-                 AudioStreamBasicDescription &oasbd, uint32_t chanmask)
+                 uint32_t chanmask)
 {
     const std::shared_ptr<ISource> src = chain.back();
     const AudioStreamBasicDescription &sf = src->getSampleFormat();
@@ -843,7 +843,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
             sink = std::make_shared<WaveSink>(fileptr.get(), src->length(),
                                               sf, chanmask);
         } else {
-            sink = std::make_shared<CAFSink>(fileptr, oasbd, chanmask,
+            sink = std::make_shared<CAFSink>(fileptr, sf, chanmask,
                                              std::vector<uint8_t>());
             cafsink = dynamic_cast<CAFSink*>(sink.get());
             set_tags(chain[0].get(), cafsink, opts, L"");
@@ -1053,7 +1053,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::vector<std::shared_ptr<ISource> > chain;
     build_filter_chain(src, chain, opts, &channel_layout, &iasbd, &oasbd);
     if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
-        decode_file(chain, ofilename, opts, oasbd, channel_layout);
+        decode_file(chain, ofilename, opts, channel_layout);
         return;
     }
     AudioConverterXX converter(iasbd, oasbd);
@@ -1126,7 +1126,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     build_filter_chain(src, chain, opts, &channel_layout, &iasbd, &oasbd);
 
     if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
-        decode_file(chain, ofilename, opts, oasbd, channel_layout);
+        decode_file(chain, ofilename, opts, channel_layout);
         return;
     }
     ALACEncoderX encoder(iasbd);
