@@ -77,89 +77,6 @@ std::wstring errormsg(const std::exception &ex)
     return strutil::us2w(ex.what());
 }
 
-static
-void load_metadata_files(Options *opts)
-{
-    if (opts->chapter_file) {
-        try {
-            opts->chapters = chapters::load_from_file(opts->chapter_file,
-                                                      opts->textcp);
-        } catch (const std::exception &e) {
-            LOG(L"WARNING: %s\n", errormsg(e).c_str());
-        }
-    }
-    for (auto it = opts->ftagopts.begin(); it != opts->ftagopts.end(); ++it) {
-        try {
-            opts->tagopts[it->first] =
-                strutil::w2us(load_text_file(it->second));
-        } catch (const std::exception &e) {
-            LOG(L"WARNING: %s\n", errormsg(e).c_str());
-        }
-    }
-    for (size_t i = 0; i < opts->artwork_files.size(); ++i) {
-        try {
-            uint64_t size;
-            char *data = win32::load_with_mmap(opts->artwork_files[i].c_str(),
-                                               &size);
-            std::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
-            auto type = mp4v2::impl::itmf::computeBasicType(data, size);
-            if (type == mp4v2::impl::itmf::BT_IMPLICIT)
-                throw std::runtime_error("Unknown artwork image type");
-            std::vector<char> vec(data, data + size);
-            if (opts->artwork_size)
-                WICConvertArtwork(data, size, opts->artwork_size, &vec);
-            opts->artworks.push_back(vec);
-        } catch (const std::exception &e) {
-            LOG(L"WARNING: %s\n", errormsg(e).c_str());
-        }
-    }
-}
-
-static
-std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
-{
-    if (opts.ofilename)
-        return !std::wcscmp(opts.ofilename, L"-") ? L"-"
-                : win32::GetFullPathNameX(opts.ofilename);
-
-    const wchar_t *ext = opts.extension();
-    const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
-    if (!std::wcscmp(ifilename, L"-"))
-        return std::wstring(L"stdin") + ext;
-
-    std::wstring obasename =
-        win32::PathReplaceExtension(ifilename, ext);
-    /*
-     * Prefixed pathname starting with \\?\ is required to be canonical
-     * full pathname.
-     * Since libmp4v2 simply prepends \\?\ if it looks like a full pathname,
-     * we have to normalize pathname beforehand (by GetFullPathName()).
-     */
-    std::wstring ofilename =
-        win32::GetFullPathNameX(strutil::format(L"%s/%s", outdir,
-                                                obasename.c_str()));
-
-    std::vector<wchar_t> odir(ofilename.begin(), ofilename.end());
-    odir.push_back(0);
-    wchar_t *pos = PathFindFileNameW(odir.data());
-    *pos = 0;
-    SHCreateDirectoryExW(nullptr, odir.data(), nullptr);
-
-    /* test if ifilename and ofilename refer to the same file */
-    std::shared_ptr<FILE> ifp, ofp;
-    try {
-        ifp = win32::fopen(ifilename, L"rb");
-        ofp = win32::fopen(ofilename, L"rb");
-    } catch (...) {
-        return ofilename;
-    }
-    if (!win32::is_same_file(_fileno(ifp.get()), _fileno(ofp.get())))
-        return ofilename;
-
-    std::wstring tl = strutil::format(L"_%s", ext);
-    return win32::PathReplaceExtension(ofilename, tl.c_str());
-}
-
 class PeriodicDisplay {
     uint32_t m_interval;
     uint32_t m_last_tick_title;
@@ -249,105 +166,96 @@ public:
 };
 
 static
-void do_encode(IEncoder *encoder, const std::wstring &ofilename,
-               const Options &opts)
+AudioStreamBasicDescription get_encoding_ASBD(const Options &opts,
+                                              const ISource *src)
 {
-    typedef std::shared_ptr<std::FILE> file_t;
-    file_t statPtr;
-    if (opts.save_stat) {
-        std::wstring statname =
-            win32::PathReplaceExtension(ofilename, L".stat.txt");
-        statPtr = win32::fopen(statname, L"w");
-    }
-    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
+    AudioStreamBasicDescription iasbd = src->getSampleFormat();
+    AudioStreamBasicDescription oasbd = { 0 };
 
-    ISource *src = encoder->src();
-    Progress progress(opts.verbose, src->length(),
-                      src->getSampleFormat().mSampleRate);
-    try {
-        FILE *statfp = statPtr.get();
-        while (!g_interrupted && encoder->encodeChunk(1)) {
-            progress.update(src->getPosition());
-            if (statfp && stat->framesWritten())
-                std::fwprintf(statfp, L"%g\n", stat->currentBitrate());
+    oasbd.mFormatID = opts.output_format;
+    oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
+    oasbd.mSampleRate = iasbd.mSampleRate;
+
+    if (opts.isAAC())
+        oasbd.mFramesPerPacket = opts.isSBR() ? 2048 : 1024;
+    else if (opts.isALAC())
+        oasbd.mFramesPerPacket = 4096;
+
+    if (opts.isALAC()) {
+        if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
+            throw std::runtime_error(
+                "floating point PCM is not supported for ALAC");
+
+        switch (iasbd.mBitsPerChannel) {
+        case 16:
+            oasbd.mFormatFlags = 1; break;
+        case 20:
+            oasbd.mFormatFlags = 2; break;
+        case 24:
+            oasbd.mFormatFlags = 3; break;
+        case 32:
+            oasbd.mFormatFlags = 4; break;
+        default:
+            throw std::runtime_error("Not supported bit depth for ALAC");
         }
-        progress.finish(src->getPosition());
-    } catch (...) {
-        LOG(L"\n");
-        throw;
     }
+    return oasbd;
 }
 
 static
-AudioStreamBasicDescription getRawFormat(const Options &opts)
+uint32_t get_encoding_channel_layout(ISource *src, Options opts,
+                                     uint32_t *bitmap)
 {
-    int bits;
-    unsigned char c_type, c_endian = 'L';
-    int itype, iendian;
-
-    if (std::swscanf(opts.raw_format, L"%hc%d%hc",
-                    &c_type, &bits, &c_endian) < 2)
-        throw std::runtime_error("Invalid --raw-format spec");
-    if ((itype = strutil::strindex("USF", toupper(c_type))) == -1)
-        throw std::runtime_error("Invalid --raw-format spec");
-    if ((iendian = strutil::strindex("LB", toupper(c_endian))) == -1)
-        throw std::runtime_error("Invalid --raw-format spec");
-    if (bits <= 0)
-        throw std::runtime_error("Invalid --raw-format spec");
-    if (itype < 2 && bits > 32)
-        throw std::runtime_error("Bits per sample too large");
-    if (itype == 2 && bits != 32 && bits != 64)
-        throw std::runtime_error("Invalid bits per sample");
-
-    uint32_t type_tab[] = {
-        0, kAudioFormatFlagIsSignedInteger, kAudioFormatFlagIsFloat
-    };
-    AudioStreamBasicDescription asbd =
-        cautil::buildASBDForPCM(opts.raw_sample_rate, opts.raw_channels,
-                                bits, type_tab[itype]);
-    if (iendian)
-        asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
-    return asbd;
+    AudioStreamBasicDescription asbd = src->getSampleFormat();
+    const std::vector<uint32_t> *cs = src->getChannels();
+    uint32_t chanmask;
+    if (cs) chanmask = chanmap::getChannelMask(*cs);
+    else chanmask = chanmap::defaultChannelMask(asbd.mChannelsPerFrame);
+    uint32_t tag = chanmap::AACLayoutFromBitmap(chanmask);
+#ifdef QAAC
+    auto codec = std::make_shared<AudioCodecX>(opts.output_format);
+    if (tag == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
+        if (opts.is_caf || opts.isALAC())
+            throw std::runtime_error("Channel layout not supported");
+    } else if (!codec->isAvailableOutputChannelLayout(tag)) {
+        throw std::runtime_error("Channel layout not supported");
+    }
+#endif
+#ifdef REFALAC
+    if (!ALACEncoderX::isAvailableOutputChannelLayout(tag))
+        throw std::runtime_error("Not supported channel layout for ALAC");
+#endif
+    if (bitmap) *bitmap = chanmask;
+    return tag;
 }
 
-static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
+double target_sample_rate(const Options &opts, ISource *src)
 {
-    try {
-        file->FinishWriteX();
-        MP4FileCopy optimizer(file);
-        optimizer.start(strutil::w2us(dst).c_str());
-        uint64_t total = optimizer.getTotalChunks();
-        PeriodicDisplay disp(100, verbose);
-        for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
-            int percent = 100.0 * i / total + .5;
-            disp.put(strutil::format(L"\rOptimizing...%d%%",
-                                     percent).c_str());
-        }
-        disp.put(L"\rOptimizing...done\n");
-        disp.flush();
-    } catch (mp4v2::impl::Exception *e) {
-        handle_mp4error(e);
+    AudioStreamBasicDescription iasbd = src->getSampleFormat();
+    double candidate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
+#ifdef QAAC
+    if (!opts.isAAC())
+        return candidate;
+    else if (opts.rate != 0) {
+        auto codec = std::make_shared<AudioCodecX>(opts.output_format);
+        return codec->getClosestAvailableOutputSampleRate(candidate);
+    } else {
+        uint32_t tag = get_encoding_channel_layout(src, opts, nullptr);
+        AudioChannelLayout acl = { 0 };
+        acl.mChannelLayoutTag = tag;
+        AudioStreamBasicDescription oasbd = { 0 };
+        oasbd.mFormatID = opts.output_format;
+        oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
+        AudioConverterXX converter(iasbd, oasbd);
+        converter.setInputChannelLayout(acl);
+        converter.setOutputChannelLayout(acl);
+        int32_t quality = (opts.quality + 1) << 5;
+        converter.configAACCodec(opts.method, opts.bitrate, quality);
+        return converter.getOutputStreamDescription().mSampleRate;
     }
-}
-
-static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
-                           const Options &opts, bool seekable)
-{
-    std::shared_ptr<ISource> src = chain.back();
-    Normalizer *normalizer = new Normalizer(src, seekable);
-    chain.push_back(std::shared_ptr<ISource>(normalizer));
-
-    LOG(L"Scanning maximum peak...\n");
-    uint64_t n = 0, rc;
-    Progress progress(opts.verbose, src->length(),
-                      src->getSampleFormat().mSampleRate);
-    while (!g_interrupted && (rc = normalizer->process(4096)) > 0) {
-        n += rc;
-        progress.update(src->getPosition());
-    }
-    progress.finish(src->getPosition());
-    LOG(L"Peak value: %g\n", normalizer->getPeak());
-    return normalizer->getPeak();
+#else
+    return candidate;
+#endif
 }
 
 static
@@ -419,96 +327,6 @@ void manipulate_channels(std::vector<std::shared_ptr<ISource> > &chain,
     }
 }
 
-static
-uint32_t get_encoding_channel_layout(ISource *src, Options opts,
-                                     uint32_t *bitmap)
-{
-    AudioStreamBasicDescription asbd = src->getSampleFormat();
-    const std::vector<uint32_t> *cs = src->getChannels();
-    uint32_t chanmask;
-    if (cs) chanmask = chanmap::getChannelMask(*cs);
-    else chanmask = chanmap::defaultChannelMask(asbd.mChannelsPerFrame);
-    uint32_t tag = chanmap::AACLayoutFromBitmap(chanmask);
-#ifdef QAAC
-    auto codec = std::make_shared<AudioCodecX>(opts.output_format);
-    if (tag == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
-        if (opts.is_caf || opts.isALAC())
-            throw std::runtime_error("Channel layout not supported");
-    } else if (!codec->isAvailableOutputChannelLayout(tag)) {
-        throw std::runtime_error("Channel layout not supported");
-    }
-#endif
-#ifdef REFALAC
-    if (!ALACEncoderX::isAvailableOutputChannelLayout(tag))
-        throw std::runtime_error("Not supported channel layout for ALAC");
-#endif
-    if (bitmap) *bitmap = chanmask;
-    return tag;
-}
-
-static
-uint32_t map_to_aac_channels(std::vector<std::shared_ptr<ISource> > &chain,
-                             const Options &opts)
-{
-    uint32_t chanmask;
-    uint32_t tag = get_encoding_channel_layout(chain.back().get(), opts,
-                                               &chanmask);
-    auto map = chanmap::getMappingToAAC(chanmask);
-    std::shared_ptr<ISource>
-        mapper(new ChannelMapper(chain.back(), map, 0, tag));
-    chain.push_back(mapper);
-
-    if (opts.verbose > 1) {
-        AudioChannelLayout acl = { 0 };
-        acl.mChannelLayoutTag = tag;
-        auto vec = chanmap::getChannels(&acl);
-        LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
-    }
-    return tag;
-}
-
-static
-std::shared_ptr<ISeekableSource>
-select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
-{
-    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
-    double rate = asbd.mSampleRate;
-    int64_t start = 0, end = 0, delay = 0;
-    if (!opts.start && !opts.end && !opts.delay)
-        return src;
-    if (opts.start && !util::parse_timespec(opts.start, rate, &start))
-        throw std::runtime_error("Invalid time spec for --start");
-    if (opts.end   && !util::parse_timespec(opts.end, rate, &end))
-        throw std::runtime_error("Invalid time spec for --end");
-    if (opts.delay && !util::parse_timespec(opts.delay, rate, &delay))
-        throw std::runtime_error("Invalid time spec for --delay");
-
-    std::shared_ptr<CompositeSource> cp(new CompositeSource());
-    std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
-
-    if (start > 0 || end > 0)
-        src = std::make_shared<TrimmedSource>(src, start,
-                                              end ? std::max(0LL, end - start)
-                                                  : ~0ULL);
-
-    if (delay > 0) {
-        if (opts.verbose > 1 || opts.logfilename)
-            LOG(L"Prepend %lld samples (%g seconds)\n", delay,
-                static_cast<double>(delay) / rate);
-        cp->addSource(std::make_shared<TrimmedSource>(ns, 0, delay));
-        cp->addSource(src);
-    } else if (delay < 0) {
-        delay *= -1;
-        if (opts.verbose > 1 || opts.logfilename)
-            LOG(L"Trim %lld samples (%g seconds)\n", delay,
-                static_cast<double>(delay) / rate);
-        cp->addSource(std::make_shared<TrimmedSource>(src, delay, ~0ULL));
-    } else {
-        cp->addSource(src);
-    }
-    return cp;
-}
-
 std::string pcm_format_str(AudioStreamBasicDescription &asbd)
 {
     const char *stype[] = { "int", "float" };
@@ -516,33 +334,24 @@ std::string pcm_format_str(AudioStreamBasicDescription &asbd)
     return strutil::format("%s%d", stype[itype], asbd.mBitsPerChannel);
 }
 
-double target_sample_rate(const Options &opts, ISource *src)
+static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
+                           const Options &opts, bool seekable)
 {
-    AudioStreamBasicDescription iasbd = src->getSampleFormat();
-    double candidate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
-#ifdef QAAC
-    if (!opts.isAAC())
-        return candidate;
-    else if (opts.rate != 0) {
-        auto codec = std::make_shared<AudioCodecX>(opts.output_format);
-        return codec->getClosestAvailableOutputSampleRate(candidate);
-    } else {
-        uint32_t tag = get_encoding_channel_layout(src, opts, nullptr);
-        AudioChannelLayout acl = { 0 };
-        acl.mChannelLayoutTag = tag;
-        AudioStreamBasicDescription oasbd = { 0 };
-        oasbd.mFormatID = opts.output_format;
-        oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
-        AudioConverterXX converter(iasbd, oasbd);
-        converter.setInputChannelLayout(acl);
-        converter.setOutputChannelLayout(acl);
-        int32_t quality = (opts.quality + 1) << 5;
-        converter.configAACCodec(opts.method, opts.bitrate, quality);
-        return converter.getOutputStreamDescription().mSampleRate;
+    std::shared_ptr<ISource> src = chain.back();
+    Normalizer *normalizer = new Normalizer(src, seekable);
+    chain.push_back(std::shared_ptr<ISource>(normalizer));
+
+    LOG(L"Scanning maximum peak...\n");
+    uint64_t n = 0, rc;
+    Progress progress(opts.verbose, src->length(),
+                      src->getSampleFormat().mSampleRate);
+    while (!g_interrupted && (rc = normalizer->process(4096)) > 0) {
+        n += rc;
+        progress.update(src->getPosition());
     }
-#else
-    return candidate;
-#endif
+    progress.finish(src->getPosition());
+    LOG(L"Peak value: %g\n", normalizer->getPeak());
+    return normalizer->getPeak();
 }
 
 void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
@@ -864,6 +673,77 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
 }
 
 static
+uint32_t map_to_aac_channels(std::vector<std::shared_ptr<ISource> > &chain,
+                             const Options &opts)
+{
+    uint32_t chanmask;
+    uint32_t tag = get_encoding_channel_layout(chain.back().get(), opts,
+                                               &chanmask);
+    auto map = chanmap::getMappingToAAC(chanmask);
+    std::shared_ptr<ISource>
+        mapper(new ChannelMapper(chain.back(), map, 0, tag));
+    chain.push_back(mapper);
+
+    if (opts.verbose > 1) {
+        AudioChannelLayout acl = { 0 };
+        acl.mChannelLayoutTag = tag;
+        auto vec = chanmap::getChannels(&acl);
+        LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
+    }
+    return tag;
+}
+
+static
+void do_encode(IEncoder *encoder, const std::wstring &ofilename,
+               const Options &opts)
+{
+    typedef std::shared_ptr<std::FILE> file_t;
+    file_t statPtr;
+    if (opts.save_stat) {
+        std::wstring statname =
+            win32::PathReplaceExtension(ofilename, L".stat.txt");
+        statPtr = win32::fopen(statname, L"w");
+    }
+    IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
+
+    ISource *src = encoder->src();
+    Progress progress(opts.verbose, src->length(),
+                      src->getSampleFormat().mSampleRate);
+    try {
+        FILE *statfp = statPtr.get();
+        while (!g_interrupted && encoder->encodeChunk(1)) {
+            progress.update(src->getPosition());
+            if (statfp && stat->framesWritten())
+                std::fwprintf(statfp, L"%g\n", stat->currentBitrate());
+        }
+        progress.finish(src->getPosition());
+    } catch (...) {
+        LOG(L"\n");
+        throw;
+    }
+}
+
+static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
+{
+    try {
+        file->FinishWriteX();
+        MP4FileCopy optimizer(file);
+        optimizer.start(strutil::w2us(dst).c_str());
+        uint64_t total = optimizer.getTotalChunks();
+        PeriodicDisplay disp(100, verbose);
+        for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
+            int percent = 100.0 * i / total + .5;
+            disp.put(strutil::format(L"\rOptimizing...%d%%",
+                                     percent).c_str());
+        }
+        disp.put(L"\rOptimizing...done\n");
+        disp.flush();
+    } catch (mp4v2::impl::Exception *e) {
+        handle_mp4error(e);
+    }
+}
+
+static
 void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
                    const std::wstring &ofilename, const Options &opts)
 {
@@ -883,43 +763,6 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
     if (!opts.no_optimize)
         do_optimize(sink->getFile(), ofilename, opts.verbose);
     sink->close();
-}
-
-static
-AudioStreamBasicDescription get_encoding_ASBD(const Options &opts,
-                                              const ISource *src)
-{
-    AudioStreamBasicDescription iasbd = src->getSampleFormat();
-    AudioStreamBasicDescription oasbd = { 0 };
-
-    oasbd.mFormatID = opts.output_format;
-    oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
-    oasbd.mSampleRate = iasbd.mSampleRate;
-
-    if (opts.isAAC())
-        oasbd.mFramesPerPacket = opts.isSBR() ? 2048 : 1024;
-    else if (opts.isALAC())
-        oasbd.mFramesPerPacket = 4096;
-
-    if (opts.isALAC()) {
-        if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
-            throw std::runtime_error(
-                "floating point PCM is not supported for ALAC");
-
-        switch (iasbd.mBitsPerChannel) {
-        case 16:
-            oasbd.mFormatFlags = 1; break;
-        case 20:
-            oasbd.mFormatFlags = 2; break;
-        case 24:
-            oasbd.mFormatFlags = 3; break;
-        case 32:
-            oasbd.mFormatFlags = 4; break;
-        default:
-            throw std::runtime_error("Not supported bit depth for ALAC");
-        }
-    }
-    return oasbd;
 }
 
 #ifdef QAAC
@@ -1182,6 +1025,38 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 const char *get_qaac_version();
 
 static
+AudioStreamBasicDescription getRawFormat(const Options &opts)
+{
+    int bits;
+    unsigned char c_type, c_endian = 'L';
+    int itype, iendian;
+
+    if (std::swscanf(opts.raw_format, L"%hc%d%hc",
+                    &c_type, &bits, &c_endian) < 2)
+        throw std::runtime_error("Invalid --raw-format spec");
+    if ((itype = strutil::strindex("USF", toupper(c_type))) == -1)
+        throw std::runtime_error("Invalid --raw-format spec");
+    if ((iendian = strutil::strindex("LB", toupper(c_endian))) == -1)
+        throw std::runtime_error("Invalid --raw-format spec");
+    if (bits <= 0)
+        throw std::runtime_error("Invalid --raw-format spec");
+    if (itype < 2 && bits > 32)
+        throw std::runtime_error("Bits per sample too large");
+    if (itype == 2 && bits != 32 && bits != 64)
+        throw std::runtime_error("Invalid bits per sample");
+
+    uint32_t type_tab[] = {
+        0, kAudioFormatFlagIsSignedInteger, kAudioFormatFlagIsFloat
+    };
+    AudioStreamBasicDescription asbd =
+        cautil::buildASBDForPCM(opts.raw_sample_rate, opts.raw_channels,
+                                bits, type_tab[itype]);
+    if (iendian)
+        asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
+    return asbd;
+}
+
+static
 void setup_input_factory(const Options &opts)
 {
     LibSndfileModule::instance().load(L"libsndfile-1.dll");
@@ -1209,6 +1084,48 @@ void setup_input_factory(const Options &opts)
         InputFactory::instance().setRawFormat(getRawFormat(opts));
     }
     InputFactory::instance().setIgnoreLength(opts.ignore_length);
+}
+
+static
+std::shared_ptr<ISeekableSource>
+select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
+{
+    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
+    double rate = asbd.mSampleRate;
+    int64_t start = 0, end = 0, delay = 0;
+    if (!opts.start && !opts.end && !opts.delay)
+        return src;
+    if (opts.start && !util::parse_timespec(opts.start, rate, &start))
+        throw std::runtime_error("Invalid time spec for --start");
+    if (opts.end   && !util::parse_timespec(opts.end, rate, &end))
+        throw std::runtime_error("Invalid time spec for --end");
+    if (opts.delay && !util::parse_timespec(opts.delay, rate, &delay))
+        throw std::runtime_error("Invalid time spec for --delay");
+
+    std::shared_ptr<CompositeSource> cp(new CompositeSource());
+    std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
+
+    if (start > 0 || end > 0)
+        src = std::make_shared<TrimmedSource>(src, start,
+                                              end ? std::max(0LL, end - start)
+                                                  : ~0ULL);
+
+    if (delay > 0) {
+        if (opts.verbose > 1 || opts.logfilename)
+            LOG(L"Prepend %lld samples (%g seconds)\n", delay,
+                static_cast<double>(delay) / rate);
+        cp->addSource(std::make_shared<TrimmedSource>(ns, 0, delay));
+        cp->addSource(src);
+    } else if (delay < 0) {
+        delay *= -1;
+        if (opts.verbose > 1 || opts.logfilename)
+            LOG(L"Trim %lld samples (%g seconds)\n", delay,
+                static_cast<double>(delay) / rate);
+        cp->addSource(std::make_shared<TrimmedSource>(src, delay, ~0ULL));
+    } else {
+        cp->addSource(src);
+    }
+    return cp;
 }
 
 static
@@ -1283,6 +1200,89 @@ void group_tracks_with_formats(const playlist::Playlist &tracks,
         vec.push_back(group);
     } while (track != tracks.end());
     res->swap(vec);
+}
+
+static
+void load_metadata_files(Options *opts)
+{
+    if (opts->chapter_file) {
+        try {
+            opts->chapters = chapters::load_from_file(opts->chapter_file,
+                                                      opts->textcp);
+        } catch (const std::exception &e) {
+            LOG(L"WARNING: %s\n", errormsg(e).c_str());
+        }
+    }
+    for (auto it = opts->ftagopts.begin(); it != opts->ftagopts.end(); ++it) {
+        try {
+            opts->tagopts[it->first] =
+                strutil::w2us(load_text_file(it->second));
+        } catch (const std::exception &e) {
+            LOG(L"WARNING: %s\n", errormsg(e).c_str());
+        }
+    }
+    for (size_t i = 0; i < opts->artwork_files.size(); ++i) {
+        try {
+            uint64_t size;
+            char *data = win32::load_with_mmap(opts->artwork_files[i].c_str(),
+                                               &size);
+            std::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
+            auto type = mp4v2::impl::itmf::computeBasicType(data, size);
+            if (type == mp4v2::impl::itmf::BT_IMPLICIT)
+                throw std::runtime_error("Unknown artwork image type");
+            std::vector<char> vec(data, data + size);
+            if (opts->artwork_size)
+                WICConvertArtwork(data, size, opts->artwork_size, &vec);
+            opts->artworks.push_back(vec);
+        } catch (const std::exception &e) {
+            LOG(L"WARNING: %s\n", errormsg(e).c_str());
+        }
+    }
+}
+
+static
+std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
+{
+    if (opts.ofilename)
+        return !std::wcscmp(opts.ofilename, L"-") ? L"-"
+                : win32::GetFullPathNameX(opts.ofilename);
+
+    const wchar_t *ext = opts.extension();
+    const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
+    if (!std::wcscmp(ifilename, L"-"))
+        return std::wstring(L"stdin") + ext;
+
+    std::wstring obasename =
+        win32::PathReplaceExtension(ifilename, ext);
+    /*
+     * Prefixed pathname starting with \\?\ is required to be canonical
+     * full pathname.
+     * Since libmp4v2 simply prepends \\?\ if it looks like a full pathname,
+     * we have to normalize pathname beforehand (by GetFullPathName()).
+     */
+    std::wstring ofilename =
+        win32::GetFullPathNameX(strutil::format(L"%s/%s", outdir,
+                                                obasename.c_str()));
+
+    std::vector<wchar_t> odir(ofilename.begin(), ofilename.end());
+    odir.push_back(0);
+    wchar_t *pos = PathFindFileNameW(odir.data());
+    *pos = 0;
+    SHCreateDirectoryExW(nullptr, odir.data(), nullptr);
+
+    /* test if ifilename and ofilename refer to the same file */
+    std::shared_ptr<FILE> ifp, ofp;
+    try {
+        ifp = win32::fopen(ifilename, L"rb");
+        ofp = win32::fopen(ofilename, L"rb");
+    } catch (...) {
+        return ofilename;
+    }
+    if (!win32::is_same_file(_fileno(ifp.get()), _fileno(ofp.get())))
+        return ofilename;
+
+    std::wstring tl = strutil::format(L"_%s", ext);
+    return win32::PathReplaceExtension(ofilename, tl.c_str());
 }
 
 struct ConsoleTitleSaver {
