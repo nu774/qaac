@@ -440,6 +440,19 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
             auto vec = chanmap::getChannels(&acl);
             LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
         }
+#ifdef QAAC
+        auto codec = std::make_shared<AudioCodecX>(opts.output_format);
+        if (*channel_layout == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
+            if (opts.is_caf || opts.isALAC())
+                throw std::runtime_error("Channel layout not supported");
+        } else if (!codec->isAvailableOutputChannelLayout(*channel_layout)) {
+            throw std::runtime_error("Channel layout not supported");
+        }
+#endif
+#ifdef REFALAC
+        if (!ALACEncoderX::isAvailableOutputChannelLayout(*channel_layout))
+            throw std::runtime_error("Not supported channel layout for ALAC");
+#endif
     }
 }
 
@@ -492,11 +505,39 @@ std::string pcm_format_str(AudioStreamBasicDescription &asbd)
     return strutil::format("%s%d", stype[itype], asbd.mBitsPerChannel);
 }
 
+double target_sample_rate(const Options &opts,
+                          std::shared_ptr<ISource> src,
+                          uint32_t channel_layout_tag)
+{
+    AudioStreamBasicDescription iasbd = src->getSampleFormat();
+    double candidate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
+#ifdef QAAC
+    if (!opts.isAAC())
+        return candidate;
+    else if (opts.rate != 0) {
+        auto codec = std::make_shared<AudioCodecX>(opts.output_format);
+        return codec->getClosestAvailableOutputSampleRate(candidate);
+    } else {
+        AudioChannelLayout acl = { 0 };
+        acl.mChannelLayoutTag = channel_layout_tag;
+        AudioStreamBasicDescription oasbd = { 0 };
+        oasbd.mFormatID = opts.output_format;
+        oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
+        AudioConverterXX converter(iasbd, oasbd);
+        converter.setInputChannelLayout(acl);
+        converter.setOutputChannelLayout(acl);
+        int32_t quality = (opts.quality + 1) << 5;
+        converter.configAACCodec(opts.method, opts.bitrate, quality);
+        return converter.getOutputStreamDescription().mSampleRate;
+    }
+#else
+    return candidate;
+#endif
+}
+
 void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                             std::vector<std::shared_ptr<ISource> > &chain,
                             const Options &opts, uint32_t *channel_layout,
-                            AudioStreamBasicDescription *inputDesc,
-                            AudioStreamBasicDescription *outputDesc,
                             bool normalize_pass=false)
 {
     SYSTEM_INFO si;
@@ -504,27 +545,8 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     bool threading = opts.threading && si.dwNumberOfProcessors > 1;
 
     AudioStreamBasicDescription sasbd = src->getSampleFormat();
-#ifdef QAAC
-    std::shared_ptr<AudioCodecX> codec;
-    if (opts.isAAC() || opts.isALAC())
-        codec.reset(new AudioCodecX(opts.output_format));
-#endif
     mapped_source(chain, opts, channel_layout);
 
-    if (opts.isAAC() || opts.isALAC()) {
-#ifdef QAAC
-        if (*channel_layout == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
-            if (opts.is_caf || opts.isALAC())
-                throw std::runtime_error("Channel layout not supported");
-        } else if (!codec->isAvailableOutputChannelLayout(*channel_layout)) {
-            throw std::runtime_error("Channel layout not supported");
-        }
-#endif
-#ifdef REFALAC
-        if (!ALACEncoderX::isAvailableOutputChannelLayout(*channel_layout))
-            throw std::runtime_error("Not supported channel layout for ALAC");
-#endif
-    }
     if (opts.lowpass > 0) {
         if (!SoXConvolverModule::instance().loaded())
             LOG(L"WARNING: --lowpass requires libsoxconvolver. LPF disabled\n");
@@ -536,79 +558,49 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
             chain.push_back(f);
         }
     }
-    AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
-    AudioStreamBasicDescription oasbd = { 0 };
-    oasbd.mFormatID = opts.output_format;
-    oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
-
-    double rate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
-    if (!opts.isAAC())
-        oasbd.mSampleRate = rate;
-#ifdef QAAC
-    else {
-        double closest_rate = codec->getClosestAvailableOutputSampleRate(rate);
-        if (opts.rate != 0)
-            oasbd.mSampleRate = closest_rate;
-        else {
-            AudioChannelLayout acl = { 0 };
-            acl.mChannelLayoutTag = *channel_layout;
-            AudioStreamBasicDescription iiasbd = iasbd;
-            iiasbd.mSampleRate = closest_rate;
-            AudioConverterXX converter(iasbd, oasbd);
-            converter.setInputChannelLayout(acl);
-            converter.setOutputChannelLayout(acl);
-            int32_t quality = (opts.quality + 1) << 5;
-            converter.configAACCodec(opts.method, opts.bitrate, quality);
-            oasbd = converter.getOutputStreamDescription();
-        }
-    }
-#endif
-    if (oasbd.mSampleRate != iasbd.mSampleRate) {
-        if (!opts.native_resampler && SOXRModule::instance().loaded()) {
-            LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
-            std::shared_ptr<SoxrResampler>
-                resampler(new SoxrResampler(chain.back(),
-                                            oasbd.mSampleRate));
-            if (opts.verbose > 1 || opts.logfilename)
-                LOG(L"Using libsoxr SRC: %hs\n", resampler->engine());
-            chain.push_back(resampler);
-        } else {
-#ifndef QAAC
-            LOG(L"WARNING: --rate requires libsoxr\n");
-            oasbd.mSampleRate = iasbd.mSampleRate;
-#else
-            LOG(L"%gHz -> %gHz\n", iasbd.mSampleRate, oasbd.mSampleRate);
-
-            if (opts.native_resampler_quality >= 0 ||
-                opts.native_resampler_complexity > 0 ||
-                (!opts.isAAC() && !opts.isALAC()))
-            {
-                AudioStreamBasicDescription
-                    sfmt = chain.back()->getSampleFormat();
-                if ((sfmt.mFormatFlags & kAudioFormatFlagIsFloat) &&
-                    sfmt.mBitsPerChannel < 32)
-                {
-                    chain.push_back(std::make_shared<Quantizer>(chain.back(),
-                                                            32, false, true));
-                }
-                int quality = opts.native_resampler_quality;
-                uint32_t complexity = opts.native_resampler_complexity;
-                if (quality == -1) quality = kAudioConverterQuality_Medium;
-                if (!complexity) complexity = 'norm';
-                quality = std::min(quality, (int)kAudioConverterQuality_Max);
-
-                CoreAudioResampler *resampler =
-                    new CoreAudioResampler(chain.back(), oasbd.mSampleRate,
-                                           quality, complexity);
-                chain.push_back(std::shared_ptr<ISource>(resampler));
+    {
+        double irate = chain.back()->getSampleFormat().mSampleRate;
+        double orate = target_sample_rate(opts, chain.back(), *channel_layout);
+        if (orate != irate) {
+            LOG(L"%gHz -> %gHz\n", irate, orate);
+            if (!opts.native_resampler && SOXRModule::instance().loaded()) {
+                std::shared_ptr<SoxrResampler>
+                    resampler(new SoxrResampler(chain.back(), orate));
                 if (opts.verbose > 1 || opts.logfilename)
+                    LOG(L"Using libsoxr SRC: %hs\n", resampler->engine());
+                chain.push_back(resampler);
+            } else {
+#ifndef QAAC
+                throw std::runtime_error("--rate requires libsoxr\n");
+#else
+                AudioStreamBasicDescription sf
+                    = chain.back()->getSampleFormat();
+                if ((sf.mFormatFlags & kAudioFormatFlagIsFloat)
+                  && sf.mBitsPerChannel < 32)
+                {
+                    std::shared_ptr<ISource>
+                        f(new Quantizer(chain.back(), 32, false, true));
+                    chain.push_back(f);
+                }
+                uint32_t complexity = opts.native_resampler_complexity;
+                int quality = std::min(opts.native_resampler_quality,
+                                       (int)kAudioConverterQuality_Max);
+                if (quality < 0) quality = 0;
+                if (!complexity) complexity = 'bats';
+
+                std::shared_ptr<ISource>
+                    resampler(new CoreAudioResampler(chain.back(), orate,
+                                                     quality, complexity));
+                chain.push_back(resampler);
+                if (opts.verbose > 1 || opts.logfilename) {
+                    CoreAudioResampler *p =
+                        dynamic_cast<CoreAudioResampler*>(chain.back().get());
                     LOG(L"Using CoreAudio SRC: complexity %hs quality %u\n",
-                        util::fourcc(resampler->getComplexity()).svalue,
-                        resampler->getQuality());
-            }
-            else if (opts.verbose > 1 || opts.logfilename)
-                LOG(L"Using CoreAudio codec default SRC\n");
+                        util::fourcc(p->getComplexity()).svalue,
+                        p->getQuality());
+                }
 #endif
+            }
         }
     }
     for (size_t i = 0; i < opts.drc_params.size(); ++i) {
@@ -684,49 +676,19 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         if (opts.verbose > 1 || opts.logfilename)
             LOG(L"Enable threading\n");
     }
-    iasbd = chain.back()->getSampleFormat();
-    if (opts.verbose > 1)
+    if (opts.verbose > 1) {
+        auto asbd = chain.back()->getSampleFormat();
         LOG(L"Format: %hs -> %hs\n",
-            pcm_format_str(sasbd).c_str(), pcm_format_str(iasbd).c_str());
-
-    if (!opts.isAAC() && !opts.isALAC())
-        oasbd = iasbd;
-    else if (opts.isAAC())
-        oasbd.mFramesPerPacket = opts.isSBR() ? 2048 : 1024;
-    else if (opts.isALAC())
-        oasbd.mFramesPerPacket = 4096;
-
-    if (opts.isALAC()) {
-        if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
-            throw std::runtime_error(
-                "floating point PCM is not supported for ALAC");
-
-        switch (iasbd.mBitsPerChannel) {
-        case 16:
-            oasbd.mFormatFlags = 1; break;
-        case 20:
-            oasbd.mFormatFlags = 2; break;
-        case 24:
-            oasbd.mFormatFlags = 3; break;
-        case 32:
-            oasbd.mFormatFlags = 4; break;
-        default:
-            throw std::runtime_error("Not supported bit depth for ALAC");
-        }
+            pcm_format_str(sasbd).c_str(), pcm_format_str(asbd).c_str());
     }
-    if (inputDesc) *inputDesc = iasbd;
-    if (outputDesc) *outputDesc = oasbd;
 }
 
 void build_filter_chain(std::shared_ptr<ISeekableSource> src,
                         std::vector<std::shared_ptr<ISource> > &chain,
-                        const Options &opts, uint32_t *channel_layout,
-                        AudioStreamBasicDescription *inputDesc,
-                        AudioStreamBasicDescription *outputDesc)
+                        const Options &opts, uint32_t *channel_layout)
 {
     chain.push_back(src);
-    build_filter_chain_sub(src, chain, opts, channel_layout,
-                           inputDesc, outputDesc, opts.normalize);
+    build_filter_chain_sub(src, chain, opts, channel_layout, opts.normalize);
     if (opts.normalize && src->isSeekable()) {
         src->seekTo(0);
         Normalizer *normalizer = dynamic_cast<Normalizer*>(chain.back().get());
@@ -735,8 +697,7 @@ void build_filter_chain(std::shared_ptr<ISeekableSource> src,
         chain.push_back(src);
         if (peak > FLT_MIN)
             chain.push_back(std::make_shared<Scaler>(src, 1.0/peak));
-        build_filter_chain_sub(src, chain, opts, channel_layout,
-                               inputDesc, outputDesc, false);
+        build_filter_chain_sub(src, chain, opts, channel_layout, false);
     }
 }
 
@@ -904,6 +865,42 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
     sink->close();
 }
 
+static
+AudioStreamBasicDescription get_encoding_ASBD(const Options &opts, const ISource *src)
+{
+    AudioStreamBasicDescription iasbd = src->getSampleFormat();
+    AudioStreamBasicDescription oasbd = { 0 };
+
+    oasbd.mFormatID = opts.output_format;
+    oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
+    oasbd.mSampleRate = iasbd.mSampleRate;
+
+    if (opts.isAAC())
+        oasbd.mFramesPerPacket = opts.isSBR() ? 2048 : 1024;
+    else if (opts.isALAC())
+        oasbd.mFramesPerPacket = 4096;
+
+    if (opts.isALAC()) {
+        if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
+            throw std::runtime_error(
+                "floating point PCM is not supported for ALAC: try -b");
+
+        switch (iasbd.mBitsPerChannel) {
+        case 16:
+            oasbd.mFormatFlags = 1; break;
+        case 20:
+            oasbd.mFormatFlags = 2; break;
+        case 24:
+            oasbd.mFormatFlags = 3; break;
+        case 32:
+            oasbd.mFormatFlags = 4; break;
+        default:
+            throw std::runtime_error("Not supported input bit depth for ALAC: try -b");
+        }
+    }
+    return oasbd;
+}
+
 #ifdef QAAC
 static
 std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
@@ -1047,15 +1044,16 @@ static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
                  const std::wstring &ofilename, const Options &opts)
 {
-    uint32_t channel_layout;
-    AudioStreamBasicDescription iasbd, oasbd;
-
     std::vector<std::shared_ptr<ISource> > chain;
-    build_filter_chain(src, chain, opts, &channel_layout, &iasbd, &oasbd);
+    uint32_t channel_layout;
+    build_filter_chain(src, chain, opts, &channel_layout);
     if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
         decode_file(chain, ofilename, opts, channel_layout);
         return;
     }
+    AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
+    AudioStreamBasicDescription oasbd =
+        get_encoding_ASBD(opts, chain.back().get());
     AudioConverterXX converter(iasbd, oasbd);
     AudioChannelLayout acl = { 0 };
     acl.mChannelLayoutTag = channel_layout;
@@ -1121,14 +1119,16 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
         const std::wstring &ofilename, const Options &opts)
 {
     uint32_t channel_layout;
-    AudioStreamBasicDescription iasbd, oasbd;
     std::vector<std::shared_ptr<ISource> > chain;
-    build_filter_chain(src, chain, opts, &channel_layout, &iasbd, &oasbd);
+    build_filter_chain(src, chain, opts, &channel_layout);
 
     if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
         decode_file(chain, ofilename, opts, channel_layout);
         return;
     }
+    AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
+    AudioStreamBasicDescription oasbd =
+        get_encoding_ASBD(opts, chain.back().get());
     ALACEncoderX encoder(iasbd);
     encoder.setFastMode(opts.alac_fast);
     auto cookie = encoder.getMagicCookie();
