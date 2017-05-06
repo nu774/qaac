@@ -5,7 +5,7 @@
 #include "win32util.h"
 
 class WaveSink : public ISink {
-    FILE *m_file;
+    std::shared_ptr<FILE> m_file;
     bool m_closed;
     bool m_seekable;
     bool m_rf64;
@@ -16,7 +16,7 @@ class WaveSink : public ISink {
     uint64_t m_bytes_written;
     AudioStreamBasicDescription m_asbd;
 public:
-    WaveSink(FILE *fp, uint64_t duration,
+    WaveSink(const std::shared_ptr<FILE> &fp, uint64_t duration,
              const AudioStreamBasicDescription &format,
              uint32_t chanmask=0);
     ~WaveSink() { try { finishWrite(); } catch (...) {} }
@@ -31,8 +31,8 @@ private:
     std::string buildHeader();
     void write(const void *data, size_t length)
     {
-        std::fwrite(data, 1, length, m_file);
-        if (ferror(m_file))
+        std::fwrite(data, 1, length, m_file.get());
+        if (ferror(m_file.get()))
             win32::throw_error("write failed", _doserrno);
     }
 };

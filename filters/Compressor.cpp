@@ -41,7 +41,7 @@ Compressor::Compressor(const std::shared_ptr<ISource> &src,
         AudioStreamBasicDescription asbd =
             cautil::buildASBDForPCM(m_asbd.mSampleRate, 1,
                                     32, kAudioFormatFlagIsFloat);
-        m_statsink = std::make_shared<WaveSink>(m_statfile.get(), ~0ULL, asbd);
+        m_statsink = std::make_shared<WaveSink>(m_statfile, ~0ULL, asbd);
     }
 }
 

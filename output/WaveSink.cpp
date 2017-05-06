@@ -2,11 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <sys/stat.h>
-#if defined(_MSC_VER ) || defined(__MINGW32__)
 #include <io.h>
-#else
-#include <unistd.h>
-#endif
 #include "WaveSource.h"
 #include "WaveSink.h"
 
@@ -20,14 +16,14 @@ namespace {
     }
 }
 
-WaveSink::WaveSink(FILE *fp,
+WaveSink::WaveSink(const std::shared_ptr<FILE> &fp,
                    uint64_t duration,
                    const AudioStreamBasicDescription &asbd,
                    uint32_t chanmask)
         : m_file(fp), m_closed(false), m_seekable(false), m_fact(false),
           m_chanmask(chanmask), m_bytes_written(0), m_asbd(asbd)
 {
-    m_seekable = win32::is_seekable(fileno(fp));
+    m_seekable = win32::is_seekable(fileno(fp.get()));
     std::string header = buildHeader();
 
     uint32_t hdrsize = header.size();
@@ -119,40 +115,42 @@ void WaveSink::writeSamples(const void *data, size_t length, size_t nsamples)
     }
     write(bp, length);
     m_bytes_written += length;
-    if (!m_seekable) std::fflush(m_file);
+    if (!m_seekable) std::fflush(m_file.get());
 }
 
 void WaveSink::finishWrite()
 {
-    if (m_closed) return;
+    if (m_closed)
+        return;
     m_closed = true;
+    FILE *fp = m_file.get();
     if (m_bytes_written & 1) write("\0", 1);
     if (!m_seekable) return;
     uint64_t datasize64 = m_bytes_written;
     uint64_t riffsize64 = datasize64 + m_data_pos - 8;
     uint64_t nsamples = m_bytes_written / m_bytes_per_frame;
     if (riffsize64 >> 32 == 0) {
-        if (std::fseek(m_file, m_data_pos - 4, SEEK_SET) == 0) {
+        if (std::fseek(fp, m_data_pos - 4, SEEK_SET) == 0) {
             uint32_t size32 = static_cast<uint32_t>(datasize64);
             write(&size32, 4);
-            if (std::fseek(m_file, 4, SEEK_SET) == 0) {
+            if (std::fseek(fp, 4, SEEK_SET) == 0) {
                 size32 = static_cast<uint32_t>(riffsize64);
                 write(&size32, 4);
             }
         }
         if (m_fact) {
             uint32_t samples32 = static_cast<uint32_t>(nsamples);
-            if (std::fseek(m_file, m_data_pos - 20, SEEK_SET) == 0) {
+            if (std::fseek(fp, m_data_pos - 20, SEEK_SET) == 0) {
                 write("fact\004\0\0\0", 8);
                 write(&samples32, 4);
             }
         }
     } else if (m_rf64) {
-        std::rewind(m_file);
+        std::rewind(fp);
         write("RF64", 4);
-        std::fseek(m_file, 8, SEEK_CUR);
+        std::fseek(fp, 8, SEEK_CUR);
         write("ds64", 4);
-        std::fseek(m_file, 4, SEEK_CUR);
+        std::fseek(fp, 4, SEEK_CUR);
         write(&riffsize64, 8);
         write(&datasize64, 8);
         write(&nsamples, 8);

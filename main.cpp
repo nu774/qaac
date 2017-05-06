@@ -613,7 +613,6 @@ static
 void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
                  const std::wstring &ofilename, const Options &opts)
 {
-    std::shared_ptr<FILE> fileptr;
     std::shared_ptr<ISink> sink;
     uint32_t chanmask = 0;
     CAFSink *cafsink = 0;
@@ -629,9 +628,9 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
         }
     }
     if (opts.isLPCM()) {
-        fileptr = win32::fopen(ofilename, L"wb");
+        auto fileptr = win32::fopen(ofilename, L"wb");
         if (!opts.is_caf) {
-            sink = std::make_shared<WaveSink>(fileptr.get(), src->length(),
+            sink = std::make_shared<WaveSink>(fileptr, src->length(),
                                               sf, chanmask);
         } else {
             sink = std::make_shared<CAFSink>(fileptr, sf, chanmask,
