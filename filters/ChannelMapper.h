@@ -9,7 +9,8 @@ class ChannelMapper: public FilterBase {
     size_t (ChannelMapper::*m_process)(void *, size_t);
 public:
     ChannelMapper(const std::shared_ptr<ISource> &source,
-                  const std::vector<uint32_t> &chanmap, uint32_t bitmap=0);
+                  const std::vector<uint32_t> &chanmap,
+                  uint32_t bitmap=0, uint32_t layout_tag=0);
     const std::vector<uint32_t> *getChannels() const
     {
         return m_layout.size() ? &m_layout : 0;
@@ -19,6 +20,7 @@ public:
         return (this->*m_process)(buffer, nsamples);
     }
 private:
+    size_t processNothing(void *buffer, size_t nsamples);
     template <typename T>
     size_t processT(T *buffer, size_t nsamples);
     size_t process16(void *buffer, size_t nsamples);

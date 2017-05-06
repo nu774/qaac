@@ -3,6 +3,7 @@
 #include <cstdarg>
 #include <clocale>
 #include <algorithm>
+#include <numeric>
 #include <functional>
 #include <regex>
 #include "strutil.h"
@@ -349,28 +350,27 @@ static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
     return normalizer->getPeak();
 }
 
-static void
-mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
-              const Options &opts, uint32_t *channel_layout)
+static
+void manipulate_channels(std::vector<std::shared_ptr<ISource> > &chain,
+                         const Options &opts)
 {
-    uint32_t nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
-    const std::vector<uint32_t> *channels = chain.back()->getChannels();
-    std::vector<uint32_t> work;
-    if (channels) {
-        if (opts.verbose > 1) {
-            LOG(L"Input layout: %hs\n",
-                chanmap::getChannelNames(*channels).c_str());
-        }
-        // reorder to Microsoft (USB) order
-        work = chanmap::convertFromAppleLayout(*channels);
-        channels = &work;
-        auto mapping = chanmap::getMappingToUSBOrder(*channels);
-        if (!util::is_increasing(mapping.begin(), mapping.end())) {
-            std::shared_ptr<ISource>
-                mapper(new ChannelMapper(chain.back(), mapping,
-                                         chanmap::getChannelMask(work)));
-            chain.push_back(mapper);
-            channels = chain.back()->getChannels();
+    // normalize to Microsoft channel layout
+    {
+        const std::vector<uint32_t> *cs = chain.back()->getChannels();
+        if (cs) {
+            if (opts.verbose > 1) {
+                LOG(L"Input layout: %hs\n",
+                    chanmap::getChannelNames(*cs).c_str());
+            }
+            auto ccs = chanmap::convertFromAppleLayout(*cs);
+            auto map = chanmap::getMappingToUSBOrder(ccs);
+            if (ccs != *cs || !util::is_increasing(map.begin(), map.end()))
+            {
+                std::shared_ptr<ISource>
+                    mapper(new ChannelMapper(chain.back(), map,
+                                             chanmap::getChannelMask(ccs)));
+                chain.push_back(mapper);
+            }
         }
     }
     // remix
@@ -392,11 +392,12 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
                 mixer(new MatrixMixer(chain.back(),
                                       matrix, !opts.no_matrix_normalize));
             chain.push_back(mixer);
-            channels = 0;
-            nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
         }
     }
-    // map with --chanmap option
+
+    uint32_t nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
+
+    // --chanmap
     if (opts.chanmap.size()) {
         if (opts.chanmap.size() != nchannels)
             throw std::runtime_error(
@@ -405,55 +406,65 @@ mapped_source(std::vector<std::shared_ptr<ISource> > &chain,
             mapper(new ChannelMapper(chain.back(), opts.chanmap));
         chain.push_back(mapper);
     }
-    // retrieve original channel layout, taking --chanmask into account
-    if (opts.chanmask > 0 && util::bitcount(opts.chanmask) != nchannels)
-        throw std::runtime_error("unmatch number of channels with --chanmask");
-    int chanmask = opts.chanmask;
-    if (chanmask < 0)
-        chanmask = channels ? chanmap::getChannelMask(*channels) : 0;
-    if (!chanmask && !opts.isLPCM() && !opts.isPeak()) {
-        if (opts.verbose >1 || opts.logfilename)
-            LOG(L"Using default channel layout.\n");
-        chanmask = chanmap::defaultChannelMask(nchannels);
+    // --chanmask
+    if (opts.chanmask > 0)
+    {
+        if (util::bitcount(opts.chanmask) != nchannels)
+            throw std::runtime_error("unmatch --chanmask with input");
+        std::vector<uint32_t> map(nchannels);
+        std::iota(map.begin(), map.end(), 1);
+        std::shared_ptr<ISource>
+            mapper(new ChannelMapper(chain.back(), map, opts.chanmask));
+        chain.push_back(mapper);
     }
-    *channel_layout = chanmask;
-    if (chanmask) {
-        if ((opts.isLPCM() || opts.isWaveOut()) && opts.verbose > 1) {
-            auto vec = chanmap::getChannels(chanmask);
-            LOG(L"Output layout: %hs\n",
-                chanmap::getChannelNames(vec).c_str());
-        }
-    }
-    if (opts.isAAC() || opts.isALAC()) {
-        // construct mapped channel layout to AAC/ALAC order
-        *channel_layout = chanmap::AACLayoutFromBitmap(chanmask);
-        auto aacmap = chanmap::getMappingToAAC(chanmask);
-        if (aacmap.size() &&
-            !util::is_increasing(aacmap.begin(), aacmap.end())) {
-            std::shared_ptr<ISource>
-                mapper(new ChannelMapper(chain.back(), aacmap));
-            chain.push_back(mapper);
-        }
-        if (opts.verbose > 1) {
-            AudioChannelLayout acl = { 0 };
-            acl.mChannelLayoutTag = *channel_layout;
-            auto vec = chanmap::getChannels(&acl);
-            LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
-        }
+}
+
+static
+uint32_t get_encoding_channel_layout(ISource *src, Options opts,
+                                     uint32_t *bitmap)
+{
+    AudioStreamBasicDescription asbd = src->getSampleFormat();
+    const std::vector<uint32_t> *cs = src->getChannels();
+    uint32_t chanmask;
+    if (cs) chanmask = chanmap::getChannelMask(*cs);
+    else chanmask = chanmap::defaultChannelMask(asbd.mChannelsPerFrame);
+    uint32_t tag = chanmap::AACLayoutFromBitmap(chanmask);
 #ifdef QAAC
-        auto codec = std::make_shared<AudioCodecX>(opts.output_format);
-        if (*channel_layout == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
-            if (opts.is_caf || opts.isALAC())
-                throw std::runtime_error("Channel layout not supported");
-        } else if (!codec->isAvailableOutputChannelLayout(*channel_layout)) {
+    auto codec = std::make_shared<AudioCodecX>(opts.output_format);
+    if (tag == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
+        if (opts.is_caf || opts.isALAC())
             throw std::runtime_error("Channel layout not supported");
-        }
+    } else if (!codec->isAvailableOutputChannelLayout(tag)) {
+        throw std::runtime_error("Channel layout not supported");
+    }
 #endif
 #ifdef REFALAC
-        if (!ALACEncoderX::isAvailableOutputChannelLayout(*channel_layout))
-            throw std::runtime_error("Not supported channel layout for ALAC");
+    if (!ALACEncoderX::isAvailableOutputChannelLayout(tag))
+        throw std::runtime_error("Not supported channel layout for ALAC");
 #endif
+    if (bitmap) *bitmap = chanmask;
+    return tag;
+}
+
+static
+uint32_t map_to_aac_channels(std::vector<std::shared_ptr<ISource> > &chain,
+                             const Options &opts)
+{
+    uint32_t chanmask;
+    uint32_t tag = get_encoding_channel_layout(chain.back().get(), opts,
+                                               &chanmask);
+    auto map = chanmap::getMappingToAAC(chanmask);
+    std::shared_ptr<ISource>
+        mapper(new ChannelMapper(chain.back(), map, 0, tag));
+    chain.push_back(mapper);
+
+    if (opts.verbose > 1) {
+        AudioChannelLayout acl = { 0 };
+        acl.mChannelLayoutTag = tag;
+        auto vec = chanmap::getChannels(&acl);
+        LOG(L"Output layout: %hs\n", chanmap::getChannelNames(vec).c_str());
     }
+    return tag;
 }
 
 static
@@ -505,9 +516,7 @@ std::string pcm_format_str(AudioStreamBasicDescription &asbd)
     return strutil::format("%s%d", stype[itype], asbd.mBitsPerChannel);
 }
 
-double target_sample_rate(const Options &opts,
-                          std::shared_ptr<ISource> src,
-                          uint32_t channel_layout_tag)
+double target_sample_rate(const Options &opts, ISource *src)
 {
     AudioStreamBasicDescription iasbd = src->getSampleFormat();
     double candidate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
@@ -518,8 +527,9 @@ double target_sample_rate(const Options &opts,
         auto codec = std::make_shared<AudioCodecX>(opts.output_format);
         return codec->getClosestAvailableOutputSampleRate(candidate);
     } else {
+        uint32_t tag = get_encoding_channel_layout(src, opts, nullptr);
         AudioChannelLayout acl = { 0 };
-        acl.mChannelLayoutTag = channel_layout_tag;
+        acl.mChannelLayoutTag = tag;
         AudioStreamBasicDescription oasbd = { 0 };
         oasbd.mFormatID = opts.output_format;
         oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
@@ -537,15 +547,17 @@ double target_sample_rate(const Options &opts,
 
 void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                             std::vector<std::shared_ptr<ISource> > &chain,
-                            const Options &opts, uint32_t *channel_layout,
-                            bool normalize_pass=false)
+                            const Options &opts, bool normalize_pass=false)
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
     bool threading = opts.threading && si.dwNumberOfProcessors > 1;
 
     AudioStreamBasicDescription sasbd = src->getSampleFormat();
-    mapped_source(chain, opts, channel_layout);
+    manipulate_channels(chain, opts);
+    // check if channel layout is available for codec
+    if (opts.isAAC() || opts.isALAC())
+        get_encoding_channel_layout(chain.back().get(), opts, nullptr);
 
     if (opts.lowpass > 0) {
         if (!SoXConvolverModule::instance().loaded())
@@ -560,7 +572,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     }
     {
         double irate = chain.back()->getSampleFormat().mSampleRate;
-        double orate = target_sample_rate(opts, chain.back(), *channel_layout);
+        double orate = target_sample_rate(opts, chain.back().get());
         if (orate != irate) {
             LOG(L"%gHz -> %gHz\n", irate, orate);
             if (!opts.native_resampler && SOXRModule::instance().loaded()) {
@@ -685,10 +697,10 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
 
 void build_filter_chain(std::shared_ptr<ISeekableSource> src,
                         std::vector<std::shared_ptr<ISource> > &chain,
-                        const Options &opts, uint32_t *channel_layout)
+                        const Options &opts)
 {
     chain.push_back(src);
-    build_filter_chain_sub(src, chain, opts, channel_layout, opts.normalize);
+    build_filter_chain_sub(src, chain, opts, opts.normalize);
     if (opts.normalize && src->isSeekable()) {
         src->seekTo(0);
         Normalizer *normalizer = dynamic_cast<Normalizer*>(chain.back().get());
@@ -697,7 +709,7 @@ void build_filter_chain(std::shared_ptr<ISeekableSource> src,
         chain.push_back(src);
         if (peak > FLT_MIN)
             chain.push_back(std::make_shared<Scaler>(src, 1.0/peak));
-        build_filter_chain_sub(src, chain, opts, channel_layout, false);
+        build_filter_chain_sub(src, chain, opts, false);
     }
 }
 
@@ -788,16 +800,23 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
 
 static
 void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
-                 const std::wstring &ofilename, const Options &opts,
-                 uint32_t chanmask)
+                 const std::wstring &ofilename, const Options &opts)
 {
-    const std::shared_ptr<ISource> src = chain.back();
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
-
     std::shared_ptr<FILE> fileptr;
     std::shared_ptr<ISink> sink;
+    uint32_t chanmask = 0;
     CAFSink *cafsink = 0;
+    const std::shared_ptr<ISource> src = chain.back();
+    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    const std::vector<uint32_t> *channels = src->getChannels();
 
+    if (channels) {
+        chanmask = chanmap::getChannelMask(*channels);
+        if (opts.verbose > 1) {
+            LOG(L"Output layout: %hs\n",
+                chanmap::getChannelNames(*channels).c_str());
+        }
+    }
     if (opts.isLPCM()) {
         fileptr = win32::fopen(ofilename, L"wb");
         if (!opts.is_caf) {
@@ -810,10 +829,11 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
             set_tags(chain[0].get(), cafsink, opts, L"");
             cafsink->beginWrite();
         }
-    }
-    else if (opts.isWaveOut())
+    } else if (opts.isWaveOut()) {
+        if (!chanmask)
+            chanmask = chanmap::defaultChannelMask(sf.mChannelsPerFrame);
         sink = std::make_shared<WaveOutSink>(sf, chanmask);
-    else if (opts.isPeak())
+    } else if (opts.isPeak())
         sink = std::make_shared<PeakSink>(sf);
 
     Progress progress(opts.verbose, src->length(), sf.mSampleRate);
@@ -866,7 +886,8 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
 }
 
 static
-AudioStreamBasicDescription get_encoding_ASBD(const Options &opts, const ISource *src)
+AudioStreamBasicDescription get_encoding_ASBD(const Options &opts,
+                                              const ISource *src)
 {
     AudioStreamBasicDescription iasbd = src->getSampleFormat();
     AudioStreamBasicDescription oasbd = { 0 };
@@ -883,7 +904,7 @@ AudioStreamBasicDescription get_encoding_ASBD(const Options &opts, const ISource
     if (opts.isALAC()) {
         if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
             throw std::runtime_error(
-                "floating point PCM is not supported for ALAC: try -b");
+                "floating point PCM is not supported for ALAC");
 
         switch (iasbd.mBitsPerChannel) {
         case 16:
@@ -895,7 +916,7 @@ AudioStreamBasicDescription get_encoding_ASBD(const Options &opts, const ISource
         case 32:
             oasbd.mFormatFlags = 4; break;
         default:
-            throw std::runtime_error("Not supported input bit depth for ALAC: try -b");
+            throw std::runtime_error("Not supported bit depth for ALAC");
         }
     }
     return oasbd;
@@ -1045,12 +1066,13 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
                  const std::wstring &ofilename, const Options &opts)
 {
     std::vector<std::shared_ptr<ISource> > chain;
-    uint32_t channel_layout;
-    build_filter_chain(src, chain, opts, &channel_layout);
+    build_filter_chain(src, chain, opts);
+
     if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
-        decode_file(chain, ofilename, opts, channel_layout);
+        decode_file(chain, ofilename, opts);
         return;
     }
+    uint32_t channel_layout = map_to_aac_channels(chain, opts);
     AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
     AudioStreamBasicDescription oasbd =
         get_encoding_ASBD(opts, chain.back().get());
@@ -1118,14 +1140,14 @@ static
 void encode_file(const std::shared_ptr<ISeekableSource> &src,
         const std::wstring &ofilename, const Options &opts)
 {
-    uint32_t channel_layout;
     std::vector<std::shared_ptr<ISource> > chain;
-    build_filter_chain(src, chain, opts, &channel_layout);
+    build_filter_chain(src, chain, opts);
 
     if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
-        decode_file(chain, ofilename, opts, channel_layout);
+        decode_file(chain, ofilename, opts);
         return;
     }
+    uint32_t channel_layout = map_to_aac_channels(chain, opts);
     AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
     AudioStreamBasicDescription oasbd =
         get_encoding_ASBD(opts, chain.back().get());
