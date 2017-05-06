@@ -1245,9 +1245,7 @@ void load_metadata_files(Options *opts)
 static
 std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 {
-    if (opts.ofilename)
-        return !std::wcscmp(opts.ofilename, L"-") ? L"-"
-                : win32::GetFullPathNameX(opts.ofilename);
+    if (opts.ofilename) return opts.ofilename;
 
     const wchar_t *ext = opts.extension();
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
@@ -1256,15 +1254,8 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
 
     std::wstring obasename =
         win32::PathReplaceExtension(ifilename, ext);
-    /*
-     * Prefixed pathname starting with \\?\ is required to be canonical
-     * full pathname.
-     * Since libmp4v2 simply prepends \\?\ if it looks like a full pathname,
-     * we have to normalize pathname beforehand (by GetFullPathName()).
-     */
-    std::wstring ofilename =
-        win32::GetFullPathNameX(strutil::format(L"%s/%s", outdir,
-                                                obasename.c_str()));
+    std::wstring ofilename = strutil::format(L"%s/%s", outdir,
+                                             obasename.c_str());
 
     std::vector<wchar_t> odir(ofilename.begin(), ofilename.end());
     odir.push_back(0);
@@ -1414,7 +1405,7 @@ int wmain1(int argc, wchar_t **argv)
         load_metadata_files(&opts);
         if (opts.tmpdir) {
             std::wstring env(L"TMP=");
-            env += win32::GetFullPathNameX(opts.tmpdir);
+            env += opts.tmpdir;
             _wputenv(env.c_str());
         }
 
