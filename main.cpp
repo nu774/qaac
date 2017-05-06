@@ -385,8 +385,8 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         double irate = chain.back()->getSampleFormat().mSampleRate;
         double orate = target_sample_rate(opts, chain.back().get());
         if (orate != irate) {
-            LOG(L"%gHz -> %gHz\n", irate, orate);
             if (!opts.native_resampler && SOXRModule::instance().loaded()) {
+                LOG(L"%gHz -> %gHz\n", irate, orate);
                 std::shared_ptr<SoxrResampler>
                     resampler(new SoxrResampler(chain.back(), orate));
                 if (opts.verbose > 1 || opts.logfilename)
@@ -394,8 +394,9 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 chain.push_back(resampler);
             } else {
 #ifndef QAAC
-                throw std::runtime_error("--rate requires libsoxr\n");
+                LOG(L"WARNING: --rate requires libsoxr, resampling disabled\n");
 #else
+                LOG(L"%gHz -> %gHz\n", irate, orate);
                 AudioStreamBasicDescription sf
                     = chain.back()->getSampleFormat();
                 if ((sf.mFormatFlags & kAudioFormatFlagIsFloat)
