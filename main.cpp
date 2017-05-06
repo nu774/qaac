@@ -166,22 +166,24 @@ public:
 };
 
 static
-AudioStreamBasicDescription get_encoding_ASBD(const Options &opts,
-                                              const ISource *src)
+AudioStreamBasicDescription get_encoding_ASBD(const ISource *src,
+                                              uint32_t codecid)
 {
     AudioStreamBasicDescription iasbd = src->getSampleFormat();
     AudioStreamBasicDescription oasbd = { 0 };
 
-    oasbd.mFormatID = opts.output_format;
+    oasbd.mFormatID = codecid;
     oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
     oasbd.mSampleRate = iasbd.mSampleRate;
 
-    if (opts.isAAC())
-        oasbd.mFramesPerPacket = opts.isSBR() ? 2048 : 1024;
-    else if (opts.isALAC())
+    if (codecid = 'aac ')
+        oasbd.mFramesPerPacket = 1024;
+    else if (codecid == 'aach')
+        oasbd.mFramesPerPacket = 2048;
+    else if (codecid == 'alac')
         oasbd.mFramesPerPacket = 4096;
 
-    if (opts.isALAC()) {
+    if (codecid == 'alac') {
         if (!(iasbd.mFormatFlags & kAudioFormatFlagIsSignedInteger))
             throw std::runtime_error(
                 "floating point PCM is not supported for ALAC");
@@ -918,7 +920,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     uint32_t channel_layout = map_to_aac_channels(chain, opts);
     AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
     AudioStreamBasicDescription oasbd =
-        get_encoding_ASBD(opts, chain.back().get());
+        get_encoding_ASBD(chain.back().get(), opts.output_format);
     AudioConverterXX converter(iasbd, oasbd);
     AudioChannelLayout acl = { 0 };
     acl.mChannelLayoutTag = channel_layout;
@@ -993,7 +995,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     uint32_t channel_layout = map_to_aac_channels(chain, opts);
     AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
     AudioStreamBasicDescription oasbd =
-        get_encoding_ASBD(opts, chain.back().get());
+        get_encoding_ASBD(chain.back().get(), opts.output_format);
     ALACEncoderX encoder(iasbd);
     encoder.setFastMode(opts.alac_fast);
     auto cookie = encoder.getMagicCookie();
