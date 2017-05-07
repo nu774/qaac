@@ -8,7 +8,6 @@
 #include "CompositeSource.h"
 #include "NullSource.h"
 #include "TrimmedSource.h"
-#include "expand.h"
 #include "InputFactory.h"
 #include "playlist.h"
 
@@ -152,23 +151,28 @@ void CueSheet::parse(std::wstreambuf *src)
     validate();
 }
 
-void CueSheet::loadTracks(playlist::Playlist &tracks,
-                          const std::wstring &cuedir,
-                          const std::wstring &fname_format,
-                          const wchar_t *embedder_fname)
+std::vector<std::shared_ptr<ISeekableSource>>
+CueSheet::loadTracks(bool is_embedded, const std::wstring &path,
+                     const std::vector<int> &selection)
 {
-    std::shared_ptr<ISeekableSource> src;
-    std::for_each(begin(), end(), [&](const CueTrack &track) {
+    std::vector<std::shared_ptr<ISeekableSource>> tracks;
+    for (auto &track = begin(); track != end(); ++track) {
+        if (selection.size()) {
+            if (std::find(selection.begin(), selection.end(),
+                          track->number()) == selection.end())
+                continue;
+        }
         std::shared_ptr<CompositeSource> track_source(new CompositeSource());
-        std::for_each(track.begin(), track.end(), [&](const CueSegment &seg) {
+        std::for_each(track->begin(), track->end(), [&](const CueSegment &seg) {
+            std::shared_ptr<ISeekableSource> src;
             if (seg.m_filename == L"__GAP__") {
-                if (src.get())
+                if (tracks.size())
                     src.reset(new NullSource(src->getSampleFormat()));
-            } else if (embedder_fname) {
-                src = InputFactory::instance().open(embedder_fname);
+            } else if (is_embedded) {
+                src = InputFactory::instance().open(path.c_str());
             } else {
                 std::wstring ifilename =
-                    win32::PathCombineX(cuedir, seg.m_filename);
+                    win32::PathCombineX(path, seg.m_filename);
                 src = InputFactory::instance().open(ifilename.c_str());
             }
             if (src.get()) {
@@ -188,25 +192,18 @@ void CueSheet::loadTracks(playlist::Playlist &tracks,
         for (auto it = stags.begin(); it != stags.end(); ++it) {
             if (std::regex_match(it->first, match, re)) {
                 int tn = atoi(match[1].str().c_str());
-                if (tn == track.number())
+                if (tn == track->number())
                     tags[match[2].str()] = it->second;
             } else
                 tags[it->first] = it->second;
         }
-        auto track_tags = track.getTags();
+        auto track_tags = track->getTags();
         for (auto it = track_tags.begin(); it != track_tags.end(); ++it)
             tags[it->first] = it->second;
         track_source->setTags(tags);
-        std::wstring ofilename =
-            playlist::generateFileName(fname_format, tags) + L".stub";
-
-        playlist::Track new_track;
-        new_track.number = track.number();
-        new_track.name = track.name();
-        new_track.source = track_source;
-        new_track.ofilename = ofilename;
-        tracks.push_back(new_track);
-    });
+        tracks.push_back(track_source);
+    }
+    return tracks;
 }
 
 std::map<std::string, std::string> CueSheet::getTags() const

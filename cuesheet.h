@@ -81,10 +81,10 @@ public:
 
     CueSheet(): m_has_multiple_files(false) {}
     void parse(std::wstreambuf *src);
-    void loadTracks(playlist::Playlist &tracks,
-                    const std::wstring &cuedir,
-                    const std::wstring &fname_format,
-                    const wchar_t *embedder_fname=0);
+    std::vector<std::shared_ptr<ISeekableSource>>
+        loadTracks(bool is_embedded,
+                   const std::wstring &cue_or_container_path,
+                   const std::vector<int> &selection);
     std::map<std::string, std::string> getTags() const;
 
     unsigned count() const { return m_tracks.size(); }

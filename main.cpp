@@ -33,7 +33,6 @@
 #include "ChannelMapper.h"
 #include "logging.h"
 #include "textfile.h"
-#include "expand.h"
 #include "Compressor.h"
 #include "metadata.h"
 #include "wicimage.h"
@@ -784,7 +783,7 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
         std::shared_ptr<FILE> _ = win32::fopen(ofilename, L"wb");
     }
     if (opts.is_adts)
-        return std::make_shared<ADTSSink>(ofilename, asc, opts.concat);
+        return std::make_shared<ADTSSink>(ofilename, asc, false);
     else if (opts.is_caf)
         return std::make_shared<CAFSink>(ofilename, asbd, channel_layout,
                                          cookie);
@@ -1132,78 +1131,59 @@ select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
     return cp;
 }
 
-static
-void load_cue_sheet(const wchar_t *ifilename, const Options &opts,
-                    playlist::Playlist &tracks)
-{
-    const wchar_t *base_p = PathFindFileNameW(ifilename);
-    std::wstring cuedir =
-        (base_p == ifilename ? L"." : std::wstring(ifilename, base_p));
-    cuedir = win32::GetFullPathNameX(cuedir);
+typedef std::pair<std::wstring, std::shared_ptr<ISeekableSource>> workItem;
 
-    std::wstring cuetext = load_text_file(ifilename, opts.textcp);
-    std::wstringbuf istream(cuetext);
+static
+void load_cue_tracks(const Options &opts, std::wstreambuf *sb, bool is_embedded,
+                     const std::wstring &path, std::vector<workItem> &items)
+{
     CueSheet cue;
-    cue.parse(&istream);
-    cue.loadTracks(tracks, cuedir, 
-                   opts.fname_format ? opts.fname_format
-                                     : L"${tracknumber}${title& }${title}");
+    cue.parse(sb);
+    auto tracks = cue.loadTracks(is_embedded, path, opts.cue_tracks);
+    for (size_t i = 0; i < tracks.size(); ++i) {
+        auto parser = dynamic_cast<ITagParser*>(tracks[i].get());
+        const wchar_t *spec = opts.fname_format;
+        if (!spec) spec = L"${tracknumber}${title& }${title}";
+        std::wstring ofname =
+            playlist::generateFileName(spec, parser->getTags());
+        items.push_back(std::make_pair(ofname, tracks[i]));
+    }
 }
 
 static
 void load_track(const wchar_t *ifilename, const Options &opts,
-                playlist::Playlist &tracks)
+                std::vector<workItem> &tracks)
 {
-    const wchar_t *name = L"stdin";
-    if (std::wcscmp(ifilename, L"-"))
-        name = PathFindFileNameW(ifilename);
-    std::wstring ofilename(name);
-    const wchar_t *ext = PathFindExtensionW(name);
-    std::wstring title(name, ext);
+    if (strutil::wslower(PathFindExtensionW(ifilename)) == L".cue") {
+        const wchar_t *base_p = PathFindFileNameW(ifilename);
+        std::wstring cuedir =
+            (base_p == ifilename ? L"." : std::wstring(ifilename, base_p));
+        cuedir = win32::GetFullPathNameX(cuedir);
+        std::wstring cuetext = load_text_file(ifilename, opts.textcp);
+        std::wstringbuf istream(cuetext);
+        load_cue_tracks(opts, &istream, false, cuedir, tracks);
+        return;
+    }
 
-    auto src(InputFactory::instance().open(ifilename));
+    std::wstring ofilename(ifilename);
+    auto src = InputFactory::instance().open(ifilename);
     auto parser = dynamic_cast<ITagParser*>(src.get());
     if (parser) {
         auto meta = parser->getTags();
-        auto tag = meta.find("title");
-        if (tag != meta.end())
-            title = strutil::us2w(tag->second);
-        if (opts.filename_from_tag) {
+        auto cue = meta.find("CUESHEET");
+        if (cue != meta.end()) {
+            try {
+                std::wstringbuf wsb(strutil::us2w(cue->second));
+                load_cue_tracks(opts, &wsb, true, ifilename, tracks);
+                return;
+            } catch (...) {}
+        }
+        if (opts.filename_from_tag && opts.fname_format) {
             auto fn = playlist::generateFileName(opts.fname_format, meta);
             if (fn.size()) ofilename = fn + L".stub";
         }
     }
-    playlist::Track new_track;
-    new_track.name = title;
-    new_track.source = src;
-    new_track.ofilename = ofilename;
-    tracks.push_back(new_track);
-}
-
-static
-void group_tracks_with_formats(const playlist::Playlist &tracks,
-                               std::vector<playlist::Playlist> *res)
-{
-    if (!tracks.size())
-        return;
-    std::vector<playlist::Playlist> vec;
-    playlist::Playlist::const_iterator track = tracks.begin();
-    do {
-        playlist::Playlist group;
-        group.push_back(*track);
-        const AudioStreamBasicDescription &fmt
-            = track->source->getSampleFormat();
-        while (++track != tracks.end()) {
-            const AudioStreamBasicDescription &afmt
-                = track->source->getSampleFormat();
-            if (std::memcmp(&fmt, &afmt, sizeof fmt))
-                break;
-            else
-                group.push_back(*track);
-        }
-        vec.push_back(group);
-    } while (track != tracks.end());
-    res->swap(vec);
+    tracks.push_back(std::make_pair(ofilename, src));
 }
 
 static
@@ -1245,17 +1225,17 @@ void load_metadata_files(Options *opts)
 }
 
 static
-std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
+std::wstring get_output_filename(const std::wstring &ifilename,
+                                 const Options &opts)
 {
     if (opts.ofilename) return opts.ofilename;
 
     const wchar_t *ext = opts.extension();
     const wchar_t *outdir = opts.outdir ? opts.outdir : L".";
-    if (!std::wcscmp(ifilename, L"-"))
+    if (!std::wcscmp(ifilename.c_str(), L"-"))
         return std::wstring(L"stdin") + ext;
 
-    std::wstring obasename =
-        win32::PathReplaceExtension(ifilename, ext);
+    std::wstring obasename = win32::PathReplaceExtension(ifilename, ext);
     std::wstring ofilename = strutil::format(L"%s/%s", outdir,
                                              obasename.c_str());
 
@@ -1422,103 +1402,46 @@ int wmain1(int argc, wchar_t **argv)
             }
         }
 
-        playlist::Playlist tracks;
-        const wchar_t *ifilename = 0;
-
         if (opts.sort_args) {
             std::sort(&argv[0], &argv[argc],
                       [](const wchar_t *a, const wchar_t *b) {
                           return std::wcscmp(a, b) < 0;
                       });
         }
-        for (int i = 0; i < argc; ++i) {
-            ifilename = argv[i];
-            if (strutil::wslower(PathFindExtensionW(ifilename)) == L".cue")
-                load_cue_sheet(ifilename, opts, tracks);
-            else {
-                load_track(ifilename, opts, tracks);
-                auto src = tracks.back().source;
-                auto parser = dynamic_cast<ITagParser*>(src.get());
-                do {
-                    if (!parser) break;
-                    auto &tags = parser->getTags();
-                    auto ti = tags.begin();
-                    for (; ti != tags.end(); ++ti)
-                        if (strcasecmp(ti->first.c_str(), "cuesheet") == 0)
-                            break;
-                    if (ti == tags.end())
-                        break;
-                    try {
-                        std::wstringbuf wsb(strutil::us2w(ti->second));
-                        CueSheet cue;
-                        cue.parse(&wsb);
-                        tracks.pop_back();
-                        cue.loadTracks(tracks, L"", 
-                                   opts.fname_format
-                                    ? opts.fname_format
-                                    : L"${tracknumber}${title& }${title}",
-                                    ifilename);
-                    } catch (...) {}
-                } while (0);
-            }
-        }
         SetConsoleCtrlHandler(console_interrupt_handler, TRUE);
+
+        std::vector<workItem> workItems;
+        for (int i = 0; i < argc; ++i)
+            load_track(argv[i], opts, workItems);
+
         if (!opts.concat) {
-            for (size_t i = 0; i < tracks.size() && !g_interrupted; ++i) {
-                playlist::Track &track = tracks[i];
-                if (opts.cue_tracks.size()) {
-                    if (std::find(opts.cue_tracks.begin(),
-                                  opts.cue_tracks.end(), track.number)
-                        == opts.cue_tracks.end())
-                        continue;
-                }
+            for (size_t i = 0; i < workItems.size() && !g_interrupted; ++i) {
                 std::wstring ofilename =
-                    get_output_filename(track.ofilename.c_str(), opts);
-                const wchar_t *ofn = L"<stdout>";
-                if (ofilename != L"-")
-                    ofn = PathFindFileNameW(ofilename.c_str());
-                LOG(L"\n%s\n", ofn);
-                std::shared_ptr<ISeekableSource> src =
-                    select_timeline(track.source, opts);
+                    get_output_filename(workItems[i].first, opts);
+                LOG(L"\n%s\n",
+                    ofilename == L"-" ? L"<stdout>"
+                                      : PathFindFileNameW(ofilename.c_str()));
+                auto src = select_timeline(workItems[i].second, opts);
                 src->seekTo(0);
                 encode_file(src, ofilename, opts);
             }
         } else {
-            std::wstring ofilename = get_output_filename(ifilename, opts);
+            std::wstring ofilename = get_output_filename(argv[0], opts);
             LOG(L"\n%s\n",
                 ofilename == L"-" ? L"<stdout>"
                                   : PathFindFileNameW(ofilename.c_str()));
-            if (opts.is_adts) {
-                std::shared_ptr<FILE> _ = win32::fopen(ofilename, L"wb+");
-            }
-            std::vector<playlist::Playlist> groups;
-            group_tracks_with_formats(tracks, &groups);
-            if (!opts.is_adts && groups.size() > 1)
-                throw std::runtime_error("Concatenation of multiple inputs "
-                                         "with different sample format is "
-                                         "only supported for ADTS output");
-            std::vector<playlist::Playlist>::const_iterator group;
-            playlist::Playlist::const_iterator track;
-            for (group = groups.begin();
-                 group != groups.end() && !g_interrupted; ++group) { 
-                std::shared_ptr<CompositeSource> cs
-                    = std::make_shared<CompositeSource>();
-                for (track = group->begin(); track != group->end(); ++track) {
-                    if (opts.cue_tracks.size()) {
-                        if (std::find(opts.cue_tracks.begin(),
-                                      opts.cue_tracks.end(), track->number)
-                            == opts.cue_tracks.end())
-                            continue;
-                    }
-                    cs->addSourceWithChapter(track->source, track->name);
-                }
-                std::shared_ptr<ISeekableSource> src(select_timeline(cs, opts));
-                src->seekTo(0);
-                encode_file(src, ofilename, opts);
-            }
+
+            auto cs = std::make_shared<CompositeSource>();
+            for (size_t i = 0; i < workItems.size(); ++i)
+                cs->addSourceWithChapter(workItems[i].second, L"");
+
+            auto src = select_timeline(cs, opts);
+            src->seekTo(0);
+            encode_file(src, ofilename, opts);
         }
         if (opts.isWaveOut())
             WaveOutDevice::instance().close();
+
     } catch (const std::exception &e) {
         if (opts.print_available_formats)
             logger->enable_stderr();
