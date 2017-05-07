@@ -1,10 +1,11 @@
+#include <memory>
 #include <streambuf>
 #include <istream>
 #include <string>
 #include <vector>
 #include <map>
 #include "util.h"
-#include "playlist.h"
+#include "ISource.h"
 
 template <typename CharT>
 struct CueTokenizer {

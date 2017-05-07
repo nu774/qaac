@@ -32,7 +32,6 @@
 #include "chanmap.h"
 #include "ChannelMapper.h"
 #include "logging.h"
-#include "textfile.h"
 #include "Compressor.h"
 #include "metadata.h"
 #include "wicimage.h"
@@ -41,7 +40,7 @@
 #include "TakSource.h"
 #include "WavpackSource.h"
 #include "AvisynthSource.h"
-#include "configfile.h"
+#include "misc.h"
 #ifdef REFALAC
 #include "ALACEncoderX.h"
 #endif
@@ -287,11 +286,11 @@ void manipulate_channels(std::vector<std::shared_ptr<ISource> > &chain,
         if (!SoXConvolverModule::instance().loaded())
             LOG(L"WARNING: mixer requires libsoxconvolver. Mixing disabled\n");
         else {
-            std::vector<std::vector<complex_t> > matrix;
+            std::vector<std::vector<misc::complex_t> > matrix;
             if (opts.remix_file)
-                matrix = loadRemixerMatrixFromFile(opts.remix_file);
+                matrix = misc::loadRemixerMatrixFromFile(opts.remix_file);
             else
-                matrix = loadRemixerMatrixFromPreset(opts.remix_preset);
+                matrix = misc::loadRemixerMatrixFromPreset(opts.remix_preset);
             if (opts.verbose > 1 || opts.logfilename) {
                 LOG(L"Matrix mixer: %uch -> %uch\n",
                     static_cast<uint32_t>(matrix[0].size()),
@@ -1145,7 +1144,7 @@ void load_cue_tracks(const Options &opts, std::wstreambuf *sb, bool is_embedded,
         const wchar_t *spec = opts.fname_format;
         if (!spec) spec = L"${tracknumber}${title& }${title}";
         std::wstring ofname =
-            playlist::generateFileName(spec, parser->getTags());
+            misc::generateFileName(spec, parser->getTags());
         items.push_back(std::make_pair(ofname, tracks[i]));
     }
 }
@@ -1159,7 +1158,7 @@ void load_track(const wchar_t *ifilename, const Options &opts,
         std::wstring cuedir =
             (base_p == ifilename ? L"." : std::wstring(ifilename, base_p));
         cuedir = win32::GetFullPathNameX(cuedir);
-        std::wstring cuetext = load_text_file(ifilename, opts.textcp);
+        std::wstring cuetext = misc::loadTextFile(ifilename, opts.textcp);
         std::wstringbuf istream(cuetext);
         load_cue_tracks(opts, &istream, false, cuedir, tracks);
         return;
@@ -1179,7 +1178,7 @@ void load_track(const wchar_t *ifilename, const Options &opts,
             } catch (...) {}
         }
         if (opts.filename_from_tag && opts.fname_format) {
-            auto fn = playlist::generateFileName(opts.fname_format, meta);
+            auto fn = misc::generateFileName(opts.fname_format, meta);
             if (fn.size()) ofilename = fn + L".stub";
         }
     }
@@ -1200,7 +1199,7 @@ void load_metadata_files(Options *opts)
     for (auto it = opts->ftagopts.begin(); it != opts->ftagopts.end(); ++it) {
         try {
             opts->tagopts[it->first] =
-                strutil::w2us(load_text_file(it->second));
+                strutil::w2us(misc::loadTextFile(it->second));
         } catch (const std::exception &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }

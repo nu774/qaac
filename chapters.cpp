@@ -1,7 +1,7 @@
 #include <cstdio>
 #include "chapters.h"
 #include "strutil.h"
-#include "textfile.h"
+#include "misc.h"
 
 namespace chapters {
     void add_entry(std::vector<abs_entry_t> &chapters,
@@ -27,7 +27,7 @@ namespace chapters {
     {
         std::vector<abs_entry_t> chaps;
 
-        std::wstring str = load_text_file(path, codepage);
+        std::wstring str = misc::loadTextFile(path, codepage);
         const wchar_t *tfmt = L"%02d:%02d:%lf";
         int h = 0, m = 0;
         double s = 0.0;

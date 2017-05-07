@@ -96,15 +96,13 @@
     <ClCompile Include="..\..\chanmap.cpp" />
     <ClCompile Include="..\..\chapters.cpp" />
     <ClCompile Include="..\..\CompositeSource.cpp" />
-    <ClCompile Include="..\..\configfile.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\ISource.cpp" />
     <ClCompile Include="..\..\logging.cpp" />
     <ClCompile Include="..\..\metadata.cpp" />
+    <ClCompile Include="..\..\misc.cpp" />
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />
-    <ClCompile Include="..\..\playlist.cpp" />
     <ClCompile Include="..\..\strutil.cpp" />
-    <ClCompile Include="..\..\textfile.cpp" />
     <ClCompile Include="..\..\util.cpp" />
     <ClCompile Include="..\..\wgetopt.cpp" />
     <ClCompile Include="..\..\wicimage.cpp" />

@@ -103,9 +103,6 @@
     <ClCompile Include="..\..\cuesheet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\textfile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\bitstream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -121,10 +118,7 @@
     <ClCompile Include="..\..\CompositeSource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\configfile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\playlist.cpp">
+    <ClCompile Include="..\..\misc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\metadata.cpp">

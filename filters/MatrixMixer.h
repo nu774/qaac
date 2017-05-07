@@ -5,10 +5,10 @@
 #include <deque>
 #include "FilterBase.h"
 #include "SoXConvolverModule.h"
-
-typedef std::complex<float> complex_t;
+#include "misc.h"
 
 class MatrixMixer: public FilterBase {
+    typedef misc::complex_t complex_t;
     int64_t m_position;
     std::vector<std::vector<complex_t> > m_matrix;
     std::vector<std::shared_ptr<lsx_convolver_t> > m_filter;

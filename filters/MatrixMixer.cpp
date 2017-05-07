@@ -3,7 +3,7 @@
 #include <math.h>
 #include "cautil.h"
 
-static bool validateMatrix(const std::vector<std::vector<complex_t> > &mat,
+static bool validateMatrix(const std::vector<std::vector<misc::complex_t>> &mat,
                            uint32_t *nshifts)
 {
     *nshifts = 0;
@@ -25,7 +25,7 @@ static bool validateMatrix(const std::vector<std::vector<complex_t> > &mat,
     return true;
 }
 
-static void normalizeMatrix(std::vector<std::vector<complex_t> > &mat)
+static void normalizeMatrix(std::vector<std::vector<misc::complex_t>> &mat)
 {
     for (size_t out = 0; out < mat.size(); ++out) {
         float sum = 0.0;

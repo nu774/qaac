@@ -9,7 +9,6 @@
 #include "NullSource.h"
 #include "TrimmedSource.h"
 #include "InputFactory.h"
-#include "playlist.h"
 
 static inline
 unsigned msf2frames(unsigned mm, unsigned ss, unsigned ff)
