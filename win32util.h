@@ -20,6 +20,8 @@
 #include <shlobj.h>
 #include "util.h"
 
+#define HR(expr) (void)(win32::throwIfError((expr), #expr))
+
 namespace win32 {
     class Timer {
         DWORD m_ticks;
@@ -35,6 +37,11 @@ namespace win32 {
     inline void throw_error(const std::string& msg, DWORD error)
     {
         throw_error(strutil::us2w(msg), error);
+    }
+
+    inline void throwIfError(HRESULT expr, const char *msg)
+    {
+        if (FAILED(expr)) throw_error(msg, expr);
     }
 
     inline std::wstring GetFullPathNameX(const std::wstring &path)

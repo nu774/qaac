@@ -36,14 +36,6 @@ _COM_SMARTPTR_TYPEDEF(IWICBitmapScaler, __uuidof(IWICBitmapScaler));
 _COM_SMARTPTR_TYPEDEF(IWICBitmapEncoder, __uuidof(IWICBitmapEncoder));
 _COM_SMARTPTR_TYPEDEF(IWICBitmapFrameEncode, __uuidof(IWICBitmapFrameEncode));
 
-inline
-void throwIfError(HRESULT expr, const char *msg)
-{
-    if (FAILED(expr))
-        win32::throw_error(msg, expr);
-}
-#define HR(expr) (void)(throwIfError((expr), #expr))
-
 static IWICBitmapSourcePtr
 OpenSource(IWICImagingFactory *factory, const void *data, size_t size)
 {

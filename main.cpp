@@ -867,14 +867,6 @@ FARPROC WINAPI DllImportHook(unsigned notify, PDelayLoadInfo pdli)
 }
 */
 
-inline
-void throwIfError(HRESULT expr, const char *msg)
-{
-    if (FAILED(expr))
-        win32::throw_error(msg, expr);
-}
-#define HR(expr) (void)(throwIfError((expr), #expr))
-
 static
 void set_dll_directories(int verbose)
 {

@@ -9,13 +9,6 @@
 
 namespace misc
 {
-    static inline void throwIfError(HRESULT expr, const char *msg)
-    {
-        if (FAILED(expr))
-            win32::throw_error(msg, expr);
-    }
-#define HR(expr) (void)(throwIfError((expr), #expr))
-
     std::wstring loadTextFile(const std::wstring &path, uint32_t codepage)
     {
         IStream *stream;
