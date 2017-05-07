@@ -779,6 +779,7 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     if (opts.isAAC())
         asc = cautil::parseMagicCookieAAC(cookie);
 
+    win32::MakeSureDirectoryPathExistsX(ofilename);
     if (opts.isMP4()) {
         std::shared_ptr<FILE> _ = win32::fopen(ofilename, L"wb");
     }
@@ -1000,6 +1001,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     encoder.setFastMode(opts.alac_fast);
     auto cookie = encoder.getMagicCookie();
 
+    win32::MakeSureDirectoryPathExistsX(ofilename);
     std::shared_ptr<ISink> sink;
     if (opts.is_caf)
         sink = std::make_shared<CAFSink>(ofilename, oasbd,
@@ -1256,12 +1258,6 @@ std::wstring get_output_filename(const wchar_t *ifilename, const Options &opts)
         win32::PathReplaceExtension(ifilename, ext);
     std::wstring ofilename = strutil::format(L"%s/%s", outdir,
                                              obasename.c_str());
-
-    std::vector<wchar_t> odir(ofilename.begin(), ofilename.end());
-    odir.push_back(0);
-    wchar_t *pos = PathFindFileNameW(odir.data());
-    *pos = 0;
-    SHCreateDirectoryExW(nullptr, odir.data(), nullptr);
 
     /* test if ifilename and ofilename refer to the same file */
     std::shared_ptr<FILE> ifp, ofp;

@@ -17,6 +17,7 @@
 #endif
 #include <windows.h>
 #include <shlwapi.h>
+#include <shlobj.h>
 #include "util.h"
 
 namespace win32 {
@@ -76,6 +77,18 @@ namespace win32 {
                                        static_cast<DWORD>(buffer.size()));
         }
         return std::wstring(&buffer[0], &buffer[cclen]);
+    }
+
+    inline bool MakeSureDirectoryPathExistsX(const std::wstring &path)
+    {
+        // SHCreateDirectoryEx() doesn't work with relative path
+        std::wstring fullpath = GetFullPathNameX(path);
+        std::vector<wchar_t> buf(fullpath.begin(), fullpath.end());
+        buf.push_back(0);
+        wchar_t *pos = PathFindFileNameW(buf.data());
+        *pos = 0;
+        int rc = SHCreateDirectoryExW(nullptr, buf.data(), nullptr);
+        return rc == ERROR_SUCCESS;
     }
 
     inline std::wstring get_module_directory(HMODULE module=0)
