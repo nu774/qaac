@@ -75,7 +75,7 @@ void WaveOutDevice::writeSamples(const void *data, size_t length,
     size_t pos = m_ibuffer.size();
     m_ibuffer.resize(pos + length);
     std::memcpy(&m_ibuffer[pos], bp, length);
-    if (m_ibuffer.size() < m_asbd.mSampleRate / NUMBUFFERS)
+    if (m_ibuffer.size() < m_asbd.mSampleRate * nbpc / NUMBUFFERS)
         return;
 
     DWORD n = WaitForMultipleObjects(util::sizeof_array(m_events), m_events,
