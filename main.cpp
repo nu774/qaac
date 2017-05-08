@@ -1381,16 +1381,6 @@ int wmain1(int argc, wchar_t **argv)
             const wchar_t *ws = fullpath.c_str();
             if (!std::wcscmp(opts.ofilename, L"-"))
                 _setmode(1, _O_BINARY);
-            else if (std::wcsstr(ws, L"\\\\.\\pipe\\") == ws) {
-                if (opts.isMP4())
-                    throw std::runtime_error("MP4 piping is not supported");
-                opts.ofilename = L"-";
-                int pipe = win32::create_named_pipe(ws);
-                _close(1);
-                _dup2(pipe, 1);
-                _close(pipe);
-                _setmode(1, _O_BINARY);
-            }
         }
 
         if (opts.sort_args) {
