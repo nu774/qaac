@@ -1052,7 +1052,7 @@ AudioStreamBasicDescription getRawFormat(const Options &opts)
 
 static
 std::shared_ptr<ISeekableSource>
-select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
+trim_input(std::shared_ptr<ISeekableSource> src, const Options & opts)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
     double rate = asbd.mSampleRate;
@@ -1065,31 +1065,20 @@ select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
         throw std::runtime_error("Invalid time spec for --end");
     if (opts.delay && !util::parse_timespec(opts.delay, rate, &delay))
         throw std::runtime_error("Invalid time spec for --delay");
+    if (delay) start = delay * -1;
 
-    std::shared_ptr<CompositeSource> cp(new CompositeSource());
-    std::shared_ptr<ISeekableSource> ns(new NullSource(asbd));
-
-    if (start > 0 || end > 0)
-        src = std::make_shared<TrimmedSource>(src, start,
-                                              end ? std::max(0LL, end - start)
-                                                  : ~0ULL);
-
-    if (delay > 0) {
-        if (opts.verbose > 1 || opts.logfilename)
-            LOG(L"Prepend %lld samples (%g seconds)\n", delay,
-                static_cast<double>(delay) / rate);
-        cp->addSource(std::make_shared<TrimmedSource>(ns, 0, delay));
-        cp->addSource(src);
-    } else if (delay < 0) {
-        delay *= -1;
-        if (opts.verbose > 1 || opts.logfilename)
-            LOG(L"Trim %lld samples (%g seconds)\n", delay,
-                static_cast<double>(delay) / rate);
-        cp->addSource(std::make_shared<TrimmedSource>(src, delay, ~0ULL));
-    } else {
-        cp->addSource(src);
+    if (start < 0) {
+        std::shared_ptr<CompositeSource> cp(new CompositeSource());
+        auto ns = std::make_shared<NullSource>(asbd);
+        cp->addSource(std::make_shared<TrimmedSource>(ns, 0, start * -1));
+        if (end > 0)
+            cp->addSource(std::make_shared<TrimmedSource>(src, 0, end));
+        else
+            cp->addSource(src);
+        return cp;
     }
-    return cp;
+    uint64_t duration = end ? end - start : ~0ULL;
+    return std::make_shared<TrimmedSource>(src, start, duration);
 }
 
 typedef std::pair<std::wstring, std::shared_ptr<ISeekableSource>> workItem;
@@ -1382,7 +1371,7 @@ int wmain1(int argc, wchar_t **argv)
                 LOG(L"\n%s\n",
                     ofilename == L"-" ? L"<stdout>"
                                       : PathFindFileNameW(ofilename.c_str()));
-                auto src = select_timeline(workItems[i].second, opts);
+                auto src = trim_input(workItems[i].second, opts);
                 src->seekTo(0);
                 encode_file(src, ofilename, opts);
             }
@@ -1396,7 +1385,7 @@ int wmain1(int argc, wchar_t **argv)
             for (size_t i = 0; i < workItems.size(); ++i)
                 cs->addSourceWithChapter(workItems[i].second, L"");
 
-            auto src = select_timeline(cs, opts);
+            auto src = trim_input(cs, opts);
             src->seekTo(0);
             encode_file(src, ofilename, opts);
         }

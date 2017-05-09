@@ -194,6 +194,8 @@ void usage()
 "                       You specify either in seconds(hh:mm:ss.sss..form) or\n"
 "                       number of samples followed by 's' or\n"
 "                       cuesheet frames(mm:ss:ff form) followed by 'f'.\n"
+"                       When negative value is given, instead of trimming,\n"
+"                       specified amount of silence is prepended.\n"
 "                       Example:\n"
 "                         --start 4010160s : start at 4010160 samples\n"
 "                         --start 1:30:70f : same as above, in cuepoint\n"
@@ -201,11 +203,9 @@ void usage()
 "--end <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
 "                       Specify end point of the input (exclusive).\n"
 "--delay <[[hh:]mm:]ss[.ss..]|<n>s|<mm:ss:ff>f>\n"
-"                       Specify amount of delay.\n"
-"                       When positive value is given, silence is prepended\n"
-"                       at the begining to achieve specified amount of delay.\n"
-"                       When negative value is given, specified length is\n"
-"                       dropped from the beginning.\n"
+"                       Same as --start, with the sign reversed.\n"
+"                       Positive value will prepend silence.\n"
+"                       (This option exists due to historical reason)\n"
 "--no-delay             Compensate encoder delay by prepending 960 samples \n"
 "                       of scilence, then trimming 3 AAC frames from \n"
 "                       the beginning (and also tweak iTunSMPB).\n"
@@ -785,6 +785,10 @@ bool Options::parse(int &argc, wchar_t **&argv)
     }
     if ((!isAAC() || isSBR()) && this->num_priming != 2112) {
         complain(L"--num-priming is only applicable for AAC LC.\n");
+        return false;
+    }
+    if (this->delay && this->start) {
+        complain(L"Can't use --start and --delay at the same time.\n");
         return false;
     }
     if (this->quality == -1)
