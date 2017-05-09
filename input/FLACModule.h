@@ -7,7 +7,11 @@
 class FLACModule {
     DL m_dl;
 private:
-    FLACModule() {}
+    FLACModule() {
+        load(L"libFLAC_dynamic.dll");
+        if (!loaded()) load(L"libFLAC.dll");
+        if (!loaded()) load(L"libFLAC-8.dll");
+    }
     FLACModule(const FLACModule&);
     FLACModule& operator=(const FLACModule&);
 public:

@@ -11,7 +11,9 @@ struct HINSTANCE__;
 class LibSndfileModule {
     DL m_dl;
 private:
-    LibSndfileModule() {}
+    LibSndfileModule() {
+        load(L"libsndfile-1.dll");
+    }
     LibSndfileModule(const LibSndfileModule&);
     LibSndfileModule& operator=(const LibSndfileModule&);
 public:

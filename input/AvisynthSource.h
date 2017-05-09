@@ -8,7 +8,9 @@
 class AvisynthModule {
     DL m_dl;
 private:
-    AvisynthModule() {}
+    AvisynthModule() {
+        load(L"avisynth.dll");
+    }
     AvisynthModule(const AvisynthModule&);
     AvisynthModule& operator=(const AvisynthModule&);
 public:

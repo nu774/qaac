@@ -14,7 +14,10 @@ typedef void WavpackContext;
 class WavpackModule {
     DL m_dl;
 private:
-    WavpackModule() {}
+    WavpackModule() {
+        if (!load(L"wavpackdll.dll"))
+            load(L"libwavpack-1.dll");
+    }
     WavpackModule(const WavpackModule&);
     WavpackModule& operator=(const WavpackModule&);
 public:

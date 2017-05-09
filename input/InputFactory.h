@@ -28,6 +28,10 @@ public:
     {
         m_ignore_length = cond;
     }
+    void close()
+    {
+        m_sources.clear();
+    }
 };
 
 #endif

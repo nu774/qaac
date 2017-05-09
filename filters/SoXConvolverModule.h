@@ -7,7 +7,13 @@
 class SoXConvolverModule {
     DL m_dl;
 private:
-    SoXConvolverModule() {}
+    SoXConvolverModule() {
+#ifdef _WIN64
+        load(L"libsoxconvolver64.dll");
+#else
+        load(L"libsoxconvolver.dll");
+#endif
+    }
     SoXConvolverModule(const SoXConvolverModule&);
     SoXConvolverModule& operator=(const SoXConvolverModule&);
 public:

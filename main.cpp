@@ -1051,36 +1051,6 @@ AudioStreamBasicDescription getRawFormat(const Options &opts)
 }
 
 static
-void setup_input_factory(const Options &opts)
-{
-    LibSndfileModule::instance().load(L"libsndfile-1.dll");
-    FLACModule::instance().load(L"libFLAC_dynamic.dll");
-    if (!FLACModule::instance().loaded())
-        FLACModule::instance().load(L"libFLAC.dll");
-    if (!FLACModule::instance().loaded())
-        FLACModule::instance().load(L"libFLAC-8.dll");
-    if (!WavpackModule::instance().load(L"wavpackdll.dll"))
-        WavpackModule::instance().load(L"libwavpack-1.dll");
-    TakModule::instance().load(L"tak_deco_lib.dll");
-#ifdef _WIN64
-    if (!SOXRModule::instance().load(L"libsoxr64.dll"))
-#endif
-        SOXRModule::instance().load(L"libsoxr.dll");
-
-#ifdef _WIN64
-    SoXConvolverModule::instance().load(L"libsoxconvolver64.dll");
-#else
-    SoXConvolverModule::instance().load(L"libsoxconvolver.dll");
-#endif
-    AvisynthModule::instance().load(L"avisynth.dll");
-
-    if (opts.is_raw) {
-        InputFactory::instance().setRawFormat(getRawFormat(opts));
-    }
-    InputFactory::instance().setIgnoreLength(opts.ignore_length);
-}
-
-static
 std::shared_ptr<ISeekableSource>
 select_timeline(std::shared_ptr<ISeekableSource> src, const Options & opts)
 {
@@ -1335,8 +1305,6 @@ int wmain1(int argc, wchar_t **argv)
         if (!opts.print_available_formats)
             LOG(L"%s\n", opts.encoder_name.c_str());
 
-        setup_input_factory(opts);
-
         if (opts.check_only) {
             if (SoXConvolverModule::instance().loaded())
                 LOG(L"libsoxconvolver %hs\n",
@@ -1391,6 +1359,18 @@ int wmain1(int argc, wchar_t **argv)
         }
         SetConsoleCtrlHandler(console_interrupt_handler, TRUE);
 
+        if (opts.is_raw) {
+            InputFactory::instance().setRawFormat(getRawFormat(opts));
+        }
+        InputFactory::instance().setIgnoreLength(opts.ignore_length);
+
+        struct CleanupScope {
+            ~CleanupScope() {
+                InputFactory::instance().close();
+                WaveOutDevice::instance().close();
+            }
+        } __cleanup__;
+
         std::vector<workItem> workItems;
         for (int i = 0; i < argc; ++i)
             load_track(argv[i], opts, workItems);
@@ -1420,9 +1400,6 @@ int wmain1(int argc, wchar_t **argv)
             src->seekTo(0);
             encode_file(src, ofilename, opts);
         }
-        if (opts.isWaveOut())
-            WaveOutDevice::instance().close();
-
     } catch (const std::exception &e) {
         if (opts.print_available_formats)
             logger->enable_stderr();

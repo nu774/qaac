@@ -7,7 +7,10 @@
 class SOXRModule {
     DL m_dl;
 private:
-    SOXRModule() {}
+    SOXRModule() {
+        if (!load(L"libsoxr64.dll"))
+            load(L"libsoxr.dll");
+    }
     SOXRModule(const SOXRModule&);
     SOXRModule& operator=(const SOXRModule&);
 public:

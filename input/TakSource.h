@@ -28,7 +28,9 @@ class TakModule {
     DL m_dl;
     bool m_compatible;
 private:
-    TakModule(): m_compatible(false) {}
+    TakModule(): m_compatible(false) {
+        load(L"tak_deco_lib.dll");
+    }
     TakModule(const TakModule&);
     TakModule& operator=(const TakModule&);
 public:
