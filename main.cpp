@@ -203,7 +203,7 @@ AudioStreamBasicDescription get_encoding_ASBD(const ISource *src,
 }
 
 static
-uint32_t get_encoding_channel_layout(ISource *src, Options opts,
+uint32_t get_encoding_channel_layout(ISource *src, const Options &opts,
                                      uint32_t *bitmap)
 {
     AudioStreamBasicDescription asbd = src->getSampleFormat();
