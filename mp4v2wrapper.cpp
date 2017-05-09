@@ -441,13 +441,13 @@ bool MP4FileCopy::copyNextChunk()
     return true;
 }
  
-bool MP4FileX::GetQTChapters(std::vector<chapters::entry_t> *chapterList)
+bool MP4FileX::GetQTChapters(std::vector<misc::chapter_t> *chapterList)
 {
     MP4TrackId trackId = FindChapterTrack();
     if (trackId == MP4_INVALID_TRACK_ID)
         return false;
 
-    std::vector<chapters::entry_t> chapters;
+    std::vector<misc::chapter_t> chapters;
     MP4Track *track = GetTrack(trackId);
     uint32_t nsamples = track->GetNumberOfSamples();
     double timescale = track->GetTimeScale();
@@ -471,7 +471,7 @@ bool MP4FileX::GetQTChapters(std::vector<chapters::entry_t> *chapterList)
     return chapterList->size() > 0;
 }
 
-bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapterList,
+bool MP4FileX::GetNeroChapters(std::vector<misc::chapter_t> *chapterList,
                                double *first_off)
 {
     MP4Atom *chpl = FindAtom("moov.udta.chpl");
@@ -490,7 +490,7 @@ bool MP4FileX::GetNeroChapters(std::vector<chapters::entry_t> *chapterList,
         dynamic_cast<MP4StringProperty*>(pTable->GetProperty(1));
     if (!pStartTime || !pName)
         return false;
-    std::vector<chapters::entry_t> chapters;
+    std::vector<misc::chapter_t> chapters;
     int64_t prev = pStartTime->GetValue(0);
     double scale = 10000000.0;
     if (first_off) *first_off = prev / scale;

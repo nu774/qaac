@@ -5,7 +5,7 @@
 #include <map>
 #include <memory>
 #include "CoreAudio/CoreAudioTypes.h"
-#include "chapters.h"
+#include "misc.h"
 
 struct ISource {
     virtual ~ISource() {}
@@ -28,7 +28,7 @@ struct ITagParser {
 
 struct IChapterParser {
     virtual ~IChapterParser() {}
-    virtual const std::vector<chapters::entry_t> &getChapters() const = 0;
+    virtual const std::vector<misc::chapter_t> &getChapters() const = 0;
 };
 
 size_t readSamplesFull(ISource *src, void *buffer, size_t nsamples);

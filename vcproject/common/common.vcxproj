@@ -94,7 +94,6 @@
     <ClCompile Include="..\..\output\WaveSink.cpp" />
     <ClCompile Include="..\..\bitstream.cpp" />
     <ClCompile Include="..\..\chanmap.cpp" />
-    <ClCompile Include="..\..\chapters.cpp" />
     <ClCompile Include="..\..\CompositeSource.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\ISource.cpp" />

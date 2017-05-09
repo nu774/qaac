@@ -187,7 +187,7 @@ void MP4SinkBase::writeTags()
              * However, last chapter always ends at track end.
              */
             double off = static_cast<double>(m_edit_start) / timeScale;
-            std::vector<chapters::entry_t>::const_iterator chap;
+            std::vector<misc::chapter_t>::const_iterator chap;
             for (chap = m_chapters.begin(); chap != m_chapters.end(); ++chap) {
                 std::string name = strutil::w2us(chap->first);
                 const char *namep = name.c_str();

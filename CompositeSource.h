@@ -12,7 +12,7 @@ class CompositeSource: public ISeekableSource, public ITagParser,
     uint64_t m_length;
     std::vector<source_t> m_sources;
     std::map<std::string, std::string> m_tags;
-    std::vector<chapters::entry_t> m_chapters;
+    std::vector<misc::chapter_t> m_chapters;
     AudioStreamBasicDescription m_asbd;
 public:
     CompositeSource() : m_cur_file(0), m_position(0), m_length(0) {}
@@ -44,7 +44,7 @@ public:
         ITagParser *tp = dynamic_cast<ITagParser*>(src.get());
         return tp ? tp->getTags() : m_tags;
     }
-    const std::vector<chapters::entry_t> &getChapters() const
+    const std::vector<misc::chapter_t> &getChapters() const
     {
         return m_chapters;
     }
@@ -52,11 +52,6 @@ public:
     {
         m_tags = tags;
     }
-    void setChapters(const std::vector<chapters::entry_t> &x)
-    {
-        m_chapters = x;
-    }
-
     void addSource(const std::shared_ptr<ISeekableSource> &src);
     void addSourceWithChapter(const std::shared_ptr<ISeekableSource> &src,
                               const std::wstring &title);

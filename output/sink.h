@@ -3,9 +3,9 @@
 
 #include "CoreAudioToolbox.h"
 #include "mp4v2wrapper.h"
-#include "chapters.h"
 #include "ISink.h"
 #include "win32util.h"
+#include "misc.h"
 
 class MP4SinkBase: public ITagStore {
 protected:
@@ -16,7 +16,7 @@ protected:
     uint32_t m_edit_start;
     uint64_t m_edit_duration;
     std::map<std::string, std::string> m_tags;
-    std::vector<chapters::entry_t> m_chapters;
+    std::vector<misc::chapter_t> m_chapters;
     std::vector<std::vector<char> > m_artworks;
     unsigned m_max_bitrate;
 public:
@@ -32,9 +32,10 @@ public:
     {
         m_tags[key] = value;
     }
-    void setChapters(const std::vector<chapters::entry_t> &chapters)
+    template <class InputIterator>
+    void setChapters(InputIterator first, InputIterator last)
     {
-        m_chapters = chapters;
+        m_chapters.assign(first, last);
     }
     void addArtwork(const std::vector<char> &data)
     {

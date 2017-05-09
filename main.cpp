@@ -586,7 +586,8 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
             IChapterParser *cp = dynamic_cast<IChapterParser*>(src);
             if (cp) {
                 auto &chapters = cp->getChapters();
-                if (chapters.size()) mp4sink->setChapters(chapters);
+                if (chapters.size())
+                    mp4sink->setChapters(chapters.begin(), chapters.end());
             }
         }
     }
@@ -752,8 +753,8 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
         try {
             double duration = stat->samplesRead() /
                 encoder->getInputDescription().mSampleRate;
-            auto chapters = chapters::abs_to_duration(opts.chapters, duration);
-            sink->setChapters(chapters);
+            auto xs = misc::convertChaptersToQT(opts.chapters, duration);
+            sink->setChapters(xs.begin(), xs.end());
         } catch (const std::runtime_error &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }
@@ -1141,8 +1142,8 @@ void load_metadata_files(Options *opts)
 {
     if (opts->chapter_file) {
         try {
-            opts->chapters = chapters::load_from_file(opts->chapter_file,
-                                                      opts->textcp);
+            opts->chapters = misc::loadChapterFile(opts->chapter_file,
+                                                   opts->textcp);
         } catch (const std::exception &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }

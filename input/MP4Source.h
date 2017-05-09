@@ -60,7 +60,7 @@ class MP4Source: public ISeekableSource, public ITagParser,
     unsigned m_start_skip;
     std::shared_ptr<IPacketDecoder>    m_decoder;
     std::map<std::string, std::string> m_tags;
-    std::vector<chapters::entry_t>     m_chapters;
+    std::vector<misc::chapter_t>     m_chapters;
     std::vector<uint32_t> m_chanmap;
     std::shared_ptr<FILE> m_fp;
     MP4FileX m_file;
@@ -88,7 +88,7 @@ public:
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    const std::vector<chapters::entry_t> &getChapters() const
+    const std::vector<misc::chapter_t> &getChapters() const
     {
         return m_chapters;
     }

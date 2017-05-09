@@ -119,6 +119,76 @@ namespace misc
         return res;
     }
 
+    void add_chapter_entry(std::vector<chapter_t> &chapters,
+                           const wchar_t *name,
+                           int h, int m, double s)
+    {
+        std::wstring sname = name ? name : L"";
+        double stamp = ((h * 60) + m) * 60 + s;
+        if (!chapters.size() && stamp != 0.0)
+            throw std::runtime_error("Non zero timestamp on the first chapter "
+                                     "entry is not allowed"); 
+        else if (chapters.size()) {
+            chapter_t &prev = chapters.back();
+            if (prev.second >= stamp)
+                throw std::runtime_error("Chapter timestamps is required to "
+                                         "be strictly increasing");
+        }
+        chapters.push_back(std::make_pair(sname, stamp));
+    }
+
+    std::vector<chapter_t> loadChapterFile(const wchar_t *path,
+                                           uint32_t codepage)
+    {
+        std::vector<chapter_t> chaps;
+
+        std::wstring str = misc::loadTextFile(path, codepage);
+        const wchar_t *tfmt = L"%02d:%02d:%lf";
+        int h = 0, m = 0;
+        double s = 0.0;
+        strutil::Tokenizer<wchar_t> tokens(str, L"\n");
+        wchar_t *tok;
+        while ((tok = tokens.next())) {
+            if (*tok && tok[0] == L'#')
+                continue;
+            if (std::swscanf(tok, tfmt, &h, &m, &s) == 3) {
+                strutil::strsep(&tok, L"\t ");
+                add_chapter_entry(chaps, tok, h, m, s);
+            } else if (wcsncmp(tok, L"Chapter", 7) == 0) {
+                int hh, mm;
+                double ss;
+                wchar_t *key = strutil::strsep(&tok, L"=");
+                if (std::wcsstr(key, L"NAME"))
+                    add_chapter_entry(chaps, tok, h, m, s);
+                else if (std::swscanf(tok, tfmt, &hh, &mm, &ss) == 3)
+                    h = hh, m = mm, s = ss;
+            }
+        }
+        return chaps;
+    }
+
+    // converts absolute timestamp to time delta
+    std::vector<chapter_t>
+        convertChaptersToQT(const std::vector<chapter_t> &chapters,
+                            double total_duration)
+    {
+        std::vector<chapter_t> result;
+        auto first = chapters.begin();
+        auto last  = chapters.end();
+        if (first != last) {
+            auto prev_name = first->first;
+            auto prev_stamp = first->second;
+            for (auto it = ++first; it != last; ++it) {
+                double delta = it->second - prev_stamp;
+                result.push_back(std::make_pair(prev_name, delta));
+                prev_name = it->first;
+                prev_stamp = it->second;
+            }
+            double last_delta = total_duration - prev_stamp;
+            result.push_back(std::make_pair(prev_name, last_delta));
+        }
+        return result;
+    }
     std::shared_ptr<FILE> openConfigFile(const wchar_t *file)
     {
         std::vector<std::wstring> search_paths;
