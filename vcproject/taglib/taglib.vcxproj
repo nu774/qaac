@@ -85,7 +85,6 @@
     <ClCompile Include="..\..\taglib\toolkit\tstring.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tstringlist.cpp" />
     <ClCompile Include="..\..\taglib\toolkit\tzlib.cpp" />
-    <ClCompile Include="..\..\taglib\toolkit\unicode.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{33D0F51E-2D54-4C00-A448-380AF43BC782}</ProjectGuid>
