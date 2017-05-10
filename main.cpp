@@ -1261,15 +1261,15 @@ int wmain1(int argc, wchar_t **argv)
         return 1;
 
     COMInitializer __com__;
-    std::unique_ptr<Log> logger(Log::instance());;
+    Log &logger = Log::instance();
 
     try {
         ConsoleTitleSaver consoleTitle;
 
-        if (opts.verbose && !opts.print_available_formats)
-            logger->enable_stderr();
-        if (opts.logfilename && !opts.print_available_formats)
-            logger->enable_file(opts.logfilename);
+        if (opts.verbose)
+            logger.enable_stderr();
+        if (opts.logfilename)
+            logger.enable_file(opts.logfilename);
 
         if (opts.nice)
             SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
@@ -1391,8 +1391,6 @@ int wmain1(int argc, wchar_t **argv)
             encode_file(src, ofilename, opts);
         }
     } catch (const std::exception &e) {
-        if (opts.print_available_formats)
-            logger->enable_stderr();
         LOG(L"ERROR: %s\n", errormsg(e).c_str());
         result = 2;
     }

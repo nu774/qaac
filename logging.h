@@ -3,21 +3,18 @@
 #include <vector>
 #include "win32util.h"
 
-/* non-thread safe */
 class Log {
-    std::vector<std::shared_ptr<FILE> > m_streams;
-    DWORD m_stderr_type;
-    static Log *m_instance;
+    std::vector<std::shared_ptr<FILE>> m_streams;
 public:
-    static Log *instance()
+    static Log &instance()
     {
-        if (!m_instance) m_instance = new Log();
-        return m_instance;
+        static Log self;
+        return self;
     }
     bool is_enabled() { return m_streams.size() != 0; }
     void enable_stderr()
     {
-        if (m_stderr_type != FILE_TYPE_UNKNOWN)
+        if (GetFileType(win32::get_handle(2)) != FILE_TYPE_UNKNOWN)
             m_streams.push_back(std::shared_ptr<FILE>(stderr, [](FILE*){}));
     }
     void enable_file(const wchar_t *filename)
@@ -39,22 +36,17 @@ public:
         for (size_t i = 0; i < m_streams.size(); ++i)
             std::fputws(buffer.data(), m_streams[i].get());
     }
-private:
-    Log()
+    void wprintf(const wchar_t *fmt, ...)
     {
-        m_stderr_type = GetFileType(win32::get_handle(_fileno(stderr)));
+        va_list ap;
+        va_start(ap, fmt);
+        vwprintf(fmt, ap);
+        va_end(ap);
     }
+private:
+    Log() {}
+    Log(const Log&);
+    Log& operator=(const Log&);
 };
 
-inline void LOG(const wchar_t *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    Log::instance()->vwprintf(fmt, ap);
-    va_end(ap);
-}
-
-inline bool IS_LOG_ENABLED()
-{
-    return Log::instance()->is_enabled();
-}
+#define LOG(fmt, ...) Log::instance().wprintf(fmt, __VA_ARGS__)

@@ -97,7 +97,6 @@
     <ClCompile Include="..\..\CompositeSource.cpp" />
     <ClCompile Include="..\..\cuesheet.cpp" />
     <ClCompile Include="..\..\ISource.cpp" />
-    <ClCompile Include="..\..\logging.cpp" />
     <ClCompile Include="..\..\metadata.cpp" />
     <ClCompile Include="..\..\misc.cpp" />
     <ClCompile Include="..\..\mp4v2wrapper.cpp" />
