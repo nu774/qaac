@@ -114,7 +114,18 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
     try {
         auto acl = m_af.getChannelLayout();
         m_chanmap = chanmap::getChannels(acl.get());
-    } catch (...) {}
+    } catch (...) {
+        // getChannelLayout() will fail if chan chunk not present in CAF 
+        if (m_iasbd.mFormatID == 'aac ' ||
+            m_iasbd.mFormatID == 'aach' ||
+            m_iasbd.mFormatID == 'aacp')
+        {
+            auto kuki = m_af.getMagicCookieData();
+            auto asc = cautil::parseMagicCookieAAC(kuki);
+            AudioStreamBasicDescription tmp;
+            cautil::parseASC(asc, &tmp, &m_chanmap);
+        }
+    }
 
     /* Let AudioFile scan the file and generate index in case of MP3. 
      * Take up about 1s for 35min MP3 in my environment, but this is 
