@@ -230,21 +230,29 @@ namespace cautil {
         bs.advance(1); // frameLengthFlag
         if (bs.get(1)) bs.advance(14); // dependsOnCoreCoder
         bs.advance(1); // extensionFlag
-        const char *ch_layout_tab[] = {
-            "",
+        const char *ch_layout_tab[16] = {
+            0,
             "\x03",
             "\x01\x02",
             "\x03\x01\x02",
             "\x03\x01\x02\x09",
             "\x03\x01\x02\x05\x06",
             "\x03\x01\x02\x05\x06\x04",
-            "\x03\x07\x08\x01\x02\x05\x06\x04"
+            "\x03\x07\x08\x01\x02\x05\x06\x04",
+            0,
+            0,
+            0,
+            "\x03\x01\x02\x05\x06\x09\x04",
+            "\x03\x01\x02\x05\x06\x21\x22\x04",
+            0,
         };
         if (chan_config) {
             const char *lp = ch_layout_tab[chan_config];
-            std::vector<uint32_t> v;
-            while (*lp) v.push_back(*lp++); 
-            channels->swap(v);
+            if (lp) {
+                std::vector<uint32_t> v;
+                while (*lp) v.push_back(*lp++); 
+                channels->swap(v);
+            }
         } else { // PCE
             bs.advance(10); // element_instance_tag, object_type, sf_index
             uint8_t nfront  = bs.get(4);
