@@ -214,7 +214,7 @@ uint32_t get_encoding_channel_layout(ISource *src, const Options &opts,
     uint32_t tag = chanmap::AACLayoutFromBitmap(chanmask);
 #ifdef QAAC
     auto codec = std::make_shared<AudioCodecX>(opts.output_format);
-    if (tag == chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear) {
+    if (tag == kAudioChannelLayoutTag_AAC_7_1_B) {
         if (opts.is_caf || opts.isALAC())
             throw std::runtime_error("Channel layout not supported");
     } else if (!codec->isAvailableOutputChannelLayout(tag)) {

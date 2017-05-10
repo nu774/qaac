@@ -7,7 +7,6 @@
 #include "CoreAudio/CoreAudioTypes.h"
 
 namespace chanmap {
-    const int kAudioChannelLayoutTag_AAC_7_1_Rear = 0x01000008;
     std::string getChannelNames(const std::vector<uint32_t> &channels);
     uint32_t getChannelMask(const std::vector<uint32_t>& chanmap);
     std::vector<uint32_t> getChannels(uint32_t bitmap, uint32_t limit=~0U);

@@ -6,7 +6,7 @@
 #include "cautil.h"
 #include "chanmap.h"
 
-const UInt32 AAC_7_1_Rear_Tag = chanmap::kAudioChannelLayoutTag_AAC_7_1_Rear;
+const UInt32 AAC_7_1_Rear_Tag = kAudioChannelLayoutTag_AAC_7_1_B;
 
 std::vector<uint8_t> AudioConverterXX::getCompressionMagicCookie()
 {
