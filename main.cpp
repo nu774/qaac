@@ -1,17 +1,9 @@
-#include <iostream>
-#include <ctime>
-#include <cstdarg>
 #include <clocale>
-#include <algorithm>
 #include <numeric>
-#include <functional>
 #include <regex>
-#include "strutil.h"
 #include "win32util.h"
-#include <shellapi.h>
 #include "options.h"
 #include "InputFactory.h"
-#include "bitstream.h"
 #include "sink.h"
 #include "WaveSink.h"
 #include "CAFSink.h"
@@ -40,7 +32,6 @@
 #include "TakSource.h"
 #include "WavpackSource.h"
 #include "AvisynthSource.h"
-#include "misc.h"
 #ifdef REFALAC
 #include "ALACEncoderX.h"
 #endif
@@ -51,7 +42,6 @@
 #include "CoreAudioPaddedEncoder.h"
 #include "CoreAudioResampler.h"
 #endif
-#include <ShlObj.h>
 #include <crtdbg.h>
 
 #ifdef REFALAC
