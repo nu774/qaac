@@ -374,7 +374,9 @@ void MP4FileCopy::start(const char *path)
 {
     m_mp4file->m_file = 0;
     try {
-        m_mp4file->Open(path, File::MODE_CREATE, 0);
+        static MP4CustomFileProvider cprovider;
+        m_mp4file->Open(path, File::MODE_CREATE,
+                        static_cast<MP4FileProvider*>(&cprovider));
     } catch (...) {
         m_mp4file->ResetFile();
         throw;
@@ -508,4 +510,54 @@ bool MP4FileX::GetNeroChapters(std::vector<misc::chapter_t> *chapterList,
                                       (end - prev) / scale));
     chapterList->swap(chapters);
     return chapterList->size() > 0;
+}
+
+namespace mp4v2wrapper {
+    void *open(const char *name, MP4FileMode mode)
+    {
+        if (!std::strcmp(name, "-"))
+            return stdout;
+        const wchar_t *m = L"";
+        switch (mode) {
+        case FILEMODE_READ: m = L"rb"; break;
+        case FILEMODE_MODIFY: m = L"rb+"; break;
+        case FILEMODE_CREATE: m = L"wb"; break;
+        case FILEMODE_UNDEFINED: break;
+        }
+        return win32::wfopenx(strutil::us2w(name).c_str(), m);
+    }
+    void *open_temp(const char *name, MP4FileMode mode)
+    {
+        return win32::tmpfile(strutil::us2w(name).c_str());
+    }
+    int seek(void *fh, int64_t pos)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        return std::fsetpos(fp, static_cast<fpos_t*>(&pos));
+    }
+    int read(void *fh, void *data, int64_t size, int64_t *nc, int64_t)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        size_t n = std::fread(data, 1, size, fp);
+        *nc = n;
+        return std::ferror(fp);
+    }
+    int write(void *fh, const void *data, int64_t size, int64_t *nc, int64_t)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        size_t n = std::fwrite(data, 1, size, fp);
+        *nc = n;
+        return std::ferror(fp);
+    }
+    int close(void *fh)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        return std::fclose(fp);
+    }
+    int get_size(void *fh, int64_t *size)
+    {
+        FILE *fp = static_cast<FILE*>(fh);
+        *size = _filelengthi64(fileno(fp));
+        return *size == -1 ? -1 : 0;
+    }
 }

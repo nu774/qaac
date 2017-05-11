@@ -1,6 +1,6 @@
 #include <limits>
-#include <windows.h>
 #include "options.h"
+#include "win32util.h"
 #include "wgetopt.h"
 #include "metadata.h"
 
@@ -759,8 +759,10 @@ bool Options::parse(int &argc, wchar_t **&argv)
         this->bitrate = isSBR() ? 0 : 90;
     }
     if (isMP4() && this->ofilename && !std::wcscmp(this->ofilename, L"-")) {
-        complain(L"MP4 piping is not supported.\n");
-        return false;
+        if (!win32::is_seekable(_fileno(stdout))) {
+            complain(L"MP4 piping is not supported.\n");
+            return false;
+        }
     }
     if (!isAAC() && this->is_adts) {
         complain(L"--adts is only available for AAC.\n");

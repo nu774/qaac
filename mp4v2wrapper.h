@@ -143,4 +143,46 @@ struct MP4FDReadProvider: public MP4FileProvider
     }
 };
 
+namespace mp4v2wrapper {
+    void *open(const char *name, MP4FileMode mode);
+    void *open_temp(const char *name, MP4FileMode mode);
+    int seek(void *fh, int64_t pos);
+    int read(void *fh, void *data, int64_t size, int64_t *nc, int64_t);
+    int write(void *fh, const void *data, int64_t size, int64_t *nc, int64_t);
+    int close(void *fh);
+    int get_size(void *fh, int64_t *size);
+}
+
+struct MP4CustomFileProvider: public MP4FileProvider
+{
+    MP4CustomFileProvider()
+    {
+        static MP4FileProvider t = {
+            mp4v2wrapper::open,
+            mp4v2wrapper::seek,
+            mp4v2wrapper::read,
+            mp4v2wrapper::write,
+            mp4v2wrapper::close,
+            mp4v2wrapper::get_size
+        };
+        std::memcpy(this, &t, sizeof t);
+    }
+};
+
+struct MP4TempFileProvider: public MP4FileProvider
+{
+    MP4TempFileProvider()
+    {
+        static MP4FileProvider t = {
+            mp4v2wrapper::open_temp,
+            mp4v2wrapper::seek,
+            mp4v2wrapper::read,
+            mp4v2wrapper::write,
+            mp4v2wrapper::close,
+            mp4v2wrapper::get_size
+        };
+        std::memcpy(this, &t, sizeof t);
+    }
+};
+
 #endif
