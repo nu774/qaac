@@ -17,7 +17,10 @@
 #endif
 #include <windows.h>
 #include <shlwapi.h>
+#pragma warning(push)
+#pragma warning(disable: 4091)
 #include <shlobj.h>
+#pragma warning(pop)
 #include "util.h"
 
 #define HR(expr) (void)(win32::throwIfError((expr), #expr))
