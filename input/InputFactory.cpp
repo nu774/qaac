@@ -46,13 +46,13 @@ std::shared_ptr<ISeekableSource> InputFactory::open(const wchar_t *path)
     if (!win32::is_seekable(fileno(fp.get())))
         throw std::runtime_error("Not available input file format");
 
-    TRY_MAKE_SHARED(FLACSource, fp);
-    TRY_MAKE_SHARED(WavpackSource, path);
-    TRY_MAKE_SHARED(TakSource, fp);
     TRY_MAKE_SHARED(MP4Source, fp);
 #ifdef QAAC
     TRY_MAKE_SHARED(ExtAFSource, fp);
 #endif
+    TRY_MAKE_SHARED(FLACSource, fp);
+    TRY_MAKE_SHARED(WavpackSource, path);
+    TRY_MAKE_SHARED(TakSource, fp);
     TRY_MAKE_SHARED(LibSndfileSource, fp);
     throw std::runtime_error("Not available input file format");
 }
