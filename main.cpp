@@ -164,7 +164,7 @@ AudioStreamBasicDescription get_encoding_ASBD(const ISource *src,
     oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
     oasbd.mSampleRate = iasbd.mSampleRate;
 
-    if (codecid = 'aac ')
+    if (codecid == 'aac ')
         oasbd.mFramesPerPacket = 1024;
     else if (codecid == 'aach')
         oasbd.mFramesPerPacket = 2048;
