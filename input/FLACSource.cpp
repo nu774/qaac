@@ -216,7 +216,7 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
 void FLACSource::handleVorbisComment(
         const FLAC__StreamMetadata_VorbisComment &vc)
 {
-    std::map<std::string, std::string> tags;
+    std::map<std::string, std::string> tags(m_tags);
     for (size_t i = 0; i < vc.num_comments; ++i) {
         const char *cs = reinterpret_cast<const char *>(vc.comments[i].entry);
         strutil::Tokenizer<char> tokens(cs, "=");
