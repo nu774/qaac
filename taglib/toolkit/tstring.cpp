@@ -26,11 +26,12 @@
 #include <cerrno>
 #include <climits>
 
+#include <utf8-cpp/checked.h>
+
 #include <tdebug.h>
 #include <tstringlist.h>
 #include <trefcounter.h>
 #include <tutils.h>
-#include <utf8/checked.h>
 
 #include "tstring.h"
 
@@ -68,7 +69,8 @@ namespace
       data.resize(dstEnd - data.begin());
     }
     catch(const utf8::exception &e) {
-      debug(String("String::copyFromUTF8() - UTF8-CPP error: ") + e.what());
+      const String message(e.what());
+      debug("String::copyFromUTF8() - UTF8-CPP error: " + message);
       data.clear();
     }
   }
@@ -435,7 +437,8 @@ ByteVector String::data(Type t) const
         v.resize(static_cast<unsigned int>(dstEnd - v.begin()));
       }
       catch(const utf8::exception &e) {
-        debug(String("String::data() - UTF8-CPP error: ") + e.what());
+        const String message(e.what());
+        debug("String::data() - UTF8-CPP error: " + message);
         v.clear();
       }
 
