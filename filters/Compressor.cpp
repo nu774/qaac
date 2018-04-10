@@ -27,16 +27,14 @@ Compressor::Compressor(const std::shared_ptr<ISource> &src,
       m_knee_factor(m_slope / (knee_width * 2.0)),
       m_yR(0.0),
       m_yA(0.0),
+      m_eof(false),
+      m_position(0),
       m_statfile(statfp)
 {
     const AudioStreamBasicDescription &asbd = src->getSampleFormat();
-    unsigned bits = 32;
-    if (asbd.mBitsPerChannel > 32
-        || ((asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
-            asbd.mBitsPerChannel > 24))
-        bits = 64;
     m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
-                                     bits, kAudioFormatFlagIsFloat);
+                                     32, kAudioFormatFlagIsFloat);
+    m_buffer.set_unit(asbd.mChannelsPerFrame);
     if (m_statfile.get()) {
         AudioStreamBasicDescription asbd =
             cautil::buildASBDForPCM(m_asbd.mSampleRate, 1,
@@ -47,43 +45,74 @@ Compressor::Compressor(const std::shared_ptr<ISource> &src,
 
 size_t Compressor::readSamples(void *buffer, size_t nsamples)
 {
-    if (m_asbd.mBitsPerChannel == 64)
-        return readSamplesT(static_cast<double*>(buffer), nsamples);
-    else
-        return readSamplesT(static_cast<float*>(buffer), nsamples);
-}
-
-template <typename T>
-size_t Compressor::readSamplesT(T *buffer, size_t nsamples)
-{
     const double Fs = m_asbd.mSampleRate;
     unsigned nchannels = m_asbd.mChannelsPerFrame;
     const double alphaA = 
         m_attack > 0.0 ? std::exp(-1.0 / (m_attack * Fs)) : 0.0;
     const double alphaR =
         m_release > 0.0 ? std::exp(-1.0 / (m_release * Fs)) : 0.0;
+    unsigned lookahead = m_attack * Fs + .5;
+    uint32_t bpf = getSampleFormat().mBytesPerFrame;
 
-    nsamples = readSamplesAsFloat(source(), &m_pivot, buffer, nsamples);
+    while (!m_eof && m_buffer.count() < nsamples + lookahead) {
+        size_t count = lookahead + nsamples - m_buffer.count();
+        m_buffer.reserve(count);
+        size_t nr = readSamplesAsFloat(source(), &m_pivot,
+                                       m_buffer.write_ptr(), count);
+        m_buffer.commit(nr);
+        if (!nr) {
+            m_buffer.reserve(lookahead);
+            memset(m_buffer.write_ptr(), 0, lookahead * bpf);
+            m_buffer.commit(lookahead);
+            m_eof = true;
+        }
+    }
+    nsamples = std::min(nsamples, m_buffer.count() - lookahead);
+    float *data = m_buffer.read(nsamples);
 
     if (m_statbuf.size() < nsamples)
         m_statbuf.resize(nsamples);
 
     for (size_t i = 0; i < nsamples; ++i) {
-        T *frame = &buffer[i * nchannels];
-        double xL = frame_amplitude(frame, nchannels);
+        float xL = getPeakValue(data, i, nchannels, lookahead);
         double xG = util::scale_to_dB(xL);
         double yG = computeGain(xG);
         double cG = smoothAverage(yG, alphaA, alphaR);
-        T cL = static_cast<T>(util::dB_to_scale(cG));
+        float cL = static_cast<float>(util::dB_to_scale(cG));
         for (unsigned n = 0; n < nchannels; ++n)
-            frame[n] *= cL;
+            data[i * nchannels + n] *= cL;
         m_statbuf[i] = cL;
     }
+    memcpy(buffer, data, nsamples * bpf);
     if (m_statsink.get()) {
         m_statsink->writeSamples(m_statbuf.data(), nsamples * sizeof(float),
                                  nsamples);
         if (nsamples == 0)
             m_statsink->finishWrite();
     }
+    m_position += nsamples;
     return nsamples;
+}
+
+float Compressor::getPeakValue(const float *data, unsigned i,
+                               unsigned nchannels, unsigned lookahead)
+{
+    if (!lookahead)
+        return frame_amplitude(&data[i * nchannels], nchannels);
+    if (m_window.empty()) {
+        for (unsigned k = 0; k < lookahead; ++k) {
+            float x = frame_amplitude(&data[k * nchannels], nchannels);
+            while (!m_window.empty() && x >= m_window.back().second)
+                m_window.pop_back();
+            m_window.push_back(std::make_pair((int64_t)k, x));
+        }
+    }
+    float res = m_window.front().second;
+    while (!m_window.empty() && m_window.front().first <= m_position + i)
+        m_window.pop_front();
+    float x = frame_amplitude(&data[(i + lookahead) * nchannels], nchannels);
+    while (!m_window.empty() && x >= m_window.back().second)
+        m_window.pop_back();
+    m_window.push_back(std::make_pair(m_position + i + lookahead, x));
+    return res;
 }

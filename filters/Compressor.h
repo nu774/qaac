@@ -1,6 +1,7 @@
 #ifndef COMPRESSOR_H
 #define COMPRESSOR_H
 
+#include <deque>
 #include "FilterBase.h"
 #include "util.h"
 #include "WaveSink.h"
@@ -17,9 +18,12 @@ class Compressor: public FilterBase {
 
     double m_yR;
     double m_yA;
+    bool m_eof;
+    int64_t m_position;
     std::vector<uint8_t > m_pivot;
+    util::FIFO<float> m_buffer;
+    std::deque<std::pair<int64_t, float>> m_window;
     AudioStreamBasicDescription m_asbd;
-
     std::shared_ptr<FILE> m_statfile;
     std::shared_ptr<WaveSink> m_statsink;
     std::vector<float> m_statbuf;
@@ -34,9 +38,8 @@ public:
     }
     size_t readSamples(void *buffer, size_t nsamples);
 private:
-    template <typename T>
-    size_t readSamplesT(T *buffer, size_t nsamples);
-
+    float getPeakValue(const float *data, unsigned i, unsigned nchannels,
+                       unsigned lookahead);
     /*
      * gain computer, works on log domain
      */
