@@ -60,7 +60,10 @@ MP4StandardAtom::MP4StandardAtom (MP4File &file, const char *type) : MP4Atom(fil
         MP4TableProperty* pTable = new MP4TableProperty(*this, "entries", pCount);
         AddProperty(pTable);
 
-        pTable->AddProperty(new MP4Integer6432Property(*this, "chunkOffset"));
+        MP4Integer6432Property *pChunkOffset
+            = new MP4Integer6432Property(*this, "chunkOffset");
+        pChunkOffset->Use64Bit(true);
+        pTable->AddProperty(pChunkOffset);
     } else if (ATOMID(type) == ATOMID("ctts")) {
         AddVersionAndFlags();
 
