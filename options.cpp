@@ -127,10 +127,10 @@ void usage()
 "Main options:\n"
 #ifdef QAAC
 "--formats              Show available AAC formats and exit\n"
-"-a, --abr <bitrate>    AAC ABR mode / bitrate\n"
+"-a, --abr <bitrate>    AAC ABR mode / long term average bitrate\n"
 "-V, --tvbr <n>         AAC True VBR mode / quality [0-127]\n"
-"-v, --cvbr <bitrate>   AAC Constrained VBR mode / bitrate\n"
-"-c, --cbr <bitrate>    AAC CBR mode / bitrate\n"
+"-v, --cvbr <bitrate>   AAC Constrained VBR mode / minimum bitrate\n"
+"-c, --cbr <bitrate>    AAC CBR mode / constant bitrate\n"
 "                       For -a, -v, -c, \"0\" as bitrate means \"highest\".\n"
 "                       Highest bitrate available is automatically chosen.\n"
 "                       For LC, default is -V90\n"
