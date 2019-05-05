@@ -155,7 +155,7 @@ CueSheet::loadTracks(bool is_embedded, const std::wstring &path,
                      const std::vector<int> &selection)
 {
     std::vector<std::shared_ptr<ISeekableSource>> tracks;
-    for (auto &track = begin(); track != end(); ++track) {
+    for (auto track = begin(); track != end(); ++track) {
         if (selection.size()) {
             if (std::find(selection.begin(), selection.end(),
                           track->number()) == selection.end())
