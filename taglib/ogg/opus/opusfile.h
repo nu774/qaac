@@ -1,6 +1,10 @@
 /***************************************************************************
-    copyright            : (C) 2008 by Scott Wheeler
+    copyright            : (C) 2012 by Lukáš Lalinský
+    email                : lalinsky@gmail.com
+
+    copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
+                           (original Vorbis implementation)
 ***************************************************************************/
 
 /***************************************************************************
@@ -23,42 +27,36 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#ifndef TAGLIB_AIFFFILE_H
-#define TAGLIB_AIFFFILE_H
+#ifndef TAGLIB_OPUSFILE_H
+#define TAGLIB_OPUSFILE_H
 
-#include "rifffile.h"
-#include "id3v2tag.h"
-#include "aiffproperties.h"
+#include "oggfile.h"
+#include "xiphcomment.h"
+
+#include "opusproperties.h"
 
 namespace TagLib {
 
-  namespace RIFF {
+  namespace Ogg {
 
-    //! An implementation of AIFF metadata
+    //! A namespace containing classes for Opus metadata
 
-    /*!
-     * This is implementation of AIFF metadata.
-     *
-     * This supports an ID3v2 tag as well as reading stream from the ID3 RIFF
-     * chunk as well as properties from the file.
-     */
+    namespace Opus {
 
-    namespace AIFF {
-
-      //! An implementation of TagLib::File with AIFF specific methods
+      //! An implementation of Ogg::File with Opus specific methods
 
       /*!
-       * This implements and provides an interface for AIFF files to the
-       * TagLib::Tag and TagLib::AudioProperties interfaces by way of implementing
-       * the abstract TagLib::File API as well as providing some additional
-       * information specific to AIFF files.
+       * This is the central class in the Ogg Opus metadata processing collection
+       * of classes.  It's built upon Ogg::File which handles processing of the Ogg
+       * logical bitstream and breaking it down into pages which are handled by
+       * the codec implementations, in this case Opus specifically.
        */
 
-      class TAGLIB_EXPORT File : public TagLib::RIFF::File
+      class TAGLIB_EXPORT File : public Ogg::File
       {
       public:
         /*!
-         * Constructs an AIFF file from \a file.  If \a readProperties is true the
+         * Constructs an Opus file from \a file.  If \a readProperties is true the
          * file's audio properties will also be read.
          *
          * \note In the current implementation, \a propertiesStyle is ignored.
@@ -67,7 +65,7 @@ namespace TagLib {
              Properties::ReadStyle propertiesStyle = Properties::Average);
 
         /*!
-         * Constructs an AIFF file from \a stream.  If \a readProperties is true the
+         * Constructs an Opus file from \a stream.  If \a readProperties is true the
          * file's audio properties will also be read.
          *
          * \note TagLib will *not* take ownership of the stream, the caller is
@@ -84,55 +82,40 @@ namespace TagLib {
         virtual ~File();
 
         /*!
-         * Returns the Tag for this file.
-         *
-         * \note This always returns a valid pointer regardless of whether or not
-         * the file on disk has an ID3v2 tag.  Use hasID3v2Tag() to check if the file
-         * on disk actually has an ID3v2 tag.
-         *
-         * \see hasID3v2Tag()
+         * Returns the XiphComment for this file.  XiphComment implements the tag
+         * interface, so this serves as the reimplementation of
+         * TagLib::File::tag().
          */
-        virtual ID3v2::Tag *tag() const;
+        virtual Ogg::XiphComment *tag() const;
 
         /*!
          * Implements the unified property interface -- export function.
-         * This method forwards to ID3v2::Tag::properties().
+         * This forwards directly to XiphComment::properties().
          */
         PropertyMap properties() const;
 
-        void removeUnsupportedProperties(const StringList &properties);
-
         /*!
-         * Implements the unified property interface -- import function.
-         * This method forwards to ID3v2::Tag::setProperties().
+         * Implements the unified tag dictionary interface -- import function.
+         * Like properties(), this is a forwarder to the file's XiphComment.
          */
         PropertyMap setProperties(const PropertyMap &);
 
         /*!
-         * Returns the AIFF::Properties for this file.  If no audio properties
+         * Returns the Opus::Properties for this file.  If no audio properties
          * were read then this will return a null pointer.
          */
         virtual Properties *audioProperties() const;
 
         /*!
-         * Saves the file.
+         * Save the file.
+         *
+         * This returns true if the save was successful.
          */
         virtual bool save();
 
         /*!
-         * Save using a specific ID3v2 version (e.g. v3)
-         */
-        bool save(ID3v2::Version version);
-
-        /*!
-         * Returns whether or not the file on disk actually has an ID3v2 tag.
-         *
-         * \see ID3v2Tag()
-         */
-        bool hasID3v2Tag() const;
-
-        /*!
-         * Check if the given \a stream can be opened as an AIFF file.
+         * Returns whether or not the given \a stream can be opened as an Opus
+         * file.
          *
          * \note This method is designed to do a quick check.  The result may
          * not necessarily be correct.
@@ -144,8 +127,6 @@ namespace TagLib {
         File &operator=(const File &);
 
         void read(bool readProperties);
-
-        friend class Properties;
 
         class FilePrivate;
         FilePrivate *d;

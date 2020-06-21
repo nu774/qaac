@@ -39,9 +39,6 @@
     <ClCompile Include="..\..\taglib\toolkit\tstringlist.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\taglib\toolkit\unicode.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\taglib\riff\rifffile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -214,6 +211,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\taglib\toolkit\tzlib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\opus\opusfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\taglib\ogg\opus\opusproperties.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

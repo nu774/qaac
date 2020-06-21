@@ -277,7 +277,7 @@ PropertyMap TextIdentificationFrame::makeTIPLProperties() const
         break;
       }
     if(!found){
-      // invalid involved role -> mark whole frame as unsupported in order to be consisten with writing
+      // invalid involved role -> mark whole frame as unsupported in order to be consistent with writing
       map.clear();
       map.unsupportedData().append(frameID());
       return map;
@@ -339,7 +339,13 @@ UserTextIdentificationFrame::UserTextIdentificationFrame(const String &descripti
 
 String UserTextIdentificationFrame::toString() const
 {
-  return "[" + description() + "] " + fieldList().toString();
+  // first entry is the description itself, drop from values list
+  StringList l = fieldList();
+  for(StringList::Iterator it = l.begin(); it != l.end(); ++it) {
+    l.erase(it);
+    break;
+  }
+  return "[" + description() + "] " + l.toString();
 }
 
 String UserTextIdentificationFrame::description() const

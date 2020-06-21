@@ -63,6 +63,8 @@
     <ClCompile Include="..\..\taglib\ogg\oggfile.cpp" />
     <ClCompile Include="..\..\taglib\ogg\oggpage.cpp" />
     <ClCompile Include="..\..\taglib\ogg\oggpageheader.cpp" />
+    <ClCompile Include="..\..\taglib\ogg\opus\opusfile.cpp" />
+    <ClCompile Include="..\..\taglib\ogg\opus\opusproperties.cpp" />
     <ClCompile Include="..\..\taglib\ogg\xiphcomment.cpp" />
     <ClCompile Include="..\..\taglib\ogg\flac\oggflacfile.cpp" />
     <ClCompile Include="..\..\taglib\ogg\vorbis\vorbisfile.cpp" />

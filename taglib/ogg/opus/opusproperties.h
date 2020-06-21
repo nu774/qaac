@@ -1,6 +1,10 @@
 /***************************************************************************
-    copyright            : (C) 2008 by Scott Wheeler
+    copyright            : (C) 2012 by Lukáš Lalinský
+    email                : lalinsky@gmail.com
+
+    copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
+                           (original Vorbis implementation)
 ***************************************************************************/
 
 /***************************************************************************
@@ -23,23 +27,23 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#ifndef TAGLIB_AIFFPROPERTIES_H
-#define TAGLIB_AIFFPROPERTIES_H
+#ifndef TAGLIB_OPUSPROPERTIES_H
+#define TAGLIB_OPUSPROPERTIES_H
 
 #include "audioproperties.h"
 
 namespace TagLib {
 
-  namespace RIFF {
+  namespace Ogg {
 
-    namespace AIFF {
+    namespace Opus {
 
       class File;
 
-      //! An implementation of audio property reading for AIFF
+      //! An implementation of audio property reading for Ogg Opus
 
       /*!
-       * This reads the data from an AIFF stream found in the AudioProperties
+       * This reads the data from an Ogg Opus stream found in the AudioProperties
        * API.
        */
 
@@ -47,21 +51,13 @@ namespace TagLib {
       {
       public:
         /*!
-         * Create an instance of AIFF::Properties with the data read from the
-         * ByteVector \a data.
-         *
-         * \deprecated
+         * Create an instance of Opus::Properties with the data read from the
+         * Opus::File \a file.
          */
-        TAGLIB_DEPRECATED Properties(const ByteVector &data, ReadStyle style);
+        Properties(File *file, ReadStyle style = Average);
 
         /*!
-         * Create an instance of AIFF::Properties with the data read from the
-         * AIFF::File \a file.
-         */
-        Properties(File *file, ReadStyle style);
-
-        /*!
-         * Destroys this AIFF::Properties instance.
+         * Destroys this Opus::Properties instance.
          */
         virtual ~Properties();
 
@@ -99,6 +95,9 @@ namespace TagLib {
 
         /*!
          * Returns the sample rate in Hz.
+         *
+         * \note Always returns 48000, because Opus can decode any stream at a
+         * sample rate of 8, 12, 16, 24, or 48 kHz,
          */
         virtual int sampleRate() const;
 
@@ -108,47 +107,16 @@ namespace TagLib {
         virtual int channels() const;
 
         /*!
-         * Returns the number of bits per audio sample.
+         * The Opus codec supports decoding at multiple sample rates, there is no
+         * single sample rate of the encoded stream. This returns the sample rate
+         * of the original audio stream.
          */
-        int bitsPerSample() const;
+        int inputSampleRate() const;
 
         /*!
-         * Returns the number of bits per audio sample.
-         *
-         * \note This method is just an alias of bitsPerSample().
-         *
-         * \deprecated
+         * Returns the Opus version, in the range 0...255.
          */
-        TAGLIB_DEPRECATED int sampleWidth() const;
-
-        /*!
-         * Returns the number of sample frames
-         */
-        unsigned int sampleFrames() const;
-
-        /*!
-         * Returns true if the file is in AIFF-C format, false if AIFF format.
-         */
-        bool isAiffC() const;
-
-        /*!
-         * Returns the compression type of the AIFF-C file.  For example, "NONE" for
-         * not compressed, "ACE2" for ACE 2-to-1.
-         *
-         * If the file is in AIFF format, always returns an empty vector.
-         *
-         * \see isAiffC()
-         */
-        ByteVector compressionType() const;
-
-        /*!
-         * Returns the concrete compression name of the AIFF-C file.
-         *
-         * If the file is in AIFF format, always returns an empty string.
-         *
-         * \see isAiffC()
-         */
-        String compressionName() const;
+        int opusVersion() const;
 
       private:
         Properties(const Properties &);

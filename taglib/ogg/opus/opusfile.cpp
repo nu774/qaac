@@ -1,6 +1,10 @@
 /***************************************************************************
-    copyright            : (C) 2008 by Scott Wheeler
+    copyright            : (C) 2012 by Lukáš Lalinský
+    email                : lalinsky@gmail.com
+
+    copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
+                           (original Vorbis implementation)
  ***************************************************************************/
 
 /***************************************************************************
@@ -23,157 +27,124 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#include <tbytevector.h>
+#include <tstring.h>
 #include <tdebug.h>
-#include <id3v2tag.h>
-#include <tstringlist.h>
 #include <tpropertymap.h>
 #include <tagutils.h>
 
-#include "aifffile.h"
+#include "opusfile.h"
 
 using namespace TagLib;
+using namespace TagLib::Ogg;
 
-class RIFF::AIFF::File::FilePrivate
+class Opus::File::FilePrivate
 {
 public:
   FilePrivate() :
-    properties(0),
-    tag(0),
-    hasID3v2(false) {}
+    comment(0),
+    properties(0) {}
 
   ~FilePrivate()
   {
+    delete comment;
     delete properties;
-    delete tag;
   }
 
+  Ogg::XiphComment *comment;
   Properties *properties;
-  ID3v2::Tag *tag;
-
-  bool hasID3v2;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // static members
 ////////////////////////////////////////////////////////////////////////////////
 
-bool RIFF::AIFF::File::isSupported(IOStream *stream)
+bool Ogg::Opus::File::isSupported(IOStream *stream)
 {
-  // An AIFF file has to start with "FORM????AIFF" or "FORM????AIFC".
+  // An Opus file has IDs "OggS" and "OpusHead" somewhere.
 
-  const ByteVector id = Utils::readHeader(stream, 12, false);
-  return (id.startsWith("FORM") && (id.containsAt("AIFF", 8) || id.containsAt("AIFC", 8)));
+  const ByteVector buffer = Utils::readHeader(stream, bufferSize(), false);
+  return (buffer.find("OggS") >= 0 && buffer.find("OpusHead") >= 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // public members
 ////////////////////////////////////////////////////////////////////////////////
 
-RIFF::AIFF::File::File(FileName file, bool readProperties, Properties::ReadStyle) :
-  RIFF::File(file, BigEndian),
+Opus::File::File(FileName file, bool readProperties, Properties::ReadStyle) :
+  Ogg::File(file),
   d(new FilePrivate())
 {
   if(isOpen())
     read(readProperties);
 }
 
-RIFF::AIFF::File::File(IOStream *stream, bool readProperties, Properties::ReadStyle) :
-  RIFF::File(stream, BigEndian),
+Opus::File::File(IOStream *stream, bool readProperties, Properties::ReadStyle) :
+  Ogg::File(stream),
   d(new FilePrivate())
 {
   if(isOpen())
     read(readProperties);
 }
 
-RIFF::AIFF::File::~File()
+Opus::File::~File()
 {
   delete d;
 }
 
-ID3v2::Tag *RIFF::AIFF::File::tag() const
+Ogg::XiphComment *Opus::File::tag() const
 {
-  return d->tag;
+  return d->comment;
 }
 
-PropertyMap RIFF::AIFF::File::properties() const
+PropertyMap Opus::File::properties() const
 {
-  return d->tag->properties();
+  return d->comment->properties();
 }
 
-void RIFF::AIFF::File::removeUnsupportedProperties(const StringList &unsupported)
+PropertyMap Opus::File::setProperties(const PropertyMap &properties)
 {
-  d->tag->removeUnsupportedProperties(unsupported);
+  return d->comment->setProperties(properties);
 }
 
-PropertyMap RIFF::AIFF::File::setProperties(const PropertyMap &properties)
-{
-  return d->tag->setProperties(properties);
-}
-
-RIFF::AIFF::Properties *RIFF::AIFF::File::audioProperties() const
+Opus::Properties *Opus::File::audioProperties() const
 {
   return d->properties;
 }
 
-bool RIFF::AIFF::File::save()
+bool Opus::File::save()
 {
-    return save(ID3v2::v4);
-}
+  if(!d->comment)
+    d->comment = new Ogg::XiphComment();
 
-bool RIFF::AIFF::File::save(ID3v2::Version version)
-{
-  if(readOnly()) {
-    debug("RIFF::AIFF::File::save() -- File is read only.");
-    return false;
-  }
+  setPacket(1, ByteVector("OpusTags", 8) + d->comment->render(false));
 
-  if(!isValid()) {
-    debug("RIFF::AIFF::File::save() -- Trying to save invalid file.");
-    return false;
-  }
-
-  if(d->hasID3v2) {
-    removeChunk("ID3 ");
-    removeChunk("id3 ");
-    d->hasID3v2 = false;
-  }
-
-  if(tag() && !tag()->isEmpty()) {
-    setChunkData("ID3 ", d->tag->render(version));
-    d->hasID3v2 = true;
-  }
-
-  return true;
-}
-
-bool RIFF::AIFF::File::hasID3v2Tag() const
-{
-  return d->hasID3v2;
+  return Ogg::File::save();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // private members
 ////////////////////////////////////////////////////////////////////////////////
 
-void RIFF::AIFF::File::read(bool readProperties)
+void Opus::File::read(bool readProperties)
 {
-  for(unsigned int i = 0; i < chunkCount(); ++i) {
-    const ByteVector name = chunkName(i);
-    if(name == "ID3 " || name == "id3 ") {
-      if(!d->tag) {
-        d->tag = new ID3v2::Tag(this, chunkOffset(i));
-        d->hasID3v2 = true;
-      }
-      else {
-        debug("RIFF::AIFF::File::read() - Duplicate ID3v2 tag found.");
-      }
-    }
+  ByteVector opusHeaderData = packet(0);
+
+  if(!opusHeaderData.startsWith("OpusHead")) {
+    setValid(false);
+    debug("Opus::File::read() -- invalid Opus identification header");
+    return;
   }
 
-  if(!d->tag)
-    d->tag = new ID3v2::Tag();
+  ByteVector commentHeaderData = packet(1);
+
+  if(!commentHeaderData.startsWith("OpusTags")) {
+    setValid(false);
+    debug("Opus::File::read() -- invalid Opus tags header");
+    return;
+  }
+
+  d->comment = new Ogg::XiphComment(commentHeaderData.mid(8));
 
   if(readProperties)
-    d->properties = new Properties(this, Properties::Average);
+    d->properties = new Properties(this);
 }
