@@ -1,5 +1,7 @@
 #include "LibSndfileSource.h"
 #include <vorbisfile.h>
+#include <opusfile.h>
+#include <oggflacfile.h>
 #include "taglibhelper.h"
 #include "win32util.h"
 #include "metadata.h"
@@ -139,6 +141,7 @@ LibSndfileSource::LibSndfileSource(const std::shared_ptr<FILE> &fp)
          { SF_FORMAT_ALAC_24, 24, kAudioFormatFlagIsSignedInteger },
          { SF_FORMAT_ALAC_32, 32, kAudioFormatFlagIsSignedInteger },
          { SF_FORMAT_VORBIS,  32, kAudioFormatFlagIsFloat         },
+         { SF_FORMAT_OPUS,    32, kAudioFormatFlagIsFloat         },
          { 0, 0, 0 }
     }, *p = mapping;
     for (; p->subtype && p->subtype != subformat; ++p)
@@ -173,7 +176,7 @@ LibSndfileSource::LibSndfileSource(const std::shared_ptr<FILE> &fp)
     else if (m_format_name == "caf")
         m_tags = CAF::fetchTags(fileno(m_fp.get()));
     else if (m_format_name == "oga")
-        fetchVorbisTags();
+        fetchVorbisTags(p->subtype);
 }
 
 void LibSndfileSource::seekTo(int64_t count)
@@ -190,17 +193,24 @@ int64_t LibSndfileSource::getPosition()
     return pos;
 }
 
-void LibSndfileSource::fetchVorbisTags()
+void LibSndfileSource::fetchVorbisTags(int codec)
 {
     int fd = fileno(m_fp.get());
     util::FilePositionSaver _(fd);
     lseek(fd, 0, SEEK_SET);
     TagLibX::FDIOStreamReader stream(fd);
-    TagLib::Ogg::Vorbis::File file(&stream, false);
-
+    std::unique_ptr<TagLib::Ogg::File> file;
+    if (codec == SF_FORMAT_OPUS)
+        file = std::make_unique<TagLib::Ogg::Opus::File>(&stream, false);
+    else if (codec == SF_FORMAT_VORBIS)
+        file = std::make_unique<TagLib::Ogg::Vorbis::File>(&stream, false);
+    else if (codec == SF_FORMAT_FLAC)
+        file = std::make_unique<TagLib::Ogg::FLAC::File>(&stream, false);
+    else
+        return;
     std::map<std::string, std::string> tags;
 
-    auto tag = file.tag();
+    auto tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file->tag());
     auto &map = tag->fieldListMap();
     for (auto it = map.begin(); it != map.end(); ++it) {
         std::string key = it->first.toCString();

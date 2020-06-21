@@ -72,7 +72,7 @@ public:
     int64_t getPosition();
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
 private:
-    void fetchVorbisTags();
+    void fetchVorbisTags(int codec);
 };
 
 #endif
