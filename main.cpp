@@ -340,8 +340,8 @@ static double do_normalize(std::vector<std::shared_ptr<ISource> > &chain,
         progress.update(src->getPosition());
     }
     progress.finish(src->getPosition());
-    LOG(L"Peak value: %g\n", normalizer->getPeak());
-    return normalizer->getPeak();
+    LOG(L"Peak: %g (%gdB)\n", normalizer->getPeak(), util::scale_to_dB(normalizer->getPeak()));
+	return normalizer->getPeak();
 }
 
 void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
@@ -659,7 +659,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
             cafsink->finishWrite(AudioFilePacketTableInfo());
     } else if (opts.isPeak()) {
         PeakSink *p = dynamic_cast<PeakSink *>(sink.get());
-        LOG(L"peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
+        LOG(L"Peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
     }
 }
 
