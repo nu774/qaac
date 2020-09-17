@@ -869,16 +869,22 @@ void set_dll_directories(int verbose)
 
     try {
         HKEY hKey;
-        const wchar_t *subkey =
-            L"SOFTWARE\\Apple Inc.\\Apple Application Support";
-        HR(RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey, 0, KEY_READ, &hKey));
-        std::shared_ptr<HKEY__> hKeyPtr(hKey, RegCloseKey);
-        DWORD size;
-        HR(RegQueryValueExW(hKey, L"InstallDir", 0, 0, 0, &size));
-        std::vector<wchar_t> vec(size/sizeof(wchar_t));
-        HR(RegQueryValueExW(hKey, L"InstallDir", 0, 0,
-                    reinterpret_cast<LPBYTE>(&vec[0]), &size));
-        searchPaths = strutil::format(L"%s;%s", &vec[0], searchPaths.c_str());
+        const wchar_t *subkey[] = {
+            L"SOFTWARE\\Apple Inc.\\Apple Application Support",
+            L"SOFTWARE\\Apple Computer, Inc.\\iTunes",
+        };
+        for (int i = 0; i < 2; ++i) {
+            if (!RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey[i], 0, KEY_READ, &hKey)) {
+                std::shared_ptr<HKEY__> hKeyPtr(hKey, RegCloseKey);
+                DWORD size;
+                if (!RegQueryValueExW(hKey, L"InstallDir", 0, 0, 0, &size)) {
+                    std::vector<wchar_t> vec(size/sizeof(wchar_t));
+                    RegQueryValueExW(hKey, L"InstallDir", 0, 0,
+                            reinterpret_cast<LPBYTE>(&vec[0]), &size);
+                    searchPaths = strutil::format(L"%s;%s", &vec[0], searchPaths.c_str());
+                }
+            }
+        }
     } catch (const std::exception &) {}
     std::wstring dir = win32::get_module_directory() + L"QTfiles";
 #ifdef _WIN64
