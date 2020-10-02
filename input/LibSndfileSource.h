@@ -12,7 +12,8 @@ class LibSndfileModule {
     DL m_dl;
 private:
     LibSndfileModule() {
-        load(L"libsndfile-1.dll");
+        load(L"sndfile.dll");
+        if (!loaded()) load(L"libsndfile-1.dll");
     }
     LibSndfileModule(const LibSndfileModule&);
     LibSndfileModule& operator=(const LibSndfileModule&);
