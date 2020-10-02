@@ -1182,7 +1182,8 @@ std::wstring get_output_filename(const std::wstring &ifilename,
     if (!std::wcscmp(ifilename.c_str(), L"-"))
         return std::wstring(L"stdin") + ext;
 
-    std::wstring obasename = win32::PathReplaceExtension(ifilename, ext);
+    std::wstring obasename =
+        win32::PathReplaceExtension(PathFindFileNameW(ifilename.c_str()), ext);
     std::wstring ofilename = strutil::format(L"%s/%s", outdir,
                                              obasename.c_str());
 
