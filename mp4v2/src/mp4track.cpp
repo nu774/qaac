@@ -522,6 +522,15 @@ void MP4Track::FinishWrite(uint32_t options)
     // write out any remaining samples in chunk buffer
     WriteChunkBuffer();
 
+    MP4Duration editTotalDuration = GetEditTotalDuration(MP4_INVALID_EDIT_ID);
+    if (editTotalDuration == MP4_INVALID_DURATION) {
+        MP4Duration mediaDuration = m_pMediaDurationProperty->GetValue();
+        m_pTrackDurationProperty->SetValue(ToMovieDuration(mediaDuration));
+    } else {
+        m_pTrackDurationProperty->SetValue(editTotalDuration);
+    }
+    m_File.UpdateDuration(m_pTrackDurationProperty->GetValue());
+
     if (m_pStszFixedSampleSizeProperty == NULL &&
             m_stsz_sample_bits == 4) {
         if (m_have_stz2_4bit_sample) {
@@ -1474,15 +1483,8 @@ uint32_t MP4Track::GetTimeScale()
 
 void MP4Track::UpdateDurations(MP4Duration duration)
 {
-    // update media, track, and movie durations
     m_pMediaDurationProperty->SetValue(
         m_pMediaDurationProperty->GetValue() + duration);
-
-    MP4Duration movieDuration = ToMovieDuration(
-        m_pMediaDurationProperty->GetValue());
-    m_pTrackDurationProperty->SetValue(movieDuration);
-
-    m_File.UpdateDuration(m_pTrackDurationProperty->GetValue());
 }
 
 MP4Duration MP4Track::ToMovieDuration(MP4Duration trackDuration)
