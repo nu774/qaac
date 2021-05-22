@@ -13,6 +13,7 @@ class LibSndfileModule {
 private:
     LibSndfileModule() {
         load(L"sndfile.dll");
+        if (!loaded()) load(L"libsndfile.dll");
         if (!loaded()) load(L"libsndfile-1.dll");
     }
     LibSndfileModule(const LibSndfileModule&);
