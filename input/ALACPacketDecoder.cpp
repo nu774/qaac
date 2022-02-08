@@ -30,10 +30,13 @@ size_t ALACPacketDecoder::decode(void *data, size_t nsamples)
         BitBuffer bits;
         BitBufferInit(&bits, m_packet_buffer.data(), m_packet_buffer.size());
         uint32_t ncount;
-        CHECKCA(m_decoder->Decode(&bits, m_raw_decode_buffer.data(),
-                                  m_iasbd.mFramesPerPacket,
-                                  m_iasbd.mChannelsPerFrame,
-                                  &ncount));
+        int err;
+        if ((err = m_decoder->Decode(&bits, m_raw_decode_buffer.data(),
+            m_iasbd.mFramesPerPacket,
+            m_iasbd.mChannelsPerFrame,
+            &ncount)) != 0) {
+            throw std::runtime_error(strutil::format("ALACDecoder: decode error: %d", err));
+        }
         uint32_t bpf =
             (m_oasbd.mBitsPerChannel + 7) / 8 * m_oasbd.mChannelsPerFrame;
         size_t nbytes = ncount * bpf;
