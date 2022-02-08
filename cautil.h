@@ -40,8 +40,6 @@ public:
         long err = expr; \
         if (err) { \
             std::string msg = cautil::make_coreaudio_error(err, #expr); \
-            std::stringstream ss; \
-            ss << err << ": " << #expr; \
             throw CoreAudioException(msg, err); \
         } \
     } while (0)
