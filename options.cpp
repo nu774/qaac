@@ -207,7 +207,7 @@ void usage()
 "                       Positive value will prepend silence.\n"
 "                       (This option exists due to historical reason)\n"
 "--no-delay             Compensate encoder delay by prepending 960 samples \n"
-"                       of scilence, then trimming 3 AAC frames from \n"
+"                       of silence, then trimming 3 AAC frames from \n"
 "                       the beginning (and also tweak iTunSMPB).\n"
 "                       This option is mainly intended for resolving\n"
 "                       A/V sync issue of video. \n"
