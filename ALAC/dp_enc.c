@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
+ * Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
@@ -24,6 +25,7 @@
 	Contains:	Dynamic Predictor encode routines
 
 	Copyright:	(c) 2001-2011 Apple, Inc.
+	Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
 */
 
 #include "dplib.h"
@@ -63,7 +65,7 @@ void copy_coefs( int16_t * srcCoefs, int16_t * dstCoefs, int32_t numPairs )
 		dstCoefs[k] = srcCoefs[k];
 }
 
-static inline int32_t ALWAYS_INLINE sign_of_int( int32_t i )
+static /*inline*/ int32_t ALWAYS_INLINE sign_of_int( int32_t i )
 {
     int32_t negishift;
 	

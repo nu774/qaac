@@ -73,6 +73,7 @@
     <ClCompile Include="..\..\ALAC\ALACEncoder.cpp" />
     <ClCompile Include="..\..\ALAC\dp_dec.c" />
     <ClCompile Include="..\..\ALAC\dp_enc.c" />
+    <ClCompile Include="..\..\ALAC\EndianPortable.c" />
     <ClCompile Include="..\..\ALAC\matrix_dec.c" />
     <ClCompile Include="..\..\ALAC\matrix_enc.c" />
   </ItemGroup>

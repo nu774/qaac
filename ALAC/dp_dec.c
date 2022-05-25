@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
+ * Windows/MSVC compatibility changes (c) 2011-2015 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
@@ -24,11 +25,13 @@
 	Contains:	Dynamic Predictor decode routines
 
 	Copyright:	(c) 2001-2011 Apple, Inc.
+	Windows/MSVC compatibility changes (c) 2011-2015 Peter Pawlowski
 */
 
 
 #include "dplib.h"
 #include <string.h>
+#include <assert.h>
 
 #if __GNUC__
 #define ALWAYS_INLINE		__attribute__((always_inline))
@@ -44,7 +47,7 @@
 #define LOOP_ALIGN
 #endif
 
-static inline int32_t ALWAYS_INLINE sign_of_int( int32_t i )
+static /*inline*/ int32_t ALWAYS_INLINE sign_of_int( int32_t i )
 {
     int32_t negishift;
 	
@@ -58,11 +61,13 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 	register int32_t	b0, b1, b2, b3;
 	int32_t					j, k, lim;
 	int32_t				sum1, sg, sgn, top, dd;
-	int32_t *			pout;
+	const int32_t *		pout;
 	int32_t				del, del0;
 	uint32_t			chanshift = 32 - chanbits;
 	int32_t				denhalf = 1<<(denshift-1);
 
+    assert( num > 0 );
+    
 	out[0] = pc1[0];
 	if ( numactive == 0 )
 	{
@@ -89,6 +94,7 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 		{
 			del = pc1[j] + prev;
 			prev = (del << chanshift) >> chanshift;
+            assert( j < num );
 			out[j] = prev;
 		}
 		return;
@@ -96,7 +102,9 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 
 	for ( j = 1; j <= numactive; j++ )
 	{
+        assert( j-1 < num );
 		del = pc1[j] + out[j-1];
+        assert( j < num );
 		out[j] = (del << chanshift) >> chanshift;
 	}
 
@@ -117,6 +125,7 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 		{
 			LOOP_ALIGN
 
+            assert( j-lim < num );
 			top = out[j - lim];
 			pout = out + j - 1;
 
@@ -132,6 +141,7 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 			sg = sign_of_int(del);
 			del += top + sum1;
 
+            assert( j < num );
 			out[j] = (del << chanshift) >> chanshift;
 
 			if ( sg > 0 )
@@ -205,6 +215,7 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 		{
 			LOOP_ALIGN
 
+            assert( j-lim < num );
 			top = out[j - lim];
 			pout = out + j - 1;
 
@@ -226,6 +237,7 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 			sg = sign_of_int(del);
 			del += top + sum1;
 
+            assert( j < num );
 			out[j] = (del << chanshift) >> chanshift;
 
 			if ( sg > 0 )
@@ -341,6 +353,7 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 
 			sum1 = 0;
 			pout = out + j - 1;
+            assert( j-lim < num);
 			top = out[j-lim];
 
 			for ( k = 0; k < numactive; k++ )
@@ -350,6 +363,7 @@ void unpc_block( int32_t * pc1, int32_t * out, int32_t num, int16_t * coefs, int
 			del0 = del;
 			sg = sign_of_int( del );
 			del += top + ((sum1 + denhalf) >> denshift);
+            assert( j < num );
 			out[j] = (del << chanshift) >> chanshift;
 
 			if ( sg > 0 )

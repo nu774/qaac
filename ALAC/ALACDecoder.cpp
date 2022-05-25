@@ -35,8 +35,10 @@
 #include "ALACBitUtilities.h"
 #include "EndianPortable.h"
 
+#include <assert.h>
+
 // constants/data
-const uint32_t kMaxBitDepth = 32;			// max allowed bit depth is 32
+enum { kMinBitDepth = 16, kMaxBitDepth = 32 };			// max allowed bit depth is 32
 
 
 // prototypes
@@ -47,13 +49,12 @@ static void Zero32( int32_t * buffer, uint32_t numItems, uint32_t stride );
 /*
 	Constructor
 */
-ALACDecoder::ALACDecoder() :
-	mMixBufferU( nil ),
-	mMixBufferV( nil ),
-	mPredictor( nil ),
-	mShiftBuffer( nil )
+ALACDecoder::ALACDecoder()
 {
-	memset( &mConfig, 0, sizeof(mConfig) );
+	mMixBufferU = NULL; mMixBufferV = NULL;
+	mPredictor = NULL; mShiftBuffer = NULL;
+	mActiveElements = 0;
+    memset(&mConfig,0,sizeof(mConfig));
 }
 
 /*
@@ -61,25 +62,13 @@ ALACDecoder::ALACDecoder() :
 */
 ALACDecoder::~ALACDecoder()
 {
-	// delete the matrix mixing buffers
-	if ( mMixBufferU )
-    {
-		free(mMixBufferU);
-        mMixBufferU = NULL;
-    }
-	if ( mMixBufferV )
-    {
-		free(mMixBufferV);
-        mMixBufferV = NULL;
-    }
-	
-	// delete the dynamic predictor's "corrector" buffer
-	// - note: mShiftBuffer shares memory with this buffer
-	if ( mPredictor )
-    {
-		free(mPredictor);
-        mPredictor = NULL;
-    }
+    // delete the matrix mixing buffers
+    free(mMixBufferU);
+    free(mMixBufferV);
+    
+    // delete the dynamic predictor's "corrector" buffer
+    // - note: mShiftBuffer shares memory with this buffer
+    free(mPredictor);
 }
 
 /*
@@ -117,8 +106,15 @@ int32_t ALACDecoder::Init( void * inMagicCookie, uint32_t inMagicCookieSize )
     if (theCookieBytesRemaining < sizeof(ALACSpecificConfig)) return kALAC_ParamError;
 
 	theConfig.frameLength = Swap32BtoN(((ALACSpecificConfig *)theActualCookie)->frameLength);
+
+	// frame length is 4096 by default, some claim 16384 is max allowed by standard decoders
+	// fail early with nonsensical values, don't allocate extreme amounts of memory
+	if (theConfig.frameLength == 0 || theConfig.frameLength > 1024 * 1024) return kALAC_ParamError;
+
     theConfig.compatibleVersion = ((ALACSpecificConfig *)theActualCookie)->compatibleVersion;
     theConfig.bitDepth = ((ALACSpecificConfig *)theActualCookie)->bitDepth;
+	if (theConfig.bitDepth < kMinBitDepth || theConfig.bitDepth > kMaxBitDepth) return kALAC_ParamError;
+
     theConfig.pb = ((ALACSpecificConfig *)theActualCookie)->pb;
     theConfig.mb = ((ALACSpecificConfig *)theActualCookie)->mb;
     theConfig.kb = ((ALACSpecificConfig *)theActualCookie)->kb;
@@ -133,11 +129,11 @@ int32_t ALACDecoder::Init( void * inMagicCookie, uint32_t inMagicCookieSize )
     RequireAction( mConfig.compatibleVersion <= kALACVersion, return kALAC_ParamError; );
 
     // allocate mix buffers
-    mMixBufferU = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
-    mMixBufferV = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
+    mMixBufferU = (int32_t *) calloc( mConfig.frameLength, sizeof(int32_t));
+    mMixBufferV = (int32_t *) calloc( mConfig.frameLength, sizeof(int32_t));
 
     // allocate dynamic predictor buffer
-    mPredictor = (int32_t *) calloc( mConfig.frameLength * sizeof(int32_t), 1 );
+    mPredictor = (int32_t *) calloc( mConfig.frameLength, sizeof(int32_t));
 
     // "shift off" buffer shares memory with predictor buffer
     mShiftBuffer = (uint16_t *) mPredictor;
@@ -180,7 +176,6 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 	uint32_t			denShiftU, denShiftV;
 	uint16_t			pbFactorU, pbFactorV;
 	uint16_t			pb;
-	int16_t *			samples;
 	int16_t *			out16;
 	uint8_t *			out20;
 	uint8_t *			out24;
@@ -198,8 +193,6 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 	mActiveElements = 0;
 	channelIndex	= 0;
 	
-	samples = (int16_t *) sampleBuffer;
-
 	status = ALAC_noErr;
 	*outNumSamples = numSamples;
 
@@ -219,6 +212,9 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 			case ID_LFE:
 			{
 				// mono/LFE channel
+                if ( (channelIndex + 1) > numChannels )
+                    goto NoMoreChannels;
+                
 				elementInstanceTag = BitBufferReadSmall( bits, 4 );
 				mActiveElements |= (1u << elementInstanceTag);
 
@@ -249,6 +245,7 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 					RequireAction( numPartial <= numSamples, status = kALAC_ParamError; goto Exit; );
 					numSamples = numPartial;
 				}
+                assert( numSamples <= mConfig.frameLength );
 
 				if ( escapeFlag == 0 )
 				{
@@ -306,6 +303,7 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 						{
 							val = (int32_t) BitBufferRead( bits, (uint8_t) chanBits );
 							val = (val << shift) >> shift;
+                            assert( i < mConfig.frameLength );
 							mMixBufferU[i] = val;
 						}
 					}
@@ -317,6 +315,7 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 						{
 							val = (int32_t) BitBufferRead( bits, 16 );
 							val = (val << 16) >> shift;
+                            assert( i < mConfig.frameLength );
 							mMixBufferU[i] = val | BitBufferRead( bits, (uint8_t) extraBits );
 						}
 					}
@@ -488,10 +487,12 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 						{
 							val = (int32_t) BitBufferRead( bits, (uint8_t) chanBits );
 							val = (val << shift) >> shift;
+                            assert( i < mConfig.frameLength );
 							mMixBufferU[i] = val;
 
 							val = (int32_t) BitBufferRead( bits, (uint8_t) chanBits );
 							val = (val << shift) >> shift;
+                            assert( i < mConfig.frameLength );
 							mMixBufferV[i] = val;
 						}
 					}
@@ -503,10 +504,12 @@ int32_t ALACDecoder::Decode( BitBuffer * bits, uint8_t * sampleBuffer, uint32_t 
 						{
 							val = (int32_t) BitBufferRead( bits, 16 );
 							val = (val << 16) >> shift;
+                            assert( i < mConfig.frameLength );
 							mMixBufferU[i] = val | BitBufferRead( bits, (uint8_t)extraBits );
 
 							val = (int32_t) BitBufferRead( bits, 16 );
 							val = (val << 16) >> shift;
+                            assert( i < mConfig.frameLength );
 							mMixBufferV[i] = val | BitBufferRead( bits, (uint8_t)extraBits );
 						}
 					}

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
+ * Bug fixes and Windows/MSVC compatibility changes (c) 2011-2015 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
@@ -43,11 +44,9 @@ class ALACDecoder
 
 		int32_t	Init( void * inMagicCookie, uint32_t inMagicCookieSize );
 		int32_t	Decode( struct BitBuffer * bits, uint8_t * sampleBuffer, uint32_t numSamples, uint32_t numChannels, uint32_t * outNumSamples );
-
 	public:
 		// decoding parameters (public for use in the analyzer)
 		ALACSpecificConfig		mConfig;
-
 	protected:
 		int32_t	FillElement( struct BitBuffer * bits );
 		int32_t	DataStreamElement( struct BitBuffer * bits );

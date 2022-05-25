@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
- * Bug fixes and Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
+ * Bug fixes and Windows/MSVC compatibility changes (c) 2011-2015 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
@@ -25,7 +25,7 @@
 	Contains:   Adaptive Golomb decode routines.
 
 	Copyright:	(c) 2001-2011 Apple, Inc.
-	Bug fixes and Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
+	Bug fixes and Windows/MSVC compatibility changes (c) 2011-2015 Peter Pawlowski
 */
 
 #include "aglib.h"
@@ -36,7 +36,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if __GNUC__ && TARGET_OS_MAC
+#include <assert.h>
+#if defined(__GNUC__) && defined(__APPLE__)
 	#if __POWERPC__
 		#include <ppc_intrinsics.h>
 	#else
@@ -44,7 +45,7 @@
 	#endif
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #include <intrin.h>
 #endif
 
@@ -55,8 +56,6 @@
 
 #if __GNUC__
 #define ALWAYS_INLINE		__attribute__((always_inline))
-#elif defined(_MSC_VER)
-#define ALWAYS_INLINE __forceinline
 #else
 #define ALWAYS_INLINE
 #endif
@@ -94,48 +93,36 @@ void set_ag_params(AGParamRecPtr params, uint32_t m, uint32_t p, uint32_t k, uin
 #pragma mark -
 #endif
 
-#ifdef _MSC_VER
-static inline int32_t lead(int32_t m)
-{
-	unsigned long n;
-	_BitScanReverse(&n, m);
-	return n ^ 31;
+#if defined(_MSC_VER)
+static int32_t lead(int32_t m) {
+	unsigned long index = 0; _BitScanReverse(&index, m);
+	return 31 - index;
 }
-#elif defined(__GNUC__)
-static inline int32_t lead(int32_t m)
-{
+#elif defined(__llvm__) || defined(__GNUC__)
+static inline int32_t lead(int32_t m) {
 	return __builtin_clz(m);
 }
 #else
-/*
- * http://aggregate.org/MAGIC/#Population Count (Ones Count)
- */
-static inline uint32_t popcnt( uint32_t x )
+// note: implementing this with some kind of "count leading zeros" assembly is a big performance win
+static /*inline*/ int32_t lead( int32_t m )
 {
-    x -= ((x >> 1) & 0x55555555);
-    x = (((x >> 2) & 0x33333333) + (x & 0x33333333));
-    x = (((x >> 4) + x) & 0x0f0f0f0f);
-    x += (x >> 8);
-    x += (x >> 16);
-    return x & 0x0000003f;
+	int32_t j;
+	uint32_t c = (1ul << 31);
+
+	for(j=0; j < 32; j++)
+	{
+		if((c & (uint32_t) m) != 0)
+			break;
+		c >>= 1;
+	}
+	return (j);
 }
-/*
- * http://aggregate.org/MAGIC/#Leading Zero Count
- */
-static inline uint32_t lead( uint32_t x )
-{
-    x |= (x >> 1);
-    x |= (x >> 2);
-    x |= (x >> 4);
-    x |= (x >> 8);
-    x |= (x >> 16);
-    return 32 - popcnt(x);
-}
+
 #endif
 
 #define arithmin(a, b) ((a) < (b) ? (a) : (b))
 
-static inline int32_t ALWAYS_INLINE lg3a( int32_t x)
+static /*inline*/ int32_t ALWAYS_INLINE lg3a( int32_t x)
 {
     int32_t result;
 
@@ -145,7 +132,7 @@ static inline int32_t ALWAYS_INLINE lg3a( int32_t x)
     return 31 - result;
 }
 
-static inline uint32_t ALWAYS_INLINE read32bit( uint8_t * buffer )
+static /*inline*/ uint32_t ALWAYS_INLINE read32bit( uint8_t * buffer )
 {
 	// embedded CPUs typically can't read unaligned 32-bit words so just read the bytes
 	uint32_t		value;
@@ -156,7 +143,7 @@ static inline uint32_t ALWAYS_INLINE read32bit( uint8_t * buffer )
 
 }
 
-static inline uint32_t ALWAYS_INLINE read32bit_ex( uint8_t * buffer, uint8_t * end )
+static /*inline*/ uint32_t ALWAYS_INLINE read32bit_ex( uint8_t * buffer, uint8_t * end )
 {
 	uint32_t		value ;
 #ifdef _M_IX86
@@ -193,7 +180,7 @@ static inline uint32_t ALWAYS_INLINE read32bit_ex( uint8_t * buffer, uint8_t * e
 #define get_next_fromlong(inlong, suff)		((inlong) >> (32 - (suff)))
 
 
-static inline uint32_t ALWAYS_INLINE
+static /*inline*/ uint32_t ALWAYS_INLINE
 getstreambits( uint8_t *in, uint8_t * inEnd, int32_t bitoffset, int32_t numbits )
 {
 	uint32_t	load1, load2;
@@ -229,7 +216,7 @@ getstreambits( uint8_t *in, uint8_t * inEnd, int32_t bitoffset, int32_t numbits 
 }
 
 
-static inline int32_t dyn_get(uint8_t *in, uint8_t * inEnd, uint32_t *bitPos, uint32_t m, uint32_t k)
+static /*inline*/ int32_t dyn_get(uint8_t *in, uint8_t * inEnd, uint32_t *bitPos, uint32_t m, uint32_t k)
 {
     uint32_t	tempbits = *bitPos;
     uint32_t		result;
@@ -278,7 +265,7 @@ static inline int32_t dyn_get(uint8_t *in, uint8_t * inEnd, uint32_t *bitPos, ui
 }
 
 
-static inline int32_t dyn_get_32bit( uint8_t * in, uint8_t * inEnd, uint32_t * bitPos, int32_t m, int32_t k, int32_t maxbits )
+static /*inline*/ int32_t dyn_get_32bit( uint8_t * in, uint8_t * inEnd, uint32_t * bitPos, int32_t m, int32_t k, int32_t maxbits )
 {
 	uint32_t	tempbits = *bitPos;
 	uint32_t		v;
@@ -330,10 +317,10 @@ static inline int32_t dyn_get_32bit( uint8_t * in, uint8_t * inEnd, uint32_t * b
 	return result;
 }
 
-int32_t dyn_decomp( AGParamRecPtr params, BitBuffer * bitstream, int32_t * pc, int32_t numSamples, int32_t maxSize, uint32_t * outNumBits )
+int32_t dyn_decomp( AGParamRecPtr params, BitBuffer * bitstream, int32_t * pc, uint32_t numSamples, int32_t maxSize, uint32_t * outNumBits )
 {
     uint8_t 		*in, *inEnd;
-    int32_t			*outPtr = pc;
+    uint32_t			outWalk = 0;
     uint32_t 	bitPos, startPos, maxPos;
     uint32_t		j, m, k, n, c, mz;
     int32_t			del, zmode;
@@ -373,14 +360,15 @@ int32_t dyn_decomp( AGParamRecPtr params, BitBuffer * bitstream, int32_t * pc, i
         // least significant bit is sign bit
         {
         	uint32_t	ndecode = n + zmode;
-            int32_t		multiplier = (- (ndecode&1));
+            int32_t		multiplier = (- (int32_t)(ndecode&1));
 
             multiplier |= 1;
             del = ((ndecode+1) >> 1) * (multiplier);
         }
 
-        *outPtr++ = del;
-
+        assert( outWalk < numSamples );
+        pc[outWalk++] = del;
+        
         c++;
 
         mb = pb_local*(n+zmode) + mb - ((pb_local*mb)>>QBSHIFT);
@@ -403,8 +391,9 @@ int32_t dyn_decomp( AGParamRecPtr params, BitBuffer * bitstream, int32_t * pc, i
 
             for(j=0; j < n; j++)
             {
-                *outPtr++ = 0;
-                ++c;                    
+                assert( outWalk < numSamples );
+                pc[outWalk++] = 0;
+                ++c;
             }
 
             if(n >= 65535)
