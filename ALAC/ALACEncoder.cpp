@@ -523,7 +523,9 @@ int32_t ALACEncoder::EncodeStereo( BitBuffer * bitstream, void * inputBuffer, ui
 		{
 			*bitstream = startBits;		// reset bitstream state
 			doEscape = true;
-			printf( "compressed frame too big: %u vs. %u \n", minBits, escapeBits );
+#if VERBOSE_DEBUG
+			DebugMsg( "compressed frame too big: %u vs. %u \n", minBits, escapeBits );
+#endif
 		}
 	}
 
@@ -700,7 +702,9 @@ int32_t ALACEncoder::EncodeStereoFast( BitBuffer * bitstream, void * inputBuffer
 		if ( minBits >= escapeBits )
 		{
 			doEscape = true;
-			printf( "compressed frame too big: %u vs. %u\n", minBits, escapeBits );
+#if VERBOSE_DEBUG
+			DebugMsg( "compressed frame too big: %u vs. %u\n", minBits, escapeBits );
+#endif
 		}
 
 	}
@@ -965,7 +969,9 @@ int32_t ALACEncoder::EncodeMono( BitBuffer * bitstream, void * inputBuffer, uint
 		{
 			*bitstream = startBits;		// reset bitstream state
 			doEscape = true;
-			printf( "compressed frame too big: %u vs. %u\n", minBits, escapeBits );
+#if VERBOSE_DEBUG
+			DebugMsg( "compressed frame too big: %u vs. %u\n", minBits, escapeBits );
+#endif
 		}
 	}
 
@@ -1114,7 +1120,9 @@ int32_t ALACEncoder::Encode(AudioFormatDescription theInputFormat, AudioFormatDe
 					break;
 
 				default:
-					printf( "That ain't right! (%u)\n", tag );
+#if VERBOSE_DEBUG
+					DebugMsg( "That ain't right! (%u)\n", tag );
+#endif
 					status = kALAC_ParamError;
 					goto Exit;
 			}
@@ -1222,7 +1230,7 @@ void ALACEncoder::GetMagicCookie(void * outCookie, uint32_t * ioSize)
     GetConfig(theConfig);
     if (theConfig.numChannels > 2)
     {
-        theChannelLayout.mChannelLayoutTag = ALACChannelLayoutTags[theConfig.numChannels - 1];
+        theChannelLayout.mChannelLayoutTag = Swap32NtoB(ALACChannelLayoutTags[theConfig.numChannels - 1]);
         theCookieSize += (sizeof(ALACAudioChannelLayout) + kChannelAtomSize);
     }
      if (*ioSize >= theCookieSize)

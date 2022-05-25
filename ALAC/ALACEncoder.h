@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011 Apple Inc. All rights reserved.
- * Bug fixes and Windows/MSVC compatibility changes (c) 2011-2015 Peter Pawlowski
+ * Bug fixes and Windows/MSVC compatibility changes (c) 2011 Peter Pawlowski
  *
  * @APPLE_APACHE_LICENSE_HEADER_START@
  * 
