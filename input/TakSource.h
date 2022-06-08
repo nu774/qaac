@@ -5,25 +5,6 @@
 #include "ISource.h"
 #include "dl.h"
 
-struct TtakAudioFormatEx: public TtakAudioFormat {
-    TtakBool  HasExtension;
-    TtakInt32 ValidBitsPerSample;
-    TtakBool  HasSpeakerAssignment;
-    char SpeakerAssignment[16];
-};
-
-struct Ttak_str_StreamInfo_V10 {
-    Ttak_str_EncoderInfo Encoder;
-    Ttak_str_SizeInfo    Sizes;
-    TtakAudioFormat      Audio;
-};
-
-struct Ttak_str_StreamInfo_V22 {
-    Ttak_str_EncoderInfo Encoder;
-    Ttak_str_SizeInfo    Sizes;
-    TtakAudioFormatEx    Audio;
-};
-
 class TakModule {
     DL m_dl;
     bool m_compatible;
@@ -49,7 +30,7 @@ public:
                                  void *);
     void (*SSD_Destroy)(TtakSeekableStreamDecoder);
     TtakResult (*SSD_GetStreamInfo)(TtakSeekableStreamDecoder,
-                                    Ttak_str_StreamInfo_V10 *);
+                                    Ttak_str_StreamInfo *);
     TtakResult (*SSD_GetStreamInfo_V22)(TtakSeekableStreamDecoder,
                                         Ttak_str_StreamInfo_V22 *);
     TtakResult (*SSD_Seek)(TtakSeekableStreamDecoder, TtakInt64);

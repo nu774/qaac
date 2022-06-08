@@ -106,8 +106,8 @@ TakSource::TakSource(const std::shared_ptr<FILE> &fp)
     if (m_module.SSD_GetStreamInfo_V22)
         TRYTAK(m_module.SSD_GetStreamInfo_V22(ssd, &info));
     else {
-        Ttak_str_StreamInfo_V10 *p =
-            reinterpret_cast<Ttak_str_StreamInfo_V10*>(&info);
+        Ttak_str_StreamInfo *p =
+            reinterpret_cast<Ttak_str_StreamInfo*>(&info);
         TRYTAK(m_module.SSD_GetStreamInfo(ssd, p));
     }
     uint32_t bits = info.Audio.HasExtension ? info.Audio.ValidBitsPerSample

@@ -18,8 +18,8 @@ extern "C" {
   Software Developement Kit for TAK, (T)om's lossless (A)udio (K)ompressor:
   Decoder library.
 
-  Version:  1.1.1
-  Date:     09-02-13
+  Version:  2.3.2
+  Date:     22-05-06
   Language: C
 
   Copyright 2007 by Thomas Becker, D-49080 Osnabrueck.
@@ -31,15 +31,14 @@ extern "C" {
 /*=== Elemental Types ===============================================*/
 
 #ifdef _MSC_VER
-typedef __int32 TtakInt32;
+typedef __int32      TtakInt32;
 typedef unsigned int TtakUInt32;
-typedef __int64 TtakInt64;
-typedef __int32 TtakBool;
+typedef __int64      TtakInt64;
+typedef __int32      TtakBool;
+typedef char         TtakAnsiChar;
+typedef wchar_t      TtakWideChar;
 #else
-typedef int TtakInt32;
-typedef unsigned int TtakUInt32;
-typedef long long TtakInt64;
-typedef int TtakBool;
+#error Port me!
 #endif
 
 enum {
@@ -92,11 +91,21 @@ enum tak_FilePathStringLimits {
 typedef TtakInt32 TtakCpuOptions;
 
 enum tak_Cpu {
-  tak_Cpu_None = 0x0000,
-  tak_Cpu_Asm  = 0x0001,
-  tak_Cpu_MMX  = 0x0002,
-  tak_Cpu_SSE  = 0x0004,
-  tak_Cpu_Any  = tak_Cpu_Asm | tak_Cpu_MMX | tak_Cpu_SSE,
+  tak_Cpu_None  = 0x0000,
+  tak_Cpu_Asm   = 0x0001,
+  tak_Cpu_MMX   = 0x0002,
+  tak_Cpu_SSE   = 0x0004,
+  tak_Cpu_SSE2  = 0x0008,
+  tak_Cpu_SSE3  = 0x0010,
+  tak_Cpu_SSSE3 = 0x0020,
+  tak_Cpu_SSE41 = 0x0040,
+  tak_Cpu_SSE42 = 0x0080,
+  tak_Cpu_AVX   = 0x0100,
+  tak_Cpu_AVX2  = 0x0200,
+  tak_Cpu_Any   =    tak_Cpu_Asm   | tak_Cpu_MMX   | tak_Cpu_SSE
+                  | tak_Cpu_SSE2  | tak_Cpu_SSE3  | tak_Cpu_SSSE3
+                  | tak_Cpu_SSE41 | tak_Cpu_SSE42 | tak_Cpu_AVX
+                  | tak_Cpu_AVX2,
 };
 
 
@@ -104,7 +113,7 @@ enum tak_Cpu {
 /*=== Library ========================================================*/
 
 enum tak_Version {
-  tak_InterfaceVersion = 0x00010001,
+  tak_InterfaceVersion = 0x00020302,
 };
 
 TAK_API TtakResult tak_GetLibraryVersion (TtakInt32 * AVersion,
@@ -118,6 +127,63 @@ enum tak_AudioFormat_DataType {
   tak_AudioFormat_DataType_PCM = 0,
 };
 
+enum tak_AudioFormat_Limits {
+  tak_str_ChannelNumMax = 16,
+};
+
+enum tak_Speaker_Flags {
+  tak_Speaker_Flag_None                  = 0x00000,
+  tak_Speaker_Flag_Front_Left            = 0x00001,
+  tak_Speaker_Flag_Front_Right           = 0x00002,
+  tak_Speaker_Flag_Front_Center          = 0x00004,
+  tak_Speaker_Flag_Low_Frequency         = 0x00008,
+  tak_Speaker_Flag_Back_Left             = 0x00010,
+  tak_Speaker_Flag_Back_Right            = 0x00020,
+  tak_Speaker_Flag_Front_Left_Of_Center  = 0x00040,
+  tak_Speaker_Flag_Front_Right_Of_Center = 0x00080,
+  tak_Speaker_Flag_Back_Center           = 0x00100,
+  tak_Speaker_Flag_Side_Left             = 0x00200,
+  tak_Speaker_Flag_Side_Right            = 0x00400,
+  tak_Speaker_Flag_Top_Center            = 0x00800,
+  tak_Speaker_Flag_Top_Front_Left        = 0x01000,
+  tak_Speaker_Flag_Top_Front_Center      = 0x02000,
+  tak_Speaker_Flag_Top_Front_Right       = 0x04000,
+  tak_Speaker_Flag_Top_Back_Left         = 0x08000,
+  tak_Speaker_Flag_Top_Back_Center       = 0x10000,
+  tak_Speaker_Flag_Top_Back_Right        = 0x20000,
+
+  tak_Speaker_Flag_Max_Supported         = tak_Speaker_Flag_Top_Back_Right,
+  tak_Speaker_Flag_Mask                  =    tak_Speaker_Flag_Max_Supported
+                                           | (tak_Speaker_Flag_Max_Supported - 1),
+  tak_Speaker_Flag_Max                   = 1 << 31,
+};
+
+enum tak_Speaker_Values {
+  tak_Speaker_None                  =  0,
+  tak_Speaker_Front_Left            =  1,
+  tak_Speaker_Front_Right           =  2,
+  tak_Speaker_Front_Center          =  3,
+  tak_Speaker_Low_Frequency         =  4,
+  tak_Speaker_Back_Left             =  5,
+  tak_Speaker_Back_Right            =  6,
+  tak_Speaker_Front_Left_Of_Center  =  7,
+  tak_Speaker_Front_Right_Of_Center =  8,
+  tak_Speaker_Back_Center           =  9,
+  tak_Speaker_Side_Left             = 10,
+  tak_Speaker_Side_Right            = 11,
+  tak_Speaker_Top_Center            = 12,
+  tak_Speaker_Top_Front_Left        = 13,
+  tak_Speaker_Top_Front_Center      = 14,
+  tak_Speaker_Top_Front_Right       = 15,
+  tak_Speaker_Top_Back_Left         = 16,
+  tak_Speaker_Top_Back_Center       = 17,
+  tak_Speaker_Top_Back_Right        = 18,
+
+  tak_Speaker_Max_Supported         = tak_Speaker_Top_Back_Right,
+  tak_Speaker_Min                   = 0,
+  tak_Speaker_Max                   = 63,
+};
+
 typedef struct TtakAudioFormat {
     TtakInt32 DataType;
     TtakInt32 SampleRate;
@@ -125,6 +191,25 @@ typedef struct TtakAudioFormat {
     TtakInt32 ChannelNum;
     TtakInt32 BlockSize;
 } TtakAudioFormat;
+
+typedef char TtakSpeakerAssignment[tak_str_ChannelNumMax];
+
+typedef struct TtakAudioFormatEx {
+    TtakInt32             DataType;
+    TtakInt32             SampleRate;
+    TtakInt32             SampleBits;
+    TtakInt32             ChannelNum;
+    TtakInt32             BlockSize;
+
+    TtakBool              HasExtension;
+    TtakInt32             ValidBitsPerSample;
+    TtakBool              HasSpeakerAssignment;
+    TtakSpeakerAssignment SpeakerAssignment;
+} TtakAudioFormatEx;
+
+
+TAK_API TtakBool tak_GetWaveExtensibleSpeakerMask (TtakAudioFormatEx *  AFormat,
+                                                   TtakUInt32 *         AMask);
 
 
 
@@ -135,9 +220,9 @@ enum tak_CodecNameStringLimits {
   tak_CodecNameSizeMax = 31,
 };
 
-TAK_API TtakResult tak_GetCodecName (TtakInt32 ACodec,
-                                     char *    AName,
-                                     TtakInt32 ANameSize);
+TAK_API TtakResult tak_GetCodecName (TtakInt32       ACodec,
+                                     TtakAnsiChar *  AName,
+                                     TtakInt32       ANameSize);
 
 
 
@@ -207,6 +292,12 @@ typedef struct Ttak_str_StreamInfo {
     TtakAudioFormat      Audio;
 } Ttak_str_StreamInfo;
 
+typedef struct Ttak_str_StreamInfo_V22 {
+    Ttak_str_EncoderInfo Encoder;
+    Ttak_str_SizeInfo    Sizes;
+    TtakAudioFormatEx    Audio;
+} Ttak_str_StreamInfo_V22;
+
 typedef struct Ttak_str_SimpleWaveDataHeader {
     TtakInt32 HeadSize;
     TtakInt32 TailSize;
@@ -217,6 +308,8 @@ typedef struct Ttak_str_MetaEncoderInfo {
     TtakPresets           Preset;
     TtakPresetEvaluations Evaluation;
 } Ttak_str_MetaEncoderInfo;
+
+typedef char Ttak_str_MD5[16];
 
 
 
@@ -313,9 +406,9 @@ TAK_API TtakBool tak_APE_Valid (TtakAPEv2Tag ATag);
 
 TAK_API TtakResult tak_APE_State (TtakAPEv2Tag ATag);
 
-TAK_API TtakResult tak_APE_GetErrorString (TtakResult AError,
-                                           char *     AString,
-                                           TtakInt32  AStringSize);
+TAK_API TtakResult tak_APE_GetErrorString (TtakResult     AError,
+                                           TtakAnsiChar * AString,
+                                           TtakInt32      AStringSize);
 
 TAK_API TtakBool tak_APE_ReadOnly (TtakAPEv2Tag ATag);
 
@@ -328,20 +421,20 @@ TAK_API TtakInt32 tak_APE_GetItemNum (TtakAPEv2Tag ATag);
 
 /*--- Items ---------------------------------------------------------*/
 
-TAK_API TtakResult tak_APE_GetIndexOfKey (TtakAPEv2Tag ATag,
-                                          const char * AKey,
-                                          TtakInt32  * AIdx);
+TAK_API TtakResult tak_APE_GetIndexOfKey (      TtakAPEv2Tag   ATag,
+                                          const TtakAnsiChar * AKey,
+                                                TtakInt32    * AIdx);
 
 TAK_API TtakResult tak_APE_GetItemDesc (TtakAPEv2Tag        ATag,
                                         TtakInt32           AIdx,
                                         TtakAPEv2ItemDesc * ADesc);
 
 
-TAK_API TtakResult tak_APE_GetItemKey (TtakAPEv2Tag  ATag,
-                                       TtakInt32     AIdx,
-                                       char *        AKey,
-                                       TtakInt32     AMaxSize,
-                                       TtakInt32 *   ASize);
+TAK_API TtakResult tak_APE_GetItemKey (TtakAPEv2Tag   ATag,
+                                       TtakInt32      AIdx,
+                                       TtakAnsiChar * AKey,
+                                       TtakInt32      AMaxSize,
+                                       TtakInt32 *    ASize);
 
 TAK_API TtakResult tak_APE_GetItemValue (TtakAPEv2Tag  ATag,
                                          TtakInt32     AIdx,
@@ -349,13 +442,13 @@ TAK_API TtakResult tak_APE_GetItemValue (TtakAPEv2Tag  ATag,
                                          TtakInt32     AMaxSize,
                                          TtakInt32 *   ASize);
 
-TAK_API TtakResult tak_APE_GetTextItemValueAsAnsi (TtakAPEv2Tag  ATag,
-                                                   TtakInt32     AIdx,
-                                                   TtakInt32     AValueIdx,
-                                                   char          AValueSeparator,
-                                                   char *        AValue,
-                                                   TtakInt32     AMaxSize,
-                                                   TtakInt32 *   ASize);
+TAK_API TtakResult tak_APE_GetTextItemValueAsAnsi (TtakAPEv2Tag   ATag,
+                                                   TtakInt32      AIdx,
+                                                   TtakInt32      AValueIdx,
+                                                   TtakAnsiChar   AValueSeparator,
+                                                   TtakAnsiChar * AValue,
+                                                   TtakInt32      AMaxSize,
+                                                   TtakInt32 *    ASize);
 
 
 
@@ -419,10 +512,16 @@ typedef struct TtakSSDResult {
 /*--- Create & Destroy -----------------------------------------------*/
 
 TAK_API TtakSeekableStreamDecoder
-  tak_SSD_Create_FromFile (const char *           ASourcePath,
+  tak_SSD_Create_FromFile (const TtakAnsiChar *   ASourcePath,
                            const TtakSSDOptions * AOptions,
                            TSSDDamageCallback     ADamageCallback,
                            void *                 ACallbackUser);
+
+TAK_API TtakSeekableStreamDecoder
+  tak_SSD_Create_FromFileW (const TtakWideChar *   ASourcePath,
+                            const TtakSSDOptions * AOptions,
+                            TSSDDamageCallback     ADamageCallback,
+                            void *                 ACallbackUser);
 
 TAK_API TtakSeekableStreamDecoder
   tak_SSD_Create_FromStream (const TtakStreamIoInterface * ASourceStream,
@@ -444,14 +543,20 @@ TAK_API TtakResult tak_SSD_State (TtakSeekableStreamDecoder ADecoder);
 TAK_API TtakResult tak_SSD_GetStateInfo (TtakSeekableStreamDecoder ADecoder,
                                          TtakSSDResult *           AInfo);
 
-TAK_API TtakResult tak_SSD_GetErrorString (TtakResult AError,
-                                           char *     AString,
-                                           TtakInt32  AStringSize);
+TAK_API TtakResult tak_SSD_GetErrorString (TtakResult     AError,
+                                           TtakAnsiChar * AString,
+                                           TtakInt32      AStringSize);
 
 TAK_API TtakResult tak_SSD_GetStreamInfo (TtakSeekableStreamDecoder ADecoder,
                                           Ttak_str_StreamInfo *     AInfo);
 
+TAK_API TtakResult tak_SSD_GetStreamInfo_V22 (TtakSeekableStreamDecoder ADecoder,
+                                              Ttak_str_StreamInfo_V22 * AInfo);
+
 TAK_API TtakInt32 tak_SSD_GetFrameSize (TtakSeekableStreamDecoder ADecoder);
+
+TAK_API TtakResult tak_SSD_GetMD5 (TtakSeekableStreamDecoder ADecoder,
+                                   Ttak_str_MD5              AMD5);
 
 
 
