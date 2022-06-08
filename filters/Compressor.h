@@ -61,6 +61,9 @@ private:
     double smoothAverage(double x, double alphaA, double alphaR)
     {
         const double eps = 1e-120;
+        if (std::isnan(m_yA)) {
+            m_yA = m_yR = x;
+        }
         m_yR = std::min(x, alphaR * m_yR + (1.0 - alphaR) * x + eps - eps);
         m_yA = alphaA * m_yA + (1.0 - alphaA) * m_yR + eps - eps;
         return m_yA;
