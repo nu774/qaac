@@ -55,7 +55,7 @@ namespace
   const long MaxPaddingLegnth = 1024 * 1024;
 
   const char LastBlockFlag = '\x80';
-}
+}  // namespace
 
 class FLAC::File::FilePrivate
 {
@@ -187,16 +187,24 @@ bool FLAC::File::save()
 
   // Replace metadata blocks
 
-  for(BlockIterator it = d->blocks.begin(); it != d->blocks.end(); ++it) {
+  MetadataBlock *commentBlock =
+      new UnknownMetadataBlock(MetadataBlock::VorbisComment, d->xiphCommentData);
+  for(BlockIterator it = d->blocks.begin(); it != d->blocks.end();) {
     if((*it)->code() == MetadataBlock::VorbisComment) {
-      // Set the new Vorbis Comment block
+      // Remove the old Vorbis Comment block
       delete *it;
-      d->blocks.erase(it);
-      break;
+      it = d->blocks.erase(it);
+      continue;
     }
+    if(commentBlock && (*it)->code() == MetadataBlock::Picture) {
+      // Set the new Vorbis Comment block before the first picture block
+      d->blocks.insert(it, commentBlock);
+      commentBlock = 0;
+    }
+    ++it;
   }
-
-  d->blocks.append(new UnknownMetadataBlock(MetadataBlock::VorbisComment, d->xiphCommentData));
+  if(commentBlock)
+    d->blocks.append(commentBlock);
 
   // Render data for the metadata blocks
 
@@ -489,6 +497,11 @@ void FLAC::File::scan()
 
     seek(nextBlockOffset);
     const ByteVector header = readBlock(4);
+    if(header.size() != 4) {
+      debug("FLAC::File::scan() -- Failed to read a block header");
+      setValid(false);
+      return;
+    }
 
     // Header format (from spec):
     // <1> Last-metadata-block flag

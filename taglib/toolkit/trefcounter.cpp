@@ -29,12 +29,7 @@
 
 #include "trefcounter.h"
 
-#if defined(HAVE_STD_ATOMIC)
-# include <atomic>
-# define ATOMIC_INT std::atomic_int
-# define ATOMIC_INC(x) (++x)
-# define ATOMIC_DEC(x) (--x)
-#elif defined(HAVE_GCC_ATOMIC)
+#if defined(HAVE_GCC_ATOMIC)
 # define ATOMIC_INT int
 # define ATOMIC_INC(x) __sync_add_and_fetch(&x, 1)
 # define ATOMIC_DEC(x) __sync_sub_and_fetch(&x, 1)
@@ -98,4 +93,4 @@ namespace TagLib
   {
     return static_cast<int>(d->refCount);
   }
-}
+}  // namespace TagLib

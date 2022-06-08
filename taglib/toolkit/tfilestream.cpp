@@ -124,7 +124,7 @@ namespace
   }
 
 #endif  // _WIN32
-}
+}  // namespace
 
 class FileStream::FileStreamPrivate
 {
@@ -250,7 +250,7 @@ void FileStream::insert(const ByteVector &data, unsigned long start, unsigned lo
     writeBlock(data);
     return;
   }
-  else if(data.size() < replace) {
+  if(data.size() < replace) {
     seek(start);
     writeBlock(data);
     removeBlock(start + data.size(), replace - data.size());
@@ -496,7 +496,7 @@ void FileStream::truncate(long length)
   fflush(d->file);
   const int error = ftruncate(fileno(d->file), length);
   if(error != 0)
-    debug("FileStream::truncate() -- Coundn't truncate the file.");
+    debug("FileStream::truncate() -- Couldn't truncate the file.");
 
 #endif
 }

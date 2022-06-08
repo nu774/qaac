@@ -28,7 +28,7 @@
 using namespace TagLib;
 
 
-PropertyMap::PropertyMap() : SimplePropertyMap()
+PropertyMap::PropertyMap()
 {
 }
 
@@ -117,6 +117,12 @@ PropertyMap &PropertyMap::merge(const PropertyMap &other)
   return *this;
 }
 
+const StringList PropertyMap::value(const String &key,
+                                    const StringList &defaultValue) const
+{
+  return SimplePropertyMap::value(key.upper(), defaultValue);
+}
+
 const StringList &PropertyMap::operator[](const String &key) const
 {
   return SimplePropertyMap::operator[](key.upper());
@@ -177,3 +183,12 @@ const StringList &PropertyMap::unsupportedData() const
 {
   return unsupported;
 }
+
+#ifdef _MSC_VER
+// When building with shared libraries and tests, MSVC will fail with
+// "already defined in test_opus.obj" as soon as operator[] of
+// Ogg::FieldListMap is used because this will instantiate the same template
+// Map<String, StringList>. Therefore this template is instantiated here
+// and declared extern in the headers using it.
+template class TagLib::Map<TagLib::String, TagLib::StringList>;
+#endif

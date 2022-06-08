@@ -76,8 +76,7 @@ ByteVector ID3v1::StringHandler::render(const String &s) const
 {
   if(s.isLatin1())
     return s.data(String::Latin1);
-  else
-    return ByteVector();
+  return ByteVector();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,13 +84,11 @@ ByteVector ID3v1::StringHandler::render(const String &s) const
 ////////////////////////////////////////////////////////////////////////////////
 
 ID3v1::Tag::Tag() :
-  TagLib::Tag(),
   d(new TagPrivate())
 {
 }
 
 ID3v1::Tag::Tag(File *file, long tagOffset) :
-  TagLib::Tag(),
   d(new TagPrivate())
 {
   d->file = file;

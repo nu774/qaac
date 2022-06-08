@@ -54,7 +54,17 @@ namespace
 
   const long MinPaddingSize = 1024;
   const long MaxPaddingSize = 1024 * 1024;
-}
+
+  bool contains(const char **a, const ByteVector &v)
+  {
+    for(int i = 0; a[i]; i++)
+    {
+      if(v == a[i])
+        return true;
+    }
+    return false;
+  }
+}  // namespace
 
 class ID3v2::Tag::TagPrivate
 {
@@ -110,14 +120,12 @@ String Latin1StringHandler::parse(const ByteVector &data) const
 ////////////////////////////////////////////////////////////////////////////////
 
 ID3v2::Tag::Tag() :
-  TagLib::Tag(),
   d(new TagPrivate())
 {
   d->factory = FrameFactory::instance();
 }
 
 ID3v2::Tag::Tag(File *file, long tagOffset, const FrameFactory *factory) :
-  TagLib::Tag(),
   d(new TagPrivate())
 {
   d->factory = factory;
@@ -177,8 +185,10 @@ String ID3v2::Tag::genre() const
   // should be separated by " / " instead of " ".  For the moment to keep
   // the behavior the same as released versions it is being left with " ".
 
-  if(d->frameListMap["TCON"].isEmpty() ||
-     !dynamic_cast<TextIdentificationFrame *>(d->frameListMap["TCON"].front()))
+  const FrameList &tconFrames = d->frameListMap["TCON"];
+  TextIdentificationFrame *f;
+  if(tconFrames.isEmpty() ||
+     !(f = dynamic_cast<TextIdentificationFrame *>(tconFrames.front())))
   {
     return String();
   }
@@ -188,9 +198,6 @@ String ID3v2::Tag::genre() const
   // Here was assume that if an ID3v1 string is present that it should be
   // appended to the genre string.  Multiple fields will be appended as the
   // string is built.
-
-  TextIdentificationFrame *f = static_cast<TextIdentificationFrame *>(
-    d->frameListMap["TCON"].front());
 
   StringList fields = f->fieldList();
 
@@ -479,13 +486,13 @@ ByteVector ID3v2::Tag::render() const
 void ID3v2::Tag::downgradeFrames(FrameList *frames, FrameList *newFrames) const
 {
 #ifdef NO_ITUNES_HACKS
-  const char *unsupportedFrames[] = {
+  static const char *unsupportedFrames[] = {
     "ASPI", "EQU2", "RVA2", "SEEK", "SIGN", "TDRL", "TDTG",
     "TMOO", "TPRO", "TSOA", "TSOT", "TSST", "TSOP", 0
   };
 #else
   // iTunes writes and reads TSOA, TSOT, TSOP to ID3v2.3.
-  const char *unsupportedFrames[] = {
+  static const char *unsupportedFrames[] = {
     "ASPI", "EQU2", "RVA2", "SEEK", "SIGN", "TDRL", "TDTG",
     "TMOO", "TPRO", "TSST", 0
   };
@@ -494,60 +501,62 @@ void ID3v2::Tag::downgradeFrames(FrameList *frames, FrameList *newFrames) const
   ID3v2::TextIdentificationFrame *frameTDRC = 0;
   ID3v2::TextIdentificationFrame *frameTIPL = 0;
   ID3v2::TextIdentificationFrame *frameTMCL = 0;
+  ID3v2::TextIdentificationFrame *frameTCON = 0;
+
   for(FrameList::ConstIterator it = d->frameList.begin(); it != d->frameList.end(); it++) {
     ID3v2::Frame *frame = *it;
     ByteVector frameID = frame->header()->frameID();
-    for(int i = 0; unsupportedFrames[i]; i++) {
-      if(frameID == unsupportedFrames[i]) {
-        debug("A frame that is not supported in ID3v2.3 \'"
-          + String(frameID) + "\' has been discarded");
-        frame = 0;
-        break;
-      }
+
+    if(contains(unsupportedFrames, frameID))
+    {
+      debug("A frame that is not supported in ID3v2.3 \'" + String(frameID) +
+            "\' has been discarded");
+      continue;
     }
-    if(frame && frameID == "TDOR") {
+
+    if(frameID == "TDOR")
       frameTDOR = dynamic_cast<ID3v2::TextIdentificationFrame *>(frame);
-      frame = 0;
-    }
-    if(frame && frameID == "TDRC") {
+    else if(frameID == "TDRC")
       frameTDRC = dynamic_cast<ID3v2::TextIdentificationFrame *>(frame);
-      frame = 0;
-    }
-    if(frame && frameID == "TIPL") {
+    else if(frameID == "TIPL")
       frameTIPL = dynamic_cast<ID3v2::TextIdentificationFrame *>(frame);
-      frame = 0;
-    }
-    if(frame && frameID == "TMCL") {
+    else if(frameID == "TMCL")
       frameTMCL = dynamic_cast<ID3v2::TextIdentificationFrame *>(frame);
-      frame = 0;
-    }
-    if(frame) {
+    else if(frame && frameID == "TCON")
+      frameTCON = dynamic_cast<ID3v2::TextIdentificationFrame *>(frame);
+    else
       frames->append(frame);
-    }
   }
+
   if(frameTDOR) {
     String content = frameTDOR->toString();
+
     if(content.size() >= 4) {
-      ID3v2::TextIdentificationFrame *frameTORY = new ID3v2::TextIdentificationFrame("TORY", String::Latin1);
+      ID3v2::TextIdentificationFrame *frameTORY =
+          new ID3v2::TextIdentificationFrame("TORY", String::Latin1);
       frameTORY->setText(content.substr(0, 4));
       frames->append(frameTORY);
       newFrames->append(frameTORY);
     }
   }
+
   if(frameTDRC) {
     String content = frameTDRC->toString();
     if(content.size() >= 4) {
-      ID3v2::TextIdentificationFrame *frameTYER = new ID3v2::TextIdentificationFrame("TYER", String::Latin1);
+      ID3v2::TextIdentificationFrame *frameTYER =
+          new ID3v2::TextIdentificationFrame("TYER", String::Latin1);
       frameTYER->setText(content.substr(0, 4));
       frames->append(frameTYER);
       newFrames->append(frameTYER);
       if(content.size() >= 10 && content[4] == '-' && content[7] == '-') {
-        ID3v2::TextIdentificationFrame *frameTDAT = new ID3v2::TextIdentificationFrame("TDAT", String::Latin1);
+        ID3v2::TextIdentificationFrame *frameTDAT =
+            new ID3v2::TextIdentificationFrame("TDAT", String::Latin1);
         frameTDAT->setText(content.substr(8, 2) + content.substr(5, 2));
         frames->append(frameTDAT);
         newFrames->append(frameTDAT);
         if(content.size() >= 16 && content[10] == 'T' && content[13] == ':') {
-          ID3v2::TextIdentificationFrame *frameTIME = new ID3v2::TextIdentificationFrame("TIME", String::Latin1);
+          ID3v2::TextIdentificationFrame *frameTIME =
+              new ID3v2::TextIdentificationFrame("TIME", String::Latin1);
           frameTIME->setText(content.substr(11, 2) + content.substr(14, 2));
           frames->append(frameTIME);
           newFrames->append(frameTIME);
@@ -555,9 +564,13 @@ void ID3v2::Tag::downgradeFrames(FrameList *frames, FrameList *newFrames) const
       }
     }
   }
+
   if(frameTIPL || frameTMCL) {
-    ID3v2::TextIdentificationFrame *frameIPLS = new ID3v2::TextIdentificationFrame("IPLS", String::Latin1);
+    ID3v2::TextIdentificationFrame *frameIPLS =
+      new ID3v2::TextIdentificationFrame("IPLS", String::Latin1);
+
     StringList people;
+
     if(frameTMCL) {
       StringList v24People = frameTMCL->fieldList();
       for(unsigned int i = 0; i + 1 < v24People.size(); i += 2) {
@@ -572,9 +585,38 @@ void ID3v2::Tag::downgradeFrames(FrameList *frames, FrameList *newFrames) const
         people.append(v24People[i+1]);
       }
     }
+
     frameIPLS->setText(people);
     frames->append(frameIPLS);
     newFrames->append(frameIPLS);
+  }
+
+  if(frameTCON) {
+    StringList genres = frameTCON->fieldList();
+    String combined;
+    String genreText;
+    const bool hasMultipleGenres = genres.size() > 1;
+
+    // If there are multiple genres, add them as multiple references to ID3v1
+    // genres if such a reference exists. The first genre for which no ID3v1
+    // genre number exists can be finally added as a refinement.
+    for(StringList::ConstIterator it = genres.begin(); it != genres.end(); ++it) {
+      bool ok = false;
+      int number = it->toInt(&ok);
+      if((ok && number >= 0 && number <= 255) || *it == "RX" || *it == "CR")
+        combined += '(' + *it + ')';
+      else if(hasMultipleGenres && (number = ID3v1::genreIndex(*it)) != 255)
+        combined += '(' + String::number(number) + ')';
+      else if(genreText.isEmpty())
+        genreText = *it;
+    }
+    if(!genreText.isEmpty())
+      combined += genreText;
+
+    frameTCON = new ID3v2::TextIdentificationFrame("TCON", String::Latin1);
+    frameTCON->setText(combined);
+    frames->append(frameTCON);
+    newFrames->append(frameTCON);
   }
 }
 

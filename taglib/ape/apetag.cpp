@@ -70,7 +70,7 @@ namespace
 
     return true;
   }
-}
+}  // namespace
 
 class APE::Tag::TagPrivate
 {
@@ -91,13 +91,11 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 
 APE::Tag::Tag() :
-  TagLib::Tag(),
   d(new TagPrivate())
 {
 }
 
 APE::Tag::Tag(TagLib::File *file, long footerLocation) :
-  TagLib::Tag(),
   d(new TagPrivate())
 {
   d->file = file;
@@ -118,51 +116,44 @@ ByteVector APE::Tag::fileIdentifier()
 
 String APE::Tag::title() const
 {
-  if(d->itemListMap["TITLE"].isEmpty())
-    return String();
-  return d->itemListMap["TITLE"].values().toString();
+  Item value = d->itemListMap.value("TITLE");
+  return value.isEmpty() ? String() : value.values().toString();
 }
 
 String APE::Tag::artist() const
 {
-  if(d->itemListMap["ARTIST"].isEmpty())
-    return String();
-  return d->itemListMap["ARTIST"].values().toString();
+  Item value = d->itemListMap.value("ARTIST");
+  return value.isEmpty() ? String() : value.values().toString();
 }
 
 String APE::Tag::album() const
 {
-  if(d->itemListMap["ALBUM"].isEmpty())
-    return String();
-  return d->itemListMap["ALBUM"].values().toString();
+  Item value = d->itemListMap.value("ALBUM");
+  return value.isEmpty() ? String() : value.values().toString();
 }
 
 String APE::Tag::comment() const
 {
-  if(d->itemListMap["COMMENT"].isEmpty())
-    return String();
-  return d->itemListMap["COMMENT"].values().toString();
+  Item value = d->itemListMap.value("COMMENT");
+  return value.isEmpty() ? String() : value.values().toString();
 }
 
 String APE::Tag::genre() const
 {
-  if(d->itemListMap["GENRE"].isEmpty())
-    return String();
-  return d->itemListMap["GENRE"].values().toString();
+  Item value = d->itemListMap.value("GENRE");
+  return value.isEmpty() ? String() : value.values().toString();
 }
 
 unsigned int APE::Tag::year() const
 {
-  if(d->itemListMap["YEAR"].isEmpty())
-    return 0;
-  return d->itemListMap["YEAR"].toString().toInt();
+  Item value = d->itemListMap.value("YEAR");
+  return value.isEmpty() ? 0 : value.toString().toInt();
 }
 
 unsigned int APE::Tag::track() const
 {
-  if(d->itemListMap["TRACK"].isEmpty())
-    return 0;
-  return d->itemListMap["TRACK"].toString().toInt();
+  Item value = d->itemListMap.value("TRACK");
+  return value.isEmpty() ? 0 : value.toString().toInt();
 }
 
 void APE::Tag::setTitle(const String &s)
@@ -210,14 +201,18 @@ namespace
 {
   // conversions of tag keys between what we use in PropertyMap and what's usual
   // for APE tags
-  //                                    usual,         APE
-  const char *keyConversions[][2] =  {{"TRACKNUMBER", "TRACK"       },
-                                      {"DATE",        "YEAR"        },
-                                      {"ALBUMARTIST", "ALBUM ARTIST"},
-                                      {"DISCNUMBER",  "DISC"        },
-                                      {"REMIXER",     "MIXARTIST"   }};
+  //                usual,         APE
+  const std::pair<const char *, const char *> keyConversions[] = {
+    std::make_pair("TRACKNUMBER", "TRACK"),
+    std::make_pair("DATE",        "YEAR"),
+    std::make_pair("ALBUMARTIST", "ALBUM ARTIST"),
+    std::make_pair("DISCNUMBER",  "DISC"),
+    std::make_pair("REMIXER",     "MIXARTIST"),
+    std::make_pair("RELEASESTATUS", "MUSICBRAINZ_ALBUMSTATUS"),
+    std::make_pair("RELEASETYPE", "MUSICBRAINZ_ALBUMTYPE"),
+  };
   const size_t keyConversionsSize = sizeof(keyConversions) / sizeof(keyConversions[0]);
-}
+}  // namespace
 
 PropertyMap APE::Tag::properties() const
 {
@@ -233,8 +228,8 @@ PropertyMap APE::Tag::properties() const
     else {
       // Some tags need to be handled specially
       for(size_t i = 0; i < keyConversionsSize; ++i) {
-        if(tagName == keyConversions[i][1])
-          tagName = keyConversions[i][0];
+        if(tagName == keyConversions[i].second)
+          tagName = keyConversions[i].first;
       }
       properties[tagName].append(it->second.toStringList());
     }
@@ -255,9 +250,9 @@ PropertyMap APE::Tag::setProperties(const PropertyMap &origProps)
 
   // see comment in properties()
   for(size_t i = 0; i < keyConversionsSize; ++i)
-    if(properties.contains(keyConversions[i][0])) {
-      properties.insert(keyConversions[i][1], properties[keyConversions[i][0]]);
-      properties.erase(keyConversions[i][0]);
+    if(properties.contains(keyConversions[i].first)) {
+      properties.insert(keyConversions[i].second, properties[keyConversions[i].first]);
+      properties.erase(keyConversions[i].first);
     }
 
   // first check if tags need to be removed completely
@@ -417,7 +412,12 @@ void APE::Tag::parse(const ByteVector &data)
     }
 
     const unsigned int keyLength = nullPos - pos - 8;
-    const unsigned int valLegnth = data.toUInt(pos, false);
+    const unsigned int valLength = data.toUInt(pos, false);
+
+    if(valLength >= data.size() || pos > data.size() - valLength) {
+      debug("APE::Tag::parse() - Invalid val length. Stopped parsing.");
+      return;
+    }
 
     if(keyLength >= MinKeyLength
       && keyLength <= MaxKeyLength
@@ -432,6 +432,6 @@ void APE::Tag::parse(const ByteVector &data)
       debug("APE::Tag::parse() - Skipped an item due to an invalid key.");
     }
 
-    pos += keyLength + valLegnth + 9;
+    pos += keyLength + valLength + 9;
   }
 }

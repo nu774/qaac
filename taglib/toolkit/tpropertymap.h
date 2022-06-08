@@ -29,6 +29,11 @@
 #include "tmap.h"
 #include "tstringlist.h"
 
+#ifdef _MSC_VER
+// Explained at end of tpropertymap.cpp
+extern template class TAGLIB_EXPORT TagLib::Map<TagLib::String, TagLib::StringList>;
+#endif
+
 namespace TagLib {
 
   typedef Map<String,StringList> SimplePropertyMap;
@@ -68,6 +73,7 @@ namespace TagLib {
    *  - ALBUMSORT
    *  - ARTISTSORT
    *  - ALBUMARTISTSORT
+   *  - COMPOSERSORT
    *
    * Credits:
    *
@@ -75,7 +81,7 @@ namespace TagLib {
    *  - LYRICIST
    *  - CONDUCTOR
    *  - REMIXER
-   *  - PERFORMER:<XXXX>
+   *  - PERFORMER:\<XXXX>
    *
    * Other tags:
    *
@@ -90,12 +96,16 @@ namespace TagLib {
    *  - LABEL
    *  - CATALOGNUMBER
    *  - BARCODE
+   *  - RELEASECOUNTRY
+   *  - RELEASESTATUS
+   *  - RELEASETYPE
    *
    * MusicBrainz identifiers:
    *
    *  - MUSICBRAINZ_TRACKID
    *  - MUSICBRAINZ_ALBUMID
    *  - MUSICBRAINZ_RELEASEGROUPID
+   *  - MUSICBRAINZ_RELEASETRACKID
    *  - MUSICBRAINZ_WORKID
    *  - MUSICBRAINZ_ARTISTID
    *  - MUSICBRAINZ_ALBUMARTISTID
@@ -182,6 +192,15 @@ namespace TagLib {
     PropertyMap &merge(const PropertyMap &other);
 
     /*!
+     * Returns the value associated with \a key.
+     *
+     * If the map does not contain \a key, it returns defaultValue.
+     * If no defaultValue is specified, it returns an empty string list.
+     */
+    const StringList value(const String &key,
+                           const StringList &defaultValue = StringList()) const;
+
+    /*!
      * Returns a reference to the value associated with \a key.
      *
      * \note: If \a key is not contained in the map, an empty
@@ -199,12 +218,12 @@ namespace TagLib {
     StringList &operator[](const String &key);
 
     /*!
-     * Returns true if and only if \other has the same contents as this map.
+     * Returns true if and only if \a other has the same contents as this map.
      */
     bool operator==(const PropertyMap &other) const;
 
     /*!
-     * Returns false if and only \other has the same contents as this map.
+     * Returns false if and only \a other has the same contents as this map.
      */
     bool operator!=(const PropertyMap &other) const;
 
