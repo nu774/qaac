@@ -85,7 +85,6 @@ static /*inline*/ int32_t lead( int32_t m )
 			break;
 		c >>= 1;
 	}
-	{
 	return (j);
 }
 
