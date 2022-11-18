@@ -9,7 +9,9 @@
 namespace flac {
     template <typename T> void try__(T expr, const char *msg)
     {
-        if (!expr) throw std::runtime_error(msg);
+        if (!expr) {
+            throw std::runtime_error(msg);
+        }
     }
 
     inline void want(bool expr)
@@ -87,6 +89,7 @@ void FLACSource::seekTo(int64_t count)
     if (count == m_position)
         return;
     m_buffer.reset();
+    m_giveup = false;
     TRYFL(m_module.stream_decoder_seek_absolute(m_decoder.get(), count));
     m_position = count;
 }
