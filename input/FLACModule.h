@@ -11,6 +11,7 @@ private:
         load(L"libFLAC_dynamic.dll");
         if (!loaded()) load(L"libFLAC.dll");
         if (!loaded()) load(L"libFLAC-8.dll");
+        if (!loaded()) load(L"libFLAC-12.dll");
     }
     FLACModule(const FLACModule&);
     FLACModule& operator=(const FLACModule&);
