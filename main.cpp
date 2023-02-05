@@ -1147,7 +1147,7 @@ void load_metadata_files(Options *opts)
     for (auto it = opts->ftagopts.begin(); it != opts->ftagopts.end(); ++it) {
         try {
             opts->tagopts[it->first] =
-                strutil::w2us(misc::loadTextFile(it->second));
+                strutil::w2us(misc::loadTextFile(it->second, opts->textcp));
         } catch (const std::exception &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }
