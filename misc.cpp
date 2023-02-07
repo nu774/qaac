@@ -9,69 +9,102 @@
 #include <shlobj.h>
 #pragma warning(pop)
 #include <mlang.h>
+#include <uchardet.h>
+#include <regex>
 
 namespace misc
 {
-    std::wstring loadTextFile(const std::wstring &path, uint32_t codepage)
+    int getCodePageFromCharset(const char* charset)
     {
-        IStream *stream;
-        HRESULT hr = SHCreateStreamOnFileW(path.c_str(),
-                                           STGM_READ | STGM_SHARE_DENY_WRITE,
-                                           &stream);
-        if (FAILED(hr)) win32::throw_error(path, hr);
-        auto release_func = [](IUnknown *x) { x->Release(); };
-        std::shared_ptr<IStream> streamPtr(stream, release_func);
+        std::cmatch match;
+        std::regex windowscp("(?:IBM|CP|WINDOWS)-?(\\d+)");
+        std::regex iso8859("ISO-8859-(\\d+)");
+        std::regex iso2022("ISO-2022-(\\w+)");
+        std::regex euc("EUC-(\\w+)");
+        std::regex mac("MAC-(\\w+)");
 
-        LARGE_INTEGER li = {{ 0 }};
-        ULARGE_INTEGER ui;
-        HR(stream->Seek(li, STREAM_SEEK_END, &ui));
-        if (!ui.QuadPart)
-            return L"";
-        else if (ui.QuadPart > 0x100000) {
+        if (!charset)
+            return -1;
+        if (std::strcmp(charset, "ASCII") == 0)
+            return 20127;
+        if (std::strcmp(charset, "UTF-8") == 0)
+            return 65001;
+        else if (std::strcmp(charset, "UTF-16") == 0)
+            return 0;
+        else if (std::strcmp(charset, "SHIFT_JIS") == 0)
+            return 932;
+        else if (std::strcmp(charset, "BIG5") == 0)
+            return 950;
+        else if (std::strcmp(charset, "KOI8-R") == 0)
+            return 20866;
+        else if (std::strcmp(charset, "HZ-GB-2312") == 0)
+            return 52936;
+        else if (std::strcmp(charset, "GB18030") == 0)
+            return 54936;
+        else if (std::regex_match(charset, match, windowscp))
+            return atoi(match[1].str().c_str());
+        else if (std::regex_match(charset, match, iso8859))
+            return 28590 + atoi(match[1].str().c_str());
+        else if (std::regex_match(charset, match, iso2022)) {
+            if (match[1].str() == "JP")
+                return 50220;
+            if (match[1].str() == "KR")
+                return 50225;
+            if (match[1].str() == "CN")
+                return 50227;
+        }
+        else if (std::regex_match(charset, match, euc)) {
+            if (match[1].str() == "JP")
+                return 51932;
+            if (match[1].str() == "KR")
+                return 51949;
+            if (match[1].str() == "TW")
+                return 51950;
+        }
+        else if (std::regex_match(charset, match, mac)) {
+            if (match[1].str() == "CYRILLIC")
+                return 10007;
+            if (match[1].str() == "CENTRALEUROPE")
+                return 10029;
+        }
+        return -1;
+    }
+
+    std::wstring loadTextFile(const std::wstring &path, int codepage)
+    {
+        auto fp = std::shared_ptr<FILE>(win32::wfopenx(path.c_str(), L"rb"), std::fclose);
+        int64_t fileSize = _filelengthi64(fileno(fp.get()));
+        if (fileSize > 0x100000) {
             throw std::runtime_error(strutil::w2us(path + L": file too big"));
         }
-        size_t fileSize = ui.LowPart;
-        HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
-
-        IMultiLanguage2 *mlang;
-        HR(CoCreateInstance(CLSID_CMultiLanguage, 0, CLSCTX_INPROC_SERVER,
-                    IID_IMultiLanguage2, (void**)(&mlang)));
-        std::shared_ptr<IMultiLanguage2> mlangPtr(mlang, release_func);
-
-        if (!codepage) {
-            DetectEncodingInfo encoding[5];
-            INT nscores = 5;
-            HR(mlang->DetectCodepageInIStream(0, GetACP(),
-                                              stream, encoding, &nscores));
-            codepage = encoding[0].nCodePage;
-            for (size_t i = 0; i < nscores; ++i)
-                if (encoding[i].nCodePage == 65001) {
-                    codepage = 65001;
-                    break;
-                }
-            HR(stream->Seek(li, STREAM_SEEK_SET, &ui));
-        }
         std::vector<char> ibuf(fileSize);
-        ULONG nread;
-        HR(stream->Read(&ibuf[0], ibuf.size(), &nread));
-        if (fileSize >= 3 && std::memcmp(&ibuf[0], "\xef\xbb\xbf", 3) == 0)
-            codepage = 65001; // UTF-8
-        else if (fileSize >= 2 && std::memcmp(&ibuf[0], "\xff\xfe", 2) == 0)
-            codepage = 1200;  // UTF-16LE
-        else if (fileSize >= 2 && std::memcmp(&ibuf[0], "\xfe\xff", 2) == 0)
-            codepage = 1201;  // UTF-16BE
-
-        DWORD ctx = 0;
-        UINT size = ibuf.size(), cnt;
-        HR(mlang->ConvertStringToUnicode(&ctx, codepage,
-                                         &ibuf[0], &size, 0, &cnt));
-        std::vector<wchar_t> obuf(cnt);
-        size = ibuf.size();
-        HR(mlang->ConvertStringToUnicode(&ctx, codepage,
-                                         &ibuf[0], &size, &obuf[0], &cnt));
+        int n = std::fread(ibuf.data(), 1, fileSize, fp.get());
+        ibuf.resize(n);
+        if (!codepage) {
+            auto detector = std::shared_ptr<uchardet>(uchardet_new(), uchardet_delete);
+            if (uchardet_handle_data(detector.get(), ibuf.data(), ibuf.size())) {
+                throw std::runtime_error(strutil::w2us(path + L": uchardet_handle_data() failed"));
+            }
+            uchardet_data_end(detector.get());
+            auto charset = uchardet_get_charset(detector.get());
+            if (charset < 0)
+                throw std::runtime_error(strutil::w2us(path + L": cannot detect code page"));
+            codepage = getCodePageFromCharset(charset);
+            if (codepage < 0)
+                throw std::runtime_error(strutil::w2us(path + L": unknown charset"));
+        }
+        std::vector<wchar_t> obuf;
+        if (codepage == 0) {
+            obuf.resize(ibuf.size() / sizeof(wchar_t));
+            std::memcpy(obuf.data(), ibuf.data(), ibuf.size());
+        } else {
+            int nc = MultiByteToWideChar(codepage, 0, ibuf.data(), ibuf.size(), nullptr, 0);
+            obuf.resize(nc);
+            MultiByteToWideChar(codepage, 0, ibuf.data(), ibuf.size(), obuf.data(), obuf.size());
+        }
         obuf.push_back(0);
         // chop off BOM
-        size_t bom = obuf.size() && obuf[0] == 0xfeff;
+        size_t bom = (obuf.size() && obuf[0] == 0xfeff) ? 1 : 0;
         return strutil::normalize_crlf(&obuf[bom], L"\n");
     }
 

@@ -21,6 +21,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "refalac", "refalac\refalac.
 		{86A064E2-C81B-4EEE-8BE0-A39A2E7C7C76} = {86A064E2-C81B-4EEE-8BE0-A39A2E7C7C76}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "uchardet", "uchardet\uchardet.vcxproj", "{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -77,8 +79,19 @@ Global
 		{B5F76096-121B-4B47-BD28-1702B689F693}.Release|Win32.Build.0 = Release|Win32
 		{B5F76096-121B-4B47-BD28-1702B689F693}.Release|x64.ActiveCfg = Release|x64
 		{B5F76096-121B-4B47-BD28-1702B689F693}.Release|x64.Build.0 = Release|x64
+		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Debug|Win32.Build.0 = Debug|Win32
+		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Debug|x64.ActiveCfg = Debug|x64
+		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Debug|x64.Build.0 = Debug|x64
+		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Release|Win32.ActiveCfg = Release|Win32
+		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Release|Win32.Build.0 = Release|Win32
+		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Release|x64.ActiveCfg = Release|x64
+		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AF093D72-181F-4265-993F-B51D0DC282E3}
 	EndGlobalSection
 EndGlobal

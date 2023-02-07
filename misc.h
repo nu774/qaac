@@ -13,7 +13,7 @@ namespace misc {
     typedef std::pair<std::wstring, double> chapter_t;
     typedef std::complex<float> complex_t;
 
-    std::wstring loadTextFile(const std::wstring &path, uint32_t codepage=0);
+    std::wstring loadTextFile(const std::wstring &path, int codepage=0);
 
     std::wstring generateFileName(const std::wstring &spec,
                                   const std::map<std::string, std::string>&tag);

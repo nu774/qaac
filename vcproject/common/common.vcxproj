@@ -44,7 +44,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4018;4244;4267;4838;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;..\..\uchardet;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -112,6 +112,9 @@
     </ProjectReference>
     <ProjectReference Include="..\taglib\taglib.vcxproj">
       <Project>{33d0f51e-2d54-4c00-a448-380af43bc782}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\uchardet\uchardet.vcxproj">
+      <Project>{0805c2a4-8877-4f9a-a70a-cea5d6b5efc4}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
