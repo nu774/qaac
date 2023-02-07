@@ -666,7 +666,7 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->artwork_files.push_back(getopt::optarg);
         else if (ch == 'cpat')
             this->copy_artwork = true;
-        else if (std::find(tag_keys, tag_keys_end, ch) != tag_keys_end) {
+        else if (std::find(tag_keys, tag_keys_end, uint32_t(ch)) != tag_keys_end) {
             if (ch == Tag::kLyrics)
                 this->ftagopts[ch] = getopt::optarg;
             else if (ch != Tag::kCompilation)
