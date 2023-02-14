@@ -216,6 +216,8 @@ namespace ID3 {
                 auto k = fields.begin()->toWString();
                 auto v = (++fields.begin())->toWString();
                 tags[strutil::w2us(k)] = strutil::w2us(v);
+            } else if (sID == "TCON") {
+                tags["genre"] = strutil::w2us(tag->genre().toWString());
             } else if (sID == "APIC") {
                 auto picframe =
                     dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
