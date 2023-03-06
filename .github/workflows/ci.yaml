@@ -1,0 +1,20 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+    build:
+        strategy:
+            matrix:
+                platform: [Win32, x64]
+        runs-on: windows-latest
+        env:
+            ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+            - name: Add MSBuild to PATH
+              uses: microsoft/setup-msbuild@v1.3.1
+            - name: Build
+              run: |
+                  MSBuild.exe vcproject/qaac.sln /p:Configuration=Release /p:Platform=${{ matrix.platform }}
