@@ -58,7 +58,7 @@ struct MP4V2_EXPORT Option
         //! indicates exactly 1 argument follow option
         REQUIRED_ARG,
         //! indicates 0 or 1 arguments follow option
-        OPTIONAL_ARG,
+        OPTIONAL_ARG
     };
 
     //! contains the option name without leading double-dash

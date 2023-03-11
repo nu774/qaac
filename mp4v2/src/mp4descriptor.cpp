@@ -137,7 +137,7 @@ void MP4Descriptor::ReadProperties(MP4File& file,
             } else {
                 log.errorf("%s: \"%s\": Overran descriptor, tag %u data size %u property %u",
                            __FUNCTION__, file.GetFilename().c_str(), m_tag, m_size, i);
-                throw new Exception("overran descriptor",__FILE__, __LINE__, __FUNCTION__);
+                throw new EXCEPTION("overran descriptor");
             }
         }
     }

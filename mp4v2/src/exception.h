@@ -29,9 +29,18 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class MP4V2_EXPORT Exception
+#ifdef NDEBUG
+#   define EXCEPTION(message) mp4v2::impl::Exception(message)
+#   define PLATFORM_EXCEPTION(message, errno) mp4v2::impl::PlatformException(message, errno)
+#else
+#   define EXCEPTION(message) mp4v2::impl::Exception(message, __FILE__, __LINE__, __FUNCTION__)
+#   define PLATFORM_EXCEPTION(message, errno) mp4v2::impl::PlatformException(message, errno, __FILE__, __LINE__, __FUNCTION__)
+#endif
+
+class Exception
 {
 public:
+    explicit Exception( const string&   what_ );
     explicit Exception( const string&   what_,
                         const char      *file_,
                         int             line_,
@@ -47,9 +56,11 @@ public:
     const string        function;
 };
 
-class MP4V2_EXPORT PlatformException : public Exception
+class PlatformException : public Exception
 {
 public:
+    explicit PlatformException( const string&   what_,
+                                int             errno_ );
     explicit PlatformException( const string&   what_,
                                 int             errno_,
                                 const char      *file_,

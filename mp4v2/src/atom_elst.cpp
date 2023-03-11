@@ -90,11 +90,14 @@ void MP4ElstAtom::BeginWrite()
     MP4Integer6432Property* p1 =
         (MP4Integer6432Property*)pTable->GetProperty(1);
 
-    if (p0->GetValue() > 0xffffffff || p1->GetValue() > 0xffffffff)
-    {
+    if (p0->GetValue() > 0xffffffff || p1->GetValue() > 0xffffffff) {
         SetVersion(1);
         p0->Use64Bit(true);
         p1->Use64Bit(true);
+    } else {
+        SetVersion(0);
+        p0->Use64Bit(false);
+        p1->Use64Bit(false);
     }
     MP4Atom::BeginWrite();
 }

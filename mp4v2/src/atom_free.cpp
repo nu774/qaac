@@ -39,13 +39,10 @@ void MP4FreeAtom::Read()
 void MP4FreeAtom::Write()
 {
     BeginWrite();
-#if 1
-    for (uint64_t ix = 0; ix < GetSize(); ix++) {
-        m_File.WriteUInt8(0);
+    static uint8_t freebuf[1024];
+    for (uint64_t ix = 0; ix < GetSize(); ix += sizeof(freebuf)) {
+        m_File.WriteBytes(freebuf, min(GetSize() - ix, (uint64_t)sizeof(freebuf)));
     }
-#else
-    m_File.SetPosition(m_File.GetPosition() + GetSize());
-#endif
     FinishWrite();
 }
 

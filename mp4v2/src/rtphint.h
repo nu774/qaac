@@ -53,7 +53,7 @@ protected:
     MP4RtpPacket& m_packet;
 };
 
-MP4ARRAY_DECL(MP4RtpData, MP4RtpData*)
+typedef MP4Array<MP4RtpData*> MP4RtpDataArray;
 
 class MP4RtpNullData : public MP4RtpData {
 public:
@@ -181,7 +181,7 @@ protected:
     MP4RtpDataArray     m_rtpData;
 };
 
-MP4ARRAY_DECL(MP4RtpPacket, MP4RtpPacket*)
+typedef MP4Array<MP4RtpPacket*> MP4RtpPacketArray;
 
 class MP4RtpHint : public MP4Container {
 public:

@@ -515,7 +515,7 @@ enum LanguageCode {
     ILC_ZUL,
     ILC_ZUN,
     ILC_ZXX,
-    ILC_ZZA,
+    ILC_ZZA
 };
 
 typedef Enum<LanguageCode,ILC_UNDEFINED> EnumLanguageCode;

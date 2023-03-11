@@ -74,19 +74,28 @@ public:
     // file ops
     ///////////////////////////////////////////////////////////////////////////
 
-    void Create( const char*            fileName,
-                 uint32_t               flags,
-                 const MP4FileProvider* provider = NULL,
-                 int                    add_ftyp = 1,
-                 int                    add_iods = 1,
-                 char*                  majorBrand = NULL,
-                 uint32_t               minorVersion = 0,
-                 char**                 supportedBrands = NULL,
-                 uint32_t               supportedBrandsCount = 0 );
-
     const std::string &GetFilename() const;
-    void Read( const char* name, const MP4FileProvider* provider );
-    bool Modify( const char* fileName );
+
+    void Read( const char*            fileName,
+               const MP4FileProvider* provider,
+               const MP4IOCallbacks*  callbacks,
+               void*                  handle );
+
+    void Create( const char*           fileName,
+                 const MP4IOCallbacks* callbacks,
+                 void*                 handle,
+                 uint32_t              flags,
+                 int                   add_ftyp = 1,
+                 int                   add_iods = 1,
+                 char*                 majorBrand = NULL,
+                 uint32_t              minorVersion = 0,
+                 char**                supportedBrands = NULL,
+                 uint32_t              supportedBrandsCount = 0 );
+
+    bool Modify( const char*           fileName,
+                 const MP4IOCallbacks* callbacks,
+                 void*                 handle );
+
     void Optimize( const char* srcFileName, const char* dstFileName = NULL );
     bool CopyClose( const string& copyFileName );
     void Dump( bool dumpImplicits = false );
@@ -96,12 +105,14 @@ public:
 
     uint64_t GetIntegerProperty(const char* name);
     float GetFloatProperty(const char* name);
+    double GetDoubleProperty(const char* name);
     const char* GetStringProperty(const char* name);
     void GetBytesProperty(const char* name,
                           uint8_t** ppValue, uint32_t* pValueSize);
 
     void SetIntegerProperty(const char* name, uint64_t value);
     void SetFloatProperty(const char* name, float value);
+    void SetDoubleProperty(const char* name, double value);
     void SetStringProperty(const char* name, const char* value);
     void SetBytesProperty(const char* name,
                           const uint8_t* pValue, uint32_t valueSize);
@@ -152,6 +163,8 @@ public:
         MP4TrackId trackId, const char* name);
     float GetTrackFloatProperty(
         MP4TrackId trackId, const char* name);
+    double GetTrackDoubleProperty(
+        MP4TrackId trackId, const char* name);
     const char* GetTrackStringProperty(
         MP4TrackId trackId, const char* name);
     void GetTrackBytesProperty(
@@ -162,6 +175,8 @@ public:
         MP4TrackId trackId, const char* name, int64_t value);
     void SetTrackFloatProperty(
         MP4TrackId trackId, const char* name, float value);
+    void SetTrackDoubleProperty(
+        MP4TrackId trackId, const char* name, double value);
     void SetTrackStringProperty(
         MP4TrackId trackId, const char* name, const char* value);
     void SetTrackBytesProperty(
@@ -769,32 +784,40 @@ public:
     void ReadBytes( uint8_t* buf, uint32_t bufsiz, File* file = NULL );
     void PeekBytes( uint8_t* buf, uint32_t bufsiz, File* file = NULL );
 
-    uint64_t ReadUInt(uint8_t size);
     uint8_t ReadUInt8();
     uint16_t ReadUInt16();
     uint32_t ReadUInt24();
     uint32_t ReadUInt32();
     uint64_t ReadUInt64();
+
+    template<class type, int size> type ReadUInt();
+
     float ReadFixed16();
     float ReadFixed32();
     float ReadFloat();
+    double ReadDouble();
     char* ReadString();
-    char* ReadCountedString(
-        uint8_t charSize = 1, bool allowExpandedCount = false, uint8_t fixedLength = 0);
+    char* ReadCountedString(uint8_t charSize = 1,
+                            bool allowExpandedCount = false,
+                            uint8_t fixedLength = 0);
     uint64_t ReadBits(uint8_t numBits);
     void FlushReadBits();
     uint32_t ReadMpegLength();
 
-
     void WriteBytes( uint8_t* buf, uint32_t bufsiz, File* file = NULL );
+
     void WriteUInt8(uint8_t value);
     void WriteUInt16(uint16_t value);
     void WriteUInt24(uint32_t value);
     void WriteUInt32(uint32_t value);
     void WriteUInt64(uint64_t value);
+
+    template<class type, int size> void WriteUInt(type value);
+
     void WriteFixed16(float value);
     void WriteFixed32(float value);
     void WriteFloat(float value);
+    void WriteDouble(double value);
     void WriteString(char* string);
     void WriteCountedString(char* string,
                             uint8_t charSize = 1,
@@ -846,7 +869,13 @@ public:
 
 protected:
     void Init();
-    void Open( const char* name, File::Mode mode, const MP4FileProvider* provider );
+
+    void Open( const char*            fileName,
+               File::Mode             mode,
+               const MP4FileProvider* provider = NULL,
+               const MP4IOCallbacks*  callbacks = NULL,
+               void*                  handle = NULL );
+
     void ReadFromFile();
     void GenerateTracks();
     void BeginWrite();
@@ -857,12 +886,12 @@ protected:
 
     void Rename(const char* existingFileName, const char* newFileName);
 
-    void ProtectWriteOperation(const char* file, int line, const char *func);
-
     void FindIntegerProperty(const char* name,
                              MP4Property** ppProperty, uint32_t* pIndex = NULL);
     void FindFloatProperty(const char* name,
                            MP4Property** ppProperty, uint32_t* pIndex = NULL);
+    void FindDoubleProperty(const char* name,
+                            MP4Property** ppProperty, uint32_t* pIndex = NULL);
     void FindStringProperty(const char* name,
                             MP4Property** ppProperty, uint32_t* pIndex = NULL);
     void FindBytesProperty(const char* name,
@@ -976,12 +1005,26 @@ protected:
     uint8_t m_bufWriteBits;
 
     char m_trakName[1024];
-    char *m_editName;
+    char m_editName[1024];
 
  private:
     MP4File ( const MP4File &src );
     MP4File &operator= ( const MP4File &src );
+
+    void MoveMoovAtomToFront();
 };
+
+template<> inline uint8_t MP4File::ReadUInt<uint8_t, 8> () { return ReadUInt8(); }
+template<> inline uint16_t MP4File::ReadUInt<uint16_t, 16> () { return ReadUInt16(); }
+template<> inline uint32_t MP4File::ReadUInt<uint32_t, 24> () { return ReadUInt24(); }
+template<> inline uint32_t MP4File::ReadUInt<uint32_t, 32> () { return ReadUInt32(); }
+template<> inline uint64_t MP4File::ReadUInt<uint64_t, 64> () { return ReadUInt64(); }
+
+template<> inline void MP4File::WriteUInt<uint8_t, 8> (uint8_t value) { WriteUInt8(value); }
+template<> inline void MP4File::WriteUInt<uint16_t, 16> (uint16_t value) { WriteUInt16(value); }
+template<> inline void MP4File::WriteUInt<uint32_t, 24> (uint32_t value) { WriteUInt24(value); }
+template<> inline void MP4File::WriteUInt<uint32_t, 32> (uint32_t value) { WriteUInt32(value); }
+template<> inline void MP4File::WriteUInt<uint64_t, 64> (uint64_t value) { WriteUInt64(value); }
 
 ///////////////////////////////////////////////////////////////////////////////
 

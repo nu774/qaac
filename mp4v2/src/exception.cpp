@@ -29,6 +29,14 @@ namespace mp4v2 { namespace impl {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+Exception::Exception( const string& what_ )
+    : what(what_)
+    , line(0)
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 Exception::Exception( const string&     what_,
                       const char        *file_,
                       int               line_,
@@ -55,9 +63,24 @@ Exception::msg() const
 {
     ostringstream retval;
 
-    retval << function << ": " << what << " (" << file << "," << line << ")";
+    if( !function.empty() )
+        retval << function << ": ";
+
+    retval << what;
+    
+    if( !file.empty() )
+        retval << " (" << file << "," << line << ")";
 
     return retval.str();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+PlatformException::PlatformException( const string& what_,
+                                      int           errno_ )
+    : Exception(what_)
+    , m_errno(errno_)
+{
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -85,8 +108,13 @@ PlatformException::msg() const
 {
     ostringstream retval;
 
-    retval << function << ": " << what << ": errno: " << m_errno << " (" <<
-        file << "," << line << ")";
+    if( !function.empty() )
+        retval << function << ": ";
+
+    retval << what << ": errno: " << m_errno;
+    
+    if( !file.empty() )
+        retval << " (" << file << "," << line << ")";
 
     return retval.str();
 }

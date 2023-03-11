@@ -69,12 +69,19 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
         { "M4A ", "mp42", "isom", "" };
     if (temp) m_filename = L"qaac.int";
     try {
-        static MP4CustomFileProvider cprovider;
-        static MP4TempFileProvider tprovider;
+        static MP4StdIOCallbacks callbacks;
+        if (path == L"-") {
+            m_fp = std::shared_ptr<FILE>(stdout, [](FILE *){});
+        } else if (temp) {
+            m_fp = std::shared_ptr<FILE>(win32::tmpfile(path.c_str()), fclose);
+        } else {
+            m_fp = std::shared_ptr<FILE>(win32::wfopenx(path.c_str(), L"wb"), fclose);
+        }
+
         m_mp4file.Create(strutil::w2us(m_filename).c_str(),
+                         &callbacks,
+                         m_fp.get(),
                          0, // flags
-                         temp ? static_cast<MP4FileProvider*>(&tprovider)
-                              : static_cast<MP4FileProvider*>(&cprovider),
                          1, // add_ftypes
                          0, // add_iods
                          const_cast<char*>("M4A "), // majorBrand

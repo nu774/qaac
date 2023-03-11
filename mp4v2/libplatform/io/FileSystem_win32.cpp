@@ -10,7 +10,7 @@ namespace mp4v2 { namespace platform { namespace io {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static DWORD    getAttributes ( string   path_ );
+static DWORD    getAttributes ( const std::string& path_ );
 
 /**
  * Call GetFileAttributesW throw exceptions for errors
@@ -21,7 +21,7 @@ static DWORD    getAttributes ( string   path_ );
  * @retval anything else the attributes of @p path_
  */
 static DWORD
-getAttributes ( string  path_ )
+getAttributes ( const std::string& path_ )
 {
     win32::Utf8ToFilename filename(path_);
 
@@ -32,7 +32,7 @@ getAttributes ( string  path_ )
         // the places it's called.
         ostringstream msg;
         msg << "can't convert file to UTF-16(" << filename.utf8 << ")";
-        throw new Exception(msg.str(),__FILE__,__LINE__,__FUNCTION__);
+        throw new EXCEPTION(msg.str());
     }
 
     DWORD attributes = ::GetFileAttributesW(filename);
@@ -49,7 +49,7 @@ getAttributes ( string  path_ )
         // Anything else is an error
         ostringstream msg;
         msg << "GetFileAttributes(" << filename.utf8 << ") failed (" << last_err << ")";
-        throw new Exception(msg.str(),__FILE__,__LINE__,__FUNCTION__);
+        throw new EXCEPTION(msg.str());
     }
 
     // path exists so return its attributes
@@ -57,7 +57,7 @@ getAttributes ( string  path_ )
 }
 
 bool
-FileSystem::exists( string path_ )
+FileSystem::exists( const std::string& path_ )
 {
     return( getAttributes(path_) != INVALID_FILE_ATTRIBUTES );
 }
@@ -65,7 +65,7 @@ FileSystem::exists( string path_ )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::isDirectory( string path_ )
+FileSystem::isDirectory( const std::string& path_ )
 {
     DWORD attributes = getAttributes( path_ );
     if( attributes == INVALID_FILE_ATTRIBUTES )
@@ -77,7 +77,7 @@ FileSystem::isDirectory( string path_ )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::isFile( string path_ )
+FileSystem::isFile( const std::string& path_ )
 {
     DWORD attributes = getAttributes( path_ );
     if( attributes == INVALID_FILE_ATTRIBUTES )
@@ -89,7 +89,7 @@ FileSystem::isFile( string path_ )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::getFileSize( string path_, File::Size& size_ )
+FileSystem::getFileSize( const std::string& path_, File::Size& size_ )
 {
     win32::Utf8ToFilename filename(path_);
 
@@ -115,7 +115,7 @@ FileSystem::getFileSize( string path_, File::Size& size_ )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::rename( string from, string to )
+FileSystem::rename( const std::string& from, const std::string& to )
 {
     win32::Utf8ToFilename from_file(from);
     win32::Utf8ToFilename to_file(to);

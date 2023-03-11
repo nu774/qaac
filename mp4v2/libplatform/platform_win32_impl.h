@@ -28,7 +28,9 @@ class Utf8ToFilename
     static int          ConvertToUTF16Buf ( const char      *utf8,
                                             wchar_t         *utf16_buf,
                                             size_t          num_bytes );
-    static int          GetPrefixLen ( const string &utf8string );
+
+    static bool         HasPrefix ( const string &utf8string );
+    static string       StripPrefix ( const string &utf8string );
 
     static int          IsAbsolute ( const string &utf8string );
 
@@ -36,16 +38,16 @@ class Utf8ToFilename
 
     static int          IsUncPath ( const string &utf8string );
 
-    static const UINT8  *Utf8DecodeChar (
-        const UINT8     *utf8_char,
-        size_t          num_bytes,
-        wchar_t         *utf16,
-        int             *invalid
+    static const uint8_t    *Utf8DecodeChar (
+        const uint8_t       *utf8_char,
+        size_t              num_bytes,
+        wchar_t             *utf16,
+        int                 *invalid
         );
 
-    static size_t       Utf8LenFromUcs4 ( UINT32 ucs4 );
+    static size_t       Utf8LenFromUcs4 ( uint32_t ucs4 );
 
-    static UINT8        Utf8NumOctets ( UINT8 utf8_first_byte );
+    static uint8_t      Utf8NumOctets ( uint8_t utf8_first_byte );
 
     /**
      * The UTF-8 encoding of the filename actually used

@@ -1,3 +1,23 @@
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is MP4v2.
+ *
+ * The Initial Developer of the Original Code is Kona Blend.
+ * Portions created by Kona Blend are Copyright (C) 2008.
+ * All Rights Reserved.
+ *
+ * Contributor(s):
+ *      Kona Blend, kona8lend@gmail.com
+ */
 #ifndef MP4V2_PLATFORM_H
 #define MP4V2_PLATFORM_H
 
@@ -6,27 +26,9 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdint.h>
 
-// Thanks, MSFT, for making C99 a total PITA.  Declare this not to define any stdint stuff; this is useful
-// if you're going to be using mp4v2 on windows with some other library that defines its own stdint.
-// The 1600 version check is for Visual Studio 2010 which has stdint once again.
-#ifndef MP4V2_NO_STDINT_DEFS
-    #if defined( _WIN32 ) && !defined( __MINGW32__ ) && !(defined(_MSC_VER) && _MSC_VER >= 1600)
-        typedef char      int8_t;
-        typedef short     int16_t;
-        typedef int       int32_t;
-        typedef long long int64_t;
-
-        typedef unsigned char      uint8_t;
-        typedef unsigned short     uint16_t;
-        typedef unsigned int       uint32_t;
-        typedef unsigned long long uint64_t;
-    #else
-        #include <stdint.h>
-    #endif
-#endif
-
-#if defined( _WIN32 ) && !defined( __MINGW32__ )
+#if defined( _WIN32 ) || defined( __MINGW32__ )
 #   if defined( MP4V2_EXPORTS )
 #       define MP4V2_EXPORT __declspec(dllexport)
 #   elif defined( MP4V2_USE_DLL_IMPORT ) || !defined( MP4V2_USE_STATIC_LIB )

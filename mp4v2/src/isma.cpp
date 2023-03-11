@@ -40,7 +40,9 @@ static const uint8_t BifsV2Config[3] = {
 
 void MP4File::MakeIsmaCompliant(bool addIsmaComplianceSdp)
 {
-    ProtectWriteOperation(__FILE__, __LINE__, __FUNCTION__);
+    if( !IsWriteMode() ) {
+        throw new EXCEPTION("operation not permitted in read mode");
+    }
 
     if (m_useIsma) {
         // already done

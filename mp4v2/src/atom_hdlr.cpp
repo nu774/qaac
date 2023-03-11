@@ -82,7 +82,7 @@ void MP4HdlrAtom::Read()
             if( m_File.GetPosition() - GetEnd() == 1 )
                 delete x;
             else
-                throw x;
+                throw;
         }
     }
 

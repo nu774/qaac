@@ -15,17 +15,11 @@
  * Portions created by Cisco Systems Inc. are
  * Copyright (C) Cisco Systems Inc. 2001 - 2005.  All Rights Reserved.
  *
- * 3GPP features implementation is based on 3GPP's TS26.234-v5.60,
- * and was contributed by Ximpo Group Ltd.
- *
- * Portions created by Ximpo Group Ltd. are
- * Copyright (C) Ximpo Group Ltd. 2003, 2004.  All Rights Reserved.
- *
  * Contributor(s):
- *      Dave Mackie                 dmackie@cisco.com
- *      Alix Marchandise-Franquet   alix@cisco.com
- *      Ximpo Group Ltd.            mp4v2@ximpo.com
- *      Bill May                    wmay@cisco.com
+ *      Dave Mackie,               dmackie@cisco.com
+ *      Alix Marchandise-Franquet, alix@cisco.com
+ *      Bill May,                  wmay@cisco.com
+ *      Kona Blend,                kona8lend@gmail.com
  */
 #ifndef MP4V2_MP4V2_H
 #define MP4V2_MP4V2_H

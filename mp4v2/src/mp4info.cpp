@@ -36,21 +36,22 @@ static char* PrintAudioInfo(
     MP4TrackId trackId)
 {
     static const char* mpeg4AudioNames[] = {
-        "MPEG-4 AAC main",
+        "MPEG-4 AAC Main",
         "MPEG-4 AAC LC",
         "MPEG-4 AAC SSR",
         "MPEG-4 AAC LTP",
-        "MPEG-4 AAC HE",
+        "MPEG-4 SBR",
         "MPEG-4 AAC Scalable",
         "MPEG-4 TwinVQ",
         "MPEG-4 CELP",
         "MPEG-4 HVXC",
-        NULL, NULL,
+        NULL,
+        NULL,
         "MPEG-4 TTSI",
         "MPEG-4 Main Synthetic",
-        "MPEG-4 Wavetable Syn",
+        "MPEG-4 Wavetable Synth",
         "MPEG-4 General MIDI",
-        "MPEG-4 Algo Syn and Audio FX",
+        "MPEG-4 Algo Synth and Audio FX",
         "MPEG-4 ER AAC LC",
         NULL,
         "MPEG-4 ER AAC LTP",
@@ -73,6 +74,12 @@ static char* PrintAudioInfo(
         "MPEG-4 Audio Lossless",
         "MPEG-4 SLS",
         "MPEG-4 SLS non-core",
+        "MPEG-4 ER AAC ELD",
+        "MPEG-4 SMR Simple",
+        "MPEG-4 SMR Main",
+        "MPEG-4 USAC",
+        "MPEG-4 SAOC",
+        "MPEG-4 MPEG Surround LD",
     };
 
     static const uint8_t mpegAudioTypes[] = {
@@ -376,7 +383,7 @@ static char* PrintVideoInfo(
                 snprintf(levelb, 20, "unknown level %x", level);
                 break;
             }
-            if (originalFormat != NULL && originalFormat[0] != '\0')
+            if (originalFormat[0] != 0)
                 snprintf(oformatbuffer, 32, "(%s) ", originalFormat);
             snprintf(typebuffer, sizeof(typebuffer), "H264 %s%s@%s",
                      oformatbuffer, profileb, levelb);
@@ -530,21 +537,21 @@ static char* PrintTrackInfo(
         MP4GetTrackType(mp4File, trackId);
     if (trackType == NULL) return NULL;
 
-    if (!strcmp(trackType, MP4_AUDIO_TRACK_TYPE)) {
+    if (strequal(trackType, MP4_AUDIO_TRACK_TYPE)) {
         trackInfo = PrintAudioInfo(mp4File, trackId);
-    } else if (!strcmp(trackType, MP4_VIDEO_TRACK_TYPE)) {
+    } else if (strequal(trackType, MP4_VIDEO_TRACK_TYPE)) {
         trackInfo = PrintVideoInfo(mp4File, trackId);
-    } else if (!strcmp(trackType, MP4_HINT_TRACK_TYPE)) {
+    } else if (strequal(trackType, MP4_HINT_TRACK_TYPE)) {
         trackInfo = PrintHintInfo(mp4File, trackId);
-    } else if (strcmp(trackType, MP4_CNTL_TRACK_TYPE) == 0) {
+    } else if (strequal(trackType, MP4_CNTL_TRACK_TYPE)) {
         trackInfo = PrintCntlInfo(mp4File, trackId);
     } else {
         trackInfo = (char*)MP4Malloc(256);
-        if (!strcmp(trackType, MP4_OD_TRACK_TYPE)) {
+        if (strequal(trackType, MP4_OD_TRACK_TYPE)) {
             snprintf(trackInfo, 256,
                      "%u\tod\tObject Descriptors\n",
                      trackId);
-        } else if (!strcmp(trackType, MP4_SCENE_TRACK_TYPE)) {
+        } else if (strequal(trackType, MP4_SCENE_TRACK_TYPE)) {
             snprintf(trackInfo, 256,
                      "%u\tscene\tBIFS\n",
                      trackId);

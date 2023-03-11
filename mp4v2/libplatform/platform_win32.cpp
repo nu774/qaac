@@ -71,12 +71,12 @@ struct utf8_len_info
     /**
      * This structure applies to a number >= @p range_min.
      */
-    UINT32      range_min;
+    uint32_t    range_min;
 
     /**
      * This structure applies to a number <= @p range_max.
      */
-    UINT32      range_max;
+    uint32_t    range_max;
 
     /**
      * The number of characters required to encode a number
@@ -117,15 +117,17 @@ std::wstring GetFullPathNameStr(const wchar_t *path)
  * Utf8ToFilename constructor
  *
  * @param utf8string a UTF-8 encoded string that does not
- * begin with \\\?\\ nor \\\?\\UNC\\
+ * begin with \\?\ nor \\?\UNC\
  *
  * @see IsValidUTF16 to see whether the constructor
  * succeeded
  */
-Utf8ToFilename::Utf8ToFilename( const string &utf8string )
+Utf8ToFilename::Utf8ToFilename( const string &_utf8string )
     : _wideCharString( NULL )
       , utf8( _utf8 )
 {
+    string utf8string = StripPrefix( _utf8string );
+
     // See
     // http://msdn.microsoft.com/en-us/library/aa365247%28v=vs.85%29.aspx
     // for notes about path lengths, prefixes, etc.  The
@@ -210,7 +212,7 @@ Utf8ToFilename::~Utf8ToFilename( )
 wchar_t *
 Utf8ToFilename::ConvertToUTF16 ( const string &utf8string )
 {
-    int         num_bytes;
+    size_t      num_bytes;
     size_t      num_chars;
     wchar_t     *retval;
 
@@ -297,13 +299,13 @@ Utf8ToFilename::ConvertToUTF16Buf ( const char      *utf8,
                                     wchar_t         *utf16_buf,
                                     size_t          num_bytes )
 {
-    size_t      i;
-    const UINT8 *next_char;
-    size_t      num_chars;
-    size_t      num_utf16_chars;
-    size_t      num_input_bytes;
-    const UINT8 *p;
-    wchar_t     this_utf16[2];
+    size_t        i;
+    const uint8_t *next_char;
+    size_t        num_chars;
+    size_t        num_utf16_chars;
+    size_t        num_input_bytes;
+    const uint8_t *p;
+    wchar_t       this_utf16[2];
 
     ASSERT(utf8);
     ASSERT(utf16_buf || (num_bytes == 0));
@@ -348,7 +350,7 @@ Utf8ToFilename::ConvertToUTF16Buf ( const char      *utf8,
     // in utf16_buf
     num_utf16_chars = num_bytes / sizeof(wchar_t);
 
-    p = (const UINT8 *)utf8;
+    p = (const uint8_t *)utf8;
     i = 0;
     while (*p && (i < num_utf16_chars))
     {
@@ -414,63 +416,76 @@ Utf8ToFilename::ConvertToUTF16Buf ( const char      *utf8,
 }
 
 /**
- * Accessor for the length of a prefix (i.e. \\\?\\ or
- * \\\?\\UNC\\) that begins a filename
+ * Check for the presence of a prefix (i.e. \\?\) 
+ * at the beginning of a filename
  *
  * @param utf8string the UTF-8 encoded filename to
  * examine
  *
- * @return the length of the prefix of @p utf8string in
- * characters
+ * @return true if @p utf8string begins with a
+ * prefix, false otherwise
  */
-int
-Utf8ToFilename::GetPrefixLen ( const string &utf8string )
+bool
+Utf8ToFilename::HasPrefix ( const string &utf8string )
 {
-    if (utf8string.find("\\\\?\\") == 0)
-    {
-        return strlen("\\\\?\\");
-    }
+    return (utf8string.find("\\\\?\\") == 0);
+}
 
+/**
+ * Strip a prefix (i.e. \\?\ or \\?\UNC\) from a
+ * filename and return the corresponding unprefixed
+ * path
+ *
+ * @param utf8string the UTF-8 encoded filename to
+ * work on
+ *
+ * @return the unprefixed path corresponding to
+ * @p utf8string
+ */
+string
+Utf8ToFilename::StripPrefix ( const string &utf8string )
+{
+    if (!HasPrefix( utf8string ))
+        return utf8string;
+
+    // convert \\?\UNC\server\path to \\server\path
     if (utf8string.find("\\\\?\\UNC\\") == 0)
-    {
-        return strlen("\\\\?\\UNC\\");
-    }
+        return string("\\\\").append(utf8string.substr(8));
 
-    return 0;
+    // just strip Windows \\?\ prefix otherwise
+    return utf8string.substr(4);
 }
 
 /**
  * Determine if a path is absolute or not
  *
  * @param utf8string the UTF-8 encoded path to examine
- * that does not begin with \\\?\\ nor \\\?\\UNC\\
+ * that does not begin with \\?\ nor \\?\UNC\
  *
  * @retval 0 @p utf8string is not an absolute path
  * @retval 1 @p utf8string is an absolute path
- */       
+ */
 int
 Utf8ToFilename::IsAbsolute ( const string &utf8string )
 {
     // Assume utf8string doesn't already start with a
     // long filename prefix (i.e. \\?\ or \\?\UNC\)
     // since the logic here depends on that.
-    ASSERT(GetPrefixLen(utf8string) == 0);
+    ASSERT(!HasPrefix(utf8string));
 
     // Is an empty string absolute or relative?  It's
     // not absolute since we can't tell what
     // drive/volume it's for so say it's relative.
     if (utf8string.length() == 0)
-    {
         return 0;
-    }
-        
+
     // Here we're looking for:
     //  x:   drive relative
     //  x:\  absolute path
-    if (utf8string[1] == ':')
+    if (utf8string.length() > 1 && utf8string[1] == ':')
     {
         // It starts with x:, but is it x:/ ?
-        if ((utf8string.length() >= 2) && IsPathSeparator(utf8string[2]))
+        if ((utf8string.length() > 2) && IsPathSeparator(utf8string[2]))
         {
             // Yup -- it's absolute
             return 1;
@@ -502,11 +517,11 @@ Utf8ToFilename::IsPathSeparator ( char c )
  * Determine if a path is a UNC path
  *
  * @param utf8string the UTF-8 encoded path to examine
- * that does not begin with \\\?\\ nor \\\?\\UNC\\
+ * that does not begin with \\?\ nor \\?\UNC\
  *
  * @retval 0 @p utf8string is not a UNC path
  * @retval 1 @p utf8string is a UNC path
- */       
+ */
 int
 Utf8ToFilename::IsUncPath ( const string &utf8string )
 {
@@ -517,13 +532,11 @@ Utf8ToFilename::IsUncPath ( const string &utf8string )
     // Assume utf8string doesn't already start with a
     // long filename prefix (i.e. \\?\ or \\?\UNC\)
     // since the logic here depends on that.
-    ASSERT(GetPrefixLen(utf8string) == 0);
+    ASSERT(!HasPrefix(utf8string));
 
     // Is an empty string a UNC path?  No.
     if (utf8string.length() == 0)
-    {
         return 0;
-    }
 
     //  Recognize:
     //    //volume/path
@@ -565,10 +578,8 @@ Utf8ToFilename::IsUncPath ( const string &utf8string )
     // but that's someone else's problem.  It's not a
     // UNC path.
     if (num_slashes == 1)
-    {
         return 0;
-    }
-    
+
     // If we're here, we've got two slashes followed by
     // a non-slash.  Something like //foo.  To be a
     // proper UNC path, we need to see a hostname
@@ -690,21 +701,21 @@ Utf8ToFilename::IsUTF16Valid( ) const
  * be valid to dereference depending on the value of @p
  * num_bytes.
  */
-const UINT8 *
-Utf8ToFilename::Utf8DecodeChar ( const UINT8    *utf8_char,
+const uint8_t *
+Utf8ToFilename::Utf8DecodeChar ( const uint8_t  *utf8_char,
                                  size_t         num_bytes,
                                  wchar_t        *utf16,
                                  int            *invalid )
 
 {
-    wchar_t     high_half;
-    int         i;
-    UINT8       len;
-    wchar_t     low_half;
-    UINT8       mask;
-    const UINT8 *p;
-    UINT32      ucs4;
-    int         valid_len;
+    wchar_t       high_half;
+    int           i;
+    uint8_t       len;
+    wchar_t       low_half;
+    uint8_t       mask;
+    const uint8_t *p;
+    uint32_t      ucs4;
+    size_t        valid_len;
 
     ASSERT(utf8_char);
     ASSERT(num_bytes > 0);
@@ -725,7 +736,7 @@ Utf8ToFilename::Utf8DecodeChar ( const UINT8    *utf8_char,
     ** Traverse the UTF-8 encoding and figure out what we've
     ** got.
     */
-    p = (const UINT8 *)(utf8_char);
+    p = (const uint8_t *)(utf8_char);
 
     /*
     ** This is the number of bytes we expect based on the
@@ -998,7 +1009,7 @@ Utf8ToFilename::Utf8DecodeChar ( const UINT8    *utf8_char,
  * UTF-8 encoding of @p ucs4
  */
 size_t
-Utf8ToFilename::Utf8LenFromUcs4 ( UINT32 ucs4 )
+Utf8ToFilename::Utf8LenFromUcs4 ( uint32_t ucs4 )
 {
     size_t      table_idx;
 
@@ -1033,8 +1044,8 @@ Utf8ToFilename::Utf8LenFromUcs4 ( UINT32 ucs4 )
  * @retval [1,6] the number of octets that @p
  * utf8_first_byte should occupy
  */
-UINT8
-Utf8ToFilename::Utf8NumOctets ( UINT8 utf8_first_byte )
+uint8_t
+Utf8ToFilename::Utf8NumOctets ( uint8_t utf8_first_byte )
 {
     /**
      * Here's a mapping from the first byte of a UTF-8

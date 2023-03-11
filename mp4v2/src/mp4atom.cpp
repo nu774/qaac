@@ -142,6 +142,13 @@ MP4Atom* MP4Atom::ReadAtom(MP4File& file, MP4Atom* pParentAtom)
         dataSize = file.GetSize() - pos;
     }
 
+    // Prevent integer underflow due to incorrect atom size read from file
+    if ( dataSize < hdrSize ) {
+       ostringstream oss;
+       oss << "Invalid atom size in '" << type << "' atom, dataSize = " << dataSize << " cannot be less than hdrSize = " << static_cast<unsigned>( hdrSize );
+       log.errorf( "%s: \"%s\": %s", __FUNCTION__, file.GetFilename().c_str(), oss.str().c_str() );
+       throw new EXCEPTION(oss.str().c_str());
+    }
     dataSize -= hdrSize;
 
     log.verbose1f("\"%s\": type = \"%s\" data-size = %" PRIu64 " (0x%" PRIx64 ") hdr %u",
@@ -190,15 +197,14 @@ MP4Atom* MP4Atom::ReadAtom(MP4File& file, MP4Atom* pParentAtom)
 
     pAtom->SetParentAtom(pParentAtom);
 
-	try {
-		pAtom->Read();
-	}
-	catch (Exception* x) {
-		// delete atom and rethrow so we don't leak memory.
-		delete pAtom;	
-		throw x;
-	}
-
+    try {
+        pAtom->Read();
+    }
+    catch (Exception*) {
+        // delete atom and rethrow so we don't leak memory.
+        delete pAtom;
+        throw;
+    }
 
     return pAtom;
 }
@@ -297,7 +303,7 @@ bool MP4Atom::IsMe(const char* name)
     }
 
     // root atom always matches
-    if (!strcmp(m_type, "")) {
+    if (strequal(m_type, "")) {
         return true;
     }
 
@@ -382,7 +388,7 @@ void MP4Atom::ReadProperties(uint32_t startIndex, uint32_t count)
 
             ostringstream oss;
             oss << "atom '" << GetType() << "' is too small; overrun at property: " << m_pProperties[i]->GetName();
-            throw new Exception( oss.str().c_str(), __FILE__, __LINE__, __FUNCTION__ );
+            throw new EXCEPTION(oss.str().c_str());
         }
 
         MP4LogLevel thisVerbosity =
@@ -603,7 +609,7 @@ void MP4Atom::ExpectChildAtom(const char* name, bool mandatory, bool onlyOne)
 
 uint8_t MP4Atom::GetVersion()
 {
-    if (strcmp("version", m_pProperties[0]->GetName())) {
+    if (!strequal("version", m_pProperties[0]->GetName())) {
         return 0;
     }
     return ((MP4Integer8Property*)m_pProperties[0])->GetValue();
@@ -611,7 +617,7 @@ uint8_t MP4Atom::GetVersion()
 
 void MP4Atom::SetVersion(uint8_t version)
 {
-    if (strcmp("version", m_pProperties[0]->GetName())) {
+    if (!strequal("version", m_pProperties[0]->GetName())) {
         return;
     }
     ((MP4Integer8Property*)m_pProperties[0])->SetValue(version);
@@ -619,7 +625,7 @@ void MP4Atom::SetVersion(uint8_t version)
 
 uint32_t MP4Atom::GetFlags()
 {
-    if (strcmp("flags", m_pProperties[1]->GetName())) {
+    if (!strequal("flags", m_pProperties[1]->GetName())) {
         return 0;
     }
     return ((MP4Integer24Property*)m_pProperties[1])->GetValue();
@@ -627,7 +633,7 @@ uint32_t MP4Atom::GetFlags()
 
 void MP4Atom::SetFlags(uint32_t flags)
 {
-    if (strcmp("flags", m_pProperties[1]->GetName())) {
+    if (!strequal("flags", m_pProperties[1]->GetName())) {
         return;
     }
     ((MP4Integer24Property*)m_pProperties[1])->SetValue(flags);
@@ -647,12 +653,13 @@ void MP4Atom::Dump(uint8_t indent, bool dumpImplicits)
         // create contextual atom-name
         string can;
         const list<string>::iterator ie = tlist.end();
-        for( list<string>::iterator it = tlist.begin(); it != ie; it++ )
+        for( list<string>::iterator it = tlist.begin(); it != ie; ++it )
             can += *it + '.';
         if( can.length() )
             can.resize( can.length() - 1 );
 
-        log.dump(indent, MP4_LOG_VERBOSE1, "type %s (%s)",
+        log.dump(indent, MP4_LOG_VERBOSE1, "\"%s\": type %s (%s)",
+                 GetFile().GetFilename().c_str(),
                  m_type, can.c_str() );
     }
 
@@ -666,7 +673,8 @@ void MP4Atom::Dump(uint8_t indent, bool dumpImplicits)
         /* skip details of tables unless we're told to be verbose */
         if (m_pProperties[i]->GetType() == TableProperty
                 && (log.verbosity < MP4_LOG_VERBOSE2)) {
-            log.dump(indent + 1, MP4_LOG_VERBOSE1, "<table entries suppressed>" );
+            log.dump(indent + 1, MP4_LOG_VERBOSE1, "\"%s\": <table entries suppressed>",
+                     GetFile().GetFilename().c_str() );
             continue;
         }
 
@@ -779,8 +787,10 @@ MP4Atom::factory( MP4File &file, MP4Atom* parent, const char* type )
         const char* const ptype = parent->GetType();
 
         if( descendsFrom( parent, "ilst" )) {
-            if( ATOMID( ptype ) == ATOMID( "ilst" ))
-                return new MP4ItemAtom( file, type );
+            if( ATOMID( ptype ) == ATOMID( "ilst" )) {
+               ASSERT( ATOMID( type ) != ATOMID( "ilst" ));  // don't allow ilst to be a child of ilst
+               return new MP4ItemAtom( file, type );
+            }
 
             if( ATOMID( type ) == ATOMID( "data" ))
                 return new MP4DataAtom(file);
@@ -802,7 +812,7 @@ MP4Atom::factory( MP4File &file, MP4Atom* parent, const char* type )
             if( ATOMID( type ) == ATOMID( "hinf" ))
                 return new MP4HinfAtom(file);
             for( const char* const* p = UDTA_ELEMENTS; *p; p++ )
-                if( !strcmp( type, *p ))
+                if( strequal( type, *p ))
                     return new MP4UdtaElementAtom( file, type );
         }
     }
@@ -894,11 +904,18 @@ MP4Atom::factory( MP4File &file, MP4Atom* parent, const char* type )
                 return new MP4TrefTypeAtom( file, type );
             if( ATOMID(type) == ATOMID("ima4") )
                 return new MP4SoundAtom( file, type );
+            if( ATOMID(type) == ATOMID("ipcm") )
+                return new MP4SoundAtom( file, type );
             break;
 
         case 'j':
             if( ATOMID(type) == ATOMID("jpeg") )
                 return new MP4VideoAtom(file, "jpeg");
+            break;
+
+        case 'l':
+            if( ATOMID(type) == ATOMID("lpcm") )
+                return new MP4SoundAtom( file, type );
             break;
 
         case 'm':

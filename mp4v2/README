@@ -1,0 +1,9 @@
+All docs are located in doc/ subdirectory. Useful starting points:
+
+Release Notes               -- doc/ReleaseNotes.txt
+Guide to Command Line Tools -- doc/ToolGuide.txt
+
+Building the Source         -- doc/BuildSource.txt
+Building the Repository     -- doc/BuildRepository.txt
+
+See the COPYING file for license rights and limitations.

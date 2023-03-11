@@ -30,7 +30,7 @@ namespace mp4v2 { namespace impl {
 class MP4Atom;
 
 class MP4Descriptor;
-MP4ARRAY_DECL(MP4Descriptor, MP4Descriptor*);
+typedef MP4Array<MP4Descriptor*> MP4DescriptorArray;
 
 enum MP4PropertyType {
     Integer8Property,
@@ -40,12 +40,13 @@ enum MP4PropertyType {
     Integer64Property,
     Integer6432Property,
     Float32Property,
+    Float64Property,
     StringProperty,
     BytesProperty,
     TableProperty,
     DescriptorProperty,
     LanguageCodeProperty,
-    BasicTypeProperty,
+    BasicTypeProperty
 };
 
 class MP4Property {
@@ -105,7 +106,7 @@ private:
     MP4Property &operator= ( const MP4Property &src );
 };
 
-MP4ARRAY_DECL(MP4Property, MP4Property*);
+typedef MP4Array<MP4Property*> MP4PropertyArray;
 
 class MP4IntegerProperty : public MP4Property {
 protected:
@@ -129,82 +130,93 @@ private:
     MP4IntegerProperty &operator= ( const MP4IntegerProperty &src );
 };
 
-#define MP4INTEGER_PROPERTY_DECL2(isize, xsize) \
-    class MP4Integer##xsize##Property : public MP4IntegerProperty { \
-    public: \
-        MP4Integer##xsize##Property(MP4Atom& parentAtom, const char* name) \
-            : MP4IntegerProperty(parentAtom, name) { \
-            SetCount(1); \
-            m_values[0] = 0; \
-        } \
-        \
-        MP4PropertyType GetType() { \
-            return Integer##xsize##Property; \
-        } \
-        \
-        uint32_t GetCount() { \
-            return m_values.Size(); \
-        } \
-        void SetCount(uint32_t count) { \
-            m_values.Resize(count); \
-        } \
-        \
-        uint##isize##_t GetValue(uint32_t index = 0) { \
-            return m_values[index]; \
-        } \
-        \
-        void SetValue(uint##isize##_t value, uint32_t index = 0) { \
-            if (m_readOnly) { \
-                ostringstream msg; \
-                msg << "property is read-only: " << m_name; \
-                throw new PlatformException(msg.str().c_str(), EACCES, __FILE__, __LINE__, __FUNCTION__); \
-            } \
-            m_values[index] = value; \
-        } \
-        void AddValue(uint##isize##_t value) { \
-            m_values.Add(value); \
-        } \
-        void InsertValue(uint##isize##_t value, uint32_t index) { \
-            m_values.Insert(value, index); \
-        } \
-        void DeleteValue(uint32_t index) { \
-            m_values.Delete(index); \
-        } \
-        void IncrementValue(int32_t increment = 1, uint32_t index = 0) { \
-            m_values[index] += increment; \
-        } \
-        void Read(MP4File& file, uint32_t index = 0) { \
-            if (m_implicit) { \
-                return; \
-            } \
-            m_values[index] = file.ReadUInt##xsize(); \
-        } \
-        \
-        void Write(MP4File& file, uint32_t index = 0) { \
-            if (m_implicit) { \
-                return; \
-            } \
-            file.WriteUInt##xsize(m_values[index]); \
-        } \
-        void Dump(uint8_t indent, \
-            bool dumpImplicits, uint32_t index = 0); \
-    \
-    protected: \
-        MP4Integer##isize##Array m_values; \
-    private: \
-        MP4Integer##xsize##Property(); \
-        MP4Integer##xsize##Property ( const MP4Integer##xsize##Property &src ); \
-        MP4Integer##xsize##Property &operator= ( const MP4Integer##xsize##Property &src ); \
-    };
+template <class type, int size> class MP4SizedIntegerProperty : public MP4IntegerProperty {
+public:
+    MP4SizedIntegerProperty(MP4Atom& parentAtom, const char* name)
+        : MP4IntegerProperty(parentAtom, name) {
+        SetCount(1);
+        m_values[0] = 0;
+    }
 
-#define MP4INTEGER_PROPERTY_DECL(size) \
-    MP4INTEGER_PROPERTY_DECL2(size, size)
+    MP4PropertyType GetType() {
+        switch (size) {
+            case 8: return Integer8Property;
+            case 16: return Integer16Property;
+            case 24: return Integer24Property;
+            case 32: return Integer32Property;
+            case 64: return Integer64Property;
+        }
+        return Integer32Property;
+    }
 
-MP4INTEGER_PROPERTY_DECL(8);
-MP4INTEGER_PROPERTY_DECL(16);
-MP4INTEGER_PROPERTY_DECL2(32, 24);
-MP4INTEGER_PROPERTY_DECL(32);
-MP4INTEGER_PROPERTY_DECL(64);
+    uint32_t GetCount() {
+        return m_values.Size();
+    }
+
+    void SetCount(uint32_t count) {
+        m_values.Resize(count);
+    }
+
+    type GetValue(uint32_t index = 0) {
+        return m_values[index];
+    }
+
+    void SetValue(type value, uint32_t index = 0) {
+        if (m_readOnly) { 
+            ostringstream msg;
+            msg << "property is read-only: " << m_name;
+            throw new PLATFORM_EXCEPTION(msg.str().c_str(), EACCES);
+        }
+        m_values[index] = value;
+    }
+
+    void AddValue(type value) {
+        m_values.Add(value);
+    }
+
+    void InsertValue(type value, uint32_t index) {
+        m_values.Insert(value, index);
+    }
+
+    void DeleteValue(uint32_t index) {
+        m_values.Delete(index);
+    }
+
+    void IncrementValue(int32_t increment = 1, uint32_t index = 0) {
+        m_values[index] += increment;
+    }
+
+    void Read(MP4File& file, uint32_t index = 0) {
+        if (m_implicit) {
+            return;
+        }
+        m_values[index] = file.ReadUInt<type, size>();
+    }
+
+    void Write(MP4File& file, uint32_t index = 0) {
+        if (m_implicit) {
+            return;
+        }
+        file.WriteUInt<type, size>(m_values[index]);
+    }
+
+    void Dump(uint8_t indent,
+        bool dumpImplicits, uint32_t index = 0);
+
+protected:
+    MP4Array<type> m_values;
+
+private:
+    MP4SizedIntegerProperty();
+    MP4SizedIntegerProperty ( const MP4SizedIntegerProperty &src );
+    MP4SizedIntegerProperty &operator= ( const MP4SizedIntegerProperty &src );
+};
+
+typedef MP4SizedIntegerProperty<uint8_t, 8> MP4Integer8Property;
+typedef MP4SizedIntegerProperty<uint16_t, 16> MP4Integer16Property;
+typedef MP4SizedIntegerProperty<uint32_t, 24> MP4Integer24Property;
+typedef MP4SizedIntegerProperty<uint32_t, 32> MP4Integer32Property;
+typedef MP4SizedIntegerProperty<uint64_t, 64> MP4Integer64Property;
 
 class MP4Integer6432Property: public MP4Integer64Property {
 public:
@@ -300,7 +312,7 @@ public:
         if (m_readOnly) {
             ostringstream msg;
             msg << "property is read-only: " << m_name;
-            throw new PlatformException(msg.str().c_str(), EACCES, __FILE__, __LINE__, __FUNCTION__);
+            throw new PLATFORM_EXCEPTION(msg.str().c_str(), EACCES);
         }
         m_values[index] = value;
     }
@@ -343,6 +355,60 @@ private:
     MP4Float32Property();
     MP4Float32Property ( const MP4Float32Property &src );
     MP4Float32Property &operator= ( const MP4Float32Property &src );
+};
+
+class MP4Float64Property : public MP4Property {
+public:
+    MP4Float64Property(MP4Atom& parentAtom, const char* name)
+            : MP4Property(parentAtom, name) {
+        SetCount(1);
+        m_values[0] = 0.0;
+    }
+
+    MP4PropertyType GetType() {
+        return Float64Property;
+    }
+
+    uint32_t GetCount() {
+        return m_values.Size();
+    }
+    void SetCount(uint32_t count) {
+        m_values.Resize(count);
+    }
+
+    double GetValue(uint32_t index = 0) {
+        return m_values[index];
+    }
+
+    void SetValue(double value, uint32_t index = 0) {
+        if (m_readOnly) {
+            ostringstream msg;
+            msg << "property is read-only: " << m_name;
+            throw new PLATFORM_EXCEPTION(msg.str().c_str(), EACCES);
+        }
+        m_values[index] = value;
+    }
+
+    void AddValue(double value) {
+        m_values.Add(value);
+    }
+
+    void InsertValue(double value, uint32_t index) {
+        m_values.Insert(value, index);
+    }
+
+    void Read(MP4File& file, uint32_t index = 0);
+    void Write(MP4File& file, uint32_t index = 0);
+    void Dump(uint8_t indent,
+              bool dumpImplicits, uint32_t index = 0);
+
+protected:
+    MP4Float64Array m_values;
+
+private:
+    MP4Float64Property();
+    MP4Float64Property ( const MP4Float64Property &src );
+    MP4Float64Property &operator= ( const MP4Float64Property &src );
 };
 
 class MP4StringProperty : public MP4Property {

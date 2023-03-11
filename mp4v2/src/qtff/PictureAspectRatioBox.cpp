@@ -41,14 +41,14 @@ PictureAspectRatioBox::add( MP4FileHandle file, uint16_t trackIndex, const Item&
     MP4Atom* coding;
 
     if( !MP4_IS_VALID_FILE_HANDLE( file ))
-        throw new Exception( "invalid file handle", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("invalid file handle");
 
     if( findCoding( file, trackIndex, coding ))
-        throw new Exception( "supported coding not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("supported coding not found");
 
     MP4Atom* pasp;
     if( !findPictureAspectRatioBox( file, *coding, pasp ))
-        throw new Exception( "pasp-box already exists", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("pasp-box already exists");
 
     pasp = MP4Atom::CreateAtom( *((MP4File *)file), coding, BOX_CODE.c_str() );
     coding->AddChildAtom( pasp );
@@ -84,11 +84,11 @@ PictureAspectRatioBox::get( MP4FileHandle file, uint16_t trackIndex, Item& item 
 
     MP4Atom* coding;
     if( findCoding( file, trackIndex, coding ))
-        throw new Exception( "supported coding not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("supported coding not found");
 
     MP4Atom* pasp;
     if( findPictureAspectRatioBox( file, *coding, pasp ))
-        throw new Exception( "pasp-box not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("pasp-box not found");
 
     MP4Integer16Property* hSpacing;
     MP4Integer16Property* vSpacing;
@@ -159,11 +159,11 @@ PictureAspectRatioBox::remove( MP4FileHandle file, uint16_t trackIndex )
 {
     MP4Atom* coding;
     if( findCoding( file, trackIndex, coding ))
-        throw new Exception( "supported coding not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("supported coding not found");
 
     MP4Atom* pasp;
     if( findPictureAspectRatioBox( file, *coding, pasp ))
-        throw new Exception( "pasp-box not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("pasp-box not found");
 
     coding->DeleteChildAtom( pasp );
     delete pasp;
@@ -187,11 +187,11 @@ PictureAspectRatioBox::set( MP4FileHandle file, uint16_t trackIndex, const Item&
 {
     MP4Atom* coding;
     if( findCoding( file, trackIndex, coding ))
-        throw new Exception( "supported coding not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("supported coding not found");
 
     MP4Atom* pasp;
     if( findPictureAspectRatioBox( file, *coding, pasp ))
-        throw new Exception( "pasp-box not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("pasp-box not found");
 
     MP4Integer16Property* hSpacing;
     MP4Integer16Property* vSpacing;
@@ -258,7 +258,7 @@ PictureAspectRatioBox::Item::convertFromCSV( const string& text )
         xss << "invalid PcitureAspectRatioBox format"
             << " (expecting: hSpacing,vSpacing)"
             << " got: " << text;
-        throw new Exception( xss.str(), __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION(xss.str());
     }
 }
 

@@ -29,11 +29,16 @@ namespace impl {
 
 typedef uint32_t MP4ArrayIndex;
 
-class MP4Array {
+template<class type> class MP4Array {
 public:
     MP4Array() {
+        m_elements = NULL;
         m_numElements = 0;
         m_maxNumElements = 0;
+    }
+
+    ~MP4Array() {
+        MP4Free(m_elements);
     }
 
     inline bool ValidIndex(MP4ArrayIndex index) {
@@ -48,94 +53,73 @@ public:
         return m_maxNumElements;
     }
 
+    inline void Add(type newElement) {
+        Insert(newElement, m_numElements);
+    }
+
+    void Insert(type newElement, MP4ArrayIndex newIndex) {
+        if (newIndex > m_numElements) {
+            throw new PLATFORM_EXCEPTION("illegal array index", ERANGE);
+        }
+        if (m_numElements == m_maxNumElements) {
+            MP4ArrayIndex newSize = max(m_maxNumElements, (MP4ArrayIndex)1) * 2;
+            m_elements = (type*)MP4Realloc(m_elements,
+                newSize * sizeof(type));
+            m_maxNumElements = newSize;
+        }
+        memmove(&m_elements[newIndex + 1], &m_elements[newIndex],
+            (m_numElements - newIndex) * sizeof(type));
+        m_elements[newIndex] = newElement;
+        m_numElements++;
+    }
+
+    void Delete(MP4ArrayIndex index) {
+        if (!ValidIndex(index)) {
+            ostringstream msg;
+            msg << "illegal array index: " << index << " of " << m_numElements;
+            throw new PLATFORM_EXCEPTION(msg.str().c_str(), ERANGE);
+        }
+        m_numElements--;
+        if (index < m_numElements) {
+            memmove(&m_elements[index], &m_elements[index + 1],
+                (m_numElements - index) * sizeof(type));
+        }
+    }
+
+    void Resize(MP4ArrayIndex newSize) {
+        if ( (uint64_t) newSize * sizeof(type) > 0xFFFFFFFF )
+            throw new PLATFORM_EXCEPTION("requested array size exceeds 4GB", ERANGE); /* prevent overflow */
+        m_elements = (type*)MP4Realloc(m_elements,
+        newSize * sizeof(type));
+        m_numElements = newSize;
+        m_maxNumElements = newSize;
+    }
+
+    type& operator[](MP4ArrayIndex index) {
+        if (ValidIndex(index)) {
+            return m_elements[index];
+        }
+        else {
+            ostringstream msg;
+            msg << "illegal array index: " << index << " of " << m_numElements;
+            throw new PLATFORM_EXCEPTION(msg.str().c_str(), ERANGE);
+        }
+    }
+
 protected:
+    type*           m_elements;
     MP4ArrayIndex   m_numElements;
     MP4ArrayIndex   m_maxNumElements;
 };
 
-// macro to generate subclasses
-// we use this as an alternative to templates
-// due to the excessive compile time price of extensive template usage
-
-#define MP4ARRAY_DECL(name, type) \
-    class name##Array : public MP4Array { \
-    public: \
-        name##Array() { \
-            m_elements = NULL; \
-        } \
-        \
-        ~name##Array() { \
-            MP4Free(m_elements); \
-        } \
-        \
-        inline void Add(type newElement) { \
-            Insert(newElement, m_numElements); \
-        } \
-        \
-        void Insert(type newElement, MP4ArrayIndex newIndex) { \
-            if (newIndex > m_numElements) { \
-                  throw new PlatformException("illegal array index", ERANGE, __FILE__, __LINE__, __FUNCTION__); \
-            } \
-            if (m_numElements == m_maxNumElements) { \
-                m_maxNumElements = max(m_maxNumElements, (MP4ArrayIndex)1) * 2; \
-                m_elements = (type*)MP4Realloc(m_elements, \
-                    m_maxNumElements * sizeof(type)); \
-            } \
-            memmove(&m_elements[newIndex + 1], &m_elements[newIndex], \
-                (m_numElements - newIndex) * sizeof(type)); \
-            m_elements[newIndex] = newElement; \
-            m_numElements++; \
-        } \
-        \
-        void Delete(MP4ArrayIndex index) { \
-            if (!ValidIndex(index)) { \
-                ostringstream msg; \
-                msg << "illegal array index: " << index << " of " << m_numElements; \
-                throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__); \
-            } \
-            m_numElements--; \
-            if (index < m_numElements) { \
-              memmove(&m_elements[index], &m_elements[index + 1], \
-                  (m_numElements - index) * sizeof(type)); \
-            } \
-        } \
-        void Resize(MP4ArrayIndex newSize) { \
-            m_numElements = newSize; \
-            m_maxNumElements = newSize; \
-            m_elements = (type*)MP4Realloc(m_elements, \
-                m_maxNumElements * sizeof(type)); \
-        } \
-        \
-        type& operator[](MP4ArrayIndex index) { \
-            if (ValidIndex(index)) { \
-                return m_elements[index]; \
-            } \
-            else { \
-                ostringstream msg; \
-                msg << "illegal array index: " << index << " of " << m_numElements; \
-                throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__ ); \
-            } \
-        } \
-        \
-    protected: \
-        type*   m_elements; \
-    };
-
-MP4ARRAY_DECL(MP4Integer8, uint8_t)
-
-MP4ARRAY_DECL(MP4Integer16, uint16_t)
-
-MP4ARRAY_DECL(MP4Integer32, uint32_t)
-
-MP4ARRAY_DECL(MP4Integer64, uint64_t)
-
-MP4ARRAY_DECL(MP4Float32, float)
-
-MP4ARRAY_DECL(MP4Float64, double)
-
-MP4ARRAY_DECL(MP4String, char*)
-
-MP4ARRAY_DECL(MP4Bytes, uint8_t*)
+typedef MP4Array<uint8_t> MP4Integer8Array;
+typedef MP4Array<uint16_t> MP4Integer16Array;
+typedef MP4Array<uint32_t> MP4Integer32Array;
+typedef MP4Array<uint64_t> MP4Integer64Array;
+typedef MP4Array<float> MP4Float32Array;
+typedef MP4Array<double> MP4Float64Array;
+typedef MP4Array<char*> MP4StringArray;
+typedef MP4Array<uint8_t*> MP4BytesArray;
 
 ///////////////////////////////////////////////////////////////////////////////
 

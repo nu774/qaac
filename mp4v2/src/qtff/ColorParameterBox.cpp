@@ -41,14 +41,14 @@ ColorParameterBox::add( MP4FileHandle file, uint16_t trackIndex, const Item& ite
     MP4Atom* coding;
 
     if( !MP4_IS_VALID_FILE_HANDLE( file ))
-        throw new Exception( "invalid file handle", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("invalid file handle");
 
     if( findCoding( file, trackIndex, coding ))
-        throw new Exception( "supported coding not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("supported coding not found");
 
     MP4Atom* colr;
     if( !findColorParameterBox( file, *coding, colr ))
-        throw new Exception( "colr-box already exists", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("colr-box already exists");
 
     colr = MP4Atom::CreateAtom( *((MP4File *)file), coding, BOX_CODE.c_str() );
     coding->AddChildAtom( colr );
@@ -92,11 +92,11 @@ ColorParameterBox::get( MP4FileHandle file, uint16_t trackIndex, Item& item )
 
     MP4Atom* coding;
     if( findCoding( file, trackIndex, coding ))
-        throw new Exception( "supported coding not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("supported coding not found");
 
     MP4Atom* colr;
     if( findColorParameterBox( file, *coding, colr ))
-        throw new Exception( "colr-box not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("colr-box not found");
 
     MP4Integer16Property* primariesIndex;
     MP4Integer16Property* transferFunctionIndex;
@@ -171,11 +171,11 @@ ColorParameterBox::remove( MP4FileHandle file, uint16_t trackIndex )
 {
     MP4Atom* coding;
     if( findCoding( file, trackIndex, coding ))
-        throw new Exception( "supported coding not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("supported coding not found");
 
     MP4Atom* colr;
     if( findColorParameterBox( file, *coding, colr ))
-        throw new Exception( "colr-box not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("colr-box not found");
 
     coding->DeleteChildAtom( colr );
     delete colr;
@@ -199,11 +199,11 @@ ColorParameterBox::set( MP4FileHandle file, uint16_t trackIndex, const Item& ite
 {
     MP4Atom* coding;
     if( findCoding( file, trackIndex, coding ))
-        throw new Exception( "supported coding not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("supported coding not found");
 
     MP4Atom* colr;
     if( findColorParameterBox( file, *coding, colr ))
-        throw new Exception( "colr-box not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("colr-box not found");
 
     MP4Integer16Property* primariesIndex;
     MP4Integer16Property* transferFunctionIndex;
@@ -268,7 +268,7 @@ ColorParameterBox::Item::convertFromCSV( const string& text )
         xss << "invalid ColorParameterBox format"
             << " (expecting: INDEX1,INDEX2,INDEX3)"
             << " got: " << text;
-        throw new Exception( xss.str(), __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION(xss.str());
     }
 }
 

@@ -46,7 +46,7 @@ enum BasicType {
     BT_URL       = 15,  ///< absolute, in UTF-8 characters
     BT_DURATION  = 16,  ///< in milliseconds, 32-bit integer
     BT_DATETIME  = 17,  ///< in UTC, counting seconds since midnight, January 1, 1904; 32 or 64-bits
-    BT_GENRES    = 18,  ///< a list of enumerated values, see #Genre
+    BT_GENRES    = 18,  ///< a list of enumerated values, see #GenreType
     BT_INTEGER   = 21,  ///< a signed big-endian integer with length one of { 1,2,3,4,8 } bytes
     BT_RIAA_PA   = 24,  ///< RIAA parental advisory; { -1=no, 1=yes, 0=unspecified }, 8-bit ingteger
     BT_UPC       = 25,  ///< Universal Product Code, in text UTF-8 format (valid as an ID)
@@ -274,11 +274,12 @@ MP4V2_EXPORT extern const EnumCountryCode enumCountryCode;
 /// enumerated 8-bit Content Rating used by iTunes.
 /// Note values are not formally defined in any specification.
 enum ContentRating {   
-    CR_NONE      = 0,
-    CR_CLEAN     = 2,
-    CR_EXPLICIT  = 4,
+    CR_NONE         = 0,
+    CR_EXPLICIT     = 1,
+    CR_CLEAN        = 2,
+    CR_EXPLICIT_OLD = 4,
 
-    CR_UNDEFINED = 255
+    CR_UNDEFINED    = 255
 };
 
 typedef Enum<ContentRating,CR_UNDEFINED> EnumContentRating;

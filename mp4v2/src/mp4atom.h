@@ -34,7 +34,7 @@ namespace mp4v2 { namespace impl {
 ///////////////////////////////////////////////////////////////////////////////
 
 class MP4Atom;
-MP4ARRAY_DECL(MP4Atom, MP4Atom*);
+typedef MP4Array<MP4Atom*> MP4AtomArray;
 
 #define Required    true
 #define Optional    false
@@ -47,6 +47,9 @@ class MP4AtomInfo {
 public:
     MP4AtomInfo() {
         m_name = NULL;
+        m_mandatory = Optional;
+        m_onlyOne = OnlyOne;
+        m_count = 0;
     }
     MP4AtomInfo(const char* name, bool mandatory, bool onlyOne);
 
@@ -56,7 +59,7 @@ public:
     uint32_t m_count;
 };
 
-MP4ARRAY_DECL(MP4AtomInfo, MP4AtomInfo*);
+typedef MP4Array<MP4AtomInfo*> MP4AtomInfoArray;
 
 class MP4Atom
 {

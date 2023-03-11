@@ -44,8 +44,13 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4018;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalIncludeDirectories>..\..\mp4v2;..\..\mp4v2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\mp4v2;..\..\mp4v2\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MP4V2_USE_STATIC_LIB;_CRT_SECURE_NO_DEPRECATE;WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$([System.Convert]::ToInt32($(PlatformToolset.Substring(1, 3))))' &lt; 140">
+    <ClCompile>
+      <PreprocessorDefinitions>snprintf=_snprintf;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32' and '$(PlatformToolset)' != 'v100'">
@@ -154,7 +159,6 @@
     <ClCompile Include="..\..\mp4v2\src\odcommands.cpp" />
     <ClCompile Include="..\..\mp4v2\libplatform\prog\option.cpp" />
     <ClCompile Include="..\..\mp4v2\src\qtff\PictureAspectRatioBox.cpp" />
-    <ClCompile Include="..\..\mp4v2\libplatform\process\process_win32.cpp" />
     <ClCompile Include="..\..\mp4v2\src\qosqualifiers.cpp" />
     <ClCompile Include="..\..\mp4v2\libplatform\number\random_win32.cpp" />
     <ClCompile Include="..\..\mp4v2\src\rtphint.cpp" />

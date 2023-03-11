@@ -9,10 +9,11 @@ class StandardFileProvider : public FileProvider
 public:
     StandardFileProvider();
 
-    bool open( std::string name, Mode mode );
+    bool open( const std::string& name, Mode mode );
     bool seek( Size pos );
-    bool read( void* buffer, Size size, Size& nin, Size maxChunkSize );
-    bool write( const void* buffer, Size size, Size& nout, Size maxChunkSize );
+    bool read( void* buffer, Size size, Size& nin );
+    bool write( const void* buffer, Size size, Size& nout );
+    bool truncate( Size size );
     bool close();
     bool getSize( Size& nout );
 
@@ -32,7 +33,7 @@ StandardFileProvider::StandardFileProvider()
 }
 
 bool
-StandardFileProvider::open( std::string name, Mode mode )
+StandardFileProvider::open( const std::string& name, Mode mode )
 {
     ios::openmode om = ios::binary;
     switch( mode ) {
@@ -73,7 +74,7 @@ StandardFileProvider::seek( Size pos )
 }
 
 bool
-StandardFileProvider::read( void* buffer, Size size, Size& nin, Size maxChunkSize )
+StandardFileProvider::read( void* buffer, Size size, Size& nin )
 {
     _fstream.read( (char*)buffer, size );
     if( _fstream.fail() )
@@ -83,13 +84,32 @@ StandardFileProvider::read( void* buffer, Size size, Size& nin, Size maxChunkSiz
 }
 
 bool
-StandardFileProvider::write( const void* buffer, Size size, Size& nout, Size maxChunkSize )
+StandardFileProvider::write( const void* buffer, Size size, Size& nout )
 {
     _fstream.write( (const char*)buffer, size );
     if( _fstream.fail() )
         return true;
     nout = size;
     return false;
+}
+
+bool
+StandardFileProvider::truncate( Size size )
+{
+    // close the file prior to truncating it
+    _fstream.close();
+
+    // truncate the file using the POSIX truncate function
+    if( ::truncate( _name.c_str(), size ) != 0)
+        return true;
+
+    // reopen the file and seek to the new end
+    _fstream.clear();
+    _fstream.open( _name.c_str(), ios::binary | ios::in | ios::out);
+    if ( _fstream.fail() )
+        return true;
+
+    return seek( size );
 }
 
 bool
@@ -104,12 +124,10 @@ StandardFileProvider::getSize( Size& nout )
 {
     bool retval;
 
-    streampos curpos = _fstream.tellg();
-    _fstream.seekg(0, ios::end);
-    nout = _fstream.tellg();
-    _fstream.seekg(curpos, ios::beg);
+    // getFileSize will log if it fails
+    retval = FileSystem::getFileSize( _name, nout );
 
-    return _fstream.fail();
+    return retval;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

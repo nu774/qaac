@@ -91,6 +91,13 @@ void MP4MdhdAtom::BeginWrite()
         ((MP4Integer6432Property*)m_pProperties[3])->Use64Bit(true);
         ((MP4Integer6432Property*)m_pProperties[5])->Use64Bit(true);
     }
+    else
+    {
+        SetVersion(0);
+        ((MP4Integer6432Property*)m_pProperties[2])->Use64Bit(false);
+        ((MP4Integer6432Property*)m_pProperties[3])->Use64Bit(false);
+        ((MP4Integer6432Property*)m_pProperties[5])->Use64Bit(false);
+    }
     MP4Atom::BeginWrite();
 }
 

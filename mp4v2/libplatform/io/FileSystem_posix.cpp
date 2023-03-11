@@ -6,7 +6,7 @@ namespace mp4v2 { namespace platform { namespace io {
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::exists( string path_ )
+FileSystem::exists( const std::string& path_ )
 {
     struct stat buf;
     return stat( path_.c_str(), &buf ) == 0;
@@ -15,7 +15,7 @@ FileSystem::exists( string path_ )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::isDirectory( string path_ )
+FileSystem::isDirectory( const std::string& path_ )
 {
     struct stat buf;
     if( stat( path_.c_str(), &buf ))
@@ -26,7 +26,7 @@ FileSystem::isDirectory( string path_ )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::isFile( string path_ )
+FileSystem::isFile( const std::string& path_ )
 {
     struct stat buf;
     if( stat( path_.c_str(), &buf ))
@@ -37,7 +37,7 @@ FileSystem::isFile( string path_ )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::getFileSize( string path_, File::Size& size_ )
+FileSystem::getFileSize( const std::string& path_, File::Size& size_ )
 {
     size_ = 0;
     struct stat buf;
@@ -50,7 +50,7 @@ FileSystem::getFileSize( string path_, File::Size& size_ )
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-FileSystem::rename( string from, string to )
+FileSystem::rename( const std::string& from, const std::string& to )
 {
     return ::rename( from.c_str(), to.c_str() ) != 0;
 }

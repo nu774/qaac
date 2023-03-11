@@ -42,9 +42,8 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
             if (read(fd, buf, 8) != 8 || std::memcmp(&buf[4], "ftyp", 4))
                 throw std::runtime_error("Not an MP4 file");
         }
-        static MP4FDReadProvider provider;
-        std::string name = strutil::format("%d", fd);
-        m_file.Read(name.c_str(), &provider);
+        static MP4StdIOCallbacks callbacks;
+        m_file.Read(nullptr, nullptr, &callbacks, m_fp.get());
         m_track_id = m_file.FindTrackId(0, MP4_AUDIO_TRACK_TYPE);
 
         const char *type = m_file.GetTrackMediaDataName(m_track_id);

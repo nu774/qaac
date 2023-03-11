@@ -69,10 +69,10 @@ void MP4RtpAtom::AddPropertiesHntiType()
 void MP4RtpAtom::Generate()
 {
     ASSERT(m_pParentAtom);
-    if (!strcmp(m_pParentAtom->GetType(), "stsd")) {
+    if (strequal(m_pParentAtom->GetType(), "stsd")) {
         AddPropertiesStsdType();
         GenerateStsdType();
-    } else if (!strcmp(m_pParentAtom->GetType(), "hnti")) {
+    } else if (strequal(m_pParentAtom->GetType(), "hnti")) {
         AddPropertiesHntiType();
         GenerateHntiType();
     } else {
@@ -101,10 +101,10 @@ void MP4RtpAtom::GenerateHntiType()
 void MP4RtpAtom::Read()
 {
     ASSERT(m_pParentAtom);
-    if (!strcmp(m_pParentAtom->GetType(), "stsd")) {
+    if (strequal(m_pParentAtom->GetType(), "stsd")) {
         AddPropertiesStsdType();
         ReadStsdType();
-    } else if (!strcmp(m_pParentAtom->GetType(), "hnti")) {
+    } else if (strequal(m_pParentAtom->GetType(), "hnti")) {
         AddPropertiesHntiType();
         ReadHntiType();
     } else {
@@ -135,7 +135,7 @@ void MP4RtpAtom::ReadHntiType()
 
 void MP4RtpAtom::Write()
 {
-    if (!strcmp(m_pParentAtom->GetType(), "hnti")) {
+    if (strequal(m_pParentAtom->GetType(), "hnti")) {
         WriteHntiType();
     } else {
         MP4Atom::Write();

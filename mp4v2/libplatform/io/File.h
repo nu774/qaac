@@ -16,7 +16,7 @@ public:
         MODE_UNDEFINED, //!< undefined
         MODE_READ,      //!< file may be read
         MODE_MODIFY,    //!< file may be read/written
-        MODE_CREATE,    //!< file will be created/truncated for read/write
+        MODE_CREATE     //!< file will be created/truncated for read/write
     };
 
     //! type used to represent all file sizes and offsets
@@ -25,10 +25,11 @@ public:
 public:
     virtual ~FileProvider() { }
 
-    virtual bool open( std::string name, Mode mode ) = 0;
+    virtual bool open( const std::string& name, Mode mode ) = 0;
     virtual bool seek( Size pos ) = 0;
-    virtual bool read( void* buffer, Size size, Size& nin, Size maxChunkSize ) = 0;
-    virtual bool write( const void* buffer, Size size, Size& nout, Size maxChunkSize ) = 0;
+    virtual bool read( void* buffer, Size size, Size& nin ) = 0;
+    virtual bool write( const void* buffer, Size size, Size& nout ) = 0;
+    virtual bool truncate( Size size ) = 0;
     virtual bool close() = 0;
     virtual bool getSize( Size& nout ) = 0;
 
@@ -58,7 +59,7 @@ public:
     //! A new file object is constructed but not opened.
     //!
     //! @param name filename of file object, or empty-string.
-	//!  On Windows, this should be a UTF-8 encoded string.
+    //!  On Windows, this should be a UTF-8 encoded string.
     //!  On other platforms, it should be an 8-bit encoding that is
     //!  appropriate for the platform, locale, file system, etc.
     //!  (prefer to use UTF-8 when possible).
@@ -70,7 +71,8 @@ public:
     //!
     ///////////////////////////////////////////////////////////////////////////
 
-    explicit File( std::string name = "", Mode mode = MODE_UNDEFINED, FileProvider* = NULL );
+    explicit File( const std::string& name = "", Mode mode = MODE_UNDEFINED,
+        FileProvider* provider = NULL );
 
     ///////////////////////////////////////////////////////////////////////////
     //!
@@ -88,16 +90,18 @@ public:
     //! Open file.
     //!
     //! @param name filename of file object, or empty-string to use #name.
-	//!     On Windows, this should be a UTF-8 encoded string.
+    //!     On Windows, this should be a UTF-8 encoded string.
     //!     On other platforms, it should be an 8-bit encoding that is
     //!     appropriate for the platform, locale, file system, etc.
     //!     (prefer to use UTF-8 when possible).
+    //! @param mode bitmask specifying mode flags.
+    //!     See #Mode for bit constants.
     //!
     //! @return true on failure, false on success.
     //!
     ///////////////////////////////////////////////////////////////////////////
 
-    bool open( std::string name = "", Mode mode = MODE_UNDEFINED );
+    bool open( const std::string& name = "", Mode mode = MODE_UNDEFINED );
 
     ///////////////////////////////////////////////////////////////////////////
     //!
@@ -135,14 +139,12 @@ public:
     //! @param buffer storage for data read from file.
     //! @param size maximum number of bytes to read from file.
     //! @param nin output indicating number of bytes read from file.
-    //! @param maxChunkSize maximum chunk size for reads issued to operating
-    //!     system or 0 for default.
     //!
     //! @return true on failure, false on success.
     //!
     ///////////////////////////////////////////////////////////////////////////
 
-    bool read( void* buffer, Size size, Size& nin, Size maxChunkSize = 0 );
+    bool read( void* buffer, Size size, Size& nin );
 
     ///////////////////////////////////////////////////////////////////////////
     //!
@@ -155,14 +157,24 @@ public:
     //! @param buffer data to be written out to file.
     //! @param size maximum number of bytes to read from file.
     //! @param nout output indicating number of bytes written to file.
-    //! @param maxChunkSize maximum chunk size for writes issued to operating
-    //!     system or 0 for default.
     //!
     //! @return true on failure, false on success.
     //!
     ///////////////////////////////////////////////////////////////////////////
 
-    bool write( const void* buffer, Size size, Size& nout, Size maxChunkSize = 0 );
+    bool write( const void* buffer, Size size, Size& nout );
+
+    ///////////////////////////////////////////////////////////////////////////
+    //!
+    //! Truncate file to length in bytes.
+    //!
+    //! @param size number of bytes to truncate the file to.
+    //!
+    //! @return true on failure, false on success.
+    //!
+    ///////////////////////////////////////////////////////////////////////////
+
+    bool truncate( Size size );
 
     ///////////////////////////////////////////////////////////////////////////
     //!
@@ -203,16 +215,38 @@ class CustomFileProvider : public FileProvider
 public:
     CustomFileProvider( const MP4FileProvider& );
 
-    bool open( std::string name, Mode mode );
+    bool open( const std::string& name, Mode mode );
     bool seek( Size pos );
-    bool read( void* buffer, Size size, Size& nin, Size maxChunkSize );
-    bool write( const void* buffer, Size size, Size& nout, Size maxChunkSize );
+    bool read( void* buffer, Size size, Size& nin );
+    bool write( const void* buffer, Size size, Size& nout );
+    bool truncate( Size size );
     bool close();
     bool getSize( Size& nout );
 
 private:
     MP4FileProvider _call;
     void*           _handle;
+    std::string     _name;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+class CallbacksFileProvider : public FileProvider
+{
+public:
+    CallbacksFileProvider( const MP4IOCallbacks& callbacks, void* handle );
+
+    bool open( const std::string& name, Mode mode );
+    bool seek( Size pos );
+    bool read( void* buffer, Size size, Size& nin );
+    bool write( const void* buffer, Size size, Size& nout );
+    bool truncate( Size size );
+    bool close();
+    bool getSize( Size& nout );
+
+private:
+    MP4IOCallbacks _call;
+    void*          _handle;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

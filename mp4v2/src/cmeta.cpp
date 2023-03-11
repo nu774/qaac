@@ -69,7 +69,7 @@ MP4TagsAlloc()
         m->c_alloc( result );
         return result;
     }
-    catch( std::bad_alloc ) {
+    catch( const std::bad_alloc& ) {
         // This could be a failure to allocate itmf::Tags or
         // a failure to allocate inside c_alloc.
         mp4v2::impl::log.errorf("%s: memory allocation error", __FUNCTION__);

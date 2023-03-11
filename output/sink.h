@@ -10,6 +10,7 @@
 class MP4SinkBase: public ITagStore {
 protected:
     std::wstring m_filename;
+    std::shared_ptr<FILE> m_fp;
     MP4FileX m_mp4file;
     MP4TrackId m_track_id;
     bool m_closed;

@@ -1,3 +1,26 @@
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is MPEG4IP.
+ *
+ * The Initial Developer of the Original Code is Cisco Systems Inc.
+ * Portions created by Cisco Systems Inc. are
+ * Copyright (C) Cisco Systems Inc. 2001 - 2005.  All Rights Reserved.
+ *
+ * Contributor(s):
+ *      Dave Mackie,               dmackie@cisco.com
+ *      Alix Marchandise-Franquet, alix@cisco.com
+ *      Bill May,                  wmay@cisco.com
+ *      Kona Blend,                kona8lend@gmail.com
+ */
 #ifndef MP4V2_SAMPLE_H
 #define MP4V2_SAMPLE_H
 
@@ -37,13 +60,13 @@ typedef enum MP4SampleDependencyType_e {
  *  *ppBytes to the buffer it wishes to use. The calling application is
  *  responsible for ensuring that the buffer is large enough to hold the
  *  sample. This can be done by using either MP4GetSampleSize() or
- *  MP4GetTrackMaxSampleSize() to determine before-hand how large the
+ *  MP4GetTrackMaxSampleSize() to determine beforehand how large the
  *  receiving buffer must be.
  *
  *  If the value of *ppBytes is NULL, then an appropriately sized buffer is
- *  automatically malloc'ed for the sample data and *ppBytes set to this
- *  pointer. The calling application is responsible for free'ing this
- *  memory.
+ *  automatically allocated for the sample data and *ppBytes set to this
+ *  pointer. The calling application is responsible for freeing this memory
+ *  with MP4Free().
  *
  *  The last four arguments are pointers to variables that can receive
  *  optional sample information.
@@ -81,8 +104,8 @@ typedef enum MP4SampleDependencyType_e {
  *
  *  @return <b>true</b> on success, <b>false</b> on failure.
  *
- *  @see MP4GetSampleSize().
- *  @see MP4GetTrackMaxSampleSize().
+ *  @see MP4GetSampleSize()
+ *  @see MP4GetTrackMaxSampleSize()
  */
 MP4V2_EXPORT
 bool MP4ReadSample(
@@ -91,8 +114,8 @@ bool MP4ReadSample(
     MP4TrackId    trackId,
     MP4SampleId   sampleId,
     /* input/output parameters */
-    uint8_t** ppBytes,
-    uint32_t* pNumBytes,
+    uint8_t**     ppBytes,
+    uint32_t*     pNumBytes,
     /* output parameters */
     MP4Timestamp* pStartTime DEFAULT(NULL),
     MP4Duration*  pDuration DEFAULT(NULL),
@@ -113,13 +136,13 @@ bool MP4ReadSample(
  *  *ppBytes to the buffer it wishes to use. The calling application is
  *  responsible for ensuring that the buffer is large enough to hold the
  *  sample. This can be done by using either MP4GetSampleSize() or
- *  MP4GetTrackMaxSampleSize() to determine before-hand how large the
+ *  MP4GetTrackMaxSampleSize() to determine beforehand how large the
  *  receiving buffer must be.
  *
  *  If the value of *ppBytes is NULL, then an appropriately sized buffer is
- *  automatically malloc'ed for the sample data and *ppBytes set to this
- *  pointer. The calling application is responsible for free'ing this
- *  memory.
+ *  automatically allocated for the sample data and *ppBytes set to this
+ *  pointer. The calling application is responsible for freeing this memory
+ *  with MP4Free().
  *
  *  The last four arguments are pointers to variables that can receive
  *  optional sample information.
@@ -157,10 +180,10 @@ bool MP4ReadSample(
  *
  *  @return <b>true</b> on success, <b>false</b> on failure.
  *
- *  @see MP4ReadSample().
- *  @see MP4GetSampleIdFromTime().
- *  @see MP4GetSampleSize().
- *  @see MP4GetTrackMaxSampleSize().
+ *  @see MP4ReadSample()
+ *  @see MP4GetSampleIdFromTime()
+ *  @see MP4GetSampleSize()
+ *  @see MP4GetTrackMaxSampleSize()
  */
 MP4V2_EXPORT
 bool MP4ReadSampleFromTime(
@@ -169,8 +192,8 @@ bool MP4ReadSampleFromTime(
     MP4TrackId    trackId,
     MP4Timestamp  when,
     /* input/output parameters */
-    uint8_t** ppBytes,
-    uint32_t* pNumBytes,
+    uint8_t**     ppBytes,
+    uint32_t*     pNumBytes,
     /* output parameters */
     MP4Timestamp* pStartTime DEFAULT(NULL),
     MP4Duration*  pDuration DEFAULT(NULL),
@@ -212,7 +235,7 @@ bool MP4ReadSampleFromTime(
  *
  *  @return <b>true</b> on success, <b>false</b> on failure.
  *
- *  @see MP4AddTrack().
+ *  @see MP4AddTrack()
  */
 MP4V2_EXPORT
 bool MP4WriteSample(
@@ -226,11 +249,11 @@ bool MP4WriteSample(
 
 /** Write a track sample and supply dependency information.
  *
- *  MP4WriteSampleDependency writes the given sample at the end of the specified track.
- *  Currently the library does not support random insertion of samples into
- *  the track timeline. Note that with mp4 there cannot be any holes or
- *  overlapping samples in the track timeline. The last three arguments give
- *  optional sample information.
+ *  MP4WriteSampleDependency writes the given sample at the end of the
+ *  specified track. Currently the library does not support random insertion of
+ *  samples into the track timeline. Note that with mp4 there cannot be any
+ *  holes or overlapping samples in the track timeline. The last three
+ *  arguments give optional sample information.
  *
  *  The value of duration can be given as #MP4_INVALID_DURATION if all samples
  *  in the track have the same duration. This can be specified with
@@ -260,7 +283,7 @@ bool MP4WriteSample(
  *
  *  @return <b>true</b> on success, <b>false</b> on failure.
  *
- *  @see MP4AddTrack().
+ *  @see MP4AddTrack()
  */
 MP4V2_EXPORT
 bool MP4WriteSampleDependency(
@@ -277,11 +300,11 @@ bool MP4WriteSampleDependency(
  *
  *  MP4CopySample creates a new sample based on an existing sample. Note that
  *  another copy of the media sample data is created in the file using this
- *  function. ie. this call is equivalent to MP4ReadSample() followed by
+ *  function. I.e. this call is equivalent to MP4ReadSample() followed by
  *  MP4WriteSample().
  *
  *  Note that is the responsibility of the caller to ensure that the copied
- *  media sample makes sense in the destination track. eg. copying a video
+ *  media sample makes sense in the destination track, e.g. copying a video
  *  sample to an audio track is unlikely to result in anything good happening,
  *  even copying a sample from video track to another requires that the tracks
  *  use the same encoding and that issues such as image size are addressed.
@@ -302,8 +325,8 @@ bool MP4WriteSampleDependency(
  *  @return On success, thew id of the new sample.
  *      On error, #MP4_INVALID_SAMPLE_ID.
  *
- *  @see MP4ReadSample().
- *  @see MP4WriteSample().
+ *  @see MP4ReadSample()
+ *  @see MP4WriteSample()
  */
 MP4V2_EXPORT
 bool MP4CopySample(
@@ -337,7 +360,7 @@ bool MP4CopySample(
  *  @return On success, thew id of the new sample.
  *      On error, #MP4_INVALID_SAMPLE_ID.
  *
- *  @see MP4CopySample().
+ *  @see MP4CopySample()
  */
 MP4V2_EXPORT
 bool MP4EncAndCopySample(
@@ -389,7 +412,7 @@ uint32_t MP4GetSampleSize(
  *
  *  @return On success, the maximum sample size in bytes. On error, <b>0</b>.
  *
- *  @see MP4GetSampleSize().
+ *  @see MP4GetSampleSize()
  */
 MP4V2_EXPORT
 uint32_t MP4GetTrackMaxSampleSize(
@@ -412,6 +435,9 @@ uint32_t MP4GetTrackMaxSampleSize(
  *  be the case for a player that is implementing a positioning function and
  *  needs to be able to start decoding a track from the returned sample id.
  *
+ *  See MP4ConvertToTrackTimestamp() for how to map a time value to this
+ *  timescale.
+ *
  *  @param hFile handle of file for operation.
  *  @param trackId id of track for operation.
  *  @param when time in track timescale.
@@ -421,8 +447,7 @@ uint32_t MP4GetTrackMaxSampleSize(
  *  @return On success, the sample id that occurs at the specified time.
  *      On error, #MP4_INVALID_SAMPLE_ID.
  *
- *  @see MP4ConvertToTrackTimestamp() for how to map a time value to this
- *      timescale.
+ *  @see MP4ConvertToTrackTimestamp()
  */
 MP4V2_EXPORT
 MP4SampleId MP4GetSampleIdFromTime(
@@ -436,6 +461,9 @@ MP4SampleId MP4GetSampleIdFromTime(
  *  MP4GetSampleTime returns the start time of the specified sample from
  *  the specified track in the track timescale units.
  *
+ *  See MP4ConvertFromTrackTimestamp() for how to map this value to another
+ *      timescale.
+ *
  *  @param hFile handle of file for operation.
  *  @param trackId id of track for operation.
  *  @param sampleId id of sample for operation. Caveat: the first sample has
@@ -444,8 +472,7 @@ MP4SampleId MP4GetSampleIdFromTime(
  *  @return On success, sample start time in track timescale units.
  *      On error, #MP4_INVALID_TIMESTAMP.
  *
- *  @see MP4ConvertFromTrackTimestamp() for how to map this value to another
- *      timescale.
+ *  @see MP4ConvertFromTrackTimestamp()
  */
 MP4V2_EXPORT
 MP4Timestamp MP4GetSampleTime(
@@ -458,6 +485,9 @@ MP4Timestamp MP4GetSampleTime(
  *  MP4GetSampleDuration returns the duration of the specified sample from
  *  the specified track in the track timescale units.
  *
+ *  See MP4ConvertFromTrackDuration() for how to map this value to another
+ *      timescale.
+ *
  *  @param hFile handle of file for operation.
  *  @param trackId id of track for operation.
  *  @param sampleId id of sample for operation. Caveat: the first sample has
@@ -466,8 +496,7 @@ MP4Timestamp MP4GetSampleTime(
  *  @return On success, the sample duration in track timescale units.
  *      On error, #MP4_INVALID_DURATION.
  *
- *  @see MP4ConvertFromTrackDuration() for how to map this value to another
- *      timescale.
+ *  @see MP4ConvertFromTrackDuration()
  */
 MP4V2_EXPORT
 MP4Duration MP4GetSampleDuration(
@@ -492,6 +521,9 @@ MP4Duration MP4GetSampleDuration(
  *  decoded, the start time plus the rendering offset indicates when it
  *  should be rendered.
  *
+ *  See MP4ConvertFromTrackDuration() for how to map this value to another
+ *      timescale.
+ *
  *  @param hFile handle of file for operation.
  *  @param trackId id of track for operation.
  *  @param sampleId id of sample for operation. Caveat: the first sample has
@@ -500,8 +532,7 @@ MP4Duration MP4GetSampleDuration(
  *  @return On success, the rendering offset in track timescale units.
  *      On error, #MP4_INVALID_DURATION.
  *
- *  @see MP4ConvertFromTrackDuration() for how to map this value to another
- *      timescale.
+ *  @see MP4ConvertFromTrackDuration()
  */
 MP4V2_EXPORT
 MP4Duration MP4GetSampleRenderingOffset(
@@ -514,6 +545,10 @@ MP4Duration MP4GetSampleRenderingOffset(
  *  MP4SetSampleRenderingOffset sets the rendering offset of the specified
  *  sample from the specified track in the track timescale units.
  *
+ *  See MP4ConvertToTrackDuration() for how to map this value from another
+ *  timescale and MP4GetSampleRenderingOffset() for a description of this
+ *  sample property.
+ *
  *  @param hFile handle of file for operation.
  *  @param trackId id of track for operation.
  *  @param sampleId id of sample for operation. Caveat: the first sample has
@@ -522,10 +557,8 @@ MP4Duration MP4GetSampleRenderingOffset(
  *
  *  @return <b>true</b> on success, <b>false</b> on failure.
  *
- *  @see MP4ConvertToTrackDuration() for how to map this value from another
- *      timescale.
- *  @see MP4GetSampleRenderingOffset() for a description of this sample
- *      property.
+ *  @see MP4ConvertToTrackDuration()
+ *  @see MP4GetSampleRenderingOffset()
  */
 MP4V2_EXPORT
 bool MP4SetSampleRenderingOffset(
@@ -552,6 +585,6 @@ int8_t MP4GetSampleSync(
     MP4TrackId    trackId,
     MP4SampleId   sampleId );
 
-/* @} ***********************************************************************/
+/** @} ***********************************************************************/
 
 #endif /* MP4V2_SAMPLE_H */

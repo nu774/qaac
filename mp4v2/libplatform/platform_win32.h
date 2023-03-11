@@ -3,6 +3,12 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef __MINGW32__
+#   include "libplatform/config.h"
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+
 // mingw needs this to enable some newer 64-bit functions
 #ifdef __MINGW32__
 #   undef  __MSVCRT_VERSION__
@@ -10,12 +16,23 @@
 #endif
 
 // set minimum win32 API requirement to Windows 2000 or higher
-#ifndef _WIN32_WINNT
-#   define _WIN32_WINNT 0x0500
-#endif 
 #ifndef WINVER
-#   define WINVER 0x0500
-#endif 
+#   ifndef _MSC_VER
+#       define WINVER 0x0500
+#   elif _MSC_VER >= 1930 // toolset versions >= 17.0 support Windows 7 or later
+#       define WINVER 0x0601
+#   elif _MSC_VER >= 1910 // toolset versions >= 15.0 support Windows Vista or later
+#       define WINVER 0x0600
+#   elif _MSC_VER >= 1600 // toolset versions >= 10.0 support Windows XP or later
+#       define WINVER 0x0501
+#   else
+#       define WINVER 0x0500
+#   endif
+#endif
+
+#ifndef _WIN32_WINNT
+#   define _WIN32_WINNT WINVER
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -58,18 +75,17 @@ namespace mp4v2 { namespace platform {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// If using Visual Studio 2010 or newer these aren't needed since stdint.h is available.
-#if !(defined(_MSC_VER) && _MSC_VER >= 1600)
 // some macros for constant expressions
-#define INT8_C(x)    x
-#define INT16_C(x)   x
-#define INT32_C(x)   x ## L
-#define INT64_C(x)   x ## LL
+#ifndef INT8_C
+#   define INT8_C(x)    x
+#   define INT16_C(x)   x
+#   define INT32_C(x)   x ## L
+#   define INT64_C(x)   x ## LL
 
-#define UINT8_C(x)   x
-#define UINT16_C(x)  x
-#define UINT32_C(x)  x ## UL
-#define UINT64_C(x)  x ## ULL
+#   define UINT8_C(x)   x
+#   define UINT16_C(x)  x
+#   define UINT32_C(x)  x ## UL
+#   define UINT64_C(x)  x ## ULL
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -84,11 +100,13 @@ namespace mp4v2 { namespace platform {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define snprintf(s,n,...)  _snprintf(s,n,__VA_ARGS__)
 #ifndef strcasecmp
-#define strcasecmp(s1,s2)  _stricmp(s1,s2)
+#   define strcasecmp(s1,s2) _stricmp(s1,s2)
 #endif
-#define strdup(s)          _strdup(s)
+
+#ifndef strncasecmp
+#   define strncasecmp(s1,s2,l) _strnicmp(s1,s2,l)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 

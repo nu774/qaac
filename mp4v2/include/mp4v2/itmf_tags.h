@@ -1,3 +1,24 @@
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is MP4v2.
+ *
+ * The Initial Developer of the Original Code is Kona Blend.
+ * Portions created by Kona Blend are Copyright (C) 2009.
+ * All Rights Reserved.
+ *
+ * Contributor(s):
+ *      Kona Blend, kona8lend@gmail.com
+ *      David Byron, dbyron0@gmail.com
+ */
 #ifndef MP4V2_ITMF_TAGS_H
 #define MP4V2_ITMF_TAGS_H
 
@@ -99,64 +120,64 @@ typedef struct MP4Tags_s
 {
     void* __handle; /* internal use only */
 
-    const char*        name;
-    const char*        artist;
-    const char*        albumArtist; 
-    const char*        album;
-    const char*        grouping;
-    const char*        composer;
-    const char*        comments;
-    const char*        genre;
-    const uint16_t*    genreType;
-    const char*        releaseDate;
-    const MP4TagTrack* track;
-    const MP4TagDisk*  disk;
-    const uint16_t*    tempo;
-    const uint8_t*     compilation;
+    const char*          name;
+    const char*          artist;
+    const char*          albumArtist; 
+    const char*          album;
+    const char*          grouping;
+    const char*          composer;
+    const char*          comments;
+    const char*          genre;
+    const uint16_t*      genreType;
+    const char*          releaseDate;
+    const MP4TagTrack*   track;
+    const MP4TagDisk*    disk;
+    const uint16_t*      tempo;
+    const uint8_t*       compilation;
 
-    const char*     tvShow;
-    const char*     tvNetwork;
-    const char*     tvEpisodeID;
-    const uint32_t* tvSeason;
-    const uint32_t* tvEpisode;
+    const char*          tvShow;
+    const char*          tvNetwork;
+    const char*          tvEpisodeID;
+    const uint32_t*      tvSeason;
+    const uint32_t*      tvEpisode;
 
-    const char* description;
-    const char* longDescription;
-    const char* lyrics;
+    const char*          description;
+    const char*          longDescription;
+    const char*          lyrics;
 
-    const char* sortName;
-    const char* sortArtist;
-    const char* sortAlbumArtist;
-    const char* sortAlbum;
-    const char* sortComposer;
-    const char* sortTVShow;
+    const char*          sortName;
+    const char*          sortArtist;
+    const char*          sortAlbumArtist;
+    const char*          sortAlbum;
+    const char*          sortComposer;
+    const char*          sortTVShow;
 
     const MP4TagArtwork* artwork;
     uint32_t             artworkCount;
 
-    const char* copyright;
-    const char* encodingTool;
-    const char* encodedBy;
-    const char* purchaseDate;
+    const char*          copyright;
+    const char*          encodingTool;
+    const char*          encodedBy;
+    const char*          purchaseDate;
 
-    const uint8_t* podcast;
-    const char*    keywords;  /* TODO: Needs testing */
-    const char*    category;    
+    const uint8_t*       podcast;
+    const char*          keywords;  /* TODO: Needs testing */
+    const char*          category;    
 
-    const uint8_t* hdVideo;
-    const uint8_t* mediaType;
-    const uint8_t* contentRating;
-    const uint8_t* gapless;
+    const uint8_t*       hdVideo;
+    const uint8_t*       mediaType;
+    const uint8_t*       contentRating;
+    const uint8_t*       gapless;
 
-    const char*     iTunesAccount;
-    const uint8_t*  iTunesAccountType;
-    const uint32_t* iTunesCountry;
-    const uint32_t* contentID;
-    const uint32_t* artistID;
-    const uint64_t* playlistID;
-    const uint32_t* genreID;
-    const uint32_t* composerID;
-    const char*     xid;
+    const char*          iTunesAccount;
+    const uint8_t*       iTunesAccountType;
+    const uint32_t*      iTunesCountry;
+    const uint32_t*      contentID;
+    const uint32_t*      artistID;
+    const uint64_t*      playlistID;
+    const uint32_t*      genreID;
+    const uint32_t*      composerID;
+    const char*          xid;
 } MP4Tags;
 
 /** Allocate tags convenience structure for reading and settings tags.
@@ -182,7 +203,9 @@ const MP4Tags* MP4TagsAlloc( void );
  *  @return <b>true</b> on success, <b>false</b> on failure.
  */
 MP4V2_EXPORT
-bool MP4TagsFetch( const MP4Tags* tags, MP4FileHandle hFile );
+bool MP4TagsFetch(
+    const MP4Tags* tags,
+    MP4FileHandle  hFile );
 
 /** Store data to mp4 file from structure.
  *
@@ -196,7 +219,9 @@ bool MP4TagsFetch( const MP4Tags* tags, MP4FileHandle hFile );
  *  @return <b>true</b> on success, <b>false</b> on failure.
  */
 MP4V2_EXPORT
-bool MP4TagsStore( const MP4Tags* tags, MP4FileHandle hFile );
+bool MP4TagsStore(
+    const MP4Tags* tags,
+    MP4FileHandle  hFile );
 
 /** Free tags convenience structure.
  *
@@ -205,7 +230,8 @@ bool MP4TagsStore( const MP4Tags* tags, MP4FileHandle hFile );
  *  @param tags structure to destroy.
  */
 MP4V2_EXPORT
-void MP4TagsFree( const MP4Tags* tags );
+void MP4TagsFree(
+    const MP4Tags* tags );
 
 /** Accessor that indicates whether a tags structure
  * contains any metadata
@@ -222,57 +248,59 @@ void MP4TagsFree( const MP4Tags* tags );
  * metadata
  */
 MP4V2_EXPORT
-bool MP4TagsHasMetadata ( const MP4Tags* tags, bool *hasMetadata );
+bool MP4TagsHasMetadata (
+    const MP4Tags* tags,
+    bool*          hasMetadata );
 
-MP4V2_EXPORT bool MP4TagsSetName            ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetArtist          ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetAlbumArtist     ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetAlbum           ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetGrouping        ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetComposer        ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetComments        ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetGenre           ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetGenreType       ( const MP4Tags*, const uint16_t* );
-MP4V2_EXPORT bool MP4TagsSetReleaseDate     ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetTrack           ( const MP4Tags*, const MP4TagTrack* );
-MP4V2_EXPORT bool MP4TagsSetDisk            ( const MP4Tags*, const MP4TagDisk* );
-MP4V2_EXPORT bool MP4TagsSetTempo           ( const MP4Tags*, const uint16_t* );
-MP4V2_EXPORT bool MP4TagsSetCompilation     ( const MP4Tags*, const uint8_t* );
+MP4V2_EXPORT bool MP4TagsSetName              ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetArtist            ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetAlbumArtist       ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetAlbum             ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetGrouping          ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetComposer          ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetComments          ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetGenre             ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetGenreType         ( const MP4Tags*, const uint16_t* );
+MP4V2_EXPORT bool MP4TagsSetReleaseDate       ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetTrack             ( const MP4Tags*, const MP4TagTrack* );
+MP4V2_EXPORT bool MP4TagsSetDisk              ( const MP4Tags*, const MP4TagDisk* );
+MP4V2_EXPORT bool MP4TagsSetTempo             ( const MP4Tags*, const uint16_t* );
+MP4V2_EXPORT bool MP4TagsSetCompilation       ( const MP4Tags*, const uint8_t* );
 
-MP4V2_EXPORT bool MP4TagsSetTVShow          ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetTVNetwork       ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetTVEpisodeID     ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetTVSeason        ( const MP4Tags*, const uint32_t* );
-MP4V2_EXPORT bool MP4TagsSetTVEpisode       ( const MP4Tags*, const uint32_t* );
+MP4V2_EXPORT bool MP4TagsSetTVShow            ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetTVNetwork         ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetTVEpisodeID       ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetTVSeason          ( const MP4Tags*, const uint32_t* );
+MP4V2_EXPORT bool MP4TagsSetTVEpisode         ( const MP4Tags*, const uint32_t* );
 
-MP4V2_EXPORT bool MP4TagsSetDescription     ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetLongDescription ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetLyrics          ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetDescription       ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetLongDescription   ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetLyrics            ( const MP4Tags*, const char* );
 
-MP4V2_EXPORT bool MP4TagsSetSortName        ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetSortArtist      ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetSortAlbumArtist ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetSortAlbum       ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetSortComposer    ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetSortTVShow      ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetSortName          ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetSortArtist        ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetSortAlbumArtist   ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetSortAlbum         ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetSortComposer      ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetSortTVShow        ( const MP4Tags*, const char* );
 
-MP4V2_EXPORT bool MP4TagsAddArtwork         ( const MP4Tags*, MP4TagArtwork* );
-MP4V2_EXPORT bool MP4TagsSetArtwork         ( const MP4Tags*, uint32_t, MP4TagArtwork* );
-MP4V2_EXPORT bool MP4TagsRemoveArtwork      ( const MP4Tags*, uint32_t );
+MP4V2_EXPORT bool MP4TagsAddArtwork           ( const MP4Tags*, MP4TagArtwork* );
+MP4V2_EXPORT bool MP4TagsSetArtwork           ( const MP4Tags*, uint32_t, MP4TagArtwork* );
+MP4V2_EXPORT bool MP4TagsRemoveArtwork        ( const MP4Tags*, uint32_t );
 
-MP4V2_EXPORT bool MP4TagsSetCopyright       ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetEncodingTool    ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetEncodedBy       ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetPurchaseDate    ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetCopyright         ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetEncodingTool      ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetEncodedBy         ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetPurchaseDate      ( const MP4Tags*, const char* );
 
-MP4V2_EXPORT bool MP4TagsSetPodcast         ( const MP4Tags*, const uint8_t* );
-MP4V2_EXPORT bool MP4TagsSetKeywords        ( const MP4Tags*, const char* );
-MP4V2_EXPORT bool MP4TagsSetCategory        ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetPodcast           ( const MP4Tags*, const uint8_t* );
+MP4V2_EXPORT bool MP4TagsSetKeywords          ( const MP4Tags*, const char* );
+MP4V2_EXPORT bool MP4TagsSetCategory          ( const MP4Tags*, const char* );
 
-MP4V2_EXPORT bool MP4TagsSetHDVideo         ( const MP4Tags*, const uint8_t* );
-MP4V2_EXPORT bool MP4TagsSetMediaType       ( const MP4Tags*, const uint8_t* );
-MP4V2_EXPORT bool MP4TagsSetContentRating   ( const MP4Tags*, const uint8_t* );
-MP4V2_EXPORT bool MP4TagsSetGapless         ( const MP4Tags*, const uint8_t* );
+MP4V2_EXPORT bool MP4TagsSetHDVideo           ( const MP4Tags*, const uint8_t* );
+MP4V2_EXPORT bool MP4TagsSetMediaType         ( const MP4Tags*, const uint8_t* );
+MP4V2_EXPORT bool MP4TagsSetContentRating     ( const MP4Tags*, const uint8_t* );
+MP4V2_EXPORT bool MP4TagsSetGapless           ( const MP4Tags*, const uint8_t* );
 
 MP4V2_EXPORT bool MP4TagsSetITunesAccount     ( const MP4Tags*, const char* );
 MP4V2_EXPORT bool MP4TagsSetITunesAccountType ( const MP4Tags*, const uint8_t* );

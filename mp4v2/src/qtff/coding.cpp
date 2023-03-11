@@ -54,29 +54,29 @@ findCoding( MP4FileHandle file, uint16_t trackIndex, MP4Atom*& coding )
     if( trackIndex == numeric_limits<uint16_t>::max() ) {
         ostringstream xss;
         xss << "invalid track-index: " << trackIndex;
-        throw new Exception( xss.str(), __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION(xss.str());
     }
 
     ostringstream oss;
     oss << "moov.trak[" << trackIndex << "].mdia.hdlr";
     MP4Atom* hdlr = mp4.FindAtom( oss.str().c_str() );
     if( !hdlr )
-        throw new Exception( "media handler not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("media handler not found");
 
     MP4StringProperty* handlerType;
     if( !hdlr->FindProperty( "hdlr.handlerType", (MP4Property**)&handlerType ))
-        throw new Exception( "media handler type-property not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("media handler type-property not found");
 
     const string video = "vide";
     if( video != handlerType->GetValue() )
-        throw new Exception( "video-track required", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("video-track required");
 
     oss.str( "" );
     oss.clear();
     oss << "moov.trak[" << trackIndex << "].mdia.minf.stbl.stsd";
     MP4Atom* stsd = mp4.FindAtom( oss.str().c_str() );
     if( !stsd )
-        throw new Exception( "media handler type-property not found", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("media handler type-property not found");
 
     // find first atom which is a supported coding
     const uint32_t atomc = stsd->GetNumberOfChildAtoms();

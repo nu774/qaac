@@ -50,12 +50,17 @@ MP4StsdAtom::MP4StsdAtom(MP4File &file)
     ExpectChildAtom("mp4v", Optional, Many);
     ExpectChildAtom("encv", Optional, Many);
     ExpectChildAtom("rtp ", Optional, Many);
+    ExpectChildAtom("ipcm", Optional, Many);
+    ExpectChildAtom("lpcm", Optional, Many);
+    ExpectChildAtom("alaw", Optional, Many);
+    ExpectChildAtom("ulaw", Optional, Many);
     ExpectChildAtom("samr", Optional, Many); // For AMR-NB
     ExpectChildAtom("sawb", Optional, Many); // For AMR-WB
     ExpectChildAtom("s263", Optional, Many); // For H.263
     ExpectChildAtom("avc1", Optional, Many);
     ExpectChildAtom("alac", Optional, Many);
     ExpectChildAtom("text", Optional, Many);
+    ExpectChildAtom("tx3g", Optional, Many);
     ExpectChildAtom("ac-3", Optional, Many);
     ExpectChildAtom("fLaC", Optional, Many);
 }

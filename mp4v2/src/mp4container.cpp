@@ -60,7 +60,7 @@ void MP4Container::FindIntegerProperty(const char* name,
                                        MP4Property** ppProperty, uint32_t* pIndex)
 {
     if (!FindProperty(name, ppProperty, pIndex)) {
-        throw new Exception("no such property", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no such property");
     }
 
     switch ((*ppProperty)->GetType()) {
@@ -72,7 +72,7 @@ void MP4Container::FindIntegerProperty(const char* name,
     case Integer6432Property:
         break;
     default:
-        throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("type mismatch");
     }
 }
 
@@ -100,10 +100,10 @@ void MP4Container::FindFloatProperty(const char* name,
                                      MP4Property** ppProperty, uint32_t* pIndex)
 {
     if (!FindProperty(name, ppProperty, pIndex)) {
-        throw new Exception("no such property", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no such property");
     }
     if ((*ppProperty)->GetType() != Float32Property) {
-        throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("type mismatch");
     }
 }
 
@@ -131,10 +131,10 @@ void MP4Container::FindStringProperty(const char* name,
                                       MP4Property** ppProperty, uint32_t* pIndex)
 {
     if (!FindProperty(name, ppProperty, pIndex)) {
-        throw new Exception("no such property", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no such property");
     }
     if ((*ppProperty)->GetType() != StringProperty) {
-        throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("type mismatch");
     }
 }
 
@@ -162,10 +162,10 @@ void MP4Container::FindBytesProperty(const char* name,
                                      MP4Property** ppProperty, uint32_t* pIndex)
 {
     if (!FindProperty(name, ppProperty, pIndex)) {
-        throw new Exception("no such property", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no such property");
     }
     if ((*ppProperty)->GetType() != BytesProperty) {
-        throw new Exception("type mismatch", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("type mismatch");
     }
 }
 

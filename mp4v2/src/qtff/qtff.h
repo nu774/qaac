@@ -31,7 +31,7 @@
 /// QuickTime File Format Specification, revision 2007-09-04.
 ///
 namespace mp4v2 { namespace impl { namespace qtff {
-    ;
+
 }}}
 
 ///////////////////////////////////////////////////////////////////////////////

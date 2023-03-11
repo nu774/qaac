@@ -83,6 +83,7 @@ class MP4FileCopy {
         MP4Timestamp time;
     };
     MP4FileX *m_mp4file;
+    std::shared_ptr<FILE> m_fp;
     uint64_t m_nchunks;
     std::vector<ChunkInfo> m_state;
     mp4v2::platform::io::File *m_src;
@@ -96,92 +97,45 @@ public:
     uint64_t getTotalChunks() { return m_nchunks; }
 };
 
-struct MP4FDReadProvider: public MP4FileProvider
+struct MP4StdIOCallbacks: public MP4IOCallbacks
 {
-    MP4FDReadProvider()
+    MP4StdIOCallbacks()
     {
-        static MP4FileProvider t = {
-            open, seek, read, 0, close, get_size
+        static MP4IOCallbacks t = {
+            get_size, seek, read, write, truncate
         };
         std::memset(this, 0, sizeof t);
         std::memcpy(this, &t, sizeof t);
     }
 
-    static void *open(const char *name, MP4FileMode mode)
+    static int64_t get_size(void *handle)
     {
-        /*
-         * file descriptor (in the form of text string) is get passed as
-         * "name". We decode it to an integer, and use it as a handle.
-         * Since returning zero is treated as error on mp4v2 side,
-         * we cannot use fd 0 (stdin) as handle. So we add 1 to it here,
-         * and substruct by 1 on the succeeding jobs.
-         */
-        int fd = std::strtol(name, 0, 10);
-        return reinterpret_cast<void*>(static_cast<intptr_t>(fd + 1));
+        FILE *fp = static_cast<FILE*>(handle);
+        fflush(fp);
+        return _filelengthi64(_fileno(fp));
     }
     static int seek(void *handle, int64_t pos)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(handle)) - 1;
-        return _lseeki64(fd, pos, SEEK_SET) < 0;
+        FILE *fp = static_cast<FILE*>(handle);
+        return _fseeki64(fp, pos, SEEK_SET) < 0;
     }
-    static int read(void *handle, void *buffer, int64_t size, int64_t *nin,
-                    int64_t maxChunkSize)
+    static int read(void *handle, void *buffer, int64_t size, int64_t *nin)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(handle)) - 1;
-        *nin = util::nread(fd, buffer, size);
-        return *nin < 0;
+        FILE *fp = static_cast<FILE*>(handle);
+        *nin = fread(buffer, 1, size, fp);
+        return ferror(fp);
     }
-    static int close(void *handle)
+    static int write(void *handle, const void *buffer, int64_t size, int64_t *nout)
     {
-        return 0;
+        FILE *fp = static_cast<FILE*>(handle);
+        *nout = fwrite(buffer, 1, size, fp);
+        return ferror(fp);
     }
-    static int get_size(void *handle, int64_t *size)
+    static int truncate(void *handle, int64_t size)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(handle)) - 1;
-        *size = _filelengthi64(fd);
-        return *size == -1 ? -1 : 0;
-    }
-};
-
-namespace mp4v2wrapper {
-    void *open(const char *name, MP4FileMode mode);
-    void *open_temp(const char *name, MP4FileMode mode);
-    int seek(void *fh, int64_t pos);
-    int read(void *fh, void *data, int64_t size, int64_t *nc, int64_t);
-    int write(void *fh, const void *data, int64_t size, int64_t *nc, int64_t);
-    int close(void *fh);
-    int get_size(void *fh, int64_t *size);
-}
-
-struct MP4CustomFileProvider: public MP4FileProvider
-{
-    MP4CustomFileProvider()
-    {
-        static MP4FileProvider t = {
-            mp4v2wrapper::open,
-            mp4v2wrapper::seek,
-            mp4v2wrapper::read,
-            mp4v2wrapper::write,
-            mp4v2wrapper::close,
-            mp4v2wrapper::get_size
-        };
-        std::memcpy(this, &t, sizeof t);
-    }
-};
-
-struct MP4TempFileProvider: public MP4FileProvider
-{
-    MP4TempFileProvider()
-    {
-        static MP4FileProvider t = {
-            mp4v2wrapper::open_temp,
-            mp4v2wrapper::seek,
-            mp4v2wrapper::read,
-            mp4v2wrapper::write,
-            mp4v2wrapper::close,
-            mp4v2wrapper::get_size
-        };
-        std::memcpy(this, &t, sizeof t);
+        FILE *fp = static_cast<FILE*>(handle);
+        fflush(fp);
+        return _chsize(_fileno(fp), size) < 0;
     }
 };
 

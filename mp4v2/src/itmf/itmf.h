@@ -31,7 +31,7 @@
 /// iTunes Metadata Format Specification, revision 2008-04-16.
 ///
 namespace mp4v2 { namespace impl { namespace itmf {
-    ;
+
 }}}
 
 ///////////////////////////////////////////////////////////////////////////////

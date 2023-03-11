@@ -54,14 +54,6 @@ namespace mp4v2 { namespace platform {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// win32 platform requires O_BINARY when using old open() calls so we add
-// this harmless bit-flag for posix to avoid .cpp platform conditionals
-#ifndef O_BINARY
-#   define O_BINARY  0
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-
 // ARM seems to require integer instructions operands to have 4-byte alignment
 // so we set this macro to for some int<->string code to manually copy string
 // bytes into an int which aligns it. This is much easier than trying to

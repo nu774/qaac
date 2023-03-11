@@ -148,8 +148,7 @@ void MP4RtpHintTrack::ReadHint(
 uint16_t MP4RtpHintTrack::GetHintNumberOfPackets()
 {
     if (m_pReadHint == NULL) {
-        throw new Exception("no hint has been read",
-                            __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no hint has been read");
     }
     return m_pReadHint->GetNumberOfPackets();
 }
@@ -157,8 +156,7 @@ uint16_t MP4RtpHintTrack::GetHintNumberOfPackets()
 bool MP4RtpHintTrack::GetPacketBFrame(uint16_t packetIndex)
 {
     if (m_pReadHint == NULL) {
-        throw new Exception("no hint has been read",
-                            __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no hint has been read");
     }
     MP4RtpPacket* pPacket =
         m_pReadHint->GetPacket(packetIndex);
@@ -169,8 +167,7 @@ bool MP4RtpHintTrack::GetPacketBFrame(uint16_t packetIndex)
 uint16_t MP4RtpHintTrack::GetPacketTransmitOffset(uint16_t packetIndex)
 {
     if (m_pReadHint == NULL) {
-        throw new Exception("no hint has been read",
-                            __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no hint has been read");
      }
 
     MP4RtpPacket* pPacket =
@@ -188,12 +185,10 @@ void MP4RtpHintTrack::ReadPacket(
     bool addPayload)
 {
     if (m_pReadHint == NULL) {
-        throw new Exception("no hint has been read",
-                            __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no hint has been read");
     }
     if (!addHeader && !addPayload) {
-        throw new Exception("no data requested",
-                             __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no data requested");
     }
 
     MP4RtpPacket* pPacket =
@@ -242,12 +237,12 @@ void MP4RtpHintTrack::ReadPacket(
             pPacket->GetData(pDest);
         }
     }
-    catch (Exception* x) {
+    catch (Exception*) {
         if (buffer_malloc) {
             MP4Free(*ppBytes);
             *ppBytes = NULL;
         }
-        throw x;
+        throw;
     }
 
     log.hexDump(0, MP4_LOG_VERBOSE1, *ppBytes, *pNumBytes,
@@ -332,17 +327,17 @@ void MP4RtpHintTrack::GetPayload(
 
             if (ppPayloadName) {
                 *ppPayloadName = (char*)MP4Calloc(length + 1);
-                strncpy(*ppPayloadName, pRtpMap, length);
+                memcpy(*ppPayloadName, pRtpMap, length);
             }
             if (pSlash && ppEncodingParams) {
                 pSlash++;
                 pSlash = strchr(pSlash, '/');
                 if (pSlash != NULL) {
                     pSlash++;
-                    if (pSlash != '\0') {
+                    if (*pSlash != '\0') {
                         length = (uint32_t)strlen(pRtpMap) - (pSlash - pRtpMap);
                         *ppEncodingParams = (char *)MP4Calloc(length + 1);
-                        strncpy(*ppEncodingParams, pSlash, length);
+                        memcpy(*ppEncodingParams, pSlash, length);
                     }
                 }
             }
@@ -408,11 +403,11 @@ void MP4RtpHintTrack::SetPayload(
 
     // set sdp media type
     const char* sdpMediaType;
-    if (!strcmp(m_pRefTrack->GetType(), MP4_AUDIO_TRACK_TYPE)) {
+    if (strequal(m_pRefTrack->GetType(), MP4_AUDIO_TRACK_TYPE)) {
         sdpMediaType = "audio";
-    } else if (!strcmp(m_pRefTrack->GetType(), MP4_VIDEO_TRACK_TYPE)) {
+    } else if (strequal(m_pRefTrack->GetType(), MP4_VIDEO_TRACK_TYPE)) {
         sdpMediaType = "video";
-    } else if (!strcmp(m_pRefTrack->GetType(), MP4_CNTL_TRACK_TYPE)) {
+    } else if (strequal(m_pRefTrack->GetType(), MP4_CNTL_TRACK_TYPE)) {
         sdpMediaType = "control";
     } else {
         sdpMediaType = "application";
@@ -458,7 +453,7 @@ void MP4RtpHintTrack::AddHint(bool isBFrame, uint32_t timestampOffset)
     }
 
     if (m_pWriteHint) {
-        throw new Exception("unwritten hint is still pending", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("unwritten hint is still pending");
     }
 
     m_pWriteHint = new MP4RtpHint(*this);
@@ -472,7 +467,7 @@ void MP4RtpHintTrack::AddHint(bool isBFrame, uint32_t timestampOffset)
 void MP4RtpHintTrack::AddPacket(bool setMbit, int32_t transmitOffset)
 {
     if (m_pWriteHint == NULL) {
-        throw new Exception("no hint pending", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no hint pending");
     }
 
     MP4RtpPacket* pPacket = m_pWriteHint->AddPacket();
@@ -499,21 +494,19 @@ void MP4RtpHintTrack::AddImmediateData(
     uint32_t numBytes)
 {
     if (m_pWriteHint == NULL) {
-        throw new Exception("no hint pending", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("no hint pending");
     }
 
     MP4RtpPacket* pPacket = m_pWriteHint->GetCurrentPacket();
     if (pPacket == NULL) {
-        throw new Exception("no packet pending", __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("no packet pending");
     }
 
     if (pBytes == NULL || numBytes == 0) {
-        throw new Exception("no data",
-                            __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("no data");
     }
     if (numBytes > 14) {
-        throw new Exception("data size is larger than 14 bytes",
-                            __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("data size is larger than 14 bytes");
     }
 
     MP4RtpImmediateData* pData = new MP4RtpImmediateData(*pPacket);
@@ -534,12 +527,12 @@ void MP4RtpHintTrack::AddSampleData(
     uint32_t dataLength)
 {
     if (m_pWriteHint == NULL) {
-        throw new Exception("no hint pending", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("no hint pending");
     }
 
     MP4RtpPacket* pPacket = m_pWriteHint->GetCurrentPacket();
     if (pPacket == NULL) {
-        throw new Exception("no packet pending", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("no packet pending");
     }
 
     MP4RtpSampleData* pData = new MP4RtpSampleData(*pPacket);
@@ -558,7 +551,7 @@ void MP4RtpHintTrack::AddSampleData(
 void MP4RtpHintTrack::AddESConfigurationPacket()
 {
     if (m_pWriteHint == NULL) {
-        throw new Exception("no hint pending", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("no hint pending");
     }
 
     uint8_t* pConfig = NULL;
@@ -574,7 +567,7 @@ void MP4RtpHintTrack::AddESConfigurationPacket()
     ASSERT(m_pMaxPacketSizeProperty);
 
     if (configSize > m_pMaxPacketSizeProperty->GetValue()) {
-        throw new Exception("ES configuration is too large for RTP payload", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("ES configuration is too large for RTP payload");
     }
 
     AddPacket(false);
@@ -603,7 +596,7 @@ void MP4RtpHintTrack::AddESConfigurationPacket()
 void MP4RtpHintTrack::WriteHint(MP4Duration duration, bool isSyncSample)
 {
     if (m_pWriteHint == NULL) {
-        throw new Exception("no hint pending", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("no hint pending");
     }
 
     uint8_t* pBytes;
@@ -894,7 +887,7 @@ void MP4RtpPacket::Read(MP4File& file)
             pData = new MP4RtpSampleDescriptionData(*this);
             break;
         default:
-            throw new Exception("unknown packet data entry type", __FILE__, __LINE__, __FUNCTION__ );
+            throw new EXCEPTION("unknown packet data entry type");
         }
 
         m_rtpData.Add(pData);
@@ -911,7 +904,7 @@ void MP4RtpPacket::ReadExtra(MP4File& file)
     int32_t extraLength = (int32_t)file.ReadUInt32();
 
     if (extraLength < 4) {
-        throw new Exception("bad packet extra info length", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("bad packet extra info length");
     }
     extraLength -= 4;
 
@@ -920,7 +913,7 @@ void MP4RtpPacket::ReadExtra(MP4File& file)
         uint32_t entryTag = file.ReadUInt32();
 
         if (entryLength < 8) {
-            throw new Exception("bad packet extra info entry length", __FILE__, __LINE__, __FUNCTION__ );
+            throw new EXCEPTION("bad packet extra info entry length");
         }
 
         if (entryTag == STRTOINT32("rtpo") && entryLength == 12) {
@@ -935,7 +928,7 @@ void MP4RtpPacket::ReadExtra(MP4File& file)
     }
 
     if (extraLength < 0) {
-        throw new Exception("invalid packet extra info length", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("invalid packet extra info length");
     }
 }
 
@@ -1318,7 +1311,7 @@ void MP4RtpSampleDescriptionData::GetData(uint8_t* pDest)
 
     // bad reference
     if (pSdAtom == NULL) {
-        throw new Exception("invalid sample description index", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("invalid sample description index");
     }
 
     // check validity of the upcoming copy
@@ -1328,8 +1321,7 @@ void MP4RtpSampleDescriptionData::GetData(uint8_t* pDest)
         ((MP4Integer32Property*)m_pProperties[4])->GetValue();
 
     if (offset + length > pSdAtom->GetSize()) {
-        throw new Exception("offset and/or length are too large",
-                            __FILE__, __LINE__, __FUNCTION__);
+        throw new EXCEPTION("offset and/or length are too large");
     }
 
     // now we use the raw file to get the desired bytes

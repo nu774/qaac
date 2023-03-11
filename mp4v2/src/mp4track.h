@@ -40,11 +40,15 @@ class MP4File;
 class MP4Atom;
 class MP4Property;
 class MP4IntegerProperty;
-class MP4Integer8Property;
-class MP4Integer16Property;
-class MP4Integer32Property;
-class MP4Integer64Property;
 class MP4StringProperty;
+
+template <class, int> class MP4SizedIntegerProperty;
+
+typedef MP4SizedIntegerProperty<uint8_t, 8> MP4Integer8Property;
+typedef MP4SizedIntegerProperty<uint16_t, 16> MP4Integer16Property;
+typedef MP4SizedIntegerProperty<uint32_t, 24> MP4Integer24Property;
+typedef MP4SizedIntegerProperty<uint32_t, 32> MP4Integer32Property;
+typedef MP4SizedIntegerProperty<uint64_t, 64> MP4Integer64Property;
 
 class MP4Track
 {
@@ -285,7 +289,7 @@ protected:
     string m_sdtpLog; // records frame types for H264 samples
 };
 
-MP4ARRAY_DECL(MP4Track, MP4Track*);
+typedef MP4Array<MP4Track*> MP4TrackArray;
 
 ///////////////////////////////////////////////////////////////////////////////
 

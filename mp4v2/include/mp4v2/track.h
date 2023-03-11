@@ -1,3 +1,26 @@
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is MPEG4IP.
+ *
+ * The Initial Developer of the Original Code is Cisco Systems Inc.
+ * Portions created by Cisco Systems Inc. are
+ * Copyright (C) Cisco Systems Inc. 2001 - 2005.  All Rights Reserved.
+ *
+ * Contributor(s):
+ *      Dave Mackie,               dmackie@cisco.com
+ *      Alix Marchandise-Franquet, alix@cisco.com
+ *      Bill May,                  wmay@cisco.com
+ *      Kona Blend,                kona8lend@gmail.com
+ */
 #ifndef MP4V2_TRACK_H
 #define MP4V2_TRACK_H
 
@@ -37,6 +60,7 @@ MP4TrackId MP4AddTrack(
  *  this should not be used to add OD or scene tracks, MP4AddODTrack() and
  *  MP4AddSceneTrack() should be used for those purposes. Other known
  *  MPEG-4 System track types are:
+ *
  *      @li #MP4_CLOCK_TRACK_TYPE
  *      @li #MP4_MPEG7_TRACK_TYPE
  *      @li #MP4_OCI_TRACK_TYPE
@@ -100,7 +124,7 @@ MP4TrackId MP4AddSceneTrack(
  *  can then be used to add the desired audio samples.
  *
  *  It is recommended that the time scale be set to the sampling frequency
- *  (eg. 44100 Hz) of the audio so as to preserve the timing information
+ *  (e.g. 44100 Hz) of the audio so as to preserve the timing information
  *  accurately.
  *
  *  If the audio encoding uses a fixed duration for each sample that should
@@ -138,7 +162,7 @@ MP4TrackId MP4AddAudioTrack(
 MP4V2_EXPORT
 MP4TrackId MP4AddULawAudioTrack(
     MP4FileHandle hFile,
-    uint32_t timeScale);
+    uint32_t      timeScale);
 
 /** Add alaw track to mp4 file.
  *
@@ -365,6 +389,28 @@ MP4TrackId MP4AddColr(
     uint16_t      transfer,
     uint16_t      matrix );
 
+/** Make a clone of a specified track.
+ *
+ *  MP4CloneTrack creates a new track to an mp4 file that is a copy of an
+ *  existing track with respect to the track media type, and other control
+ *  information. 
+ *
+ *  Note this function does not copy the media samples of the source track to
+ *  the new track. If you want to do that use MP4CopyTrack() instead.
+ *
+ *  @param srcFile specifies the mp4 file of the source track of the operation.
+ *  @param srcTrackId specifies the track id of the track to be cloned.
+ *  @param dstFile specifies the mp4 file of the new, cloned track. If the
+ *      value is MP4_INVALID_FILE_HANDLE, the new track is created in the same
+ *      file as the source track.
+ *  @param dstHintTrackReferenceTrack specifies the track id of the reference
+ *      track in the destination file when cloning a hint track.
+ *
+ *  @return Upon success, the track id of the new track. Upon an error,
+ *      MP4_INVALID_TRACK_ID.
+ *
+ *  @see MP4CopyTrack()
+ */
 MP4V2_EXPORT
 MP4TrackId MP4CloneTrack(
     MP4FileHandle srcFile,
@@ -372,6 +418,39 @@ MP4TrackId MP4CloneTrack(
     MP4FileHandle dstFile DEFAULT(MP4_INVALID_FILE_HANDLE),
     MP4TrackId    dstHintTrackReferenceTrack DEFAULT(MP4_INVALID_TRACK_ID) );
 
+/** Make a copy of a specified track.
+ *
+ *  MP4CopyTrack creates a new track to an mp4 file that is a copy of an
+ *  existing track with respect to the track media type, other control
+ *  information, and media samples.
+ *
+ *  The applyEdits parameter of this function allows for easy creation of
+ *  standalone clips from a larger mp4 file. To do this use MP4AddTrackEdit()
+ *  to specify the start and duration of the clip, and then use MP4CopyTrack()
+ *  to export that portion of the media to a new mp4 file.
+ *
+ *  Note if you do not want to copy the media samples, but just want to create
+ *  a track with the same type and control information of the source track use
+ *  MP4CloneTrack().
+ *
+ *  @param srcFile specifies the mp4 file of the source track of the operation.
+ *  @param srcTrackId specifies the track id of the track to be copied.
+ *  @param dstFile specifies the mp4 file of the new, copied track. If the
+ *      value is MP4_INVALID_FILE_HANDLE, the new track is created in the same
+ *      file as the source track.
+ *  @param applyEdits specifies if the track edit list is to be applied during
+ *      the copying of media samples. If false, then all samples are copied, if
+ *      true then only those samples included by the track edit list are
+ *      copied.
+ *  @param dstHintTrackReferenceTrack specifies the track id of the reference
+ *      track in the destination file when cloning a hint track.
+ *
+ *  @return Upon success, the track id of the new track. Upon an error,
+ *      MP4_INVALID_TRACK_ID.
+ *
+ *  @see MP4CloneTrack()
+ *  @see MP4AddTrackEdit()
+ */
 MP4V2_EXPORT
 MP4TrackId MP4CopyTrack(
     MP4FileHandle srcFile,
@@ -380,17 +459,90 @@ MP4TrackId MP4CopyTrack(
     bool          applyEdits DEFAULT(false),
     MP4TrackId    dstHintTrackReferenceTrack DEFAULT(MP4_INVALID_TRACK_ID) );
 
+/** Delete a track.
+ *
+ *  MP4DeleteTrack deletes the control information associated with the
+ *  specified track. The trackId will become invalid if this call succeeds.
+ * 
+ *  Note that the samples associated with this track are not deleted with this
+ *  call. This can be accomplished via MP4Optimize(). The reason for this is
+ *  that multiple tracks can reference the same samples so a global view must
+ *  be taken when deleting them.
+ *
+ *  @param hFile specifies the mp4 file to which the operation applies.
+ *  @param trackId specifies the track to which the operation applies.
+ *
+ *  @return Upon success, true (1). Upon an error, false (0).
+ */
 MP4V2_EXPORT
 bool MP4DeleteTrack(
     MP4FileHandle hFile,
     MP4TrackId    trackId );
 
+/** Get the number of tracks.
+ *
+ *  MP4GetNumberOfTracks returns how many tracks of the specified type and
+ *  subtype exist in the mp4 file. This can be used to determine if an mp4 file
+ *  contains a track of a given type of media, for instance audio or video. It
+ *  can also be used to determine if multiple options may be available. For
+ *  instance multiple audio tracks in different languages.
+ *
+ *  For audio and video tracks, a subtype can be specified to only count tracks
+ *  of a particular encoding.
+ *
+ *  @param hFile specifies the mp4 file to which the operation applies.
+ *  @param type specifies the type of track for which a count is desired. A
+ *      NULL value implies any type of track. See MP4GetTrackType() for
+ *      predefined values.
+ *  @param subType specifies the subtype of the tracks to be counted. Subtypes
+ *      are only defined for audio and video tracks, see
+ *      MP4GetTrackEsdsObjectTypeId() for predefined values. A zero value
+ *      implies any subtype.
+ *
+ *  @return The number of tracks of the specified type and subType in the mp4
+ *      file.
+ */
 MP4V2_EXPORT
 uint32_t MP4GetNumberOfTracks(
     MP4FileHandle hFile,
     const char*   type DEFAULT(NULL),
     uint8_t       subType DEFAULT(0) );
 
+/** Find a track id.
+ *
+ *  MP4FindTrackId gets the track id associated with the index'th track of the
+ *  specified track type. For example, to get the track id of the first video
+ *  track:
+ *
+ *  @code
+ *    MP4FindTrackId(hFile, 0, MP4_VIDEO_TRACK_TYPE);
+ *  @endcode
+ *
+ *  For audio and video tracks, a subtype can be specified to find a track of a
+ *  particular encoding. For example, to get the track id of the first audio
+ *  track encoded with MPEG-1 audio:
+ *
+ *  @code
+ *    MP4FindTrackId(hFile, 0, MP4_AUDIO_TRACK_TYPE, MP4_MPEG1_AUDIO_TYPE);
+ *  @endcode
+ *
+ *  Caveat: The track id's do not imply anything about the ordering of the
+ *  track information within the mp4 file.
+ *
+ *  @param hFile specifies the mp4 file to which the operation applies.
+ *  @param index specifies which track is desired from matching tracks.
+ *  @param type specifies the type of track to be matched. A NULL value implies
+ *      any type of track. See MP4GetTrackType() for predefined values.
+ *  @param subType specifies the subtype of the track to be matched. Subtypes
+ *      are only defined for audio and video tracks, see
+ *      MP4GetTrackEsdsObjectTypeId() for predefined values. A zero value
+ *      implies any subtype.
+ *
+ *  @return Upon success, the track index of the specified track. Upon an
+ *      error, 0xFFFF.
+ *
+ *  @see MP4FindTrackIndex()
+ */
 MP4V2_EXPORT
 MP4TrackId MP4FindTrackId(
     MP4FileHandle hFile,
@@ -398,6 +550,18 @@ MP4TrackId MP4FindTrackId(
     const char*   type DEFAULT(NULL),
     uint8_t       subType DEFAULT(0) );
 
+/** Find a track index.
+ *
+ *  MP4FindTrackIndex gets the index of the track with the specified track id.
+ *
+ *  @param hFile specifies the mp4 file to which the operation applies.
+ *  @param trackId specifies the track for which the index is desired.
+ *
+ *  @return Upon success, the track index of the specified track. Upon an
+ *      error, 0xFFFF.
+ *
+ *  @see MP4FindTrackId()
+ */
 MP4V2_EXPORT
 uint16_t MP4FindTrackIndex(
     MP4FileHandle hFile,
@@ -411,7 +575,7 @@ uint16_t MP4FindTrackIndex(
  *  @param trackId id of track for operation.
  *  @param duration out value of duration in track timescale units.
  *
- *  return <b>true</b> on success, <b>false</b> on failure.
+ *  @return <b>true</b> on success, <b>false</b> on failure.
  */
 MP4V2_EXPORT
 bool MP4GetTrackDurationPerChunk(

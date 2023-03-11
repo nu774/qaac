@@ -77,7 +77,7 @@ FileSystem::pathnameStripExtension( string& name )
 ///////////////////////////////////////////////////////////////////////////////
 
 void
-FileSystem::pathnameTemp( string& name, string dir, string prefix, string suffix )
+FileSystem::pathnameTemp( string& name, const std::string& dir, const std::string& prefix, const std::string& suffix )
 {
     ostringstream buf;
 

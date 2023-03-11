@@ -44,7 +44,7 @@ void MP4File::SetPosition( uint64_t pos, File* file )
 {
     if( m_memoryBuffer ) {
         if( pos >= m_memoryBufferSize )
-            throw new Exception( "position out of range", __FILE__, __LINE__, __FUNCTION__ );
+            throw new EXCEPTION("position out of range");
         m_memoryBufferPosition = pos;
         return;
     }
@@ -54,7 +54,7 @@ void MP4File::SetPosition( uint64_t pos, File* file )
 
     ASSERT( file );
     if( file->seek( pos ))
-        throw new PlatformException( "seek failed", sys::getLastError(), __FILE__, __LINE__, __FUNCTION__ );
+        throw new PLATFORM_EXCEPTION("seek failed", sys::getLastError());
 }
 
 uint64_t MP4File::GetSize( File* file )
@@ -75,11 +75,13 @@ void MP4File::ReadBytes( uint8_t* buf, uint32_t bufsiz, File* file )
         return;
 
     ASSERT( buf );
-    WARNING( m_numReadBits > 0 );
+    if ( m_numReadBits > 0 ) {
+        WARNING( m_numReadBits > 0 );
+    }
 
     if( m_memoryBuffer ) {
         if( m_memoryBufferPosition + bufsiz > m_memoryBufferSize )
-            throw new Exception( "not enough bytes, reached end-of-memory", __FILE__, __LINE__, __FUNCTION__ );
+            throw new EXCEPTION("not enough bytes, reached end-of-memory");
         memcpy( buf, &m_memoryBuffer[m_memoryBufferPosition], bufsiz );
         m_memoryBufferPosition += bufsiz;
         return;
@@ -91,9 +93,9 @@ void MP4File::ReadBytes( uint8_t* buf, uint32_t bufsiz, File* file )
     ASSERT( file );
     File::Size nin;
     if( file->read( buf, bufsiz, nin ))
-        throw new PlatformException( "read failed", sys::getLastError(), __FILE__, __LINE__, __FUNCTION__ );
+        throw new PLATFORM_EXCEPTION("read failed", sys::getLastError());
     if( nin != bufsiz )
-        throw new Exception( "not enough bytes, reached end-of-file", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("not enough bytes, reached end-of-file");
 }
 
 void MP4File::PeekBytes( uint8_t* buf, uint32_t bufsiz, File* file )
@@ -160,28 +162,9 @@ void MP4File::WriteBytes( uint8_t* buf, uint32_t bufsiz, File* file )
     ASSERT( file );
     File::Size nout;
     if( file->write( buf, bufsiz, nout ))
-        throw new PlatformException( "write failed", sys::getLastError(), __FILE__, __LINE__, __FUNCTION__ );
+        throw new PLATFORM_EXCEPTION("write failed", sys::getLastError());
     if( nout != bufsiz )
-        throw new Exception( "not all bytes written", __FILE__, __LINE__, __FUNCTION__ );
-}
-
-uint64_t MP4File::ReadUInt(uint8_t size)
-{
-    switch (size) {
-    case 1:
-        return ReadUInt8();
-    case 2:
-        return ReadUInt16();
-    case 3:
-        return ReadUInt24();
-    case 4:
-        return ReadUInt32();
-    case 8:
-        return ReadUInt64();
-    default:
-        ASSERT(false);
-        return 0;
-    }
+        throw new EXCEPTION("not all bytes written");
 }
 
 uint8_t MP4File::ReadUInt8()
@@ -283,7 +266,7 @@ void MP4File::WriteFixed16(float value)
     if (value >= 0x100) {
         ostringstream msg;
         msg << value << " out of range";
-        throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__);
+        throw new PLATFORM_EXCEPTION(msg.str().c_str(), ERANGE);
     }
 
     uint8_t iPart = (uint8_t)value;
@@ -306,7 +289,7 @@ void MP4File::WriteFixed32(float value)
     if (value >= 0x10000) {
         ostringstream msg;
         msg << value << " out of range";
-        throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__);
+        throw new PLATFORM_EXCEPTION(msg.str().c_str(), ERANGE);
     }
 
     uint16_t iPart = (uint16_t)value;
@@ -327,6 +310,17 @@ float MP4File::ReadFloat()
     return u.f;
 }
 
+double MP4File::ReadDouble()
+{
+    union {
+        double f;
+        uint64_t i;
+    } u;
+
+    u.i = ReadUInt64();
+    return u.f;
+}
+
 void MP4File::WriteFloat(float value)
 {
     union {
@@ -336,6 +330,17 @@ void MP4File::WriteFloat(float value)
 
     u.f = value;
     WriteUInt32(u.i);
+}
+
+void MP4File::WriteDouble(double value)
+{
+    union {
+        double f;
+        uint64_t i;
+    } u;
+
+    u.f = value;
+    WriteUInt64(u.i);
 }
 
 char* MP4File::ReadString()
@@ -380,24 +385,23 @@ char* MP4File::ReadCountedString(uint8_t charSize, bool allowExpandedCount, uint
             charLength += b;
             ix++;
             if (ix > 25)
-                throw new PlatformException("Counted string too long 25 * 255",ERANGE,
-                                            __FILE__, __LINE__, __FUNCTION__);
+                throw new PLATFORM_EXCEPTION("Counted string too long 25 * 255", ERANGE);
         } while (b == 255);
     } else {
         charLength = ReadUInt8();
     }
     
-    if (fixedLength && (charLength > fixedLength - 1)) {
+    if (fixedLength && (charLength >= fixedLength)) {
         /*
          * The counted length of this string is greater than the
-         * maxiumum fixed length, so truncate the string to the
+         * maximum fixed length, so truncate the string to the
          * maximum fixed length amount (take 1 byte away from the
          * fixedlength since we've already sacrificed one byte for
          * reading the counted length, and there has been a bug where
          * a non counted string has been used in the place of a
          * counted string).
          */  
-        WARNING(charLength > fixedLength - 1);
+        WARNING(charLength >= fixedLength);
         charLength = fixedLength - 1U;
     }
 
@@ -450,7 +454,7 @@ void MP4File::WriteCountedString(char* string,
         if (charLength > 255) {
             ostringstream msg;
             msg << "Length is " << charLength;
-            throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__);
+            throw new PLATFORM_EXCEPTION(msg.str().c_str(), ERANGE);
         }
         // Write the count
         WriteUInt8(charLength);
@@ -545,7 +549,7 @@ void MP4File::WriteMpegLength(uint32_t value, bool compact)
     if (value > 0x0FFFFFFF) {
         ostringstream msg;
         msg << "out of range: " << value;
-        throw new PlatformException(msg.str().c_str(), ERANGE, __FILE__, __LINE__, __FUNCTION__ ); 
+        throw new PLATFORM_EXCEPTION(msg.str().c_str(), ERANGE); 
     }
 
     int8_t numBytes;

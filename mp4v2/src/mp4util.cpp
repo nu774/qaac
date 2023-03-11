@@ -40,12 +40,18 @@ bool MP4NameFirstMatches(const char* s1, const char* s2)
         if (*s2 == '\0' || strchr("[.", *s2)) {
             break;
         }
-        if (tolower(*s1) != tolower(*s2)) {
+        if (*s1 != *s2) {
             return false;
         }
         s1++;
         s2++;
     }
+
+    // Make sure we finished the loop by using up s2, not s1
+    if ( *s2 != '[' && *s2 != '.' && *s2 != '\0' ) {
+        return false;
+    }
+
     return true;
 }
 
@@ -111,24 +117,24 @@ const char* MP4NameAfterFirst(const char *s)
 
 char* MP4ToBase16(const uint8_t* pData, uint32_t dataSize)
 {
-    if (dataSize) {
-        ASSERT(pData);
-    }
-    uint32_t size = 2 * dataSize + 1;
-    char* s = (char*)MP4Calloc(size);
+    if (pData == NULL && dataSize != 0) return NULL;
 
-    uint32_t i, j;
-    for (i = 0, j = 0; i < dataSize; i++) {
-        size -= snprintf(&s[j], size, "%02x", pData[i]);
-        j += 2;
+    uint32_t size = 2 * dataSize;
+    char* s = (char*)MP4Calloc(size + 1);
+
+    for (uint32_t i = 0; i < dataSize; i++) {
+        if (snprintf(&s[2 * i], size - 2 * i, "%02x", pData[i]) != 2) {
+            MP4Free(s);
+            return NULL;
+        }
     }
 
-    return s;   /* N.B. caller is responsible for free'ing s */
+    return s;   /* N.B. caller is responsible for freeing s */
 }
 
 char* MP4ToBase64(const uint8_t* pData, uint32_t dataSize)
 {
-    if (pData == NULL || dataSize == 0) return NULL;
+    if (pData == NULL && dataSize != 0) return NULL;
 
     static const char encoding[64] = {
         'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
@@ -140,7 +146,6 @@ char* MP4ToBase64(const uint8_t* pData, uint32_t dataSize)
     char* s = (char*)MP4Calloc((((dataSize + 2) * 4) / 3) + 1);
 
     const uint8_t* src = pData;
-    if (pData == NULL) return NULL;
     char* dest = s;
     uint32_t numGroups = dataSize / 3;
 
@@ -164,74 +169,7 @@ char* MP4ToBase64(const uint8_t* pData, uint32_t dataSize)
         *dest++ = '=';
     }
     *dest = '\0';
-    return s;   /* N.B. caller is responsible for free'ing s */
-}
-
-static bool convertBase64 (const char data, uint8_t *value)
-{
-    static const uint8_t decodingarr64[128] = {
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0x3e, 0xff, 0xff, 0xff, 0x3f,
-        0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b,
-        0x3c, 0x3d, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
-        0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
-        0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
-        0x17, 0x18, 0x19, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-        0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
-        0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
-        0x31, 0x32, 0x33, 0xff, 0xff, 0xff, 0xff, 0xff,
-    };
-    uint8_t index = (uint8_t)data;
-    if ((index & 0x80) != 0) return false;
-
-    if (decodingarr64[index] == 0xff) return false;
-    *value = decodingarr64[index];
-    return true;
-}
-
-uint8_t *Base64ToBinary (const char *pData, uint32_t decodeSize, uint32_t *pDataSize)
-{
-    uint8_t *ret;
-    uint32_t size, ix, groups;
-    if (pData == NULL ||  decodeSize == 0 || pDataSize == NULL)
-        return NULL;
-
-    if ((decodeSize % 4) != 0) {
-        // must be multiples of 4 characters
-        return NULL;
-    }
-    size = (decodeSize * 3) / 4;
-    groups = decodeSize / 4;
-    ret = (uint8_t *)MP4Calloc(size);
-    if (ret == NULL) return NULL;
-    for (ix = 0; ix < groups; ix++) {
-        uint8_t value[4];
-        for (uint8_t jx = 0; jx < 4; jx++) {
-            if (pData[jx] == '=') {
-                if (ix != (groups - 1)) {
-                    free(ret);
-                    return NULL;
-                }
-                size--;
-                value[jx] = 0;
-            } else if (convertBase64(pData[jx], &value[jx]) == false) {
-                free(ret);
-                return NULL;
-            }
-        }
-        ret[(ix * 3)] = value[0] << 2 | ((value[1] >> 4) & 0x3);
-        ret[(ix * 3) + 1] = (value[1] << 4) | (value[2] >> 2 & 0xf);
-        ret[(ix * 3) + 2] = ((value[2] & 0x3) << 6) | value[3];
-        pData += 4;
-    }
-    *pDataSize = size;
-    return ret;
+    return s;   /* N.B. caller is responsible for freeing s */
 }
 
 // log2 of value, rounded up
@@ -252,7 +190,7 @@ uint64_t MP4ConvertTime(uint64_t t,
 {
     // avoid float point exception
     if (oldTimeScale == 0) {
-        throw new Exception("division by zero", __FILE__, __LINE__, __FUNCTION__ );
+        throw new EXCEPTION("division by zero");
     }
 
     if (oldTimeScale == newTimeScale) return t;
@@ -273,7 +211,7 @@ uint64_t MP4ConvertTime(uint64_t t,
 
 const char* MP4NormalizeTrackType (const char* type)
 {
-    if (!strcasecmp(type, "vide")
+    if (!strcasecmp(type, MP4_VIDEO_TRACK_TYPE)
             || !strcasecmp(type, "video")
             || !strcasecmp(type, "mp4v")
             || !strcasecmp(type, "avc1")
@@ -282,28 +220,45 @@ const char* MP4NormalizeTrackType (const char* type)
         return MP4_VIDEO_TRACK_TYPE;
     }
 
-    if (!strcasecmp(type, "soun")
+    if (!strcasecmp(type, MP4_AUDIO_TRACK_TYPE)
             || !strcasecmp(type, "sound")
             || !strcasecmp(type, "audio")
-            || !strcasecmp(type, "enca")
+            || !strcasecmp(type, "mp4a")
+            || !strcasecmp(type, "ipcm")
+            || !strcasecmp(type, "lpcm")
+            || !strcasecmp(type, "alaw")
+            || !strcasecmp(type, "ulaw")
             || !strcasecmp(type, "samr")  // 3GPP AMR
             || !strcasecmp(type, "sawb")  // 3GPP AMR/WB
-            || !strcasecmp(type, "mp4a")) {
+            || !strcasecmp(type, "ac-3")
+            || !strcasecmp(type, "alac")
+            || !strcasecmp(type, "enca")) {
         return MP4_AUDIO_TRACK_TYPE;
     }
 
-    if (!strcasecmp(type, "sdsm")
+    if (!strcasecmp(type, MP4_SCENE_TRACK_TYPE)
             || !strcasecmp(type, "scene")
             || !strcasecmp(type, "bifs")) {
         return MP4_SCENE_TRACK_TYPE;
     }
 
-    if (!strcasecmp(type, "odsm")
+    if (!strcasecmp(type, MP4_OD_TRACK_TYPE)
             || !strcasecmp(type, "od")) {
         return MP4_OD_TRACK_TYPE;
     }
-    if (strcasecmp(type, "cntl") == 0) {
+
+    if (!strcasecmp(type, MP4_HINT_TRACK_TYPE)
+            || !strcasecmp(type, "rtp ")) {
+        return MP4_HINT_TRACK_TYPE;
+    }
+
+    if (!strcasecmp(type, MP4_CNTL_TRACK_TYPE)) {
         return MP4_CNTL_TRACK_TYPE;
+    }
+
+    if (!strcasecmp(type, MP4_SUBTITLE_TRACK_TYPE)
+            || !strcasecmp(type, "tx3g")) {
+        return MP4_SUBTITLE_TRACK_TYPE;
     }
 
     log.verbose1f("Attempt to normalize %s did not match",type);
