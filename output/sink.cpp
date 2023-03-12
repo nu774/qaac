@@ -73,9 +73,9 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
         if (path == L"-") {
             m_fp = std::shared_ptr<FILE>(stdout, [](FILE *){});
         } else if (temp) {
-            m_fp = std::shared_ptr<FILE>(win32::tmpfile(path.c_str()), fclose);
+            m_fp = std::shared_ptr<FILE>(win32::tmpfile(m_filename.c_str()), fclose);
         } else {
-            m_fp = std::shared_ptr<FILE>(win32::wfopenx(path.c_str(), L"wb"), fclose);
+            m_fp = std::shared_ptr<FILE>(win32::wfopenx(m_filename.c_str(), L"wb"), fclose);
         }
 
         m_mp4file.Create(strutil::w2us(m_filename).c_str(),
