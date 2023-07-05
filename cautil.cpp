@@ -401,9 +401,10 @@ namespace cautil {
         /* LFE */
         bs.put(0, 4); /* lfe_elementtag_select */
         bs.byteAlign();
+        bs.put(0, 8); /* comment_field_bytes*/
 
         size_t len = bs.position() / 8;
-        std::vector<uint8_t> result(asc->size() + len);
+        std::vector<uint8_t> result(asc->size() - 2 + len);
         std::memcpy(result.data(), bs.data(), len);
         if (asc->size() > 2)
             std::memcpy(&result[len], asc->data() + 2, asc->size() - 2);
