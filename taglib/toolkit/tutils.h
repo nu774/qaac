@@ -203,8 +203,7 @@ namespace TagLib
 
         if(length > 0)
           return String(buf);
-        else
-          return String();
+        return String();
       }
 
       /*!
@@ -231,12 +230,11 @@ namespace TagLib
         u.i = 1;
         if(u.c == 1)
           return LittleEndian;
-        else
-          return BigEndian;
+        return BigEndian;
       }
-    }
-  }
-}
+    }  // namespace
+  }  // namespace Utils
+}  // namespace TagLib
 
 #endif
 

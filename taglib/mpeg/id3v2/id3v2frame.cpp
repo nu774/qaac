@@ -373,6 +373,7 @@ namespace
     std::make_pair("TSO2", "ALBUMARTISTSORT"), // non-standard, used by iTunes
     std::make_pair("TSRC", "ISRC"),
     std::make_pair("TSSE", "ENCODING"),
+    std::make_pair("TSST", "DISCSUBTITLE"),
     // URL frames
     std::make_pair("WCOP", "COPYRIGHTURL"),
     std::make_pair("WOAF", "FILEWEBPAGE"),
@@ -815,7 +816,7 @@ bool Frame::Header::dataLengthIndicator() const
 
 ByteVector Frame::Header::render() const
 {
-  ByteVector flags(2, char(0)); // just blank for the moment
+  ByteVector flags(2, static_cast<char>(0)); // just blank for the moment
 
   ByteVector v = d->frameID +
     (d->version == 3

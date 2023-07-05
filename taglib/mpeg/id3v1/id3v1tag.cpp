@@ -36,7 +36,7 @@ namespace
 {
   const ID3v1::StringHandler defaultStringHandler;
   const ID3v1::StringHandler *stringHandler = &defaultStringHandler;
-}
+} // namespace
 
 class ID3v1::Tag::TagPrivate
 {
@@ -112,9 +112,9 @@ ByteVector ID3v1::Tag::render() const
   data.append(stringHandler->render(d->album).resize(30));
   data.append(stringHandler->render(d->year).resize(4));
   data.append(stringHandler->render(d->comment).resize(28));
-  data.append(char(0));
-  data.append(char(d->track));
-  data.append(char(d->genre));
+  data.append(static_cast<char>(0));
+  data.append(static_cast<char>(d->track));
+  data.append(static_cast<char>(d->genre));
 
   return data;
 }

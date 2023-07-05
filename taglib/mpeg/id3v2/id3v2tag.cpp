@@ -186,9 +186,13 @@ String ID3v2::Tag::genre() const
   // the behavior the same as released versions it is being left with " ".
 
   const FrameList &tconFrames = d->frameListMap["TCON"];
-  TextIdentificationFrame *f;
-  if(tconFrames.isEmpty() ||
-     !(f = dynamic_cast<TextIdentificationFrame *>(tconFrames.front())))
+  if(tconFrames.isEmpty())
+  {
+    return String();
+  }
+
+  TextIdentificationFrame *f = dynamic_cast<TextIdentificationFrame *>(tconFrames.front());
+  if(!f)
   {
     return String();
   }
@@ -780,7 +784,6 @@ void ID3v2::Tag::parse(const ByteVector &origData)
     d->extendedHeader->setData(data);
     if(d->extendedHeader->size() <= data.size()) {
       frameDataPosition += d->extendedHeader->size();
-      frameDataLength -= d->extendedHeader->size();
     }
   }
 

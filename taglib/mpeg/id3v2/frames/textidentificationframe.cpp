@@ -194,7 +194,7 @@ void TextIdentificationFrame::parseFields(const ByteVector &data)
 
   // read the string data type (the first byte of the field data)
 
-  d->textEncoding = String::Type(data[0]);
+  d->textEncoding = static_cast<String::Type>(data[0]);
 
   // split the byte array into chunks based on the string type (two byte delimiter
   // for unicode encodings)
@@ -218,12 +218,32 @@ void TextIdentificationFrame::parseFields(const ByteVector &data)
   // append those split values to the list and make sure that the new string's
   // type is the same specified for this frame
 
+  unsigned short firstBom = 0;
   for(ByteVectorList::ConstIterator it = l.begin(); it != l.end(); it++) {
-    if(!(*it).isEmpty()) {
-      if(d->textEncoding == String::Latin1)
+    if(!it->isEmpty() || (it == l.begin() && frameID() == "TXXX")) {
+      if(d->textEncoding == String::Latin1) {
         d->fieldList.append(Tag::latin1StringHandler()->parse(*it));
-      else
-        d->fieldList.append(String(*it, d->textEncoding));
+      }
+      else {
+        String::Type textEncoding = d->textEncoding;
+        if(textEncoding == String::UTF16) {
+          if(it == l.begin()) {
+            firstBom = it->mid(0, 2).toUShort();
+          }
+          else {
+            unsigned short subsequentBom = it->mid(0, 2).toUShort();
+            if(subsequentBom != 0xfeff && subsequentBom != 0xfffe) {
+              if(firstBom == 0xfeff) {
+                textEncoding = String::UTF16BE;
+              }
+              else if(firstBom == 0xfffe) {
+                textEncoding = String::UTF16LE;
+              }
+            }
+          }
+        }
+        d->fieldList.append(String(*it, textEncoding));
+      }
     }
   }
 }
@@ -234,7 +254,7 @@ ByteVector TextIdentificationFrame::renderFields() const
 
   ByteVector v;
 
-  v.append(char(encoding));
+  v.append(static_cast<char>(encoding));
 
   for(StringList::ConstIterator it = d->fieldList.begin(); it != d->fieldList.end(); it++) {
 
