@@ -35,6 +35,8 @@ namespace mp4v2 { namespace impl {
 
 typedef uint32_t MP4ChunkId;
 
+#define MP4_INVALID_CHUNK_ID ((MP4ChunkId)0)
+
 // forward declarations
 class MP4File;
 class MP4Atom;
@@ -285,6 +287,11 @@ protected:
     MP4IntegerProperty*   m_pElstDurationProperty;      // 32 or 64 bits
     MP4Integer16Property* m_pElstRateProperty;
     MP4Integer16Property* m_pElstReservedProperty;
+
+    // for improved sample file offset query performance
+    MP4ChunkId  m_cachedSfoChunkId;
+    MP4SampleId m_cachedSfoSampleId;
+    uint32_t    m_cachedSfoSampleOffset;
 
     string m_sdtpLog; // records frame types for H264 samples
 };

@@ -515,7 +515,7 @@ MP4FileHandle MP4ModifyCallbacks(const MP4IOCallbacks* callbacks,
                                                    &foo,
                                                    &bufsize)) {
                         uint8_t *ptr = foo;
-                        while (bufsize > 0) {
+                        while (bufsize >= 5) {
                             if (MP4V2_HTONL(*(uint32_t *)ptr) == 0x1b0) {
                                 uint8_t ret = ptr[4];
                                 free(foo);

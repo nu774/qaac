@@ -625,13 +625,15 @@ void MP4RtpHintTrack::WriteHint(MP4Duration duration, bool isSyncSample)
 
     GetSampleTimes(m_writeHintId, &startTime, NULL);
 
-    if (startTime < m_thisSec + GetTimeScale()) {
+    uint32_t timeScale = GetTimeScale();
+
+    if (startTime < m_thisSec + timeScale) {
         m_bytesThisSec += m_bytesThisHint;
     } else {
         if (m_bytesThisSec > m_pMaxr->GetValue()) {
             m_pMaxr->SetValue(m_bytesThisSec);
         }
-        m_thisSec = startTime - (startTime % GetTimeScale());
+        m_thisSec = startTime - (timeScale ? (startTime % timeScale) : 0);
         m_bytesThisSec = m_bytesThisHint;
     }
 

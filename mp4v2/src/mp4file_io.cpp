@@ -347,19 +347,26 @@ char* MP4File::ReadString()
 {
     uint32_t length = 0;
     uint32_t alloced = 64;
-    char* data = (char*)MP4Malloc(alloced);
+    char* data = (char*) MP4Malloc(alloced);
+    try {
+        do {
+            if (length == alloced) {
+                data = (char*) MP4Realloc(data, alloced * 2);
+                if (data == NULL)
+                    return NULL;
+                alloced *= 2;
+            }
+            ReadBytes((uint8_t*) &data[length], 1);
+            length++;
+        } while (data[length - 1] != 0);
 
-    do {
-        if (length == alloced) {
-            data = (char*)MP4Realloc(data, alloced * 2);
-            if (data == NULL) return NULL;
-            alloced *= 2;
-        }
-        ReadBytes((uint8_t*)&data[length], 1);
-        length++;
-    } while (data[length - 1] != 0);
-
-    data = (char*)MP4Realloc(data, length);
+        data = (char*) MP4Realloc(data, length);
+    }
+    catch (Exception*) {
+        // free memory and rethrow
+        MP4Free(data);
+        throw;
+    }
     return data;
 }
 
@@ -406,20 +413,33 @@ char* MP4File::ReadCountedString(uint8_t charSize, bool allowExpandedCount, uint
     }
 
     uint32_t byteLength = charLength * charSize;
-    char* data = (char*)MP4Malloc(byteLength + 1);
-    if (byteLength > 0) {
-        ReadBytes((uint8_t*)data, byteLength);
-    }
-    data[byteLength] = '\0';
+    char* data = (char*) MP4Malloc(byteLength + 1);
+    try {
+        if (byteLength > 0)
+            ReadBytes((uint8_t*) data, byteLength);
+        data[byteLength] = '\0';
 
-    // read padding
-    if (fixedLength) {
-        const uint8_t padsize = fixedLength - byteLength -1U;
-        if( padsize ) {
-            uint8_t* padbuf = (uint8_t*)malloc( padsize );
-            ReadBytes( padbuf, padsize );
-            free( padbuf );
+        // read padding
+        if (fixedLength) {
+            const uint8_t padsize = fixedLength - byteLength -1U;
+            if (padsize) {
+                uint8_t* padbuf = (uint8_t*) MP4Malloc(padsize);
+                try {
+                    ReadBytes(padbuf, padsize);
+                    MP4Free(padbuf);
+                }
+                catch (Exception*) {
+                    // free memory and rethrow
+                    MP4Free(padbuf);
+                    throw;
+                }
+            }
         }
+    }
+    catch (Exception*) {
+        // free memory and rethrow
+        MP4Free(data);
+        throw;
     }
 
     return data;

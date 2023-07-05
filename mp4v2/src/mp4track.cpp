@@ -67,6 +67,10 @@ MP4Track::MP4Track(MP4File& file, MP4Atom& trakAtom)
     m_cachedSttsSid = MP4_INVALID_SAMPLE_ID;
     m_cachedCttsSid = MP4_INVALID_SAMPLE_ID;
 
+    m_cachedSfoChunkId = MP4_INVALID_CHUNK_ID;
+    m_cachedSfoSampleId = MP4_INVALID_SAMPLE_ID;
+    m_cachedSfoSampleOffset = 0;
+
     bool success = true;
 
     MP4Integer32Property* pTrackIdProperty;
@@ -995,6 +999,9 @@ uint64_t MP4Track::GetSampleFileOffset(MP4SampleId sampleId)
     uint32_t samplesPerChunk =
         m_pStscSamplesPerChunkProperty->GetValue(stscIndex);
 
+    if (samplesPerChunk == 0)
+        throw new EXCEPTION("Invalid number of samples in stsc entry");
+
     // chunkId tells which is the absolute chunk number that this sample
     // is stored in.
     MP4ChunkId chunkId = firstChunk +
@@ -1007,10 +1014,21 @@ uint64_t MP4Track::GetSampleFileOffset(MP4SampleId sampleId)
         sampleId - ((sampleId - firstSample) % samplesPerChunk);
 
     // need cumulative samples sizes from firstSample to sampleId - 1
+    MP4SampleId startSample = firstSampleInChunk;
     uint32_t sampleOffset = 0;
-    for (MP4SampleId i = firstSampleInChunk; i < sampleId; i++) {
+
+    if (chunkId == m_cachedSfoChunkId && sampleId >= m_cachedSfoSampleId) {
+        startSample = m_cachedSfoSampleId;
+        sampleOffset = m_cachedSfoSampleOffset;
+    }
+
+    for (MP4SampleId i = startSample; i < sampleId; i++) {
         sampleOffset += GetSampleSize(i);
     }
+
+    m_cachedSfoChunkId = chunkId;
+    m_cachedSfoSampleId = sampleId;
+    m_cachedSfoSampleOffset = sampleOffset;
 
     return chunkOffset + sampleOffset;
 }
@@ -1385,6 +1403,10 @@ bool MP4Track::IsSyncSample(MP4SampleId sampleId)
     }
 
     uint32_t numStss = m_pStssCountProperty->GetValue();
+    if (numStss == 0) {
+        return false;
+    }
+
     uint32_t stssLIndex = 0;
     uint32_t stssRIndex = numStss - 1;
 
@@ -1499,8 +1521,11 @@ void MP4Track::UpdateDurations(MP4Duration duration)
 
 MP4Duration MP4Track::ToMovieDuration(MP4Duration trackDuration)
 {
-    return (trackDuration * m_File.GetTimeScale())
-           / m_pTimeScaleProperty->GetValue();
+    uint32_t timeScale = m_pTimeScaleProperty->GetValue();
+    if (timeScale == 0)
+        throw new EXCEPTION("Invalid time scale");
+
+    return (trackDuration * m_File.GetTimeScale()) / timeScale;
 }
 
 void MP4Track::UpdateModificationTimes()
