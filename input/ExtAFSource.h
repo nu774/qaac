@@ -10,6 +10,7 @@ class ExtAFSource: public ISeekableSource, public ITagParser
 {
     AudioFileX m_af;
     ExtAudioFileX m_eaf;
+    int64_t m_position;
     uint64_t m_length;
     std::shared_ptr<FILE> m_fp;
     std::vector<uint32_t> m_chanmap;
@@ -32,7 +33,7 @@ public:
     {
         return m_chanmap.size() ? &m_chanmap: 0;
     }
-    int64_t getPosition();
+    int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
     bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);

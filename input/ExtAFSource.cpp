@@ -146,6 +146,9 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
     }
     try {
         auto ptinfo = m_af.getPacketTableInfo();
+        if (ptinfo.mPrimingFrames && !ptinfo.mNumberValidFrames) {
+            ptinfo.mNumberValidFrames = length - (ptinfo.mPrimingFrames + ptinfo.mRemainderFrames);
+        }
         int64_t total =
             ptinfo.mNumberValidFrames + ptinfo.mPrimingFrames +
             ptinfo.mRemainderFrames;
@@ -160,6 +163,11 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
 
 size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
 {
+    if (m_length != ~0ULL) {
+        nsamples = static_cast<size_t>(std::min(static_cast<uint64_t>(nsamples),
+                                                m_length - m_position));
+    }
+    if (!nsamples) return 0;
     UInt32 ns = nsamples;
     UInt32 nb = ns * m_asbd.mBytesPerFrame;
     AudioBufferList abl = { 0 };
@@ -168,6 +176,7 @@ size_t ExtAFSource::readSamples(void *buffer, size_t nsamples)
     abl.mBuffers[0].mData = buffer;
     abl.mBuffers[0].mDataByteSize = nb;
     CHECKCA(ExtAudioFileRead(m_eaf, &ns, &abl));
+    m_position += ns;
     return ns;
 }
 
@@ -195,11 +204,5 @@ void ExtAFSource::seekTo(int64_t count)
         if (n <= 0) break;
         distance -= n;
     }
-}
-
-int64_t ExtAFSource::getPosition()
-{
-   int64_t pos;
-   CHECKCA(ExtAudioFileTell(m_eaf, &pos));
-   return pos;
+    CHECKCA(ExtAudioFileTell(m_eaf, &m_position));
 }
