@@ -9,6 +9,7 @@
 #include "ALACPacketDecoder.h"
 #endif
 #include "FLACPacketDecoder.h"
+#include "OpusPacketDecoder.h"
 
 unsigned
 MP4Edits::editForPosition(int64_t position, int64_t *offset_in_edit) const
@@ -57,6 +58,7 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
 #ifdef QAAC
         case 'mp4a': setupMPEG4Audio(); break;
 #endif
+        case 'Opus': setupOpus();       break;
         default:     throw std::runtime_error("Not supported input codec");
         }
 
@@ -392,6 +394,23 @@ void MP4Source::setupMPEG4Audio()
 }
 #endif
 
+void MP4Source::setupOpus()
+{
+    const char *dOpsprop = "mdia.minf.stbl.stsd.Opus.dOps.data";
+    std::vector<uint8_t> dOps;
+    {
+        uint8_t *value;
+        uint32_t size;
+        m_file.GetTrackBytesProperty(m_track_id, dOpsprop, &value, &size);
+        std::copy(value, value + size, std::back_inserter(dOps));
+        MP4Free(value);
+    }
+    m_decoder = std::make_shared<OpusPacketDecoder>(this);
+    m_decoder->setMagicCookie(dOps);
+    m_iasbd = ((FLACPacketDecoder*)m_decoder.get())->getInputFormat();
+    m_oasbd = m_decoder->getSampleFormat();
+}
+
 unsigned MP4Source::getMaxFrameDependency()
 {
     switch (m_iasbd.mFormatID) {
@@ -402,6 +421,8 @@ unsigned MP4Source::getMaxFrameDependency()
     case 'aach':
     case 'aacp':
         return m_iasbd.mSampleRate / 2 / m_iasbd.mFramesPerPacket;
+    case 'opus':
+        return 4;
     }
     return 1;
 }

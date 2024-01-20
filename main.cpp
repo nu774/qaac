@@ -32,6 +32,7 @@
 #include "TakSource.h"
 #include "WavpackSource.h"
 #include "AvisynthSource.h"
+#include "OpusPacketDecoder.h"
 #ifdef REFALAC
 #include "ALACEncoderX.h"
 #endif
@@ -1313,6 +1314,8 @@ int wmain1(int argc, wchar_t **argv)
                         TakModule::instance().compatible() ? "compatible"
                                                           : "incompatible");
             }
+            if (LibOpusModule::instance().loaded())
+                LOG(L"%hs\n", LibOpusModule::instance().get_version_string());
             return 0;
         }
 #ifdef QAAC

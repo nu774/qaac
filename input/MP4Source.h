@@ -97,6 +97,7 @@ private:
     void setupALAC();
     void setupFLAC();
     void setupMPEG4Audio();
+    void setupOpus();
     unsigned getMaxFrameDependency();
     unsigned getDecoderDelay();
 };

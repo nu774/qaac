@@ -44,7 +44,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4018;4244;4267;4838;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;..\..\uchardet;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;..\..\uchardet;..\..\include\opus;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -73,6 +73,7 @@
     <ClCompile Include="..\..\input\FLACPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\FLACSource.cpp" />
     <ClCompile Include="..\..\input\LibSndfileSource.cpp" />
+    <ClCompile Include="..\..\input\OpusPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\RawSource.cpp" />
     <ClCompile Include="..\..\input\TakSource.cpp" />
     <ClCompile Include="..\..\input\WaveSource.cpp" />
