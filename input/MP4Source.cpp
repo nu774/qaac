@@ -62,18 +62,27 @@ MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
 
         m_decode_buffer.set_unit(m_oasbd.mBytesPerFrame);
         m_tags = M4A::fetchTags(m_file);
-        if (m_file.GetTimeScale() >= m_file.GetTrackTimeScale(m_track_id)) {
-            if (m_file.FindTrackAtom(m_track_id, "edts.elst")) {
-                uint32_t nedits = m_file.GetTrackNumberOfEdits(m_track_id);
-                for (uint32_t i = 1; i <= nedits; ++i) {
-                    int64_t off = m_file.GetTrackEditMediaStart(m_track_id, i);
-                    double  len = m_file.GetTrackEditDuration(m_track_id, i);
-                    len /= m_file.GetTimeScale();
-                    len *= m_file.GetTrackTimeScale(m_track_id);
-                    if (len == 0.0)
-                        len = m_file.GetTrackDuration(m_track_id) - off;
-                    m_edits.addEntry(off, len + .5);
+        if (m_file.FindTrackAtom(m_track_id, "edts.elst")) {
+            uint32_t nedits = m_file.GetTrackNumberOfEdits(m_track_id);
+            for (uint32_t i = 1; i <= nedits; ++i) {
+                int64_t off = m_file.GetTrackEditMediaStart(m_track_id, i);
+                double  len = m_file.GetTrackEditDuration(m_track_id, i);
+                if (m_file.GetTimeScale() < m_file.GetTrackTimeScale(m_track_id)) {
+                    // XXX: When the movie timescale is smaller than the media timescale,
+                    // we cannot get sample accurate duration.
+                    // In order to avoid trimming too much,
+                    // increase duration by 1 here since value in the elst is likely rounded-down.
+                    len += 1.0;
                 }
+                len /= m_file.GetTimeScale();
+                len *= m_file.GetTrackTimeScale(m_track_id);
+                if (m_file.GetTimeScale() < m_file.GetTrackTimeScale(m_track_id)) {
+                    --len;
+                }
+                if (len <= 0.0 || len + off > m_file.GetTrackDuration(m_track_id))
+                    len = m_file.GetTrackDuration(m_track_id) - off;
+
+                m_edits.addEntry(off, len + .5);
             }
         }
         if (!m_edits.count() && m_tags.find("iTunSMPB") != m_tags.end()) {
