@@ -32,6 +32,7 @@ public:
     int (*multistream_decode_float)(OpusMSDecoder *, const unsigned char *, opus_int32, float *, int, int);
     int (*multistream_decoder_ctl)(OpusMSDecoder *, int, ...);
     void (*multistream_decoder_destroy)(OpusMSDecoder *);
+    int (*decoder_ctl)(OpusDecoder *, int, ...);
 };
 
 class OpusPacketDecoder: public IPacketDecoder {

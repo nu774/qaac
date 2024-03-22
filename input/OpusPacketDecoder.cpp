@@ -28,6 +28,7 @@ bool LibOpusModule::load(const std::wstring &path)
         CHECK(multistream_decode_float = m_dl.fetch("opus_multistream_decode_float"));
         CHECK(multistream_decoder_ctl = m_dl.fetch("opus_multistream_decoder_ctl"));
         CHECK(multistream_decoder_destroy = m_dl.fetch("opus_multistream_decoder_destroy"));
+        CHECK(decoder_ctl = m_dl.fetch("opus_decoder_ctl"));
         return true;
     } catch (...) {
         m_dl.reset();
@@ -95,6 +96,13 @@ void OpusPacketDecoder::setMagicCookie(const std::vector<uint8_t> &cookie)
         OpusMSDecoder *decoder = m_module.multistream_decoder_create(48000,
             channel_count, stream_count, coupled_count, mapping, &err);
         if (err) throw std::runtime_error(m_module.strerror(err));
+        for (int i = 0; i < stream_count; ++i) {
+            OpusDecoder *dec = nullptr;
+            err = m_module.multistream_decoder_ctl(decoder, OPUS_MULTISTREAM_GET_DECODER_STATE(i, &dec));
+            if (err) throw std::runtime_error(m_module.strerror(err));
+            err = m_module.decoder_ctl(dec, OPUS_SET_COMPLEXITY(10));
+            if (err) throw std::runtime_error(m_module.strerror(err));
+        }
         m_decoder = std::shared_ptr<OpusMSDecoder>(decoder, m_module.multistream_decoder_destroy);
         m_iasbd.mFormatID = util::fourcc("opus");
         m_iasbd.mSampleRate = 48000;
