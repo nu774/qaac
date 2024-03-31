@@ -341,6 +341,18 @@ enum
 
     kAudioChannelLayoutTag_AAC_7_1_B                = (183<<16) | 8,                        // C L R Ls Rs Rls Rrs LFE
     kAudioChannelLayoutTag_AAC_7_1_C                = (184<<16) | 8,                        // C L R Ls Rs LFE Vhl Vhr
+
+    kAudioChannelLayoutTag_WAVE_4_0_B               = (185<<16) | 4,                        // L R Rls Rrs
+    kAudioChannelLayoutTag_WAVE_5_0_B               = (186<<16) | 5,                        // L R C Rls Rrs
+    kAudioChannelLayoutTag_WAVE_5_1_B               = (187<<16) | 6,                        // L R C LFE Rls Rrs
+    kAudioChannelLayoutTag_WAVE_6_1                 = (188<<16) | 7,                        // L R C LFE Cs Ls Rs
+    kAudioChannelLayoutTag_WAVE_7_1                 = (189<<16) | 8,                        // L R C LFE Rls Rrs Ls Rs
+
+    kAudioChannelLayoutTag_Logic_4_0_C              = (197U<<16) | 4,                       // L R Cs C
+    kAudioChannelLayoutTag_Logic_6_0_B              = (198U<<16) | 6,                       // L R Ls Rs Cs C
+    kAudioChannelLayoutTag_Logic_6_1_B              = (199U<<16) | 7,                       // L R Ls Rs Cs C LFE
+    kAudioChannelLayoutTag_Logic_6_1_D              = (200U<<16) | 7,                       // L C R Ls Cs Rs LFE
+    kAudioChannelLayoutTag_Logic_7_1_B              = (201U<<16) | 8,                       // L R Ls Rs Rls Rrs C LFE
 };
 
 enum
