@@ -75,10 +75,10 @@ bool WICConvertArtwork(const void *data, size_t size, unsigned maxSize,
     
     UINT width, height;
     HR(source->GetSize(&width, &height));
-    if (maxSize >= width || maxSize >= height)
+    if (maxSize >= width && maxSize >= height)
         return false;
 
-    double scale = static_cast<double>(maxSize) / std::min(width, height);
+    double scale = static_cast<double>(maxSize) / std::max(width, height);
     UINT newWidth = static_cast<UINT>(width * scale),
          newHeight = static_cast<UINT>(height * scale);
 
