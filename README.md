@@ -2,7 +2,7 @@
 
 ## Notice(2024-12-21)
 
-It turned out that CoreAudioToolbox 7.9.8.x or greater (upto 7.10.9.0, the latest version at the moment) can produce gliches on the encoded result.  
+It turned out that CoreAudioToolbox 7.9.8.x or greater (upto 7.10.9.0, the latest version at the moment) can produce glitches on the encoded result.  
 The issue is only found on AAC **CBR** mode.
 
 CoreAudioToolbox 7.9.7.x is OK, but you need very old iTunes installer for that version (it's released on 2012).
