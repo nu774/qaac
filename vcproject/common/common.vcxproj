@@ -105,6 +105,7 @@
     <ClCompile Include="..\..\util.cpp" />
     <ClCompile Include="..\..\wgetopt.cpp" />
     <ClCompile Include="..\..\wicimage.cpp" />
+    <ClCompile Include="..\..\Win32InputStream.cpp" />
     <ClCompile Include="..\..\win32util.cpp" />
   </ItemGroup>
   <ItemGroup>
