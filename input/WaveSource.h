@@ -4,6 +4,7 @@
 #include "ISource.h"
 #include "cautil.h"
 #include "win32util.h"
+#include "IInputStream.h"
 
 namespace wave {
     struct GUID {
@@ -17,17 +18,16 @@ namespace wave {
 }
 
 class WaveSource: public ISeekableSource {
-    bool m_seekable;
     int m_block_align;
     int64_t m_data_pos;
     int64_t m_position;
     uint64_t m_length;
-    std::shared_ptr<FILE> m_fp;
+    std::shared_ptr<IInputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
 public:
-    WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength = false);
+    WaveSource(std::shared_ptr<IInputStream> m_stream, bool ignorelength = false);
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {
@@ -39,15 +39,12 @@ public:
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
 private:
-    int fd() { return fileno(m_fp.get()); }
     int64_t parse();
     void read16le(void *n);
     void read32le(void *n);
     void read64le(void *n);
-    void skip(int64_t n);
     uint32_t nextChunk(uint32_t *size);
     int64_t ds64();
     void fmt(size_t size);

@@ -4,6 +4,7 @@
 #include <tak_deco_lib.h>
 #include "ISource.h"
 #include "dl.h"
+#include "IInputStream.h"
 
 class TakModule {
     DL m_dl;
@@ -43,14 +44,14 @@ class TakSource: public ISeekableSource, public ITagParser {
     uint32_t m_block_align;
     uint64_t m_length;
     std::shared_ptr<void> m_decoder;
-    std::shared_ptr<FILE> m_fp;
+    std::shared_ptr<IInputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
     std::vector<uint8_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
     TakModule &m_module;
 public:
-    TakSource(const std::shared_ptr<FILE> &fp);
+    TakSource(std::shared_ptr<IInputStream> stream);
     ~TakSource() { m_decoder.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
@@ -63,7 +64,6 @@ public:
     }
     int64_t getPosition();
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
 private:

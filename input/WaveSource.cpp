@@ -20,20 +20,20 @@ namespace wave {
     };
 }
 
-WaveSource::WaveSource(const std::shared_ptr<FILE> &fp, bool ignorelength)
-    : m_data_pos(0), m_position(0), m_fp(fp)
+WaveSource::WaveSource(std::shared_ptr<IInputStream> stream, bool ignorelength)
+    : m_data_pos(0), m_position(0), m_stream(stream)
 {
     std::memset(&m_asbd, 0, sizeof m_asbd);
-    m_seekable = win32::is_seekable(fileno(m_fp.get()));
     int64_t data_length = parse();
     if (ignorelength || !data_length || data_length % m_block_align)
         m_length = ~0ULL;
     else
         m_length = data_length / m_block_align;
-    if (m_seekable) {
-        m_data_pos = _lseeki64(fd(), 0, SEEK_CUR);
-        if (m_length == ~0ULL)
-            m_length = (_filelengthi64(fd()) - m_data_pos) / m_block_align;
+    m_data_pos = m_stream->tell();
+    if (m_length == ~0ULL) {
+        int64_t fsize = m_stream->size();
+        if (fsize > 0)
+            m_length = (fsize - m_data_pos) / m_block_align;
     }
 }
 
@@ -46,7 +46,7 @@ size_t WaveSource::readSamples(void *buffer, size_t nsamples)
     ssize_t nbytes = nsamples * m_block_align;
     if (m_buffer.size() < nbytes)
         m_buffer.resize(nbytes);
-    nbytes = util::nread(fd(), &m_buffer[0], nbytes);
+    nbytes = m_stream->read(&m_buffer[0], nbytes);
     nsamples = nbytes > 0 ? nbytes / m_block_align: 0;
     if (nsamples) {
         size_t size = nsamples * m_block_align;
@@ -64,24 +64,9 @@ size_t WaveSource::readSamples(void *buffer, size_t nsamples)
 }
 void WaveSource::seekTo(int64_t count)
 {
-    if (m_seekable) {
-        CHECKCRT(_lseeki64(fd(), m_data_pos + count * m_block_align,
-                           SEEK_SET) < 0);
-        m_position = count;
-    }
-    else if (m_position > count)
-        throw std::runtime_error("Cannot seek back the input");
-    else {
-        char buf[0x1000];
-        int64_t nread = 0;
-        int64_t bytes = (count - m_position) * m_block_align;
-        while (nread < bytes) {
-            int n = util::nread(fd(), buf, std::min(bytes - nread, 0x1000LL));
-            if (n < 0) break;
-            nread += n;
-        }
-        m_position += nread / m_block_align;
-    }
+
+    CHECKCRT(m_stream->seek(m_data_pos + count * m_block_align, SEEK_SET) < 0);
+    m_position = count;
 }
 
 int64_t WaveSource::parse()
@@ -102,11 +87,11 @@ int64_t WaveSource::parse()
 
     uint32_t size;
     while (nextChunk(&size) != FOURCCR('f','m','t',' '))
-        skip((size + 1) & ~1);
+        m_stream->seek((size + 1) & ~1, SEEK_CUR);
     fmt(size);
 
     while (nextChunk(&size) != FOURCCR('d','a','t','a'))
-        skip((size + 1) & ~1);
+        m_stream->seek((size + 1) & ~1, SEEK_CUR);
     if (fcc != FOURCCR('R','F','6','4'))
         data_length = size;
 
@@ -115,31 +100,17 @@ int64_t WaveSource::parse()
 
 inline void WaveSource::read16le(void *n)
 {
-    util::check_eof(util::nread(fd(), n, 2) == 2);
+    util::check_eof(m_stream->read(n, 2) == 2);
 }
 
 inline void WaveSource::read32le(void *n)
 {
-    util::check_eof(util::nread(fd(), n, 4) == 4);
+    util::check_eof(m_stream->read(n, 4) == 4);
 }
 
 inline void WaveSource::read64le(void *n)
 {
-    util::check_eof(util::nread(fd(), n, 8) == 8);
-}
-
-void WaveSource::skip(int64_t n)
-{
-    if (m_seekable)
-        CHECKCRT(_lseeki64(fd(), n, SEEK_CUR) < 0);
-    else {
-        char buf[8192];
-        while (n > 0) {
-            int nn = static_cast<int>(std::min(n, 8192LL));
-            util::check_eof(util::nread(fd(), buf, nn) == nn);
-            n -= nn;
-        }
-    }
+    util::check_eof(m_stream->read(n, 8) == 8);
 }
 
 uint32_t WaveSource::nextChunk(uint32_t *size)
@@ -161,9 +132,9 @@ int64_t WaveSource::ds64()
     if (size != 28)
         throw std::runtime_error("WaveSource: RF64 with non empty chunk table "
                                  "is not supported");
-    skip(8); // RIFF size
+    m_stream->seek(8, SEEK_CUR); // RIFF size
     read64le(&data_length);
-    skip(12); // sample count + chunk table size
+    m_stream->seek(12, SEEK_CUR); // sample count + chunk table size
     return data_length;
 }
 
@@ -191,7 +162,7 @@ void WaveSource::fmt(size_t size)
     read16le(&wBitsPerSample);
     wValidBitsPerSample = wBitsPerSample;
     if (wFormatTag != 0xfffe)
-        skip((size - 15) & ~1);
+        m_stream->seek((size - 15) & ~1, SEEK_CUR);
 
     if (!nChannels || !nSamplesPerSec || !nAvgBytesPerSec || !nBlockAlign)
         throw std::runtime_error("WaveSource: invalid wave fmt");
@@ -213,8 +184,8 @@ void WaveSource::fmt(size_t size)
         if (dwChannelMask > 0 && util::bitcount(dwChannelMask) >= nChannels)
             m_chanmap = chanmap::getChannels(dwChannelMask, nChannels);
 
-        util::check_eof(util::nread(fd(), &guid, sizeof guid) == sizeof guid);
-        skip((size - 39) & ~1);
+        util::check_eof(m_stream->read(&guid, sizeof guid) == sizeof guid);
+        m_stream->seek((size - 39) & ~1, SEEK_CUR);
 
         if (!std::memcmp(&guid, &wave::ksFormatSubTypeFloat, sizeof guid))
             isfloat = true;

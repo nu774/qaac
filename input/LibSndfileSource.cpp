@@ -74,40 +74,41 @@ struct SFVirtualIOImpl: public SF_VIRTUAL_IO
     }
     static sf_count_t size(void *cookie)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        return _filelengthi64(fd);
+        int64_t size = static_cast<IInputStream*>(cookie)->size();
+        return size < 0 ? SF_COUNT_MAX : size;
     }
     static sf_count_t seek(sf_count_t off, int whence, void *cookie)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        return _lseeki64(fd, off, whence);
+        IInputStream *stream = static_cast<IInputStream*>(cookie);
+        if (!stream->seekable() && off > SF_COUNT_MAX - 0x10000) {
+            return -1;
+        }
+        return static_cast<IInputStream*>(cookie)->seek(off, whence);
     }
     static sf_count_t read(void *data, sf_count_t count, void *cookie)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        return util::nread(fd, data, count);
+        return static_cast<IInputStream*>(cookie)->read(data, count);
     }
     static sf_count_t tell(void *cookie)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        return _lseeki64(fd, 0, SEEK_CUR);
+        return static_cast<IInputStream*>(cookie)->tell();
     }
 };
 
-LibSndfileSource::LibSndfileSource(const std::shared_ptr<FILE> &fp)
-    : m_fp(fp), m_module(LibSndfileModule::instance())
+LibSndfileSource::LibSndfileSource(std::shared_ptr<IInputStream> stream)
+    : m_stream(stream), m_module(LibSndfileModule::instance())
 {
     static SFVirtualIOImpl vio;
     SF_INFO info = { 0 };
 
     if (!m_module.loaded()) throw std::runtime_error("libsndfile not loaded");
-    void *cookie =
-        reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(fp.get())));
-    SNDFILE *sf = m_module.open_virtual(&vio, SFM_READ, &info, cookie);
+    SNDFILE *sf = m_module.open_virtual(&vio, SFM_READ, &info, m_stream.get());
     if (!sf)
         throw std::runtime_error(m_module.strerror(0));
     m_handle.reset(sf, m_module.close);
     m_length = info.frames;
+    if (info.frames == SF_COUNT_MAX)
+        m_length = ~0ULL;
 
     SF_FORMAT_INFO finfo = { 0 };
     int count;
@@ -172,9 +173,9 @@ LibSndfileSource::LibSndfileSource(const std::shared_ptr<FILE> &fp)
                        m_chanmap.begin(), convert_chanmap);
 
     if (m_format_name == "aiff")
-        m_tags = ID3::fetchAiffID3Tags(fileno(m_fp.get()));
+        m_tags = ID3::fetchAiffID3Tags(m_stream);
     else if (m_format_name == "caf")
-        m_tags = CAF::fetchTags(fileno(m_fp.get()));
+        m_tags = CAF::fetchTags(m_stream);
     else if (m_format_name == "oga")
         fetchVorbisTags(p->subtype);
 }
@@ -195,17 +196,16 @@ int64_t LibSndfileSource::getPosition()
 
 void LibSndfileSource::fetchVorbisTags(int codec)
 {
-    int fd = fileno(m_fp.get());
-    util::FilePositionSaver _(fd);
-    lseek(fd, 0, SEEK_SET);
-    TagLibX::FDIOStreamReader stream(fd);
+    util::FilePositionSaver _(m_stream);
+    m_stream->seek(0, SEEK_SET);
+    TagLibX::IStreamReader reader(m_stream);
     std::unique_ptr<TagLib::Ogg::File> file;
     if (codec == SF_FORMAT_OPUS)
-        file = std::make_unique<TagLib::Ogg::Opus::File>(&stream, false);
+        file = std::make_unique<TagLib::Ogg::Opus::File>(&reader, false);
     else if (codec == SF_FORMAT_VORBIS)
-        file = std::make_unique<TagLib::Ogg::Vorbis::File>(&stream, false);
+        file = std::make_unique<TagLib::Ogg::Vorbis::File>(&reader, false);
     else if (codec == SF_FORMAT_FLAC)
-        file = std::make_unique<TagLib::Ogg::FLAC::File>(&stream, false);
+        file = std::make_unique<TagLib::Ogg::FLAC::File>(&reader, false);
     else
         return;
     std::map<std::string, std::string> tags;

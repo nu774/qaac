@@ -17,7 +17,6 @@ struct ISource {
 };
 
 struct ISeekableSource: public ISource {
-    virtual bool isSeekable() = 0;
     virtual void seekTo(int64_t offset) = 0;
 };
 

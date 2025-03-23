@@ -3,6 +3,7 @@
 #include "mp4v2wrapper.h"
 #include "PacketDecoder.h"
 #include "win32util.h"
+#include "IInputStream.h"
 
 class MP4Edits {
     typedef std::pair<int64_t, int64_t> entry_t;
@@ -62,7 +63,7 @@ class MP4Source: public ISeekableSource, public ITagParser,
     std::map<std::string, std::string> m_tags;
     std::vector<misc::chapter_t>     m_chapters;
     std::vector<uint32_t> m_chanmap;
-    std::shared_ptr<FILE> m_fp;
+    std::shared_ptr<IInputStream> m_stream;
     MP4FileX m_file;
     MP4Edits m_edits;
     std::vector<uint8_t> m_packet_buffer;
@@ -70,7 +71,7 @@ class MP4Source: public ISeekableSource, public ITagParser,
     AudioStreamBasicDescription m_iasbd, m_oasbd;
     double m_time_ratio;
 public:
-    MP4Source(const std::shared_ptr<FILE> &fp);
+    MP4Source(std::shared_ptr<IInputStream> stream);
     uint64_t length() const
     {
         return m_edits.totalDuration();
@@ -85,7 +86,6 @@ public:
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
     const std::vector<misc::chapter_t> &getChapters() const

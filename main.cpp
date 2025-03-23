@@ -439,9 +439,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         chain.push_back(compressor);
     }
     if (normalize_pass) {
-        do_normalize(chain, opts, src->isSeekable());
-        if (src->isSeekable())
-            return;
+        do_normalize(chain, opts, false);
     }
 
     if (opts.gain) {
@@ -502,16 +500,6 @@ void build_filter_chain(std::shared_ptr<ISeekableSource> src,
 {
     chain.push_back(src);
     build_filter_chain_sub(src, chain, opts, opts.normalize);
-    if (opts.normalize && src->isSeekable()) {
-        src->seekTo(0);
-        Normalizer *normalizer = dynamic_cast<Normalizer*>(chain.back().get());
-        double peak = normalizer->getPeak();
-        chain.clear();
-        chain.push_back(src);
-        if (peak > FLT_MIN)
-            chain.push_back(std::make_shared<Scaler>(src, 1.0/peak));
-        build_filter_chain_sub(src, chain, opts, false);
-    }
 }
 
 static

@@ -14,15 +14,15 @@ namespace TagLibX {
             std::runtime_error(msg + ": Not implemented") {}
     };
 
-    class FDIOStreamReader: public TagLib::IOStream {
-        int m_fd;
+    class IStreamReader: public TagLib::IOStream {
+        std::shared_ptr<IInputStream> m_stream;
     public:
-        FDIOStreamReader(int fd): m_fd(fd) {}
+        IStreamReader(std::shared_ptr<IInputStream> stream): m_stream(stream) {}
         FileName name() const { return L"Dummy"; }
         ByteVector readBlock(ulong length)
         {
             ByteVector v(static_cast<uint>(length));
-            int n = util::nread(m_fd, v.data(), length);
+            int n = m_stream->read(v.data(), length);
             v.resize(std::max(0, n));
             return v;
         }
@@ -44,24 +44,16 @@ namespace TagLibX {
 
         void seek(long offset, IOStream::Position p = Beginning)
         {
-            _lseeki64(m_fd, offset, p);
+            m_stream->seek(offset, p);
         }
         void clear() { }
         long tell() const
         {
-            int64_t n = _lseeki64(m_fd, 0, SEEK_CUR);
-            if (n > 0xffffffffLL)
-                throw std::runtime_error("File position exceeded "
-                                         "the limit of TagLib");
-            return n;
+            return m_stream->tell();
         }
         long length()
         {
-            int64_t n = _filelengthi64(m_fd);
-            if (n > 0xffffffffLL)
-                throw std::runtime_error("File size exceeded "
-                                         "the limit of TagLib");
-            return n;
+            return m_stream->size();
         }
         void truncate(long length)
         {

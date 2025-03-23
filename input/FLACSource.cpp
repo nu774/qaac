@@ -29,36 +29,35 @@ namespace flac {
 }
 #define TRYFL(expr) (void)(flac::try__((expr), #expr))
 
-FLACSource::FLACSource(const std::shared_ptr<FILE> &fp):
+FLACSource::FLACSource(std::shared_ptr<IInputStream> stream):
     m_eof(false),
     m_giveup(false),
     m_initialize_done(false),
     m_length(0),
     m_position(0),
-    m_fp(fp),
+    m_stream(stream),
     m_module(FLACModule::instance())
 {
     if (!m_module.loaded()) throw std::runtime_error("libFLAC not loaded");
     char buffer[33];
-    util::check_eof(util::nread(fileno(m_fp.get()), buffer, 33) == 33);
+    util::check_eof(m_stream->read(buffer, 33) == 33);
     if (std::memcmp(buffer, "ID3", 3) == 0) {
         uint32_t size = 0;
         for (int i = 6; i < 10; ++i) {
             size <<= 7;
             size |= buffer[i];
         }
-        CHECKCRT(_lseeki64(fileno(m_fp.get()), 10 + size, SEEK_SET) < 0);
-        util::check_eof(util::nread(fileno(m_fp.get()), buffer, 33) == 33);
+        CHECKCRT(m_stream->seek(10 + size, SEEK_SET) < 0);
+        util::check_eof(m_stream->read(buffer, 33) == 33);
     }
     uint32_t fcc = util::fourcc(buffer);
     if ((fcc != 'fLaC' && fcc != 'OggS')
      || (fcc == 'OggS' && std::memcmp(&buffer[28], "\177FLAC", 5)))
         throw std::runtime_error("Not a FLAC file");
-    CHECKCRT(_lseeki64(fileno(m_fp.get()), 0, SEEK_SET) < 0);
+    CHECKCRT(m_stream->seek(0, SEEK_SET) < 0);
 
-    m_decoder =
-        decoder_t(m_module.stream_decoder_new(),
-                  std::bind1st(std::mem_fun(&FLACSource::close), this));
+    m_decoder = decoder_t(m_module.stream_decoder_new(),
+                          [this](FLAC__StreamDecoder *p) { close(p); });
     TRYFL(m_module.stream_decoder_set_metadata_respond(
                 m_decoder.get(), FLAC__METADATA_TYPE_VORBIS_COMMENT));
     TRYFL(m_module.stream_decoder_set_metadata_respond(
@@ -114,7 +113,7 @@ size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 FLAC__StreamDecoderReadStatus
 FLACSource::readCallback(FLAC__byte *buffer, size_t *bytes)
 {
-    ssize_t n = util::nread(fileno(m_fp.get()), buffer, *bytes);
+    ssize_t n = m_stream->read(buffer, *bytes);
     if (n <= 0) {
         m_eof = true;
         return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
@@ -127,7 +126,7 @@ FLAC__StreamDecoderSeekStatus
 FLACSource::seekCallback(uint64_t offset)
 {
     m_eof = false;
-    if (_lseeki64(fileno(m_fp.get()), offset, SEEK_SET) == offset)
+    if (m_stream->seek(offset, SEEK_SET) == offset)
         return FLAC__STREAM_DECODER_SEEK_STATUS_OK; 
     else
         return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR; 
@@ -136,7 +135,7 @@ FLACSource::seekCallback(uint64_t offset)
 FLAC__StreamDecoderTellStatus
 FLACSource::tellCallback(uint64_t *offset)
 {
-    int64_t off = _lseeki64(fileno(m_fp.get()), 0, SEEK_CUR);
+    int64_t off = m_stream->tell();
     if (off < 0)
         return FLAC__STREAM_DECODER_TELL_STATUS_ERROR;
     *offset = off;
@@ -146,7 +145,7 @@ FLACSource::tellCallback(uint64_t *offset)
 FLAC__StreamDecoderLengthStatus
 FLACSource::lengthCallback(uint64_t *length)
 {
-    int64_t len = _filelengthi64(fileno(m_fp.get()));
+    int64_t len = m_stream->size();
     if (len < 0)
         return FLAC__STREAM_DECODER_LENGTH_STATUS_ERROR;
     *length = len;

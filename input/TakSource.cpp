@@ -63,40 +63,34 @@ struct TakStreamIoInterfaceImpl: public TtakStreamIoInterface {
     }
     static TtakBool seekable(void *cookie)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        return win32::is_seekable(fd);
+        return tak_True;
     }
     static TtakBool read(void *cookie, void *buf, TtakInt32 n, TtakInt32 *nr)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        *nr = util::nread(fd, buf, n);
+        *nr = static_cast<IInputStream*>(cookie)->read(buf, n);
         return *nr >= 0;
     }
     static TtakBool seek(void *cookie, TtakInt64 pos)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        return _lseeki64(fd, pos, SEEK_SET) == pos;
+        return static_cast<IInputStream*>(cookie)->seek(pos, SEEK_SET) == pos;
     }
     static TtakBool size(void *cookie, TtakInt64 *len)
     {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        *len = _filelengthi64(fd);
+        *len = static_cast<IInputStream*>(cookie)->size();
         return *len >= 0LL;
     }
 };
 
-TakSource::TakSource(const std::shared_ptr<FILE> &fp)
-    : m_fp(fp), m_module(TakModule::instance())
+TakSource::TakSource(std::shared_ptr<IInputStream> stream)
+    : m_stream(stream), m_module(TakModule::instance())
 {
     static TakStreamIoInterfaceImpl io;
     TtakSSDOptions options = { tak_Cpu_Any, 0 };
 
     if (!m_module.loaded() || !m_module.compatible())
         throw std::runtime_error("TAK module not loaded");
-    void *ctx =
-        reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(fp.get())));
     TtakSeekableStreamDecoder ssd =
-        m_module.SSD_Create_FromStream(&io, ctx, &options,
+        m_module.SSD_Create_FromStream(&io, m_stream.get(), &options,
                                        staticDamageCallback, this);
     if (!ssd)
         throw std::runtime_error("tak_SSD_Create_FromStream");
@@ -163,11 +157,10 @@ size_t TakSource::readSamples(void *buffer, size_t nsamples)
 
 void TakSource::fetchTags()
 {
-    int fd = fileno(m_fp.get());
-    util::FilePositionSaver _(fd);
-    lseek(fd, 0, SEEK_SET);
-    TagLibX::FDIOStreamReader stream(fd);
-    TagLib::APE::File file(&stream, false);
+    util::FilePositionSaver _(m_stream);
+    m_stream->seek(0, SEEK_SET);
+    TagLibX::IStreamReader reader(m_stream);
+    TagLib::APE::File file(&reader, false);
 
     std::map<std::string, std::string> tags;
     std::string cover;

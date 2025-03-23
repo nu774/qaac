@@ -1,37 +1,12 @@
-#include <io.h>
 #include "ExtAFSource.h"
-#ifdef _WIN32
-#include "win32util.h"
-#endif
 #include "cautil.h"
-#include "AudioConverterX.h"
 #include "chanmap.h"
-#include "mp4v2wrapper.h"
 #include "strutil.h"
 #include "metadata.h"
 
 typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;
 
 namespace audiofile {
-    const int ioErr = -36;
-
-    OSStatus read(void *cookie, SInt64 pos, UInt32 count, void *data,
-            UInt32 *nread)
-    {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        if (_lseeki64(fd, pos, SEEK_SET) != pos)
-            return ioErr;
-        ssize_t n = util::nread(fd, data, count);
-        if (n < 0)
-            return ioErr;
-        *nread = n;
-        return 0;
-    }
-    SInt64 size(void *cookie)
-    {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-        return _filelengthi64(fd);
-    }
 
     void fetchTagDictCallback(const void *key, const void *value, void *ctx)
     {
@@ -45,7 +20,7 @@ namespace audiofile {
         (*tag)[strutil::w2us(wskey)] = strutil::w2us(wsval);
     }
 
-    std::map<std::string, std::string> fetchTags(AudioFileX &af, FILE *fp)
+    std::map<std::string, std::string> fetchTags(AudioFileX &af)
     {
         std::map<std::string, std::string> tags;
 
@@ -62,13 +37,17 @@ namespace audiofile {
     }
 }
 
-ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
-    : m_fp(fp)
+ExtAFSource::ExtAFSource(std::shared_ptr<IInputStream> stream)
+    : m_stream(stream)
 {
     AudioFileID afid;
-    void *ctx=reinterpret_cast<void*>(static_cast<intptr_t>(fileno(fp.get())));
-    CHECKCA(AudioFileOpenWithCallbacks(ctx, audiofile::read, 0,
-                                       audiofile::size, 0, 0, &afid));
+    CHECKCA(AudioFileOpenWithCallbacks(this,
+                                       &ExtAFSource::staticReadCallback,
+                                       nullptr,
+                                       &ExtAFSource::staticSizeCallback,
+                                       nullptr,
+                                       0,
+                                       &afid));
     m_af.attach(afid, true);
 
     ExtAudioFileRef eaf;
@@ -136,12 +115,12 @@ ExtAFSource::ExtAFSource(const std::shared_ptr<FILE> &fp)
     int64_t length = m_af.getAudioDataPacketCount() * m_iasbd.mFramesPerPacket;
 
     if (fcc == kAudioFileAIFFType || fcc == kAudioFileAIFCType)
-        m_tags = ID3::fetchAiffID3Tags(fileno(m_fp.get()));
+        m_tags = ID3::fetchAiffID3Tags(m_stream);
     else if (fcc == kAudioFileMP3Type)
-        m_tags = ID3::fetchMPEGID3Tags(fileno(m_fp.get()));
-    else {
+        m_tags = ID3::fetchMPEGID3Tags(m_stream);
+    else if (fcc == kAudioFileCAFType) {
         try {
-            m_tags = audiofile::fetchTags(m_af, m_fp.get());
+            m_tags = audiofile::fetchTags(m_af);
         } catch (...) {}
     }
     try {
@@ -205,4 +184,21 @@ void ExtAFSource::seekTo(int64_t count)
         distance -= n;
     }
     CHECKCA(ExtAudioFileTell(m_eaf, &m_position));
+}
+
+OSStatus ExtAFSource::readCallback(SInt64 pos, UInt32 count, void *data, UInt32 *nread)
+{
+    const int ioErr = -36;
+    if (m_stream->seek(pos, SEEK_SET) != pos)
+        return ioErr;
+    int n = m_stream->read(data, count);
+    if (n < 0)
+        return ioErr;
+    *nread = n;
+    return 0;
+}
+
+SInt64 ExtAFSource::sizeCallback()
+{
+    return m_stream->size();
 }

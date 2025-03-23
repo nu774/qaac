@@ -236,21 +236,21 @@ namespace ID3 {
         });
         return TextBasedTag::normalizeTags(tags);
     }
-    std::map<std::string, std::string> fetchAiffID3Tags(int fd)
+    std::map<std::string, std::string> fetchAiffID3Tags(std::shared_ptr<IInputStream> stream)
     {
-        util::FilePositionSaver _(fd);
-        lseek(fd, 0, SEEK_SET);
-        TagLibX::FDIOStreamReader stream(fd);
-        TagLib::RIFF::AIFF::File file(&stream, false);
+        util::FilePositionSaver _(stream);
+        stream->seek(0, SEEK_SET);
+        TagLibX::IStreamReader reader(stream);
+        TagLib::RIFF::AIFF::File file(&reader, false);
         auto tag = file.tag();
         return fetchID3v2Tags(tag);
     }
-    std::map<std::string, std::string> fetchMPEGID3Tags(int fd)
+    std::map<std::string, std::string> fetchMPEGID3Tags(std::shared_ptr<IInputStream> stream)
     {
-        util::FilePositionSaver _(fd);
-        lseek(fd, 0, SEEK_SET);
-        TagLibX::FDIOStreamReader stream(fd);
-        TagLib::MPEG::File file(&stream,
+        util::FilePositionSaver _(stream);
+        stream->seek(0, SEEK_SET);
+        TagLibX::IStreamReader reader(stream);
+        TagLib::MPEG::File file(&reader,
                                 TagLib::ID3v2::FrameFactory::instance(),
                                 false);
         auto tag = file.ID3v2Tag();
@@ -537,28 +537,28 @@ namespace M4A {
 }
 
 namespace CAF {
-    uint64_t next_chunk(int fd, char *name)
+    uint64_t next_chunk(IInputStream *stream, char *name)
     {
         uint64_t size;
-        if (util::nread(fd, name, 4) != 4 || util::nread(fd, &size, 8) != 8)
+        if (stream->read(name, 4) != 4 || stream->read(&size, 8) != 8)
             return 0;
         return util::b2host64(size);
     }
-    std::vector<uint8_t> get_info(int fd)
+    std::vector<uint8_t> get_info(std::shared_ptr<IInputStream> stream)
     {
         std::vector<uint8_t> buf;
-        util::FilePositionSaver _(fd);
-        if (_lseeki64(fd, 8, SEEK_SET) != 8)
+        util::FilePositionSaver _(stream);
+        if (stream->seek(8, SEEK_SET) != 8)
             return buf;
         uint64_t chunk_size;
         char chunk_name[4];
-        while ((chunk_size = next_chunk(fd, chunk_name)) > 0) {
+        while ((chunk_size = next_chunk(stream.get(), chunk_name)) > 0) {
             if (std::memcmp(chunk_name, "info", 4)) {
-                if (_lseeki64(fd, chunk_size, SEEK_CUR) < 0)
+                if (stream->seek(chunk_size, SEEK_CUR) < 0)
                     break;
             } else {
                 buf.resize(chunk_size);
-                if (util::nread(fd, &buf[0], buf.size()) != buf.size())
+                if (stream->read(&buf[0], buf.size()) != buf.size())
                     break;
                 return buf;
             }
@@ -585,9 +585,9 @@ namespace CAF {
             result[tokens[2 * i]] = tokens[2 * i + 1];
         return TextBasedTag::normalizeTags(result);
     }
-    std::map<std::string, std::string> fetchTags(int fd)
+    std::map<std::string, std::string> fetchTags(std::shared_ptr<IInputStream> stream)
     {
-        auto info = get_info(fd);
+        auto info = get_info(stream);
         if (info.size() < 4)
             return std::map<std::string, std::string>();
         return fetchTags(info);

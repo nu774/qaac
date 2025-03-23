@@ -2,12 +2,13 @@
 #include "win32util.h"
 #include "cautil.h"
 
-RawSource::RawSource(const std::shared_ptr<FILE> &fp,
+RawSource::RawSource(std::shared_ptr<IInputStream> stream,
                      const AudioStreamBasicDescription &asbd)
-    : m_position(0), m_fp(fp), m_asbd(asbd)
+    : m_position(0), m_stream(stream), m_asbd(asbd)
 {
-    if (isSeekable())
-        m_length = _filelengthi64(fileno(m_fp.get())) / asbd.mBytesPerFrame;
+    int64_t file_size = m_stream->size();
+    if (file_size >= 0)
+        m_length = file_size / asbd.mBytesPerFrame;
     else
         m_length = ~0ULL;
     bool isfloat = asbd.mFormatFlags & kAudioFormatFlagIsFloat;
@@ -24,7 +25,7 @@ size_t RawSource::readSamples(void *buffer, size_t nsamples)
     ssize_t nbytes = nsamples * m_asbd.mBytesPerFrame;
     if (m_buffer.size() < nbytes)
         m_buffer.resize(nbytes);
-    nbytes = util::nread(fileno(m_fp.get()), &m_buffer[0], nbytes);
+    nbytes = m_stream->read(&m_buffer[0], nbytes);
     nsamples = nbytes > 0 ? nbytes / m_asbd.mBytesPerFrame : 0;
     if (nsamples) {
         size_t size = nsamples * m_asbd.mBytesPerFrame;
@@ -51,21 +52,6 @@ size_t RawSource::readSamples(void *buffer, size_t nsamples)
 
 void RawSource::seekTo(int64_t count)
 {
-    int fd = fileno(m_fp.get());
-    if (isSeekable()) {
-        CHECKCRT(_lseeki64(fd, count*m_asbd.mBytesPerFrame, SEEK_SET) < 0);
-        m_position = count;
-    } else if (m_position > count) {
-        throw std::runtime_error("Cannot seek back the input");
-    } else {
-        int64_t bytes = (count - m_position) * m_asbd.mBytesPerFrame;
-        int64_t nread = 0;
-        char buf[0x1000];
-        while (nread < bytes) {
-            int n = util::nread(fd, buf, std::min(bytes - nread, 0x1000LL));
-            if (n <= 0) break;
-            nread += n;
-        }
-        m_position += nread / m_asbd.mBytesPerFrame;
-    }
+    CHECKCRT(m_stream->seek(count*m_asbd.mBytesPerFrame, SEEK_SET) < 0);
+    m_position = count;
 }

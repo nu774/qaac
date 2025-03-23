@@ -8,6 +8,7 @@
 #include "cautil.h"
 #include "win32util.h"
 #include "WaveSource.h"
+#include "Win32InputStream.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -50,17 +51,13 @@ bool WavpackModule::load(const std::wstring &path)
 }
 
 namespace wavpack {
-    static inline int fd(void *cookie)
-    {
-        return static_cast<int>(reinterpret_cast<intptr_t>(cookie));
-    }
     static int32_t read(void *cookie, void *data, int32_t count)
     {
-        return util::nread(fd(cookie), data, count);
+        return static_cast<IInputStream*>(cookie)->read(data, count);
     }
     static int64_t tell(void *cookie)
     {
-        return _lseeki64(fd(cookie), 0, SEEK_CUR);
+        return static_cast<IInputStream*>(cookie)->tell();
     }
     static uint32_t tell32(void *cookie)
     {
@@ -69,7 +66,7 @@ namespace wavpack {
     }
     static int seek(void *cookie, int64_t off, int whence)
     {
-        return _lseeki64(fd(cookie), off, whence) >= 0 ? 0 : -1;
+        return static_cast<IInputStream*>(cookie)->seek(off, whence) >= 0 ? 0 : -1;
     }
     static int seek32(void *cookie, int32_t off, int whence)
     {
@@ -90,7 +87,7 @@ namespace wavpack {
     }
     static int64_t size(void *cookie)
     {
-        return _filelengthi64(fd(cookie));
+        return static_cast<IInputStream*>(cookie)->size();
     }
     static uint32_t size32(void *cookie)
     {
@@ -99,11 +96,11 @@ namespace wavpack {
     }
     static int seekable(void *cookie)
     {
-        return win32::is_seekable(fd(cookie));
+        return 1;
     }
 }
 
-WavpackSource::WavpackSource(const std::wstring &path)
+WavpackSource::WavpackSource(std::shared_ptr<IInputStream> stream, const std::wstring &path)
     : m_module(WavpackModule::instance())
 {
     char error[0x100];
@@ -117,22 +114,17 @@ WavpackSource::WavpackSource(const std::wstring &path)
         nullptr, nullptr
     };
     if (!m_module.loaded()) throw std::runtime_error("libwavpack not loaded");
-    m_fp = win32::fopen(path, L"rb");
-    try { m_cfp = win32::fopen(path + L"c", L"rb"); } catch(...) {}
+    m_stream = stream;
+    try { m_cstream = std::make_shared<Win32InputStream>(path + L"c"); } catch(...) {}
 
     int flags = OPEN_TAGS | OPEN_NORMALIZE | OPEN_DSD_AS_PCM
-              | (m_cfp.get() ? OPEN_WVC : 0);
-    void *ra =
-        reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(m_fp.get())));
-    void *rc = m_cfp.get() ?
-        reinterpret_cast<void*>(static_cast<intptr_t>(_fileno(m_cfp.get())))
-        : 0;
+              | (m_cstream ? OPEN_WVC : 0);
 
     WavpackContext *wpc = nullptr;
     if (m_module.OpenFileInputEx64)
-        wpc = m_module.OpenFileInputEx64(&reader64, ra, rc, error, flags, 0);
+        wpc = m_module.OpenFileInputEx64(&reader64, m_stream.get(), m_cstream.get(), error, flags, 0);
     else
-        wpc = m_module.OpenFileInputEx(&reader32, ra, rc, error, flags, 0);
+        wpc = m_module.OpenFileInputEx(&reader32, m_stream.get(), m_cstream.get(), error, flags, 0);
     if (!wpc)
         throw std::runtime_error("WavpackOpenFileInputEx() failed");
     m_wpc.reset(wpc, m_module.CloseFile);
@@ -177,12 +169,11 @@ int64_t WavpackSource::getPosition()
 
 bool WavpackSource::parseWrapper()
 {
-    int fd = fileno(m_fp.get());
-    util::FilePositionSaver saver__(fd);
-    _lseeki64(fd, 0, SEEK_SET);
+    util::FilePositionSaver saver__(m_stream);
+    m_stream->seek(0, SEEK_SET);
 
     WavpackHeader hdr;
-    if (read(fd, &hdr, sizeof(hdr)) != sizeof(hdr))
+    if (m_stream->read(&hdr, sizeof(hdr)) != sizeof(hdr))
         return false;
     if (std::memcmp(hdr.ckID, "wvpk", 4) != 0)
         return false;
@@ -190,17 +181,17 @@ bool WavpackSource::parseWrapper()
         return false;
     std::vector<char> first_block(hdr.ckSize);
 
-    _lseeki64(fd, 0, SEEK_SET);
-    if (read(fd, &first_block[0], hdr.ckSize) != hdr.ckSize)
+    m_stream->seek(0, SEEK_SET);
+    if (m_stream->read(&first_block[0], hdr.ckSize) != hdr.ckSize)
         return false;
     void *loc = m_module.GetWrapperLocation(&first_block[0], 0);
     if (!loc)
         return false;
     ptrdiff_t off = static_cast<char *>(loc) - &first_block[0];
-    _lseeki64(fd, off, SEEK_SET);
+    m_stream->seek(off, SEEK_SET);
 
     try {
-        WaveSource src(m_fp, false);
+        WaveSource src(m_stream, false);
         memcpy(&m_asbd, &src.getSampleFormat(), sizeof(m_asbd));
         return true;
     } catch (const std::runtime_error &) {

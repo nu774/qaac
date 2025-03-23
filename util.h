@@ -10,10 +10,12 @@
 #include <iterator>
 #include <stdexcept>
 #include <cerrno>
+#include <memory>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <io.h>
 #include "strutil.h"
+#include "IInputStream.h"
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
 #ifdef _M_IX86
@@ -184,16 +186,17 @@ namespace util {
     class FilePositionSaver
     {
     private:
-        int m_fd;
+        std::shared_ptr<IInputStream> m_stream;
         int64_t m_saved_position;
     public:
-        explicit FilePositionSaver(int fd): m_fd(fd)
+        explicit FilePositionSaver(std::shared_ptr<IInputStream> stream)
+        : m_stream(stream)
         {
-            m_saved_position = _lseeki64(m_fd, 0, SEEK_CUR);
+            m_saved_position = m_stream->tell();
         }
         ~FilePositionSaver()
         {
-            _lseeki64(m_fd, m_saved_position, SEEK_SET);
+            m_stream->seek(m_saved_position, SEEK_SET);
         }
     };
 

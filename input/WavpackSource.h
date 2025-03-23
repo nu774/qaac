@@ -3,6 +3,7 @@
 
 #include "ISource.h"
 #include "dl.h"
+#include "IInputStream.h"
 
 /*
  * XXX
@@ -59,7 +60,7 @@ class WavpackSource: public ISeekableSource, public ITagParser
 {
     uint64_t m_length;
     std::shared_ptr<void> m_wpc;
-    std::shared_ptr<FILE> m_fp, m_cfp;
+    std::shared_ptr<IInputStream> m_stream, m_cstream;
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
     std::vector<uint8_t> m_pivot;
@@ -67,7 +68,7 @@ class WavpackSource: public ISeekableSource, public ITagParser
     AudioStreamBasicDescription m_asbd;
     WavpackModule &m_module;
 public:
-    WavpackSource(const std::wstring &path);
+    WavpackSource(std::shared_ptr<IInputStream> stream, const std::wstring &path);
     ~WavpackSource() { m_wpc.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
@@ -83,7 +84,6 @@ public:
     {
         return (this->*m_readSamples)(buffer, nsamples);
     }
-    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
 private:

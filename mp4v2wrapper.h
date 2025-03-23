@@ -1,6 +1,7 @@
 #ifndef MP4V2WRAPPER_H
 #define MP4V2WRAPPER_H
 
+#include <cstdio>
 #include <string>
 #include <stdexcept>
 #include <stdint.h>
@@ -136,6 +137,40 @@ struct MP4StdIOCallbacks: public MP4IOCallbacks
         FILE *fp = static_cast<FILE*>(handle);
         fflush(fp);
         return _chsize(_fileno(fp), size) < 0;
+    }
+};
+
+struct MP4InputStreamCallbacks: public MP4IOCallbacks
+{
+    MP4InputStreamCallbacks()
+    {
+        static MP4IOCallbacks t = {
+            get_size, seek, read, write, truncate
+        };
+        std::memset(this, 0, sizeof t);
+        std::memcpy(this, &t, sizeof t);
+    }
+
+    static int64_t get_size(void *handle)
+    {
+        return static_cast<IInputStream*>(handle)->size();
+    }
+    static int seek(void *handle, int64_t pos)
+    {
+        return static_cast<IInputStream*>(handle)->seek(pos, SEEK_SET) < 0;
+    }
+    static int read(void *handle, void *buffer, int64_t size, int64_t *nin)
+    {
+        *nin =  static_cast<IInputStream*>(handle)->read(buffer, size);
+        return *nin < 0;
+    }
+    static int write(void *handle, const void *buffer, int64_t size, int64_t *nout)
+    {
+        return 1;
+    }
+    static int truncate(void *handle, int64_t size)
+    {
+        return 1;
     }
 };
 

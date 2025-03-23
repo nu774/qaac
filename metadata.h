@@ -5,6 +5,7 @@
 #include "mp4v2wrapper.h"
 #include "cautil.h"
 #include "CoreAudio/AudioFile.h"
+#include "IInputStream.h"
 
 namespace Tag {
     const uint32_t kTitle = FOURCC('\xa9','n','a','m');
@@ -51,8 +52,8 @@ namespace TextBasedTag {
 }
 
 namespace ID3 {
-    std::map<std::string, std::string> fetchAiffID3Tags(int fd);
-    std::map<std::string, std::string> fetchMPEGID3Tags(int fd);
+    std::map<std::string, std::string> fetchAiffID3Tags(std::shared_ptr<IInputStream> stream);
+    std::map<std::string, std::string> fetchMPEGID3Tags(std::shared_ptr<IInputStream> stream);
 }
 
 namespace M4A {
@@ -68,7 +69,7 @@ namespace M4A {
 namespace CAF {
     std::map<std::string, std::string>
         fetchTags(const std::vector<uint8_t> &info);
-    std::map<std::string, std::string> fetchTags(int fd);
+    std::map<std::string, std::string> fetchTags(std::shared_ptr<IInputStream> stream);
 }
 
 const char * const iTunSMPB_template = " 00000000 %08X %08X %08X%08X "

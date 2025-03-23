@@ -46,8 +46,6 @@ public:
         return nsamples;
     }
 
-    bool isSeekable() { return m_src->isSeekable(); }
-
     void seekTo(int64_t count)
     {
         m_src->seekTo(m_start + count);

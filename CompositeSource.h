@@ -28,13 +28,6 @@ public:
     uint64_t length() const { return m_length; }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable()
-    {
-        for (size_t i = 0; i < m_sources.size(); ++i)
-            if (!m_sources[i]->isSeekable())
-                return false;
-        return true;
-    }
     void seekTo(int64_t pos);
 
     const std::map<std::string, std::string> &getTags() const

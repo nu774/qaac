@@ -1,10 +1,10 @@
 #ifndef _FLACSRC_H
 #define _FLACSRC_H
 
-#include <deque>
 #include <FLAC/all.h>
 #include "ISource.h"
 #include "flacmodule.h"
+#include "IInputStream.h"
 
 class FLACSource: public ISeekableSource, public ITagParser
 {
@@ -15,14 +15,14 @@ class FLACSource: public ISeekableSource, public ITagParser
     decoder_t m_decoder;
     uint64_t m_length;
     int64_t m_position;
-    std::shared_ptr<FILE> m_fp;
+    std::shared_ptr<IInputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
     util::FIFO<int32_t> m_buffer;
     AudioStreamBasicDescription m_asbd;
     FLACModule &m_module;
 public:
-    FLACSource(const std::shared_ptr<FILE> &fp);
+    FLACSource(std::shared_ptr<IInputStream> stream);
     ~FLACSource() { m_decoder.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
@@ -35,7 +35,6 @@ public:
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
 private:

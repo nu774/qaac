@@ -27,24 +27,23 @@ MP4Edits::editForPosition(int64_t position, int64_t *offset_in_edit) const
     return i == m_edits.size() ? i - 1 : i;
 }
 
-MP4Source::MP4Source(const std::shared_ptr<FILE> &fp)
+MP4Source::MP4Source(std::shared_ptr<IInputStream> stream)
     : m_position(0),
       m_position_raw(0),
       m_current_packet(0),
-      m_fp(fp),
+      m_stream(stream),
       m_time_ratio(1.0)
 {
     try {
-        int fd = fileno(m_fp.get());
         {
-            util::FilePositionSaver _(fd);
-            _lseeki64(fd, 0, SEEK_SET);
+            util::FilePositionSaver _(m_stream);
+            m_stream->seek(0, SEEK_SET);
             char buf[8];
-            if (read(fd, buf, 8) != 8 || std::memcmp(&buf[4], "ftyp", 4))
+            if (m_stream->read(buf, 8) != 8 || std::memcmp(&buf[4], "ftyp", 4))
                 throw std::runtime_error("Not an MP4 file");
         }
-        static MP4StdIOCallbacks callbacks;
-        m_file.Read(nullptr, nullptr, &callbacks, m_fp.get());
+        static MP4InputStreamCallbacks callbacks;
+        m_file.Read(nullptr, nullptr, &callbacks, m_stream.get());
         m_track_id = m_file.FindTrackId(0, MP4_AUDIO_TRACK_TYPE);
 
         const char *type = m_file.GetTrackMediaDataName(m_track_id);

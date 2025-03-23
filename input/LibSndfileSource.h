@@ -5,6 +5,7 @@
 #include <sndfile.h>
 #include "ISource.h"
 #include "dl.h"
+#include "IInputStream.h"
 
 struct HINSTANCE__;
 
@@ -46,14 +47,14 @@ class LibSndfileSource: public ISeekableSource, public ITagParser
     handle_t m_handle;
     uint64_t m_length;
     std::string m_format_name;
-    std::shared_ptr<FILE> m_fp;
+    std::shared_ptr<IInputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
     LibSndfileModule &m_module;
     AudioStreamBasicDescription m_asbd;
     sf_count_t (*m_readf)(SNDFILE *, void *, sf_count_t);
 public:
-    LibSndfileSource(const std::shared_ptr<FILE> &fp);
+    LibSndfileSource(std::shared_ptr<IInputStream> stream);
     ~LibSndfileSource() { m_handle.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const
@@ -69,7 +70,6 @@ public:
     {
         return static_cast<size_t>(m_readf(m_handle.get(), buffer, nsamples));
     }
-    bool isSeekable() { return win32::is_seekable(fileno(m_fp.get())); }
     void seekTo(int64_t count);
     int64_t getPosition();
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
