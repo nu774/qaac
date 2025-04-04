@@ -41,8 +41,8 @@ private:
         staticWaveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance,
                           DWORD_PTR dwParam1, DWORD_PTR dwParam2)
     {
-	WaveOutDevice *self = reinterpret_cast<WaveOutDevice*>(dwInstance);
-	self->waveOutProc(uMsg, dwParam1, dwParam2);
+        WaveOutDevice *self = reinterpret_cast<WaveOutDevice*>(dwInstance);
+        self->waveOutProc(uMsg, dwParam1, dwParam2);
     }
     void waveOutProc(UINT uMsg, DWORD_PTR dwParam1, DWORD_PTR dwParam2);
 };

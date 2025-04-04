@@ -7,7 +7,7 @@ inline void mm_try(MMRESULT expr, const char *msg)
     if (expr != MMSYSERR_NOERROR) {
         wchar_t text[1024];
         waveOutGetErrorTextW(expr, text, 1024);
-	throw std::runtime_error(strutil::format("WaveOut: %s",
+        throw std::runtime_error(strutil::format("WaveOut: %s",
                                                  strutil::w2us(text).c_str()));
     }
 } 
@@ -26,8 +26,8 @@ void WaveOutDevice::open(const AudioStreamBasicDescription &format,
     memset(m_packets, 0, sizeof m_packets);
 
     for (size_t i = 0; i < NUMBUFFERS; ++i) {
-	m_packets[i].dwFlags = WHDR_DONE;
-	m_events[i] = CreateEventW(0, 1, 1, 0); /* initially set. */
+        m_packets[i].dwFlags = WHDR_DONE;
+        m_events[i] = CreateEventW(0, 1, 1, 0); /* initially set. */
     }
 
     WAVEFORMATEXTENSIBLE wfex = {{ 0 }};
@@ -96,7 +96,7 @@ void WaveOutDevice::close()
 {
     WaitForMultipleObjects(NUMBUFFERS, m_events, 1, INFINITE);
     for (size_t i = 0; i < NUMBUFFERS; ++i)
-	if (m_events[i]) CloseHandle(m_events[i]);
+        if (m_events[i]) CloseHandle(m_events[i]);
     memset(m_events, 0, sizeof m_events);
     memset(&m_asbd, 0, sizeof m_asbd);
     m_chanmask = 0;
@@ -107,7 +107,7 @@ void
 WaveOutDevice::waveOutProc(UINT uMsg, DWORD_PTR dwParam1, DWORD_PTR)
 {
     if (uMsg == WOM_DONE) {
-	LPWAVEHDR lpwh = reinterpret_cast<LPWAVEHDR>(dwParam1);
-	SetEvent(m_events[lpwh - m_packets]);
+        LPWAVEHDR lpwh = reinterpret_cast<LPWAVEHDR>(dwParam1);
+        SetEvent(m_events[lpwh - m_packets]);
     }
 }
