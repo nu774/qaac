@@ -77,7 +77,7 @@ int64_t Win32InputStream::seek(int64_t off, int whence)
 void Win32InputStream::fillBuffer()
 {
     if (m_buffer.size() > m_buffer.capacity() - 0x80000) {
-        m_buffer.clear();
+        m_buffer.erase(std::begin(m_buffer), std::begin(m_buffer) + m_buffer.capacity() / 2);
     }
     size_t osize = m_buffer.size();
     m_buffer.resize(osize + 0x80000); // 512KiB
