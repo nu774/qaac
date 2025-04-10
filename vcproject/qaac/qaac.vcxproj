@@ -108,6 +108,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\input\CAFSource.cpp" />
     <ClCompile Include="..\..\input\CoreAudioPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\ExtAFSource.cpp" />
     <ClCompile Include="..\..\input\MP4Source.cpp" />

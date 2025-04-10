@@ -85,6 +85,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\input\CAFSource.cpp" />
     <ClCompile Include="..\..\input\ALACPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\InputFactory.cpp" />
     <ClCompile Include="..\..\input\MP4Source.cpp" />

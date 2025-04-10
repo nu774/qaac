@@ -69,6 +69,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\input\AvisynthSource.cpp" />
+    <ClCompile Include="..\..\input\CAFFile.cpp" />
     <ClCompile Include="..\..\input\FLACModule.cpp" />
     <ClCompile Include="..\..\input\FLACPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\FLACSource.cpp" />

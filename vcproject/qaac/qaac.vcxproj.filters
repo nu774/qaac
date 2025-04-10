@@ -7,6 +7,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\input\CAFSource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\input\CoreAudioPacketDecoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
