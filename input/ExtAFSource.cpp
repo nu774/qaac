@@ -103,6 +103,10 @@ ExtAFSource::ExtAFSource(std::shared_ptr<IInputStream> stream)
             auto asc = cautil::parseMagicCookieAAC(kuki);
             AudioStreamBasicDescription tmp;
             cautil::parseASC(asc, &tmp, &m_chanmap);
+        } else if (m_iasbd.mFormatID == 'alac') {
+            AudioChannelLayout acl = { 0 };
+            acl.mChannelLayoutTag = chanmap::getALACChannelLayoutTag(m_iasbd.mChannelsPerFrame);
+            m_chanmap = chanmap::getChannels(&acl);
         }
     }
 

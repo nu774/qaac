@@ -288,20 +288,8 @@ void MP4Source::setupALAC()
         acl.mChannelBitmap    = bitmap;
         m_chanmap = chanmap::getChannels(&acl);
     } else if (m_iasbd.mChannelsPerFrame <= 8) {
-		static const uint32_t tab[] = {
-			0,
-			kAudioChannelLayoutTag_Mono,
-			kAudioChannelLayoutTag_Stereo,
-			kAudioChannelLayoutTag_MPEG_3_0_B,
-			kAudioChannelLayoutTag_MPEG_4_0_B,
-			kAudioChannelLayoutTag_MPEG_5_0_D,
-			kAudioChannelLayoutTag_MPEG_5_1_D,
-			kAudioChannelLayoutTag_AAC_6_1,
-			kAudioChannelLayoutTag_MPEG_7_1_B,
-		};
         AudioChannelLayout acl = { 0 };
-        acl.mChannelLayoutTag = tab[m_iasbd.mChannelsPerFrame];
-        acl.mChannelBitmap    = 0;
+        acl.mChannelLayoutTag = chanmap::getALACChannelLayoutTag(m_iasbd.mChannelsPerFrame);
         m_chanmap = chanmap::getChannels(&acl);
 	}
 #ifdef QAAC

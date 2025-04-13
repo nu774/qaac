@@ -18,6 +18,7 @@ namespace chanmap {
     uint32_t defaultChannelMask(uint32_t nchannels);
     uint32_t AACLayoutFromBitmap(uint32_t bitmap);
     std::vector<uint32_t> getMappingToAAC(uint32_t bitmap);
+    uint32_t getALACChannelLayoutTag(unsigned nchannels);
 }
 
 #endif

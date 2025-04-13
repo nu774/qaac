@@ -383,4 +383,20 @@ std::vector<uint32_t> getMappingToAAC(uint32_t bitmap)
     return mapping;
 }
 
+uint32_t getALACChannelLayoutTag(unsigned nchannels)
+{
+	static const uint32_t tab[] = {
+		0,
+		kAudioChannelLayoutTag_Mono,
+		kAudioChannelLayoutTag_Stereo,
+		kAudioChannelLayoutTag_MPEG_3_0_B,
+		kAudioChannelLayoutTag_MPEG_4_0_B,
+		kAudioChannelLayoutTag_MPEG_5_0_D,
+		kAudioChannelLayoutTag_MPEG_5_1_D,
+		kAudioChannelLayoutTag_AAC_6_1,
+		kAudioChannelLayoutTag_MPEG_7_1_B,
+	};
+    return nchannels <= 8 ? tab[nchannels] : 0;
+}
+
 } // namespace
