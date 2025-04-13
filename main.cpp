@@ -257,11 +257,11 @@ void manipulate_channels(std::vector<std::shared_ptr<ISource> > &chain,
     {
         const std::vector<uint32_t> *cs = chain.back()->getChannels();
         if (cs) {
+            auto ccs = chanmap::convertFromAppleLayout(*cs);
             if (opts.verbose > 1) {
                 LOG(L"Input layout: %hs\n",
-                    chanmap::getChannelNames(*cs).c_str());
+                    chanmap::getChannelNames(ccs).c_str());
             }
-            auto ccs = chanmap::convertFromAppleLayout(*cs);
             auto map = chanmap::getMappingToUSBOrder(ccs);
             if (ccs != *cs || !util::is_increasing(map.begin(), map.end()))
             {
