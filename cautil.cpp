@@ -236,14 +236,14 @@ namespace cautil {
             "\x01\x02",
             "\x03\x01\x02",
             "\x03\x01\x02\x09",
-            "\x03\x01\x02\x05\x06",
-            "\x03\x01\x02\x05\x06\x04",
-            "\x03\x07\x08\x01\x02\x05\x06\x04",
+            "\x03\x01\x02\x0A\x0B",
+            "\x03\x01\x02\x0A\x0B\x04",
+            "\x03\x07\x08\x01\x02\x0A\x0B\x04",
             0,
             0,
             0,
-            "\x03\x01\x02\x05\x06\x09\x04",
-            "\x03\x01\x02\x05\x06\x21\x22\x04",
+            "\x03\x01\x02\x0A\x0B\x09\x04",
+            "\x03\x01\x02\x0A\x0B\x05\x06\x04",
             0,
         };
         if (chan_config) {
@@ -312,13 +312,13 @@ namespace cautil {
                 }
                 nside_channels += nback_channels;
                 if (nside_channels > 1) {
-                    v.push_back(5);
-                    v.push_back(6);
+                    v.push_back(10);
+                    v.push_back(11);
                     nside_channels -= 2;
                 }
                 if (nside_channels > 1) {
-                    v.push_back(33);
-                    v.push_back(34);
+                    v.push_back(5);
+                    v.push_back(6);
                     nside_channels -= 2;
                 }
                 if (nside_channels & 1) {

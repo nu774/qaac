@@ -1,6 +1,7 @@
 #include "chanmap.h"
 #include <numeric>
 #include <cassert>
+#include "CoreAudioTypes.h"
 #include "strutil.h"
 
 namespace chanmap {
@@ -284,24 +285,27 @@ convertFromAppleLayout(const std::vector<uint32_t> &channels)
                        return x;
                    });
 
-    size_t back = std::count(v.begin(), v.end(), 5) +
-                  std::count(v.begin(), v.end(), 6);
-    size_t side = std::count(v.begin(), v.end(), 10) +
-                  std::count(v.begin(), v.end(), 11);
-
-    std::transform(v.begin(), v.end(), v.begin(), [&](uint32_t c) -> uint32_t {
-                        switch (c) {
-                        case kAudioChannelLabel_LeftSurround:
-                        case kAudioChannelLabel_RightSurround:
-                            if (!side) c += 5;
-                            break;
-                        case kAudioChannelLabel_RearSurroundLeft:
-                        case kAudioChannelLabel_RearSurroundRight:
-                            if (!back || !side) c -= 28;
-                            break;
-                        };
-                        return c;
-                   });
+    size_t back = std::count(v.begin(), v.end(), kAudioChannelLabel_LeftSurround) +
+                  std::count(v.begin(), v.end(), kAudioChannelLabel_RightSurround);
+    size_t side = std::count(v.begin(), v.end(), kAudioChannelLabel_LeftSurroundDirect) +
+                  std::count(v.begin(), v.end(), kAudioChannelLabel_RightSurroundDirect);
+    size_t rear = std::count(v.begin(), v.end(), kAudioChannelLabel_RearSurroundLeft) +
+                  std::count(v.begin(), v.end(), kAudioChannelLabel_RearSurroundRight);
+    if (rear) {
+        std::transform(v.begin(), v.end(), v.begin(), [&](uint32_t c) -> uint32_t {
+            switch (c) {
+            case kAudioChannelLabel_LeftSurround:
+            case kAudioChannelLabel_RightSurround:
+                if (!side) c += 5;
+                break;
+            case kAudioChannelLabel_RearSurroundLeft:
+            case kAudioChannelLabel_RearSurroundRight:
+                if (!back || !side) c -= 28;
+                break;
+            };
+            return c;
+        });
+    }
     return v;
 }
 
@@ -360,34 +364,19 @@ std::vector<uint32_t> getMappingToAAC(uint32_t bitmap)
 {
     AudioChannelLayout aacLayout = { 0 };
     aacLayout.mChannelLayoutTag = AACLayoutFromBitmap(bitmap);
+    bool back = (bitmap & 0x30) != 0;
+    bool side = (bitmap & 0x600) != 0;
     auto cs = getChannels(&aacLayout);
-    /*
-     * rewrite channels in pre-defined AAC channel layout to match with
-     * input channel bitmap
-     */
-    std::transform(cs.begin(), cs.end(), cs.begin(),
-                   [&](uint32_t c) -> uint32_t {
-                        switch (c) {
-                        case kAudioChannelLabel_Mono:
-                            c = kAudioChannelLabel_Center;
-                            break;
-                        case kAudioChannelLabel_Left:
-                        case kAudioChannelLabel_Right:
-                            if (!(bitmap & 0x3) && (bitmap & 0xc))
-                                c += 6;
-                            break;
-                        case kAudioChannelLabel_LeftSurround:
-                        case kAudioChannelLabel_RightSurround:
-                            if (bitmap & 0x600)
-                                c += 5;
-                            break;
-                        case kAudioChannelLabel_RearSurroundLeft:
-                        case kAudioChannelLabel_RearSurroundRight:
-                            c -= 28;
-                            break;
-                        }
-                        return c;
-                  });
+    if (back && !side) {
+        std::transform(cs.begin(), cs.end(), cs.begin(), [](uint32_t c) -> uint32_t {
+            switch (c) {
+            case kAudioChannelLabel_LeftSurroundDirect:
+            case kAudioChannelLabel_RightSurroundDirect:
+                return c - 5;
+            };
+            return c;
+        });
+    }
     assert(getChannelMask(cs) == bitmap);
     auto mapping = getMappingToUSBOrder(cs);
     mapping = getMappingToUSBOrder(mapping);
