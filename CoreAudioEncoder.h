@@ -41,7 +41,7 @@ public:
 protected:
     virtual size_t readSamples(void *buffer, size_t nsamples)
     {
-        return m_src->readSamples(buffer, nsamples);
+        return readSamplesFull(src(), buffer, nsamples);
     }
     virtual void writeSamples(const void *data, size_t length, size_t nsamples)
     {
