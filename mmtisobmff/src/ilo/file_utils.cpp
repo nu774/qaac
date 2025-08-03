@@ -88,9 +88,12 @@ amm-info@iis.fraunhofer.de
 #define NOMINMAX             // Disables conflicting min/max def from Windows.h
 #define WIN32_LEAN_AND_MEAN  // Disables some rarely used includes in windows.h
 #include <windows.h>
+#include <codecvt>
+#include <locale>
 #endif
 
 // Internal includes
+#include "ilo/fileio.h"
 #include "ilo/file_utils.h"
 #include "ilo/uuid_utils.h"
 #include "ilo_logging.h"
@@ -100,11 +103,12 @@ std::string getUniqueTmpFilename() {
   std::string path;
 
 #if defined(WIN32) || defined(_WIN32)
-  TCHAR pathName[MAX_PATH + 1];
-  DWORD result = GetTempPath(MAX_PATH, pathName);
+  std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+  WCHAR pathName[MAX_PATH + 1];
+  DWORD result = GetTempPathW(MAX_PATH, pathName);
   ILO_ASSERT(result != 0 && result != MAX_PATH + 1, "GetTempPath() returned an error");
 
-  path = std::string(pathName);
+  path = converter.to_bytes(pathName);
 #else
   char* tmpDir = getenv("TMPDIR");
   if (tmpDir == NULL) {
@@ -127,7 +131,8 @@ std::string getUniqueTmpFilename() {
 }
 
 bool fileExists(const std::string& fileName) {
-  std::ifstream infile(fileName);
-  return infile.good();
+  FILE *fp = ilo::fopen(fileName, "r");
+  if (fp) fclose(fp);
+  return fp != nullptr;
 }
 }  // namespace ilo

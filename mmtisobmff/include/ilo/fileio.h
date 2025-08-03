@@ -129,15 +129,7 @@ namespace ilo {
  */
 
 //! Platform abstract version of fopen
-inline FILE* fopen(std::string filename, const char* mode) {
-  FILE* file;
-#if defined(WIN32) || defined(_WIN32)
-  fopen_s(&file, filename.c_str(), mode);
-#else
-  file = ::fopen(filename.c_str(), mode);
-#endif
-  return file;
-}
+FILE* fopen(std::string filename, const char* mode);
 
 /**@}*/
 

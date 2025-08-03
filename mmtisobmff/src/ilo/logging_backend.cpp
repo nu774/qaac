@@ -91,6 +91,8 @@ amm-info@iis.fraunhofer.de
 #define NOMINMAX             // Disables conflicting min/max def from Windows.h
 #define WIN32_LEAN_AND_MEAN  // Disables some rarely used includes in windows.h
 #include <windows.h>
+#include <codecvt>
+#include <locale>
 #pragma comment(lib, "advapi32.lib")
 #endif
 
@@ -227,26 +229,25 @@ void ScopeLogger::print_exit() const {
 //       If Windows.h is included in logging.h, several symbol clashes will occure!
 void print_log_windows(const char* line, const char* Component, const char* Category) {
   HANDLE hEventLog = NULL;
-  LPCSTR lpszStrings[2] = {NULL, NULL};
+  LPCWSTR lpszStrings[2] = {NULL, NULL};
 
-  std::string component = std::string(Component);
-  std::string message = std::string(line);
+  std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+  std::wstring component = converter.from_bytes(Component);
+  std::wstring message = converter.from_bytes(line);
   lpszStrings[0] = component.c_str();
   lpszStrings[1] = message.c_str();
 
   // The source name (provider) must exist as a subkey of Application.
-  hEventLog = RegisterEventSource(NULL, Component);
+  hEventLog = RegisterEventSourceW(NULL, component.c_str());
   if (hEventLog) {
     if (*Category == 'I') {
-      ReportEvent(hEventLog, EVENTLOG_INFORMATION_TYPE, 0, 0, NULL, 2, 0, (LPCSTR*)lpszStrings,
-                  NULL);
+      ReportEventW(hEventLog, EVENTLOG_INFORMATION_TYPE, 0, 0, NULL, 2, 0, lpszStrings, NULL);
     } else if (*Category == 'W') {
-      ReportEvent(hEventLog, EVENTLOG_WARNING_TYPE, 0, 0, NULL, 2, 0, (LPCSTR*)lpszStrings, NULL);
+      ReportEventW(hEventLog, EVENTLOG_WARNING_TYPE, 0, 0, NULL, 2, 0, lpszStrings, NULL);
     } else if (*Category == 'E') {
-      ReportEvent(hEventLog, EVENTLOG_ERROR_TYPE, 0, 0, NULL, 2, 0, (LPCSTR*)lpszStrings, NULL);
+      ReportEventW(hEventLog, EVENTLOG_ERROR_TYPE, 0, 0, NULL, 2, 0, lpszStrings, NULL);
     } else {
-      ReportEvent(hEventLog, EVENTLOG_INFORMATION_TYPE, 0, 0, NULL, 2, 0, (LPCSTR*)lpszStrings,
-                  NULL);
+      ReportEventW(hEventLog, EVENTLOG_INFORMATION_TYPE, 0, 0, NULL, 2, 0, lpszStrings, NULL);
     }
 
     DeregisterEventSource(hEventLog);

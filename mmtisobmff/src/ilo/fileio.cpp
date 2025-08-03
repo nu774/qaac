@@ -95,6 +95,31 @@ amm-info@iis.fraunhofer.de
 #include "ilo_logging.h"
 
 namespace ilo {
+#if defined(WIN32) || defined(_WIN32)
+namespace {
+std::wstring utf8ToWide(const std::string& utf8) {
+  if (utf8.empty()) {
+    return std::wstring();
+  }
+  int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+  ILO_ASSERT(len != 0, "MultiByteToWideChar() failed to determine required buffer size");
+  std::wstring wide(static_cast<size_t>(len - 1), L'\0');  // len includes the null terminator
+  MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &wide[0], len);
+  return wide;
+}
+}  // namespace
+#endif
+
+FILE* fopen(std::string filename, const char* mode) {
+  FILE* file;
+#if defined(WIN32) || defined(_WIN32)
+  _wfopen_s(&file, utf8ToWide(filename).c_str(), utf8ToWide(mode).c_str());
+#else
+  file = ::fopen(filename.c_str(), mode);
+#endif
+  return file;
+}
+
 CFileWrapper::CFileWrapper(const std::string& filename_, const OpenMode mode) {
   open(filename_, mode);
 }

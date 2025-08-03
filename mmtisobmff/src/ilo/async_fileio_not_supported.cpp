@@ -88,8 +88,12 @@ amm-info@iis.fraunhofer.de
 // System includes
 #include <system_error>
 #if defined(WIN32) || defined(_WIN32)
+#include <sys/stat.h>
 #include <io.h>
+#include <share.h>
 #include <wchar.h>
+#include <codecvt>
+#include <locale>
 #else
 #include <unistd.h>
 #endif
@@ -109,7 +113,8 @@ static os_file_t openForWriting(const std::string& utf8Path, bool append) {
   int creation = O_CREAT | O_WRONLY | (append ? O_APPEND : O_TRUNC);
   os_file_t file;
 #if defined(WIN32) || defined(_WIN32)
-  errno_t err = _sopen_s(&file, utf8Path.c_str(), creation, _SH_DENYNO, _S_IREAD | _S_IWRITE);
+  std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+  errno_t err = _wsopen_s(&file, converter.from_bytes(utf8Path).c_str(), creation, _SH_DENYNO, _S_IREAD | _S_IWRITE);
   throwLastErrorIf(file == -1 || err != 0);
 #else
   file = open(utf8Path.c_str(), creation, 0644);
@@ -119,16 +124,19 @@ static os_file_t openForWriting(const std::string& utf8Path, bool append) {
 }
 
 static os_file_t openForWriting(const std::wstring& widePath, bool append) {
-  char utf8Path[FILENAME_MAX];
+  int creation = O_CREAT | O_WRONLY | (append ? O_APPEND : O_TRUNC);
+  os_file_t file;
 #if defined(WIN32) || defined(_WIN32)
-  size_t convertedSize = 0;
-  errno_t result = wcstombs_s(&convertedSize, utf8Path, widePath.c_str(), FILENAME_MAX - 1);
-  throwLastErrorIf(result != 0);
+  errno_t err = _wsopen_s(&file, widePath.c_str(), creation, _SH_DENYNO, _S_IREAD | _S_IWRITE);
+  throwLastErrorIf(file == -1 || err != 0);
 #else
+  char utf8Path[FILENAME_MAX];
   size_t result = wcstombs(utf8Path, widePath.c_str(), FILENAME_MAX);
   throwLastErrorIf(result == static_cast<size_t>(-1));
+  file = open(utf8Path, creation, 0644);
+  throwLastErrorIf(file == -1);
 #endif
-  return openForWriting(utf8Path, append);
+  return file;
 }
 
 class CAsyncFileWriter::Operation {};

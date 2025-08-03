@@ -93,6 +93,9 @@ amm-info@iis.fraunhofer.de
 #include <cerrno>
 #include <chrono>
 #include <thread>
+#if defined(_WIN32) || defined(WIN32)
+#include <codecvt>
+#endif
 
 // External includes
 #include "ilo/memory.h"
@@ -1347,8 +1350,15 @@ void CIsobmffWriter::Pimpl::cleanTempFiles() {
   uint32_t retryCount = 10;
   uint32_t sleepDuration = 100;  // ms
   for (uint32_t retries = 1; retries <= retryCount; ++retries) {
+#if defined(WIN32) || defined(_WIN32)
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    auto res = _wremove(converter.from_bytes(m_tmpFileName).c_str());
+#else
     auto res = remove(m_tmpFileName.c_str());
-    if (res != 0) {
+#endif
+    if (res == 0) {
+        break;
+    } else {
 #if defined(WIN32) || defined(_WIN32)
       const uint32_t BUFFER_SIZE = 256;
       char buffer[BUFFER_SIZE] = {0};
