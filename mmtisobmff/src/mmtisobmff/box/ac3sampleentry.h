@@ -82,109 +82,51 @@ amm-info@iis.fraunhofer.de
 
 /*
  * Project: MPEG-4 ISO Base Media File Format (ISO BMFF) library
- * Content: box registry
+ * Content: alac sample entry
  */
 
-// External includes
+#pragma once
+
+// External headers
 #include "ilo/common_types.h"
 
-// Internal includes
-#include "boxregistry.h"
-
-#define ADD_BOX_REGISTRY(RegEntry)        \
-  extern box::CBoxRegistryEntry RegEntry; \
-  boxes[RegEntry.fcc] = RegEntry
+// Internal headers
+#include "mmtisobmff/types.h"
+#include "box/sampleentry.h"
 
 namespace mmt {
 namespace isobmff {
-static void registerBoxes(CBoxRegistry::CRegistryMap& boxes) {
-  ADD_BOX_REGISTRY(ftypBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stypBoxRegistryEntry);
-  ADD_BOX_REGISTRY(moofBoxRegistryEntry);
-  ADD_BOX_REGISTRY(moovBoxRegistryEntry);
-  ADD_BOX_REGISTRY(trakBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mdiaBoxRegistryEntry);
-  ADD_BOX_REGISTRY(edtsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(avcCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(btrtBoxRegistryEntry);
-  ADD_BOX_REGISTRY(hdlrBoxRegistryEntry);
-  ADD_BOX_REGISTRY(hvcCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mdhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mdatBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mfhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mhaCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(esdsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mmpuBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mvhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(sidxBoxRegistryEntry);
-  ADD_BOX_REGISTRY(smhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(vmhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stcoBoxRegistryEntry);
-  ADD_BOX_REGISTRY(co64BoxRegistryEntry);
-  ADD_BOX_REGISTRY(stscBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stz2BoxRegistryEntry);
-  ADD_BOX_REGISTRY(stszBoxRegistryEntry);
-  ADD_BOX_REGISTRY(sttsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stssBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tfdtBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tfhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tkhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(trunBoxRegistryEntry);
-  ADD_BOX_REGISTRY(trexBoxRegistryEntry);
-  ADD_BOX_REGISTRY(minfBoxRegistryEntry);
-  ADD_BOX_REGISTRY(dinfBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stblBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mvexBoxRegistryEntry);
-  ADD_BOX_REGISTRY(trafBoxRegistryEntry);
-  ADD_BOX_REGISTRY(drefBoxRegistryEntry);
-  ADD_BOX_REGISTRY(urlBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stsdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(cttsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mhm1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(mhm2BoxRegistryEntry);
-  ADD_BOX_REGISTRY(mha1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(mha2BoxRegistryEntry);
-  ADD_BOX_REGISTRY(hvc1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(hev1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(avc1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(avc3BoxRegistryEntry);
-  ADD_BOX_REGISTRY(mp4aBoxRegistryEntry);
-  ADD_BOX_REGISTRY(elstBoxRegistryEntry);
-  ADD_BOX_REGISTRY(sgpdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(sbgpBoxRegistryEntry);
-  ADD_BOX_REGISTRY(udtaBoxRegistryEntry);
-  ADD_BOX_REGISTRY(ludtBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tlouBoxRegistryEntry);
-  ADD_BOX_REGISTRY(alouBoxRegistryEntry);
-  ADD_BOX_REGISTRY(iodsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jxsmBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jpviBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jxplBoxRegistryEntry);
-  ADD_BOX_REGISTRY(colrBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jpvsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jxsHBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mhaPBoxRegistryEntry);
-  ADD_BOX_REGISTRY(vvc1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(vvi1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(vvcCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(alacBoxRegistryEntry);
-  ADD_BOX_REGISTRY(fLaCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(dfLaBoxRegistryEntry);
-  ADD_BOX_REGISTRY(OpusBoxRegistryEntry);
-  ADD_BOX_REGISTRY(dOpsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(ac3BoxRegistryEntry);
-  ADD_BOX_REGISTRY(dac3BoxRegistryEntry);
-}
+namespace box {
 
-CBoxRegistry::CBoxRegistry() {
-  registerBoxes(m_boxes);
-}
+class CAc3SampleEntry : public box::CAudioSampleEntry {
+ public:
+  struct SAc3SampleEntryWriteConfig : SAudioSampleEntryWriteConfig {
+    SAc3SampleEntryWriteConfig(ilo::Fourcc fourcc) : SAudioSampleEntryWriteConfig(fourcc) {}
+  };
 
-bool CBoxRegistry::isContainer(const std::shared_ptr<box::IBox>& box) const {
-  auto boxreg = m_boxes.find(box->type());
-  if (boxreg != m_boxes.end())
-    return boxreg->second.containerType == box::CContainerType::isContainer;
-  return false;
-}
+  //! constructor to init member variables through parsing
+  CAc3SampleEntry(ilo::ByteBuffer::const_iterator& begin,
+                   const ilo::ByteBuffer::const_iterator& end);
+
+  //! constructor to init member variables by setting
+  explicit CAc3SampleEntry(const SAc3SampleEntryWriteConfig& alacSampleEntryWriteConfig);
+
+  //! function to get the channel count
+  uint16_t channelCount() const override { return box::CAudioSampleEntry::channelCount(); }
+
+  //! function to get the size per sample
+  uint16_t sampleSize() const override { return box::CAudioSampleEntry::sampleSize(); }
+
+  //! function to get the sampling rate
+  uint32_t sampleRate() const override { return box::CAudioSampleEntry::sampleRate(); }
+
+ protected:
+  void writeBox(ilo::ByteBuffer& buffer, ilo::ByteBuffer::iterator& position) const override;
+
+ private:
+  void sanityCheck();
+};
+
+}  // namespace box
 }  // namespace isobmff
 }  // namespace mmt

@@ -97,6 +97,7 @@ amm-info@iis.fraunhofer.de
 #include "common/logging.h"
 #include "../descriptor/esdescriptor.h"
 #include "mmtisobmff/configdescriptor/vvc_decoderconfigrecord.h"
+#include "mmtisobmff/types.h"
 
 namespace mmt {
 namespace isobmff {
@@ -138,6 +139,8 @@ SAttributeList CDecoderConfigurationFullBox::getAttributeList() const {
   } else if (type() == ilo::toFcc("vvcC")) {
     config::CVvcDecoderConfigRecord configRecord(dataBegin, decoderConfig.end());
     return configRecord.getAttributeList();
+  } else if (type() == ilo::toFcc("alac")) {
+    return SAttributeList();
   } else {
     ILO_ASSERT(false, "Invalid config record box type");
   }
@@ -146,11 +149,11 @@ SAttributeList CDecoderConfigurationFullBox::getAttributeList() const {
 }
 
 void CDecoderConfigurationFullBox::verify() {
-  std::vector<ilo::Fourcc> validFccs = {ilo::toFcc("esds"), ilo::toFcc("vvcC")};
+  std::vector<ilo::Fourcc> validFccs = {ilo::toFcc("esds"), ilo::toFcc("vvcC"), ilo::toFcc("alac")};
 
   ILO_ASSERT_WITH(std::find(validFccs.begin(), validFccs.end(), CBox::type()) != validFccs.end(),
                   std::invalid_argument,
-                  "Expected config record box type (esds / vvcC) but found %s",
+                  "Expected config record box type (esds / vvcC / alac) but found %s",
                   ilo::toString(CBox::type()).c_str());
 
   if (CBox::type() == ilo::toFcc("vvcC")) {
@@ -176,3 +179,4 @@ BOXREGISTRY_FUNCTIONS(CDecoderConfigurationFullBox,
                       CDecoderConfigurationFullBox::SConfigFullBoxWriteConfig);
 BOXREGISTRY_REGISTER_FOURCC(esds, CContainerType::noContainer);
 BOXREGISTRY_REGISTER_FOURCC(vvcC, CContainerType::noContainer);
+//BOXREGISTRY_REGISTER_FOURCC(alac, CContainerType::noContainer);

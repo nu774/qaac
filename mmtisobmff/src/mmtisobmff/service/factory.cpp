@@ -106,6 +106,8 @@ amm-info@iis.fraunhofer.de
 #include "box/invalidbox.h"
 #include "box/unknownbox.h"
 #include "box/containerbox.h"
+#include "box/alacsampleentry.h"
+#include "box/decoderconfigurationfullbox.h"
 
 namespace mmt {
 namespace isobmff {
@@ -176,9 +178,19 @@ void CNodeFactory::createNode(BoxTree::NodeType& addTo, ilo::ByteBuffer::const_i
                               const ilo::ByteBuffer::const_iterator& end) const {
   auto chopEnd = boxEnd(begin, end);
   ilo::ByteBuffer::const_iterator chopBegin = begin;
-
-  auto boxfac = CServiceLocatorSingleton::instance().lock()->getService<IBoxFactory>().lock();
-  auto box = boxfac->createBox(begin, chopEnd);
+  BoxSizeType boxSizeType = tools::getBoxSizeAndType(begin, chopEnd);
+  auto parent = dynamic_cast<ilo::Element<BoxItem>*>(&addTo);
+  std::shared_ptr<box::IBox> box;
+  if (parent && boxSizeType.type == ilo_v1::toFcc("alac")) {
+    if (parent->item->type() == ilo_v1::toFcc("alac")) {
+      box = std::make_shared<box::CDecoderConfigurationFullBox>(begin, chopEnd);
+    } else {
+      box = std::make_shared<box::CAlacSampleEntry>(begin, chopEnd);
+    }
+  } else {
+    auto boxfac = CServiceLocatorSingleton::instance().lock()->getService<IBoxFactory>().lock();
+    box = boxfac->createBox(begin, chopEnd);
+  }
   if (box->size() != static_cast<uint64_t>(chopEnd - chopBegin)) {
     ILO_LOG_WARNING("Box size mismatch");
   }
@@ -205,8 +217,20 @@ void CNodeFactory::createNode(BoxTree::NodeType& addTo, ilo::ByteBuffer::const_i
 
 std::reference_wrapper<BoxElement> CNodeFactory::createNode(
     BoxTree::NodeType& addTo, const BoxWriteConfig& boxWriteConfig) const {
-  auto boxfac = CServiceLocatorSingleton::instance().lock()->getService<IBoxFactory>().lock();
-  auto box = boxfac->createBox(boxWriteConfig);
+  auto parent = dynamic_cast<ilo::Element<BoxItem>*>(&addTo);
+  std::shared_ptr<box::IBox> box;
+  if (parent && boxWriteConfig.getType() == ilo::toFcc("alac")) {
+    if (parent->item->type() == ilo::toFcc("alac")) {
+      auto config = dynamic_cast<const box::CDecoderConfigurationFullBox::SConfigFullBoxWriteConfig&>(boxWriteConfig);
+      box = std::make_shared<box::CDecoderConfigurationFullBox>(config);
+    } else {
+      auto config = dynamic_cast<const box::CAlacSampleEntry::SAlacSampleEntryWriteConfig&>(boxWriteConfig);
+      box = std::make_shared<box::CAlacSampleEntry>(config);
+    }
+  } else {
+    auto boxfac = CServiceLocatorSingleton::instance().lock()->getService<IBoxFactory>().lock();
+    box = boxfac->createBox(boxWriteConfig);
+  }
   return ref(addTo.addChild(box));
 }
 

@@ -119,7 +119,12 @@ struct CReaderMaps {
                               {ilo::toFcc("avc3"), Codec::avc},
                               {ilo::toFcc("jxsm"), Codec::jxs},
                               {ilo::toFcc("vvc1"), Codec::vvc},
-                              {ilo::toFcc("vvi1"), Codec::vvc}});
+                              {ilo::toFcc("vvi1"), Codec::vvc},
+                              {ilo::toFcc("ac-3"), Codec::ac3},
+                              {ilo::toFcc("alac"), Codec::alac},
+                              {ilo::toFcc("fLaC"), Codec::flac},
+                              {ilo::toFcc("Opus"), Codec::opus},
+                            });
   }
 
   std::map<ilo::Fourcc, TrackType> handlerToType;

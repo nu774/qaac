@@ -152,7 +152,11 @@ enum class Codec : uint8_t {
   avc,        /**< AVC/H.264 video codec */
   hevc,       /**< HEVC/H.265 video codec */
   jxs,        /**< JPEG XS video codec */
-  vvc         /**< VVC/H.266 video codec */
+  vvc,        /**< VVC/H.266 video codec */
+  ac3,
+  alac,
+  flac,
+  opus,
 };
 
 /*!

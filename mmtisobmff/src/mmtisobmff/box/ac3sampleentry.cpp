@@ -82,98 +82,42 @@ amm-info@iis.fraunhofer.de
 
 /*
  * Project: MPEG-4 ISO Base Media File Format (ISO BMFF) library
- * Content: decoder configuration base box declaration
+ * Content: alac sample entry
  */
 
 // System headers
-#include <algorithm>
+#include <exception>
 
 // External headers
-#include "ilo/bytebuffertools.h"
 #include "ilo/string_utils.h"
+#include "ilo/bytebuffertools.h"
 
 // Internal headers
-#include "decoderconfigurationbox.h"
-#include "mmtisobmff/configdescriptor/hevc_decoderconfigrecord.h"
-#include "mmtisobmff/configdescriptor/avc_decoderconfigrecord.h"
-#include "mmtisobmff/configdescriptor/mha_decoderconfigrecord.h"
-#include "mmtisobmff/configdescriptor/jxs_decoderconfigrecord.h"
+#include "ac3sampleentry.h"
 #include "common/logging.h"
 
 namespace mmt {
 namespace isobmff {
 namespace box {
 
-CDecoderConfigurationBaseBox::CDecoderConfigurationBaseBox(
-    ilo::ByteBuffer::const_iterator& begin, const ilo::ByteBuffer::const_iterator& end)
-    : m_decoderConfiguration(begin, end) {
-  begin = end;
+CAc3SampleEntry::CAc3SampleEntry(ilo::ByteBuffer::const_iterator& begin,
+                                   const ilo::ByteBuffer::const_iterator& end)
+    : CAudioSampleEntry(begin, end) {
+  sanityCheck();
 }
 
-CDecoderConfigurationBaseBox::CDecoderConfigurationBaseBox(
-    const SConfigBaseBoxWriteConfig& writeConfig) {
-  m_decoderConfiguration = writeConfig.decoderConfigRecord;
-}
-
-CDecoderConfigurationBox::CDecoderConfigurationBox(ilo::ByteBuffer::const_iterator& begin,
-                                                   const ilo::ByteBuffer::const_iterator& end)
-    : CBox(begin, end), CDecoderConfigurationBaseBox(begin, end) {
-  std::vector<ilo::Fourcc> validFccs = {ilo::toFcc("hvcC"), ilo::toFcc("avcC"), ilo::toFcc("mhaC"),
-                                        ilo::toFcc("jxsH"), ilo::toFcc("dfLa"), ilo::toFcc("dOps"),
-                                        ilo::toFcc("dac3")};
-
-  ILO_ASSERT_WITH(
-      std::find(validFccs.begin(), validFccs.end(), CBox::type()) != validFccs.end(),
-      std::invalid_argument,
-      "Expected config record box type (hvcC / avcC / mhaC / jxsH / dfLa / dOps / dac3) but found %s while parsing.",
-      ilo::toString(CBox::type()).c_str());
-}
-
-CDecoderConfigurationBox::CDecoderConfigurationBox(const SConfigBoxWriteConfig& writeConfig)
-    : CBox(writeConfig), CDecoderConfigurationBaseBox(writeConfig) {
+CAc3SampleEntry::CAc3SampleEntry(const SAc3SampleEntryWriteConfig& config)
+    : CAudioSampleEntry(config) {
+  sanityCheck();
   updateSize(0);
 }
 
-SAttributeList CDecoderConfigurationBox::getAttributeList() const {
-  auto decoderConfig = decoderConfiguration();
-  ilo::ByteBuffer::const_iterator dataBegin = decoderConfig.cbegin();
+void CAc3SampleEntry::writeBox(ilo::ByteBuffer& /*buffer*/,
+                                ilo::ByteBuffer::iterator& /*position*/) const {}
 
-  if (type() == ilo::toFcc("hvcC")) {
-    config::CHevcDecoderConfigRecord configRecord(dataBegin, decoderConfig.end());
-    return configRecord.getAttributeList();
-  } else if (type() == ilo::toFcc("avcC")) {
-    config::CAvcDecoderConfigRecord configRecord(dataBegin, decoderConfig.end());
-    return configRecord.getAttributeList();
-  } else if (type() == ilo::toFcc("mhaC")) {
-    config::CMhaDecoderConfigRecord configRecord(dataBegin, decoderConfig.end());
-    return configRecord.getAttributeList();
-  } else if (type() == ilo::toFcc("jxsH")) {
-    config::CJxsDecoderConfigRecord configRecord(dataBegin, decoderConfig.end());
-    return configRecord.getAttributeList();
-  } else if (type() == ilo::toFcc("dfLa")) {
-    return SAttributeList();
-  } else if (type() == ilo::toFcc("dOps")) {
-    return SAttributeList();
-  } else if (type() == ilo::toFcc("dac3")) {
-    return SAttributeList();
-  } else {
-    ILO_ASSERT(false, "Invalid config record box type");
-  }
-
-  return SAttributeList();
-}
-
-void CDecoderConfigurationBox::updateSize(uint64_t sizeValue) {
-  CBox::updateSize(sizeValue + decoderConfiguration().size());
-}
-
-void CDecoderConfigurationBox::writeBox(ilo::ByteBuffer& buffer,
-                                        ilo::ByteBuffer::iterator& position) const {
-  ILO_ASSERT(buffer.end() >= position + decoderConfiguration().size(),
-             "Buffer too small for decoder configuration");
-
-  std::copy(decoderConfiguration().begin(), decoderConfiguration().end(), position);
-  position += decoderConfiguration().size();
+void CAc3SampleEntry::sanityCheck() {
+  ILO_ASSERT_WITH(CBox::type() == ilo::toFcc("ac-3"), std::invalid_argument,
+                  "Expected box type alac, but found: %s", ilo::toString(CBox::type()).c_str());
 }
 
 }  // namespace box
@@ -186,11 +130,5 @@ using namespace mmt;
 using namespace mmt::isobmff;
 using namespace mmt::isobmff::box;
 
-BOXREGISTRY_FUNCTIONS(CDecoderConfigurationBox, CDecoderConfigurationBox::SConfigBoxWriteConfig);
-BOXREGISTRY_REGISTER_FOURCC(hvcC, CContainerType::noContainer);
-BOXREGISTRY_REGISTER_FOURCC(avcC, CContainerType::noContainer);
-BOXREGISTRY_REGISTER_FOURCC(mhaC, CContainerType::noContainer);
-BOXREGISTRY_REGISTER_FOURCC(jxsH, CContainerType::noContainer);
-BOXREGISTRY_REGISTER_FOURCC(dfLa, CContainerType::noContainer);
-BOXREGISTRY_REGISTER_FOURCC(dOps, CContainerType::noContainer);
-BOXREGISTRY_REGISTER_FOURCC(dac3, CContainerType::noContainer);
+BOXREGISTRY_FUNCTIONS(CAc3SampleEntry, CAc3SampleEntry::SAc3SampleEntryWriteConfig);
+BOXREGISTRY_REGISTER_FOURCC_FCC(ac3, "ac-3", CContainerType::isContainer);
