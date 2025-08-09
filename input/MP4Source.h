@@ -4,53 +4,7 @@
 #include "PacketDecoder.h"
 #include "win32util.h"
 #include "IInputStream.h"
-
-class MP4Edits {
-    typedef std::pair<int64_t, int64_t> entry_t;
-    std::vector<entry_t> m_edits;
-public:
-    void addEntry(int64_t offset, int64_t duration)
-    {
-        m_edits.push_back(std::make_pair(offset, duration));
-    }
-    size_t count() const { return m_edits.size(); }
-    uint64_t totalDuration() const
-    {
-        return std::accumulate(m_edits.begin(), m_edits.end(), 0ULL,
-                               [](uint64_t n, const entry_t &e) -> uint64_t {
-                                    return n + e.second;
-                               });
-    }
-    int64_t mediaOffset(unsigned edit_index) const
-    {
-        return m_edits[edit_index].first;
-    }
-    int64_t duration(unsigned edit_index) const
-    {
-        return m_edits[edit_index].second;
-    }
-    unsigned editForPosition(int64_t position, int64_t *offset_in_edit) const;
-
-    int64_t mediaOffsetForPosition(int64_t position) const
-    {
-        int64_t  off;
-        unsigned edit = editForPosition(position, &off);
-        return mediaOffset(edit) + off;
-    }
-    void scaleShift(double ratio)
-    {
-        std::for_each(m_edits.begin(), m_edits.end(), [&](entry_t & e) {
-                      e.first = static_cast<int64_t>(e.first * ratio + .5);
-                      e.second = static_cast<int64_t>(e.second * ratio + .5);
-                      });
-    }
-    void shiftMediaOffset(int val)
-    {
-        std::for_each(m_edits.begin(), m_edits.end(), [val](entry_t & e) {
-                      e.first = std::max(e.first + val, (int64_t)0);
-                      });
-    }
-};
+#include "MP4Edits.h"
 
 class MP4Source: public ISeekableSource, public ITagParser,
     public IPacketFeeder, public IChapterParser

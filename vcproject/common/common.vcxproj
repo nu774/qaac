@@ -74,6 +74,7 @@
     <ClCompile Include="..\..\input\FLACPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\FLACSource.cpp" />
     <ClCompile Include="..\..\input\LibSndfileSource.cpp" />
+    <ClCompile Include="..\..\input\MP4Edits.cpp" />
     <ClCompile Include="..\..\input\OpusPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\RawSource.cpp" />
     <ClCompile Include="..\..\input\TakSource.cpp" />

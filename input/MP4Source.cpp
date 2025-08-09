@@ -1,4 +1,5 @@
 #include "MP4Source.h"
+#include "MP4Edits.h"
 #include "metadata.h"
 #include "cautil.h"
 #include "chanmap.h"
@@ -10,22 +11,6 @@
 #endif
 #include "FLACPacketDecoder.h"
 #include "OpusPacketDecoder.h"
-
-unsigned
-MP4Edits::editForPosition(int64_t position, int64_t *offset_in_edit) const
-{
-    int64_t acc = 0;
-    int64_t off = 0;
-    size_t  i = 0;
-    for (; i < m_edits.size(); ++i) {
-        off =  position - acc;
-        acc += m_edits[i].second;
-        if (position < acc)
-            break;
-    }
-    if (offset_in_edit) *offset_in_edit = off;
-    return i == m_edits.size() ? i - 1 : i;
-}
 
 MP4Source::MP4Source(std::shared_ptr<IInputStream> stream)
     : m_position(0),
@@ -63,6 +48,7 @@ MP4Source::MP4Source(std::shared_ptr<IInputStream> stream)
 
         m_decode_buffer.set_unit(m_oasbd.mBytesPerFrame);
         m_tags = M4A::fetchTags(m_file);
+        std::vector<MP4Edits::entry_t> edits;
         if (m_file.FindTrackAtom(m_track_id, "edts.elst")) {
             uint32_t nedits = m_file.GetTrackNumberOfEdits(m_track_id);
             for (uint32_t i = 1; i <= nedits; ++i) {
@@ -82,7 +68,6 @@ MP4Source::MP4Source(std::shared_ptr<IInputStream> stream)
                 }
                 if (len <= 0.0 || len + off > m_file.GetTrackDuration(m_track_id))
                     len = m_file.GetTrackDuration(m_track_id) - off;
-
                 m_edits.addEntry(off, len + .5);
             }
         }
