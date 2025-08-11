@@ -36,9 +36,8 @@ bool LibOpusModule::load(const std::wstring &path)
     }
 }
 
-OpusPacketDecoder::OpusPacketDecoder(IPacketFeeder *feeder)
+OpusPacketDecoder::OpusPacketDecoder()
     : m_module(LibOpusModule::instance())
-    , m_feeder(feeder)
 {
     if (!m_module.loaded()) throw std::runtime_error("libopus not loaded");
     memset(&m_iasbd, 0, sizeof(m_iasbd));
@@ -53,8 +52,6 @@ void OpusPacketDecoder::reset()
 {
     if (m_decoder) {
         m_module.multistream_decoder_ctl(m_decoder.get(), OPUS_RESET_STATE);
-        m_packet_buffer.clear();
-        m_decode_buffer.reset();
     }
 }
 
@@ -111,20 +108,14 @@ void OpusPacketDecoder::setMagicCookie(const std::vector<uint8_t> &cookie)
     }
 }
 
-size_t OpusPacketDecoder::decode(void *data, size_t nsamples)
+size_t OpusPacketDecoder::decode(const std::vector<uint8_t> &packet, std::vector<uint8_t> *samples)
 {
-    if (m_decoder && m_feeder->feed(&m_packet_buffer)) {
-        int fpp = m_module.packet_get_nb_samples(m_packet_buffer.data(), m_packet_buffer.size(), 48000);
-        m_decode_buffer.reserve(fpp * m_iasbd.mChannelsPerFrame);
-        int nc = m_module.multistream_decode_float(m_decoder.get(),
-            m_packet_buffer.data(),
-            m_packet_buffer.size(),
-            m_decode_buffer.write_ptr(), fpp * m_iasbd.mChannelsPerFrame, 0);
-        m_decode_buffer.commit(nc * m_iasbd.mChannelsPerFrame);
-        nsamples = std::min(nsamples, (size_t)(m_decode_buffer.count() / m_iasbd.mChannelsPerFrame));
-        std::memcpy(data, m_decode_buffer.read_ptr(), nsamples * m_iasbd.mChannelsPerFrame * sizeof(float));
-        m_decode_buffer.advance(nsamples * m_iasbd.mChannelsPerFrame);
-        return nsamples;
+    if (!m_iasbd.mFramesPerPacket) {
+        m_iasbd.mFramesPerPacket = m_module.packet_get_nb_samples(packet.data(), packet.size(), 48000);
     }
-    return 0;
+    samples->resize(m_iasbd.mFramesPerPacket * m_oasbd.mBytesPerFrame);
+    int nc = m_module.multistream_decode_float(m_decoder.get(), packet.data(), packet.size(),
+        reinterpret_cast<float*>(samples->data()), samples->size() / m_oasbd.mBytesPerFrame, 0);
+    samples->resize(nc * m_oasbd.mBytesPerFrame);
+    return nc;
 }

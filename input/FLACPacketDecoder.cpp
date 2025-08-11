@@ -10,8 +10,8 @@ namespace {
 }
 #define TRYFL(expr) (void)(try__((expr), #expr))
 
-FLACPacketDecoder::FLACPacketDecoder(IPacketFeeder *feeder)
-    : m_feeder(feeder), m_module(FLACModule::instance())
+FLACPacketDecoder::FLACPacketDecoder()
+    : m_module(FLACModule::instance())
 {
     if (!m_module.loaded()) throw std::runtime_error("libFLAC not loaded");
     memset(&m_iasbd, 0, sizeof(m_iasbd));
@@ -49,21 +49,17 @@ void FLACPacketDecoder::setMagicCookie(const std::vector<uint8_t> &cookie)
     TRYFL(st);
 }
 
-size_t FLACPacketDecoder::decode(void *data, size_t nsamples)
+size_t FLACPacketDecoder::decode(const std::vector<uint8_t> &packet, std::vector<uint8_t> *samples)
 {
-    if (m_feeder->feed(&m_feed_buffer)) {
-        m_packet_buffer.reserve(m_feed_buffer.size());
-        auto p = m_packet_buffer.write_ptr();
-        std::memcpy(p, m_feed_buffer.data(), m_feed_buffer.size());
-        m_packet_buffer.commit(m_feed_buffer.size());
-        TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
-    }
-    nsamples = std::min(nsamples, m_decode_buffer.count());
-    if (nsamples)
-        std::memcpy(data,
-                    m_decode_buffer.read(nsamples),
-                    nsamples * m_oasbd.mBytesPerFrame);
-    return nsamples;
+    m_packet_buffer.reserve(packet.size());
+    std::memcpy(m_packet_buffer.write_ptr(), packet.data(), packet.size());
+    m_packet_buffer.commit(packet.size());
+    TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
+    size_t count = m_decode_buffer.count();
+    samples->resize(count * m_oasbd.mBytesPerFrame);
+    std::memcpy(samples->data(), m_decode_buffer.read_ptr(), samples->size());
+    m_decode_buffer.advance(count);
+    return count;
 }
 
 FLAC__StreamDecoderReadStatus

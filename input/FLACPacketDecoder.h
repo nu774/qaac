@@ -10,14 +10,13 @@ class FLACPacketDecoder: public IPacketDecoder {
     typedef FLACPacketDecoder ThisType;
     typedef std::shared_ptr<FLAC__StreamDecoder> decoder_t;
     decoder_t m_decoder;
-    IPacketFeeder *m_feeder;
     AudioStreamBasicDescription m_iasbd, m_oasbd;
     std::vector<uint8_t> m_feed_buffer;
     util::FIFO<uint8_t> m_packet_buffer;
     util::FIFO<int32_t> m_decode_buffer;
     FLACModule &m_module;
 public:
-    FLACPacketDecoder(IPacketFeeder *feeder);
+    FLACPacketDecoder();
     ~FLACPacketDecoder()
     {
         m_decoder.reset();
@@ -26,7 +25,7 @@ public:
     const AudioStreamBasicDescription &getInputFormat() { return m_iasbd; }
     const AudioStreamBasicDescription &getSampleFormat() { return m_oasbd; }
     void setMagicCookie(const std::vector<uint8_t> &cookie);
-    size_t decode(void *data, size_t nsamples);
+    size_t decode(const std::vector<uint8_t> &packet, std::vector<uint8_t> *samples);
 private:
     void close(FLAC__StreamDecoder *decoder)
     {
