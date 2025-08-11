@@ -9,6 +9,10 @@ public:
     typedef std::pair<int64_t, int64_t> entry_t;
 
     void addEntry(int64_t offset, int64_t duration);
+    void clear()
+    {
+        m_edits.clear();
+    }
     size_t count() const
     {
         return m_edits.size();
@@ -26,6 +30,8 @@ public:
         return m_edits[edit_index].second;
     }
 
+    int64_t startPosition(unsigned edit_index) const;
+    int64_t endPosition(unsigned edit_index) const;
     unsigned editForPosition(int64_t position, int64_t *offset_in_edit) const;
     int64_t mediaOffsetForPosition(int64_t position) const;
     void scaleShift(double ratio);

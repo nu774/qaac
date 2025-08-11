@@ -5,15 +5,24 @@
 void MP4Edits::addEntry(int64_t offset, int64_t duration)
 {
     m_edits.emplace_back(offset, duration);
-    computeTotalDuration();
+    m_total_duration = computeTotalDuration();
 }
 
 int64_t MP4Edits::computeTotalDuration() const
 {
-    return std::accumulate(m_edits.begin(), m_edits.end(), 0ULL,
+    return startPosition(m_edits.size());
+}
+
+int64_t MP4Edits::startPosition(unsigned edit_index) const
+{
+    return std::accumulate(m_edits.begin(), m_edits.begin() + edit_index, 0ULL,
                             [](uint64_t n, const entry_t &e) -> uint64_t {
                                 return n + e.second;
                             });
+}
+int64_t MP4Edits::endPosition(unsigned edit_index) const
+{
+    return startPosition(edit_index + 1);
 }
 
 unsigned
@@ -45,7 +54,7 @@ void MP4Edits::scaleShift(double ratio)
                     e.first = static_cast<int64_t>(e.first * ratio + .5);
                     e.second = static_cast<int64_t>(e.second * ratio + .5);
                     });
-    computeTotalDuration();
+    m_total_duration = computeTotalDuration();
 }
 
 void MP4Edits::shiftMediaOffset(int val)
