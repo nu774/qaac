@@ -130,5 +130,8 @@
     <ClCompile Include="..\..\input\MP4Edits.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\input\LPCMPacketDecoder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
