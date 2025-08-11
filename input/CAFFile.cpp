@@ -182,6 +182,16 @@ void CAFFile::parse_desc(Format *d)
     read32be(&d->asbd.mChannelsPerFrame);
     read32be(&d->asbd.mBitsPerChannel);
     d->asbd.mBytesPerFrame = d->asbd.mBytesPerPacket / d->asbd.mFramesPerPacket;
+    if (d->asbd.mFormatID == 'lpcm') {
+        unsigned flags = (d->asbd.mFormatFlags & 1) ? kAudioFormatFlagIsFloat : kAudioFormatFlagIsSignedInteger;
+        if ((d->asbd.mFormatFlags & 2) == 0)
+            flags |= kAudioFormatFlagIsBigEndian;
+        if (d->asbd.mBitsPerChannel * d->asbd.mChannelsPerFrame == d->asbd.mBytesPerPacket * 8)
+            flags |= kAudioFormatFlagIsPacked;
+        else
+            flags |= kAudioFormatFlagIsAlignedHigh;
+        d->asbd.mFormatFlags = flags;
+    }
 }
 
 void CAFFile::parse_chan(Format *d, int64_t size)
