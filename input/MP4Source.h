@@ -1,18 +1,15 @@
-#include <numeric>
 #include "ISource.h"
 #include "mp4v2wrapper.h"
 #include "PacketDecoder.h"
-#include "win32util.h"
 #include "IInputStream.h"
 #include "MP4Edits.h"
 
 class MP4Source: public ISeekableSource, public ITagParser,
-    public IPacketFeeder, public IChapterParser
+    public IChapterParser
 {
     uint32_t m_track_id;
-    int64_t  m_position, m_position_raw;
-    int64_t  m_current_packet;
-    unsigned m_start_skip;
+    int64_t  m_position;
+    int64_t  m_nextPacket;
     std::shared_ptr<IPacketDecoder>    m_decoder;
     std::map<std::string, std::string> m_tags;
     std::vector<misc::chapter_t>     m_chapters;
@@ -20,10 +17,12 @@ class MP4Source: public ISeekableSource, public ITagParser,
     std::shared_ptr<IInputStream> m_stream;
     MP4FileX m_file;
     MP4Edits m_edits;
-    std::vector<uint8_t> m_packet_buffer;
-    util::FIFO<uint8_t>  m_decode_buffer;
+    std::vector<uint8_t> m_packetBuffer;
+    std::vector<uint8_t> m_rawDecodeBuffer;
+    util::FIFO<uint8_t>  m_decodeBuffer;
     AudioStreamBasicDescription m_iasbd, m_oasbd;
-    double m_time_ratio;
+    int m_currentEdit;
+    int64_t m_currentEditEndPosition;
 public:
     MP4Source(std::shared_ptr<IInputStream> stream);
     uint64_t length() const
@@ -46,8 +45,9 @@ public:
     {
         return m_chapters;
     }
-    bool feed(std::vector<uint8_t> *buffer);
 private:
+    bool readPacket(std::vector<uint8_t> *buffer);
+    void fillDecodeBuffer();
     void setupALAC();
     void setupFLAC();
     void setupMPEG4Audio();
