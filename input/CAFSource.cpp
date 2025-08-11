@@ -6,15 +6,16 @@
 #include "ALACPacketDecoder.h"
 #endif
 #include "FLACPacketDecoder.h"
+#include "LPCMPacketDecoder.h"
 #include "cautil.h"
 #include "chanmap.h"
 
 CAFSource::CAFSource(std::shared_ptr<IInputStream> stream)
     : m_position(0)
     , m_position_raw(0)
-    , m_current_packet(0)
+    , m_currentPacket(0)
     , m_start_skip(0)
-    , m_packets_per_chunk(1)
+    , m_packetsPerChunk(1)
 {
     m_file = std::make_shared<CAFFile>(stream);
     for (auto &&e: m_file->get_tags()) {
@@ -33,109 +34,84 @@ CAFSource::CAFSource(std::shared_ptr<IInputStream> stream)
 #endif
         default:     throw std::runtime_error("Not supported input codec");
     }
-    m_decode_buffer.set_unit(m_oasbd.mBytesPerFrame);
+    m_decodeBuffer.set_unit(m_oasbd.mBytesPerFrame);
 }
 
 size_t CAFSource::readSamples(void *buffer, size_t nsamples)
 {
     auto &&asbd = m_file->format().asbd;
-    if (asbd.mFormatID == kAudioFormatLinearPCM)
-        return readSamplesLPCM(buffer, nsamples);
-    auto fpp = asbd.mFramesPerPacket;
-    if (m_decode_buffer.count() == 0) {
-        m_decode_buffer.reserve(fpp);
-        int64_t n = m_decoder->decode(m_decode_buffer.write_ptr(), fpp);
-        m_decode_buffer.commit(std::min(n, m_file->duration() - m_position));
-        if (m_start_skip) {
-            if (m_start_skip >= m_decode_buffer.count()) {
-                m_start_skip -= m_decode_buffer.count();
-                m_decode_buffer.reset();
-                return readSamples(buffer, nsamples);
-            }
-            m_decode_buffer.advance(m_start_skip);
-            m_start_skip = 0;
-        }
+    if (m_decodeBuffer.count() == 0) {
+        fillDecodeBuffer();
     }
-    if (m_decode_buffer.count() == 0) {
-        return 0;
+    if (nsamples > m_decodeBuffer.count())
+        nsamples = m_decodeBuffer.count();
+    if (nsamples > 0) {
+        std::memcpy(buffer, m_decodeBuffer.read(nsamples), nsamples * m_oasbd.mBytesPerFrame);
+        m_position += nsamples;
     }
-    auto n = std::min(nsamples, m_decode_buffer.count());
-    std::memcpy(buffer, m_decode_buffer.read_ptr(), n * m_oasbd.mBytesPerFrame);
-    m_decode_buffer.advance(n);
-    m_position += n;
-    return n;
-}
-
-size_t CAFSource::readSamplesLPCM(void *buffer, size_t nsamples)
-{
-    auto &&asbd = m_file->format().asbd;
-    if (m_decode_buffer.count() == 0) {
-        int n = m_file->read_packets(m_current_packet, m_packets_per_chunk, &m_packet_buffer);
-        if (n == 0) return 0;
-        m_current_packet += n;
-        size_t size = m_packet_buffer.size();
-        if ((asbd.mFormatFlags & 2) == 0) {
-            util::bswapbuffer(m_packet_buffer.data(), size, (asbd.mBitsPerChannel + 7) & ~7);
-        }
-        m_decode_buffer.reserve(size / asbd.mBytesPerFrame);
-        util::unpack(m_packet_buffer.data(), m_decode_buffer.write_ptr(), &size,
-                     asbd.mBytesPerFrame / asbd.mChannelsPerFrame,
-                     m_oasbd.mBytesPerFrame / m_oasbd.mChannelsPerFrame);
-        m_decode_buffer.commit(size / m_oasbd.mBytesPerFrame);
-    }
-    if (m_decode_buffer.count() == 0) return 0;
-    if (m_decode_buffer.count() < nsamples) {
-        nsamples = m_decode_buffer.count();
-    }
-    std::memcpy(buffer, m_decode_buffer.read_ptr(), nsamples * m_oasbd.mBytesPerFrame);
-    m_decode_buffer.advance(nsamples);
-    m_position += nsamples;
     return nsamples;
 }
 
 void CAFSource::seekTo(int64_t count)
 {
+    if (count >= length()) return;
     auto &&asbd = m_file->format().asbd;
-    m_decode_buffer.reset();
-    auto fpp = asbd.mFramesPerPacket;
-    auto ipacket = count / fpp;
-    if (m_decoder) {
-        m_decoder->reset();
-        auto ppacket = std::max(0LL, ipacket - getMaxFrameDependency());
-        m_start_skip = count + m_file->start_offset() + getDecoderDelay() - ipacket * fpp;
-        std::vector<std::uint8_t> tmp(asbd.mFramesPerPacket * asbd.mBytesPerFrame);
-        while (ppacket < ipacket) {
-            m_file->read_packets(ppacket++, 1, &m_packet_buffer);
-            m_decoder->decode(tmp.data(), fpp);
-        }
-    }
-    m_current_packet = ipacket;
     m_position = count;
+    m_decoder->reset();
+    int64_t offsetInMediaTime = m_position + m_file->start_offset();
+    m_currentPacket = std::max((offsetInMediaTime - getMaxFrameDependency() * asbd.mFramesPerPacket) / asbd.mFramesPerPacket, 0LL);
+    int prerollSamples = offsetInMediaTime - m_currentPacket * asbd.mFramesPerPacket;
+    while (prerollSamples > 0) {
+        readPacket(& m_packetBuffer);
+        size_t samples = m_decoder->decode(m_packetBuffer, &m_rawDecodeBuffer);
+        if (samples > prerollSamples) {
+            m_decodeBuffer.reserve(samples - prerollSamples);
+            memcpy(m_decodeBuffer.write_ptr(), &m_rawDecodeBuffer[prerollSamples * m_oasbd.mBytesPerFrame], (samples - prerollSamples) * m_oasbd.mBytesPerFrame);
+            m_decodeBuffer.commit(samples - prerollSamples);
+        }
+        prerollSamples -= samples;
+    }
 }
 
-bool CAFSource::feed(std::vector<uint8_t> *buffer)
+bool CAFSource::readPacket(std::vector<uint8_t> *buffer)
 {
-    uint32_t n = m_file->read_packets(m_current_packet, m_packets_per_chunk, buffer);
-    m_current_packet += n;
+    if (m_currentPacket >= m_file->num_packets()) {
+        buffer->resize(0);
+        return false;
+    }
+    uint32_t n = m_file->read_packets(m_currentPacket, m_packetsPerChunk, buffer);
+    m_currentPacket += n;
     return n > 0;
+}
+
+void CAFSource::fillDecodeBuffer()
+{
+    while (m_decodeBuffer.count() == 0) {
+        bool ok = readPacket(&m_packetBuffer);
+        int nsamples = m_decoder->decode(m_packetBuffer, &m_rawDecodeBuffer);
+        if (m_position + m_decodeBuffer.count() + nsamples > m_file->duration()) {
+            nsamples = std::max(0LL, m_file->duration() - m_position - int(m_decodeBuffer.count()));
+        }
+        if (!ok && nsamples == 0) break;
+        if (nsamples > 0) {
+            m_decodeBuffer.reserve(nsamples);
+            std::memcpy(m_decodeBuffer.write_ptr(), m_rawDecodeBuffer.data(), m_rawDecodeBuffer.size());
+            m_decodeBuffer.commit(nsamples);
+        }
+    }
 }
 
 void CAFSource::setupLPCM()
 {
     auto &&asbd = m_file->format().asbd;
-    if (asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
-        m_oasbd = cautil::buildASBDForPCM2(asbd.mSampleRate, asbd.mChannelsPerFrame,
-            asbd.mBitsPerChannel, asbd.mBitsPerChannel,
-            kAudioFormatFlagIsFloat);
-    } else {
-        m_oasbd = cautil::buildASBDForPCM2(asbd.mSampleRate, asbd.mChannelsPerFrame,
-            asbd.mBitsPerChannel, 32,
-            kAudioFormatFlagIsSignedInteger);
-    }
-
+    m_decoder = std::make_shared<LPCMPacketDecoder>();
+    std::vector<uint8_t> cookie(sizeof(AudioStreamBasicDescription));
+    std::memcpy(cookie.data(), &asbd, sizeof(AudioStreamBasicDescription));
+    m_decoder->setMagicCookie(cookie);
+    m_oasbd = m_decoder->getSampleFormat();
     if (asbd.mBytesPerPacket > 0) {
-        while (m_packets_per_chunk * asbd.mBytesPerPacket < 4096)
-            m_packets_per_chunk <<= 1;
+        while (m_packetsPerChunk * asbd.mBytesPerPacket < 4096)
+            m_packetsPerChunk <<= 1;
     }
 }
 
@@ -146,10 +122,10 @@ void CAFSource::setupALAC()
     auto &&asbd = m_file->format().asbd;
 
 #ifdef QAAC
-    m_decoder = std::make_shared<CoreAudioPacketDecoder>(this, asbd);
+    m_decoder = std::make_shared<CoreAudioPacketDecoder>(asbd);
     m_decoder->setMagicCookie(cookie);
 #else
-    m_decoder = std::make_shared<ALACPacketDecoder>(this, asbd);
+    m_decoder = std::make_shared<ALACPacketDecoder>(asbd);
     m_decoder->setMagicCookie(cookie);
 #endif
     m_oasbd = m_decoder->getSampleFormat();
@@ -167,7 +143,7 @@ void CAFSource::setupFLAC()
     if (cookie.size() > 12) {
         cookie.erase(cookie.begin(), cookie.begin() + 12);
     }
-    m_decoder = std::make_shared<FLACPacketDecoder>(this);
+    m_decoder = std::make_shared<FLACPacketDecoder>();
     m_decoder->setMagicCookie(cookie);
     m_oasbd = m_decoder->getSampleFormat();
 }
@@ -175,7 +151,7 @@ void CAFSource::setupFLAC()
 #ifdef QAAC
 void CAFSource::setupMPEG1Audio()
 {
-    m_decoder = std::make_shared<CoreAudioPacketDecoder>(this, m_file->format().asbd);
+    m_decoder = std::make_shared<CoreAudioPacketDecoder>(m_file->format().asbd);
     m_oasbd = m_decoder->getSampleFormat();
 }
 
@@ -183,7 +159,7 @@ void CAFSource::setupMPEG4Audio()
 {
     std::vector<std::uint8_t> cookie;
     m_file->get_magic_cookie(&cookie);
-    m_decoder = std::make_shared<CoreAudioPacketDecoder>(this, m_file->format().asbd);
+    m_decoder = std::make_shared<CoreAudioPacketDecoder>(m_file->format().asbd);
     m_decoder->setMagicCookie(cookie);
     m_oasbd = m_decoder->getSampleFormat();
     if (m_chanmap.empty()) {

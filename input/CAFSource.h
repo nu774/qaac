@@ -7,19 +7,19 @@
 #include "CAFFile.h"
 #include "util.h"
 
-class CAFSource: public ISeekableSource, public ITagParser,
-    public IPacketFeeder
+class CAFSource: public ISeekableSource, public ITagParser
 {
     int64_t  m_position, m_position_raw;
-    int64_t  m_current_packet;
+    int64_t  m_currentPacket;
     unsigned m_start_skip;
-    unsigned m_packets_per_chunk;
+    unsigned m_packetsPerChunk;
     std::shared_ptr<CAFFile> m_file;
     std::shared_ptr<IPacketDecoder>    m_decoder;
     std::map<std::string, std::string> m_tags;
     std::vector<uint32_t> m_chanmap;
-    std::vector<uint8_t> m_packet_buffer;
-    util::FIFO<uint8_t>  m_decode_buffer;
+    std::vector<uint8_t> m_packetBuffer;
+    std::vector<uint8_t> m_rawDecodeBuffer;
+    util::FIFO<uint8_t>  m_decodeBuffer;
     AudioStreamBasicDescription m_oasbd;
 public:
     CAFSource(std::shared_ptr<IInputStream> stream);
@@ -38,11 +38,11 @@ public:
     }
     int64_t getPosition() { return m_position; }
     size_t readSamples(void *buffer, size_t nsamples);
-    size_t readSamplesLPCM(void *buffer, size_t nsamples);
     void seekTo(int64_t count);
     const std::map<std::string, std::string> &getTags() const { return m_tags; }
-    bool feed(std::vector<uint8_t> *buffer);
 private:
+    bool readPacket(std::vector<uint8_t> *buffer);
+    void fillDecodeBuffer();
     void setupLPCM();
     void setupALAC();
     void setupFLAC();
