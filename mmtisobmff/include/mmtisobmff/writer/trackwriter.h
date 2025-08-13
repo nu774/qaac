@@ -647,5 +647,44 @@ class CVvcTrackWriter : public CTrackWriter {
  private:
   std::unique_ptr<config::CVvcDecoderConfigRecord> m_decoderConfigRecord;
 };
+
+/* ######---ALAC Track Writer---###### */
+
+//! ALAC config for
+struct SAlacTrackConfig : SBaseAudioConfig {
+  SAlacTrackConfig() { codingName = ilo::toFcc("alac"); }
+  //! Config record defining multiple aspects of the coding system (required)
+  ilo::ByteBuffer configRecord;
+  //! Number of audio channels
+  uint16_t channelCount = 0;
+};
+
+/*!
+ * @brief Track writer for the ALAC codec
+ *
+ * The format of the @ref CSample payload is defined as one raw (no encapsulation) ALAC audio access
+ * unit (AU) per @ref CSample.
+ *
+ * @note One @ref CSample shall only contain one ALAC AU.
+ *
+ * \ingroup mp4trackwriter
+ */
+class CAlacTrackWriter : public CTrackWriter {
+ public:
+  /*!
+   * @brief Creates an MP4A based AAC track writer
+   *
+   * @note Needs to be created via CIsobmffWriter::trackWriter function call.
+   * @code auto twriter = writer.trackWriter<CAlacTrackWriter>(config) @endcode
+   * @note The @ref CSample structure shall contain one raw access unit (AU).
+   */
+  CAlacTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPimpl,
+                   const SAlacTrackConfig& config);
+  virtual ~CAlacTrackWriter() override;
+};
+
+
+
+
 }  // namespace isobmff
 }  // namespace mmt

@@ -106,6 +106,7 @@ amm-info@iis.fraunhofer.de
 #include "writer/hevc_tree_enhancer.h"
 #include "writer/jxs_tree_enhancer.h"
 #include "writer/vvc_tree_enhancer.h"
+#include "writer/alac_tree_enhancer.h"
 #include "writer/trak_sample_enhancer.h"
 #include "writer/mediafragment_tree_builder.h"
 #include "writer/traf_tree_enhancer.h"
@@ -518,5 +519,33 @@ void CVvcTrackWriter::addSample(const SVvcNalus& nalus) {
       nalus, m_decoderConfigRecord->lengthSizeMinusOne() + 1, sample);
   addSample(sample.sample);
 }
+
+/* ######---ALAC Track Writer---###### */
+CAlacTrackWriter::CAlacTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPimpl,
+                                   const SAlacTrackConfig& config)
+    : CTrackWriter(writerPimpl, config) {
+  auto trakBoxElement = m_pimpl->createTrack();
+
+  auto stsdBoxElements = findAllElementsWithFourccAndBoxType<box::CSampleDescriptionBox>(
+      trakBoxElement, ilo::toFcc("stsd"));
+  ILO_ASSERT(stsdBoxElements.size() == 1,
+             "one and only one stsd box should be present for each trak");
+  BoxElement& stsdBoxElement = const_cast<BoxElement&>(stsdBoxElements[0].get());
+
+  SAlacEnhancerConfig alacEnhancerConfig;
+  alacEnhancerConfig.alacConfig.channelCount = config.channelCount;
+  alacEnhancerConfig.alacConfig.sampleRate = config.sampleRate;
+
+  alacEnhancerConfig.decoderConfig = config.configRecord;
+
+  CAlacTreeEnhancer{stsdBoxElement, alacEnhancerConfig};
+
+  auto wPimpl = writerPimpl.lock();
+  wPimpl->fillStaticMoovInfo();
+}
+
+CAlacTrackWriter::~CAlacTrackWriter() = default;
+
+
 }  // namespace isobmff
 }  // namespace mmt
