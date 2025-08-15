@@ -132,7 +132,7 @@ class CSampleToChunkBox : public CFullBox {
 
  public:
   //! Retrieve the complete list stsc entries
-  CVectorEntry entries() const;
+  const CVectorEntry& entries() const;
 
   //! Get the number of entries
   uint32_t entryCount() const;

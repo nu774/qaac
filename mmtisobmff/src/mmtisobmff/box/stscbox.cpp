@@ -112,7 +112,7 @@ CSampleToChunkBox::CSampleToChunkBox(const SStscBoxWriteConfig& stscBoxData)
   updateSize(0);
 }
 
-CSampleToChunkBox::CVectorEntry CSampleToChunkBox::entries() const {
+const CSampleToChunkBox::CVectorEntry& CSampleToChunkBox::entries() const {
   return m_entries;
 }
 

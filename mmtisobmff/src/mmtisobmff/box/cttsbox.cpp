@@ -118,7 +118,7 @@ CCompositionTimeToSampleBox::CCompositionTimeToSampleBox(const SCttsBoxWriteConf
   updateSize(0);
 }
 
-CCompositionTimeToSampleBox::CVectorEntry CCompositionTimeToSampleBox::entries() const {
+const CCompositionTimeToSampleBox::CVectorEntry& CCompositionTimeToSampleBox::entries() const {
   return m_entries;
 }
 

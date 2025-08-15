@@ -123,7 +123,7 @@ class CSampleSizeBox : public CFullBox {
 
   uint32_t sampleCount() const { return m_sampleCount; }
 
-  std::vector<uint32_t> entrySize() const { return m_entrySize; }
+  const std::vector<uint32_t>& entrySize() const { return m_entrySize; }
 
   SAttributeList getAttributeList() const override;
 

@@ -110,7 +110,7 @@ CSyncSampleTableBox::CSyncSampleTableBox(const SStssBoxWriteConfig& stssBoxData)
   updateSize(0);
 }
 
-CSyncSampleTableBox::CVectorEntry CSyncSampleTableBox::entries() const {
+const CSyncSampleTableBox::CVectorEntry& CSyncSampleTableBox::entries() const {
   return m_entries;
 }
 

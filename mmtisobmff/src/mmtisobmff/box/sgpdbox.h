@@ -132,7 +132,7 @@ class CSampleGroupDescriptionBox : public CFullBox {
 
   uint32_t defaultSampleDescriptionIndex() const { return m_defaultSampleDescriptionIndex; }
 
-  std::vector<SSampleGroupDescriptionEntry> sampleGroupDescriptionEntries() {
+  const std::vector<SSampleGroupDescriptionEntry>& sampleGroupDescriptionEntries() {
     return m_sampleGroupDescriptionEntries;
   }
 

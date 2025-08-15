@@ -127,7 +127,7 @@ class CDecodingTimeToSampleBox : public CFullBox {
   explicit CDecodingTimeToSampleBox(const SSttsBoxWriteConfig& sttsBoxData);
 
  public:
-  CDecodingTimeToSampleBox::CVectorEntry entries() const;
+  const CDecodingTimeToSampleBox::CVectorEntry& entries() const;
 
   SAttributeList getAttributeList() const override;
 

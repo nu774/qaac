@@ -123,7 +123,7 @@ class CCompositionTimeToSampleBox : public CFullBox {
   //! constructor to init member variables by setting
   explicit CCompositionTimeToSampleBox(const SCttsBoxWriteConfig& sttsBoxData);
 
-  CVectorEntry entries() const;
+  const CVectorEntry& entries() const;
 
   SAttributeList getAttributeList() const override;
 

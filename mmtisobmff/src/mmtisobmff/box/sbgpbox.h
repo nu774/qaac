@@ -133,7 +133,7 @@ class CSampleToGroupBox : public CFullBox {
 
   uint32_t groupingTypeParameter() const { return m_groupingTypeParameter; }
 
-  std::vector<SSampleGroupEntry> sampleGroupEntries() const { return m_sampleGroupEntries; }
+  const std::vector<SSampleGroupEntry>& sampleGroupEntries() const { return m_sampleGroupEntries; }
 
   SAttributeList getAttributeList() const override;
 

@@ -110,7 +110,7 @@ CDecodingTimeToSampleBox::CDecodingTimeToSampleBox(const SSttsBoxWriteConfig& st
   updateSize(0);
 }
 
-CDecodingTimeToSampleBox::CVectorEntry CDecodingTimeToSampleBox::entries() const {
+const CDecodingTimeToSampleBox::CVectorEntry& CDecodingTimeToSampleBox::entries() const {
   return m_entries;
 }
 

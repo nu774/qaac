@@ -124,7 +124,7 @@ class CSyncSampleTableBox : public CFullBox {
   explicit CSyncSampleTableBox(const SStssBoxWriteConfig& stssBoxData);
 
  public:
-  CSyncSampleTableBox::CVectorEntry entries() const;
+  const CSyncSampleTableBox::CVectorEntry& entries() const;
 
   SAttributeList getAttributeList() const override;
 

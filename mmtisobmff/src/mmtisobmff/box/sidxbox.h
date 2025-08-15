@@ -146,7 +146,7 @@ class CSegmentIndexBox : public CFullBox {
     return static_cast<uint16_t>(m_references.size());
   }
 
-  std::vector<SSidxReference> references() const { return m_references; }
+  const std::vector<SSidxReference>& references() const { return m_references; }
 
   SAttributeList getAttributeList() const override;
 

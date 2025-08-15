@@ -125,7 +125,7 @@ class CCompactSampleSizeBox : public CFullBox {
 
   uint32_t sampleCount() const { return m_sampleCount; }
 
-  std::vector<uint16_t> entrySizes() const { return m_entrySizes; }
+  const std::vector<uint16_t>& entrySizes() const { return m_entrySizes; }
 
   SAttributeList getAttributeList() const override;
 
