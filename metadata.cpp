@@ -261,15 +261,15 @@ namespace ID3 {
 namespace M4A {
     enum { TAG_TOTAL_DISCS = 1, TAG_TOTAL_TRACKS = 2 };
 
-    typedef struct fcc2name_t {
+    struct fcc2name_t {
         uint32_t fcc;
         const char *name;
-    } fcc2name_t;
+    };
 
-    typedef struct name2fcc_t {
+    struct name2fcc_t {
         const char *name;
         uint32_t fcc;
-    } name2fcc_t;
+    };
 
     const fcc2name_t iTunes_fcc2name_map[] = {
         { 'aART',                     "ALBUM ARTIST"          }, 
