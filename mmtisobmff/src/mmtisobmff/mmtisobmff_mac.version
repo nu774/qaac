@@ -4,6 +4,7 @@ _isobmff_redirectLogAppend
 _isobmff_redirectLogToConsole
 _isobmff_redirectLogToSystemLogger
 _isobmff_disableLogging
+_isobmff_setLogLevel
 _isobmff_createFileReader
 _isobmff_createMemoryReader
 _isobmff_destroy

@@ -158,7 +158,7 @@ class CGenericTrackReader : public ITrackReader {
    * The function is returning a serialized representation of the isobmff config record structure.
    * To gain access to specific fields it must be parsed in a codec specific way. Can be used in
    * combination with the decoderconfigrecord classes that will parse the information. The codec
-   * being used can be retrieved vom the CTrackInfo structure.
+   * being used can be retrieved from the CTrackInfo structure.
    *
    * @return Byte buffer containing the codec specific decoder config record in a serialized form
    */

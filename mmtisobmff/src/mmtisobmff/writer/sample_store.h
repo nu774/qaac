@@ -87,7 +87,7 @@ amm-info@iis.fraunhofer.de
 
 #pragma once
 
-// system includes
+// System includes
 #include <vector>
 #include <memory>
 

@@ -87,4 +87,7 @@ amm-info@iis.fraunhofer.de
 
 #pragma once
 #define LOG_COMPONENT "miso"
+#include <atomic>
 #include "ilo/logging.h"
+
+extern std::atomic_bool verboseLogLevel;

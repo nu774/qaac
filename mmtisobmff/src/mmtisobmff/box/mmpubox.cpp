@@ -102,20 +102,16 @@ namespace mmt {
 namespace isobmff {
 namespace box {
 
-static void assertAssetIdScheme(ilo::Fourcc assetIdScheme) {
-  ILO_LOG_SCOPE("%s", ilo::toString(assetIdScheme).c_str());
+static void assertAssetIdScheme(uint32_t assetIdScheme) {
+  if (verboseLogLevel) {
+    ILO_LOG_SCOPE("%u", assetIdScheme);
+  }
 
-  // To check: this might have to be updated because last version of ISO/IEC 23008-1 has different
-  // asset_id_scheme 0x00000000 UUID (universally unique identifier) 0x00000001 URI (uniform
-  // resource identifier)
-
-  std::array<char, 3> uri{'U', 'R', 'I'};
-
-  ILO_ASSERT_WITH(assetIdScheme == ilo::toFcc("UUID") ||
-                      std::equal(uri.begin(), uri.end(), assetIdScheme.begin()) ||
-                      std::equal(uri.begin(), uri.end(), assetIdScheme.begin() + 1),
-                  std::invalid_argument, "MPU box invalid asset_id_scheme %s",
-                  ilo::toString(assetIdScheme).c_str());
+  // Valid ID schemes
+  // 0x00000000 UUID (universally unique identifier)
+  // 0x00000001 URI (uniform resource identifier)
+  ILO_ASSERT_WITH(assetIdScheme == 0U || assetIdScheme == 1U, std::invalid_argument,
+                  "MPU box invalid asset_id_scheme %u", assetIdScheme);
 }
 
 CMediaProcessingUnitBox::CMediaProcessingUnitBox(ilo::ByteBuffer::const_iterator& begin,
@@ -166,7 +162,7 @@ void CMediaProcessingUnitBox::parseBox(ilo::ByteBuffer::const_iterator& begin,
   m_isAdcPresent = (tmp & 0x40) != 0;
   m_reserved = (uint8_t)(tmp & 0x3F);
   m_mpuSequenceNumber = ilo::readUint32(begin, end);
-  m_assetIdentifier.assetIdScheme = ilo::readFourCCRaw(begin, end);
+  m_assetIdentifier.assetIdScheme = ilo::readUint32(begin, end);
 
   assertAssetIdScheme(m_assetIdentifier.assetIdScheme);
 
@@ -194,7 +190,7 @@ SAttributeList CMediaProcessingUnitBox::getAttributeList() const {
   std::stringstream ss;
 
   ss << "Asset Id Length: " << std::to_string(m_assetIdentifier.assetIdLength)
-     << ", Asset Id Scheme: " << ilo::toString(m_assetIdentifier.assetIdScheme)
+     << ", Asset Id Scheme: " << std::to_string(m_assetIdentifier.assetIdScheme)
      << ", Asset Id Value{";
 
   uint8_t index = 0;
@@ -230,7 +226,7 @@ void CMediaProcessingUnitBox::writeBox(ilo::ByteBuffer& buffer,
 
   ilo::writeUint8(buffer, position, tmp);
   ilo::writeUint32(buffer, position, m_mpuSequenceNumber);
-  ilo::writeFourCC(buffer, position, m_assetIdentifier.assetIdScheme);
+  ilo::writeUint32(buffer, position, m_assetIdentifier.assetIdScheme);
   ilo::writeUint32(buffer, position, m_assetIdentifier.assetIdLength);
 
   for (auto assetId : m_assetIdentifier.assetIdValue) {

@@ -464,14 +464,16 @@ void CVvcDecoderConfigRecord::parse(ilo::ByteBuffer::const_iterator& begin,
                   std::logic_error, "Failed to create bitparser from buffer.");
 
   // Read and check reserved bits
-  if (bitParser.read<uint8_t>(5) != 0x31) {
-    ILO_LOG_WARNING("Reserved field1 is not '11111'b.");
+  if (bitParser.read<uint8_t>(5) != 0x1F) {
+    ILO_LOG_WARNING("Reserved field1 is not '11111'b in vvc decoder config record.");
   }
 
   m_lengthSizeMinusOne = bitParser.read<uint8_t>(2);
   if (m_lengthSizeMinusOne != 0 && m_lengthSizeMinusOne != 1 && m_lengthSizeMinusOne != 3) {
-    ILO_LOG_WARNING("Invalid lengthSizeMinusOneValue of %d. Allowed values are 0, 1 and 3.",
-                    m_lengthSizeMinusOne);
+    ILO_LOG_WARNING(
+        "Invalid lengthSizeMinusOneValue of %d in vvc decoder config record. Allowed values are 0, "
+        "1 and 3.",
+        m_lengthSizeMinusOne);
   }
 
   m_ptlPresentFlag = bitParser.read<uint8_t>(1) > 0;
@@ -485,12 +487,14 @@ void CVvcDecoderConfigRecord::parse(ilo::ByteBuffer::const_iterator& begin,
     array.arrayCompleteness = bitParser.read<uint8_t>(1) > 0;
     // Read and check reserved bits
     if (bitParser.read<uint8_t>(2) != 0) {
-      ILO_LOG_WARNING("Reserved field5 is not '0'b.");
+      ILO_LOG_WARNING("Reserved field5 is not '0'b in vvc decoder config record.");
     }
     array.naluType = bitParser.read<uint8_t>(5);
     if (std::find(ALLOWED_VVC_NALU_TYPES.begin(), ALLOWED_VVC_NALU_TYPES.end(), array.naluType) ==
         ALLOWED_VVC_NALU_TYPES.end()) {
-      ILO_LOG_WARNING("Potential unallowed non-VCL nalu type of %d found.", array.naluType);
+      ILO_LOG_WARNING(
+          "Potentially forbidden non-VCL NALU type of %d found in VVC decoder config record.",
+          array.naluType);
     }
 
     // According to ISO/IEC 14496-15 - 11.2.4.2.3 numValues
@@ -530,7 +534,7 @@ void CVvcDecoderConfigRecord::parsePtl(ilo::CBitParser& bitParser) {
   m_ptl.bitDepthMinus8 = bitParser.read<uint8_t>(3);
   // Read and check reserved bits
   if (bitParser.read<uint8_t>(5) != 0x31) {
-    ILO_LOG_WARNING("Reserved field2 is not '11111'b.");
+    ILO_LOG_WARNING("Reserved field2 is not '11111'b in vvc decoder config record.");
   }
 
   parsePtlRecord(bitParser);
@@ -543,7 +547,7 @@ void CVvcDecoderConfigRecord::parsePtl(ilo::CBitParser& bitParser) {
 void CVvcDecoderConfigRecord::parsePtlRecord(ilo::CBitParser& bitParser) {
   // Read and check reserved bits
   if (bitParser.read<uint8_t>(2) != 0) {
-    ILO_LOG_WARNING("Reserved field3 is not '0'b.");
+    ILO_LOG_WARNING("Reserved field3 is not '0'b in vvc decoder config record.");
   }
 
   uint8_t numBytesConstraintInfo = bitParser.read<uint8_t>(6);
@@ -572,7 +576,7 @@ void CVvcDecoderConfigRecord::parsePtlRecord(ilo::CBitParser& bitParser) {
   for (uint8_t i = m_ptl.numSublayers; i <= 8 && m_ptl.numSublayers > 1; ++i) {
     // Read and check reserved bits
     if (bitParser.read<uint8_t>(1) != 0) {
-      ILO_LOG_WARNING("Reserved field4 is not '0'b.");
+      ILO_LOG_WARNING("Reserved field4 is not '0'b in vvc decoder config record.");
     }
   }
 
@@ -715,7 +719,9 @@ void CVvcDecoderConfigRecord::writeConstraintInfo(ilo::CBitBuffer& bitWriter,
   }
 
   if (lefOverBits) {
-    bitWriter.write(m_ptl.nativePtl.generalConstraintInfo.back() >> (8 - lefOverBits), lefOverBits);
+    bitWriter.write(
+        static_cast<uint8_t>(m_ptl.nativePtl.generalConstraintInfo.back() >> (8U - lefOverBits)),
+        lefOverBits);
   }
 
   // Since we might have changed the original byte-alignment of the general_constraints_info()

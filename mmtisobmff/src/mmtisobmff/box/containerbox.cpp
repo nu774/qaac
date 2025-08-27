@@ -103,12 +103,16 @@ namespace box {
 CContainerBox::CContainerBox(ilo::ByteBuffer::const_iterator& begin,
                              const ilo::ByteBuffer::const_iterator& end)
     : CBox(begin, end) {
-  ILO_LOG_INFO("Create read CContainerBox");
+  if (verboseLogLevel) {
+    ILO_LOG_INFO("Create read CContainerBox");
+  }
 }
 
 CContainerBox::CContainerBox(const CContainerBox::SContainerBoxWriteConfig& containerWriteConfig)
     : CBox(containerWriteConfig) {
-  ILO_LOG_INFO("Create write CContainerBox");
+  if (verboseLogLevel) {
+    ILO_LOG_INFO("Create write CContainerBox");
+  }
 }
 
 void CContainerBox::writeBox(ilo::ByteBuffer& /*buffer*/,

@@ -126,7 +126,6 @@ struct ISOBMFF_Reader {
   std::vector<std::unique_ptr<TrackReader>> trackVec;
   std::unique_ptr<SDrcInfo> drcInfo = nullptr;
   std::unique_ptr<SIodsInfo> iodsInfo = nullptr;
-  std::unique_ptr<SDashInfo> dashInfo = nullptr;
   CMovieInfo movieInfo;
 };
 
@@ -354,11 +353,21 @@ ESapType convertSapTypeFromUint8ToESapType(uint8_t sapType) {
   }
 }
 
+LogLevel convertLogLevelCEnum(LogLevel_C logLevel) {
+  switch (logLevel) {
+    case LogLevel_C::LogLevelStandard:
+      return LogLevel::standard;
+    case LogLevel_C::LogLevelVerbose:
+      return LogLevel::verbose;
+    default:
+      throw std::invalid_argument("Invalid log level given.");
+  }
+}
+
 void fillIsobmffReadInstance(ISOBMFF_Reader** isobmff) {
   (*isobmff)->movieInfo = (*isobmff)->isobmffReader->movieInfo();
   (*isobmff)->drcInfo = (*isobmff)->isobmffReader->specificBoxInfo<SDrcInfo>();
   (*isobmff)->iodsInfo = (*isobmff)->isobmffReader->specificBoxInfo<SIodsInfo>();
-  (*isobmff)->dashInfo = (*isobmff)->isobmffReader->specificBoxInfo<SDashInfo>();
 }
 
 SMovieConfig isobmffHelper_createMovieConfig(const MovieConfig& config) {
@@ -433,6 +442,16 @@ ISOBMFF_ERR isobmff_disableLogging() {
     disableLogging();
   } catch (const std::exception& e) {
     ILO_LOG_ERROR("Disabling the logging system failed %s", e.what());
+    return ISOBMFF_LIB_ERR;
+  }
+  return ISOBMFF_OK;
+}
+
+ISOBMFF_ERR isobmff_setLogLevel(const LogLevel_C logLevel) {
+  try {
+    setLogLevel(convertLogLevelCEnum(logLevel));
+  } catch (const std::exception& e) {
+    ILO_LOG_ERROR("Setting the log level failed: %s", e.what());
     return ISOBMFF_LIB_ERR;
   }
   return ISOBMFF_OK;
@@ -3380,15 +3399,7 @@ ISOBMFF_ERR isobmff_createMovieConfigFromReader(ISOBMFF_Reader* isobmff,
   }
 
   try {
-    std::unique_ptr<SidxConfig> sidxConfig = nullptr;
     std::unique_ptr<IodsConfig> iodsConfig = nullptr;
-
-    if (isobmff->dashInfo && isobmff->dashInfo->m_sidxInfo &&
-        isobmff->dashInfo->m_sidxInfo->references.size() > 0) {
-      sidxConfig = ilo::make_unique<SidxConfig>();
-      sidxConfig->sapType = convertSapTypeFromUint8ToESapType(
-          isobmff->dashInfo->m_sidxInfo->references.at(0).sapType);
-    }
 
     if (isobmff->iodsInfo && isobmff->iodsInfo->iodsInfoAvailable()) {
       iodsConfig = ilo::make_unique<IodsConfig>();
@@ -3406,7 +3417,6 @@ ISOBMFF_ERR isobmff_createMovieConfigFromReader(ISOBMFF_Reader* isobmff,
     (*config)->compatibleBrands = isobmff->movieInfo.compatibleBrands;
     (*config)->movieTimeScale = isobmff->movieInfo.timeScale;
     (*config)->iodsConfig = std::move(iodsConfig);
-    (*config)->sidxConfig = std::move(sidxConfig);
     if (copyMovieUdta > 0) {
       (*config)->userData = isobmff->movieInfo.userData;
     }

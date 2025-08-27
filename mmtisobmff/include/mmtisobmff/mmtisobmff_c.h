@@ -218,6 +218,16 @@ typedef enum {
   SapType6 = 6  /**< No specific signalling in isobmff standard supported */
 } SapType_C;
 
+/**
+ * @brief C interface available log levels
+ *
+ * Define the logging verbosity.
+ */
+typedef enum {
+  LogLevelStandard = 0, /**< Default log level with less info prints */
+  LogLevelVerbose = 1   /**< Verbose log level with all info prints */
+} LogLevel_C;
+
 /** @name forward declarations (reading interface) */
 /**@{*/
 struct ISOBMFF_Reader;
@@ -290,29 +300,49 @@ typedef struct Sample Sample;
  * @brief Redirects logging to the specified file.
  * @param [in] fileUri - must be non-NULL.
  * @returns ISOBMFF_OK if the redirection of the log to a file was successful.
+ *
+ * @note Setting this will affect all instances of this library
  */
 MMTISOBMFF_DLL ISOBMFF_ERR isobmff_redirectLog(const char* fileUri);
 /**
  * @brief Redirects logging and appends to the specified file.
  * @param [in] fileUri - must be non-NULL.
  * @returns ISOBMFF_OK if the redirection of the log to a file was successful.
+ *
+ * @note Setting this will affect all instances of this library
  */
 MMTISOBMFF_DLL ISOBMFF_ERR isobmff_redirectLogAppend(const char* fileUri);
 /**
  * @brief Redirects logging to console.
  * @returns ISOBMFF_OK if the redirection of the log to console was successful.
+ *
+ * @note Setting this will affect all instances of this library
  */
 MMTISOBMFF_DLL ISOBMFF_ERR isobmff_redirectLogToConsole(void);
 /**
  * @brief Redirects logging to the system logger.
  * @returns ISOBMFF_OK if the redirection of the log to the system logger was successful.
+ *
+ * @note Setting this will affect all instances of this library
  */
 MMTISOBMFF_DLL ISOBMFF_ERR isobmff_redirectLogToSystemLogger(void);
 /**
  * @brief Disables logging. Can be re-enabled by using any of the above specified redirectors.
  * @returns ISOBMFF_OK if disabling the logging was successful.
+ *
+ * @note Setting this will affect all instances of this library
  */
 MMTISOBMFF_DLL ISOBMFF_ERR isobmff_disableLogging(void);
+/**
+ * @brief Set the log level
+ * The default log level is @ref LogLevelStandard being less verbose
+ * with info prints.
+ * @param [in] logLevel - Log level to set
+ * @returns ISOBMFF_OK if setting the log level was successful.
+ *
+ * @note Setting this will affect all instances of this library
+ */
+MMTISOBMFF_DLL ISOBMFF_ERR isobmff_setLogLevel(const LogLevel_C logLevel);
 
 /**@}*/
 

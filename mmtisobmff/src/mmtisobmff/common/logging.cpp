@@ -88,6 +88,8 @@ amm-info@iis.fraunhofer.de
 #include "mmtisobmff/logging.h"
 #include "common/logging.h"
 
+std::atomic_bool verboseLogLevel{false};
+
 namespace mmt {
 namespace isobmff {
 void redirectLoggingToFile(std::string filename, RedirectMode mode) {
@@ -111,6 +113,17 @@ void redirectLoggingToSystemLogger() {
 
 void disableLogging() {
   LOG_DISABLE_LOGGING();
+}
+
+void setLogLevel(LogLevel logLevel) {
+  switch (logLevel) {
+    case LogLevel::standard:
+      verboseLogLevel = false;
+      break;
+    case LogLevel::verbose:
+      verboseLogLevel = true;
+      break;
+  }
 }
 }  // namespace isobmff
 }  // namespace mmt

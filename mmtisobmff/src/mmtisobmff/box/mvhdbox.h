@@ -108,7 +108,7 @@ class CMovieHeaderBox : public CFullBox {
   struct SMvhdBoxWriteConfig : SFullBoxWriteConfig {
     uint64_t creationTime = 0;
     uint64_t modificationTime = 0;
-    uint64_t timescale = 0;
+    uint32_t timescale = 0;
     uint64_t duration = 0;
     int32_t rate = 0x00010000;
     int16_t volume = 0x0100;
@@ -132,7 +132,7 @@ class CMovieHeaderBox : public CFullBox {
 
   uint64_t modificationTime() const { return m_modificationTime; }
 
-  uint64_t timescale() const { return m_timescale; }
+  uint32_t timescale() const { return m_timescale; }
 
   uint64_t duration() const { return m_duration; }
 
@@ -165,7 +165,7 @@ class CMovieHeaderBox : public CFullBox {
  private:
   uint64_t m_creationTime;
   uint64_t m_modificationTime;
-  uint64_t m_timescale;
+  uint32_t m_timescale;
   uint64_t m_duration;
   int32_t m_rate;
   int16_t m_volume;

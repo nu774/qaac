@@ -131,7 +131,7 @@ uint64_t currentUTCTime() {
 }
 
 std::string UTCTimeToString(uint64_t seconds) {
-  time_t t = static_cast<time_t>(seconds - UNIX_TO_UTC);
+  time_t t = static_cast<time_t>(static_cast<int64_t>(seconds) - static_cast<int64_t>(UNIX_TO_UTC));
 
   // ISOBMFF timestamps are based on UTC epoch (00:00:00 1 January 1904)
   // C/C++ functions work with UNIX epoch (00:00:00 1 January 1970)
@@ -310,6 +310,8 @@ void copyMpegh(CIsobmffReader& reader, CIsobmffWriter& writer, const SCopyConfig
   fillAudioConfig(mpeghTrackConfig, config);
   mpeghTrackConfig.sampleRate = mpeghTrackReader->sampleRate();
   mpeghTrackConfig.configRecord = mpeghTrackReader->mhaDecoderConfigRecord();
+  mpeghTrackConfig.profileAndLevelCompatibleSets =
+      mpeghTrackReader->profileAndLevelCompatibleSets();
 
   auto mpeghTrackWriter = writer.trackWriter<CMpeghTrackWriter>(mpeghTrackConfig);
 

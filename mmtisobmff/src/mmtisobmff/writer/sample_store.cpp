@@ -85,7 +85,7 @@ amm-info@iis.fraunhofer.de
  * Content: store for the sample writer
  */
 
-// system includes
+// System includes
 #include <algorithm>
 #include <map>
 #include <utility>

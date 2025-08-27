@@ -119,7 +119,7 @@ class CChunkOffsetBox : public virtual CFullBox {
 
  public:
   //! Retrieve the complete list of chunk offsets
-  std::vector<uint32_t> chunkOffsets() const;
+  const std::vector<uint32_t>& chunkOffsets() const;
 
   //! Add an offset to the list
   void addChunkOffset(uint32_t chunkOffset);

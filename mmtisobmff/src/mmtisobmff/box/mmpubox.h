@@ -104,11 +104,9 @@ namespace box {
 class CMediaProcessingUnitBox : public virtual CFullBox {
  public:
   struct SAssetIdentifierBox {
-    ilo::Fourcc assetIdScheme;
+    uint32_t assetIdScheme = 0;
     uint32_t assetIdLength = 0;
     std::vector<uint8_t> assetIdValue;
-
-    SAssetIdentifierBox() : assetIdScheme(ilo::toFcc("0000")) {}
   };
 
   struct SMmpuBoxWriteConfig : SFullBoxWriteConfig {

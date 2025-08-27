@@ -109,19 +109,46 @@ enum class RedirectMode {
  * @brief Enables logging and redirects the output to the provided file.
  *
  * Depending on the mode, the output file is either overwritten or appended to.
+ *
+ * @note Setting this will affect all instances of this library
  */
 void redirectLoggingToFile(std::string filename, RedirectMode mode);
-//! Enables logging and redirects the output to console (std::out)
+/*!
+ * @brief Enables logging and redirects the output to console (std::out)
+ *
+ * @note Setting this will affect all instances of this library
+ */
 void redirectLoggingToConsole();
 /*!
  * @brief Enables logging and redirects the output to the system default system logger.
  *
  * The log files can then be viewed with tools from the os-vendor.
+ *
+ * @note Setting this will affect all instances of this library
  */
 void redirectLoggingToSystemLogger();
-//! Disables logging
+/*!
+ * @brief Disables logging
+ *
+ * @note Setting this will affect all instances of this library
+ */
 void disableLogging();
 
+//! Available log levels
+enum class LogLevel {
+  standard, /**< Default log level with less info prints */
+  verbose   /**< Verbose log level with all info prints */
+};
+
+/*!
+ * @brief Controls log level for this library
+ *
+ * The default log level is @ref LogLevel::standard being less verbose
+ * with info prints.
+ *
+ * @note Setting this will affect all instances of this library
+ */
+void setLogLevel(LogLevel logLevel);
 /**@}*/
 }  // namespace isobmff
 }  // namespace mmt

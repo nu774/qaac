@@ -384,7 +384,6 @@ void CIsobmffWriter::Pimpl::createSidxBox(ilo::ByteBuffer& sidxBuff) {
     uint64_t ptsFirstSap = 0;
     bool sapFound = false;
 
-    size_t indexSample = 0;
     for (const auto& trunEntry : trunBox->trunEntries()) {
       uint64_t samplePts =
           static_cast<uint64_t>(static_cast<int64_t>(dts) + trunEntry.sampleCtsOffset());
@@ -399,8 +398,6 @@ void CIsobmffWriter::Pimpl::createSidxBox(ilo::ByteBuffer& sidxBuff) {
 
       curFragEarliestPts = (samplePts < curFragEarliestPts) ? samplePts : curFragEarliestPts;
       curFragEndPts = (dts > curFragEndPts) ? dts : curFragEndPts;
-
-      indexSample++;
     }
 
     earliestPtsAllFrags.push_back(curFragEarliestPts);

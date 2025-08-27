@@ -114,7 +114,9 @@ size_t maxSampleSize(CIsobmffReader::Pimpl& p, uint32_t trackId) {
     return 0;
   }
   size_t maxSize = 0;
-  ILO_LOG_SCOPE_RET(maxSize, "trackId: %u", trackId);
+  if (verboseLogLevel) {
+    ILO_LOG_SCOPE_RET(maxSize, "trackId: %u", trackId);
+  }
   for (const auto& sz : p.trackIdToTrackSampleInfo().at(trackId)) {
     maxSize = std::max(maxSize, static_cast<size_t>(sz.size));
   }
@@ -147,7 +149,9 @@ CTrackInfo createTrackInfoFromTrack(CIsobmffReader::Pimpl& p, const BoxElement& 
   CTrackIdExtractor::store(t, ti);
   CMediaTimeInfoExtractor::store(t, ti);
   if (ti.duration == 0) {
-    ILO_LOG_INFO("duration is zero, summing up sample durations");
+    if (verboseLogLevel) {
+      ILO_LOG_INFO("duration is zero, summing up sample durations");
+    }
     ti.duration = sampleDurationSum(p, ti.trackId);
   }
   CEditListExtractor::store(t, ti);
@@ -178,7 +182,10 @@ CMovieInfo CIsobmffReader::movieInfo() const {
   result.majorBrand = ftype->majorBrand();
   result.compatibleBrands = ftype->compatibleBrands();
 
-  CUserDataExtractor::store<CMovieInfo>(p->tree()[1], result);
+  auto moov =
+      findFirstElementWithFourccAndBoxType<box::CContainerBox>(p->tree(), ilo::toFcc("moov"));
+
+  CUserDataExtractor::store<CMovieInfo>(moov, result);
 
   return result;
 }

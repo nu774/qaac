@@ -147,9 +147,10 @@ BoxSizeType CBoxReader::readBoxHeaderFields(ilo::ByteBuffer& buffer) const {
   }
   boxSizeType.headerLengthInBytes = static_cast<uint32_t>(buffer.size());
 
-  ILO_LOG_SCOPE("type: %s, size: % " PRIu64 "bytes", ilo::toString(boxSizeType.type).c_str(),
-                boxSizeType.size);
-
+  if (verboseLogLevel) {
+    ILO_LOG_SCOPE("type: %s, size: % " PRIu64 "bytes", ilo::toString(boxSizeType.type).c_str(),
+                  boxSizeType.size);
+  }
   return boxSizeType;
 }
 

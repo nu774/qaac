@@ -157,7 +157,7 @@ void CMovieHeaderBox::parseBox(ilo::ByteBuffer::const_iterator& begin,
   } else {
     m_creationTime = ilo::readUint64(begin, end);
     m_modificationTime = ilo::readUint64(begin, end);
-    m_timescale = ilo::readUint64(begin, end);
+    m_timescale = ilo::readUint32(begin, end);
     m_duration = ilo::readUint64(begin, end);
   }
 
@@ -165,10 +165,12 @@ void CMovieHeaderBox::parseBox(ilo::ByteBuffer::const_iterator& begin,
   m_volume = ilo::readInt16(begin, end);
 
   if (ilo::readUint16(begin, end) != 0) {
-    ILO_LOG_WARNING("Reserved 16bit field is not zero for the mvhd box");
+    ILO_LOG_WARNING("Reserved 16bit field is not zero in the mvhd box");
   }
 
-  ILO_ASSERT(ilo::readUint64(begin, end) == 0, "Reserved value must be zero for the mvhd box");
+  if (ilo::readUint64(begin, end) != 0) {
+    ILO_LOG_WARNING("Reserved 2x32bit fields are not zero in the mvhd box");
+  }
 
   std::vector<int32_t> tmp = ilo::readInt32Array(begin, end, 9);
   std::copy_n(tmp.begin(), 9, m_matrix.begin());
@@ -190,7 +192,7 @@ void CMovieHeaderBox::updateSize(uint64_t sizeValue) {
   if (CFullBox::version() == 0) {
     CFullBox::updateSize(sizeValue + 4 + 4 + 4 + 4 + 4 + 2 + 2 + 8 + 36 + 24 + 4);
   } else {
-    CFullBox::updateSize(sizeValue + 8 + 8 + 8 + 8 + 4 + 2 + 2 + 8 + 36 + 24 + 4);
+    CFullBox::updateSize(sizeValue + 8 + 8 + 4 + 8 + 4 + 2 + 2 + 8 + 36 + 24 + 4);
   }
 }
 
@@ -244,12 +246,12 @@ void CMovieHeaderBox::writeBox(ilo::ByteBuffer& buffer, ilo::ByteBuffer::iterato
   if (CFullBox::version() == 0) {
     ilo::writeUint32_64(buffer, position, m_creationTime);
     ilo::writeUint32_64(buffer, position, m_modificationTime);
-    ilo::writeUint32_64(buffer, position, m_timescale);
+    ilo::writeUint32(buffer, position, m_timescale);
     ilo::writeUint32_64(buffer, position, m_duration);
   } else {
     ilo::writeUint64(buffer, position, m_creationTime);
     ilo::writeUint64(buffer, position, m_modificationTime);
-    ilo::writeUint64(buffer, position, m_timescale);
+    ilo::writeUint32(buffer, position, m_timescale);
     ilo::writeUint64(buffer, position, m_duration);
   }
 

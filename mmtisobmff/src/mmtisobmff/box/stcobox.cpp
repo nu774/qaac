@@ -111,7 +111,7 @@ CChunkOffsetBox::CChunkOffsetBox(const SStcoBoxWriteConfig& stcoBoxData)
   updateSize(0);
 }
 
-std::vector<uint32_t> CChunkOffsetBox::chunkOffsets() const {
+const std::vector<uint32_t>& CChunkOffsetBox::chunkOffsets() const {
   return m_chunkOffsets;
 }
 

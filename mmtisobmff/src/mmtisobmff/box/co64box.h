@@ -107,7 +107,7 @@ class CChunkOffset64Box : public virtual CFullBox {
   struct SCo64BoxWriteConfig : SFullBoxWriteConfig {
     std::vector<uint64_t> chunkOffsets;
 
-    SCo64BoxWriteConfig() : SFullBoxWriteConfig(ilo::toFcc("co64"), 0, 0), chunkOffsets() {}
+    SCo64BoxWriteConfig() : SFullBoxWriteConfig(ilo::toFcc("co64"), 0, 0) {}
   };
 
   //! constructor to init member variables through parsing
@@ -119,7 +119,7 @@ class CChunkOffset64Box : public virtual CFullBox {
 
  public:
   //! Retrieve the complete list of chunk offsets
-  std::vector<uint64_t> chunkOffsets() const;
+  const std::vector<uint64_t>& chunkOffsets() const;
 
   //! Add an offset to the list
   void addChunkOffset(uint64_t chunkOffset);

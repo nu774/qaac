@@ -110,7 +110,10 @@ struct CServices {
   //! setup services
   template <class boxregType, class boxfactoryType, class nodefactoryType>
   static void setup() {
-    ILO_LOG_SCOPE("");
+    if (verboseLogLevel) {
+      ILO_LOG_SCOPE("");
+    }
+
     // setup service locator
     CServiceLocatorSingleton::swap(std::make_shared<ilo::ServiceLocator>());
 

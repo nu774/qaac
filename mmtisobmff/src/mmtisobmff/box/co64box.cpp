@@ -111,7 +111,7 @@ CChunkOffset64Box::CChunkOffset64Box(const SCo64BoxWriteConfig& co64BoxData)
   updateSize(0);
 }
 
-std::vector<uint64_t> CChunkOffset64Box::chunkOffsets() const {
+const std::vector<uint64_t>& CChunkOffset64Box::chunkOffsets() const {
   return m_chunkOffsets;
 }
 

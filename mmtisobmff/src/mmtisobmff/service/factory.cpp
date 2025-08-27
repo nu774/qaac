@@ -114,8 +114,10 @@ std::shared_ptr<box::IBox> CBoxFactory::createBox(
   BoxSizeType boxSizeType = tools::getBoxSizeAndType(begin, end);
 
   auto registry = CServiceLocatorSingleton::instance().lock()->getService<IBoxRegistry>().lock();
-  ILO_LOG_INFO("creating box of type %s with size %" PRIu64,
-               ilo::toString(boxSizeType.type).c_str(), boxSizeType.size);
+  if (verboseLogLevel) {
+    ILO_LOG_INFO("creating box of type %s with size %" PRIu64,
+                 ilo::toString(boxSizeType.type).c_str(), boxSizeType.size);
+  }
 
   box::CBoxRegistryEntry registryEntry;
   try {
@@ -141,7 +143,9 @@ std::shared_ptr<box::IBox> CBoxFactory::createBox(
 
   auto registry = CServiceLocatorSingleton::instance().lock()->getService<IBoxRegistry>().lock();
 
-  ILO_LOG_INFO("creating box of type %s", ilo::toString(fcc).c_str());
+  if (verboseLogLevel) {
+    ILO_LOG_INFO("creating box of type %s", ilo::toString(fcc).c_str());
+  }
 
   box::CBoxRegistryEntry registryEntry;
 
@@ -188,7 +192,9 @@ void CNodeFactory::createNode(BoxTree::NodeType& addTo, ilo::ByteBuffer::const_i
     if (!registry->isContainer(box)) {
       ILO_LOG_WARNING("box was not fully parsed: %s", ilo::toString(box->type()).c_str());
     } else {
-      ILO_LOG_INFO("Container found");
+      if (verboseLogLevel) {
+        ILO_LOG_INFO("Container found");
+      }
       while (begin != chopEnd) {
         createNode(current_node, begin, chopEnd);
       }

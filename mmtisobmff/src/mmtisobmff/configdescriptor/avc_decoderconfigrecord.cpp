@@ -479,18 +479,19 @@ SAttributeList CAvcDecoderConfigRecord::getAttributeList() const {
 
 void CAvcDecoderConfigRecord::sanityCheck() {
   if (m_lengthSizeMinusOne != 0 && m_lengthSizeMinusOne != 1 && m_lengthSizeMinusOne != 3) {
-    throw std::invalid_argument("AVC: lengthSizeMinusOne is supposed to have a value of 0, 1 or 3");
+    throw std::invalid_argument(
+        "AVCC: lengthSizeMinusOne is supposed to have a value of 0, 1 or 3");
   }
 
   if (m_avcProfileIndication == 100 || m_avcProfileIndication == 110 ||
       m_avcProfileIndication == 122 || m_avcProfileIndication == 144) {
     if (m_bitDepthLumaMinus8 > 4) {
       throw std::invalid_argument(
-          "AVC: bitDepthLumaMinus8 is supposed to have a value of between 0 and 4 (inclusive)");
+          "AVCC: bitDepthLumaMinus8 is supposed to have a value of between 0 and 4 (inclusive)");
     }
     if (m_bitDepthChromaMinus8 > 4) {
       throw std::invalid_argument(
-          "AVC: bitDepthChromaMinus8 is supposed to have a value of between 0 and 4 (inclusive)");
+          "AVCC: bitDepthChromaMinus8 is supposed to have a value of between 0 and 4 (inclusive)");
     }
   }
 }

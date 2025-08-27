@@ -7,6 +7,7 @@ mmtisobmff {
     isobmff_redirectLogToConsole;
     isobmff_redirectLogToSystemLogger;
     isobmff_disableLogging;
+    isobmff_setLogLevel;
     isobmff_createFileReader;
     isobmff_createMemoryReader;
     isobmff_destroy;

@@ -126,11 +126,11 @@ struct CGenericTrackReader::Pimpl {
 };
 
 static std::shared_ptr<box::CBox> getSampleEntry(const BoxElement& currentTrackElement) {
-  const BoxElement& stsdElement = findFirstElementWithFourccAndBoxType<box::CSampleDescriptionBox>(
-                                      currentTrackElement, ilo::toFcc("stsd"))
-                                      .get();
-  ILO_ASSERT(stsdElement.childCount() == 1, "Only a single sample entry is supported");
-  return std::dynamic_pointer_cast<box::CBox>(stsdElement[0].item);
+  std::reference_wrapper<const BoxElement> stsdElement =
+      findFirstElementWithFourccAndBoxType<box::CSampleDescriptionBox>(currentTrackElement,
+                                                                       ilo::toFcc("stsd"));
+  ILO_ASSERT(stsdElement.get().childCount() == 1, "Only a single sample entry is supported");
+  return std::dynamic_pointer_cast<box::CBox>(stsdElement.get()[0].item);
 }
 
 const BoxElement& getCurrentTrackElement(const BoxTree& tree, size_t tracknumber) {
@@ -250,7 +250,7 @@ CGenericVideoTrackReader::CGenericVideoTrackReader(
   auto visualSampleEntry =
       std::dynamic_pointer_cast<box::CVisualSampleEntry>(p->m_genericSampleEntry);
   ILO_ASSERT(visualSampleEntry != nullptr,
-             "Generic video track reader could not access video sample entry!");
+             "Generic video track reader could not access visual sample entry!");
 
   pv = std::unique_ptr<CGenericVideoTrackReader::PimplVideo>(
       new CGenericVideoTrackReader::PimplVideo(visualSampleEntry));
