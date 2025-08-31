@@ -1,4 +1,6 @@
+#include <array>
 #include <algorithm>
+#include <cstdlib>
 #include <riff/aiff/aifffile.h>
 #include <ape/apefile.h>
 #include <ape/apetag.h>
@@ -271,6 +273,12 @@ namespace M4A {
         uint32_t fcc;
     };
 
+    struct fcc2type_t {
+        uint32_t fcc;
+        uint8_t type;
+        int length;
+    };
+
     const fcc2name_t iTunes_fcc2name_map[] = {
         { 'aART',                     "ALBUM ARTIST"          }, 
         { 'akID',                     "iTunes:akID"          },
@@ -393,6 +401,30 @@ namespace M4A {
         { "unsyncedlyrics",             Tag::kLyrics               },
         { "year",                       Tag::kDate                 },
     };
+
+    const fcc2type_t itunes_fcc2type_map[] = {
+        { 'akID', ITMF_TYPE_INTEGER, 1 },
+        { 'atID', ITMF_TYPE_INTEGER, 4 },
+        { 'cmID', ITMF_TYPE_INTEGER, 4 },
+        { 'cnID', ITMF_TYPE_INTEGER, 4 },
+        { 'cpil', ITMF_TYPE_INTEGER, 1 },
+        { 'disk', ITMF_TYPE_IMPLICIT, 6 },
+        { 'geID', ITMF_TYPE_INTEGER, 4 },
+        { 'gnre', ITMF_TYPE_IMPLICIT, 2 },
+        { 'hdvd', ITMF_TYPE_INTEGER, 1 },
+        { 'pcst', ITMF_TYPE_INTEGER, 1 },
+        { 'pgap', ITMF_TYPE_INTEGER, 1 },
+        { 'plID', ITMF_TYPE_INTEGER, 8 },
+        { 'purl', ITMF_TYPE_IMPLICIT, 0 },
+        { 'rtng', ITMF_TYPE_INTEGER, 1 },
+        { 'sfID', ITMF_TYPE_INTEGER, 4 },
+        { 'stik', ITMF_TYPE_INTEGER, 1 },
+        { 'tmpo', ITMF_TYPE_INTEGER, 2 },
+        { 'trkn', ITMF_TYPE_IMPLICIT, 8 },
+        { 'tves', ITMF_TYPE_INTEGER, 4 },
+        { 'tvsn', ITMF_TYPE_INTEGER, 4 },
+    };
+
     uint32_t getFourCCFromTagName(const char *name)
     {
         std::string sname =
@@ -531,6 +563,464 @@ namespace M4A {
             }
         } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
+        }
+        return result;
+    }
+
+    class ITMFParser {
+        class Reader {
+            const uint8_t *ptr;
+            int size;
+        public:    
+            Reader(const void *p, size_t len) {
+                ptr = static_cast<const uint8_t*>(p);
+                size = len;
+            }
+            int remaining() {
+                return size;
+            }
+            Reader sub_reader(size_t len) {
+                return Reader(ptr, len);
+            }
+            uint32_t u32be()
+            {
+                if (size < 4) return 0;
+                uint32_t rc = ptr[0]<<24 | ptr[1]<<16 |ptr[2]<<8 | ptr[3];
+                ptr += 4;
+                size -= 4;
+                return rc;
+            }
+            uint8_t u8()
+            {
+                if (size == 0) return 0;
+                uint8_t value = *ptr++;
+                size--;
+                return value;
+            }
+            uint32_t header(uint32_t *len)
+            {
+                if (size < 8) {
+                    *len = 0;
+                    return 0;
+                }
+                *len = u32be() - 8;
+                return u32be();
+            }
+            std::string str(int len)
+            {
+                int n = std::min(len, size);
+                std::string res(ptr, ptr + n);
+                ptr += n;
+                size -= n;
+                return res;
+            }
+            std::string remaining_str()
+            {
+                std::string res(ptr, ptr + size);
+                ptr += size;
+                size = 0;
+                return res;
+            }
+            void skip(int len)
+            {
+                int n = std::min(len, size);
+                ptr += n;
+                size -= n;
+            }
+        };
+        std::vector<ITMFItem> items;
+    public:
+        ITMFParser(const void *p, size_t len) {
+            Reader reader(p, len);
+            udta(reader);
+        }
+        std::vector<ITMFItem> result() {
+            return items;
+        }
+        void udta(Reader &reader) {
+            uint32_t size;
+            while (true) {
+                uint32_t type = reader.header(&size);
+                if (!type) break;
+                if (type == 'meta') {
+                    Reader sub = reader.sub_reader(size);
+                    meta(sub);
+                }
+                reader.skip(size);
+            }
+        }
+        void meta(Reader &reader) {
+            reader.skip(4); // version: 0, flags: 0
+            uint32_t size;
+            while (true) {
+                uint32_t type = reader.header(&size);
+                if (!type) break;
+                if (type == 'ilst') {
+                    Reader sub = reader.sub_reader(size);
+                    ilst(sub);
+                }
+                reader.skip(size);
+            }
+        }
+        void ilst(Reader &reader) {
+            uint32_t size;
+            while (true) {
+                uint32_t type = reader.header(&size);
+                if (!type) break;
+                Reader sub = reader.sub_reader(size);
+                ITMFItem item;
+                item.code = type;
+                this->item(sub, item);
+                reader.skip(size);
+            }
+        }
+        void item(Reader &reader, ITMFItem &item) {
+            uint32_t size;
+            while (true) {
+                uint32_t type = reader.header(&size);
+                if (!type) break;
+                Reader sub = reader.sub_reader(size);
+                switch (type) {
+                case 'mean':
+                    mean(sub, item);
+                    break;
+                case 'name':
+                    name(sub, item);
+                    break;
+                case 'data':
+                    data(sub, item);
+                    break;
+                }
+                reader.skip(size);
+            }
+            items.push_back(item);
+        }
+        void mean(Reader &reader, ITMFItem &item) {
+            reader.skip(4);
+            item.mean = reader.remaining_str();
+        }
+        void name(Reader &reader, ITMFItem &item) {
+            reader.skip(4);
+            item.name = reader.remaining_str();
+        }
+        void data(Reader &reader, ITMFItem &item) {
+            auto sub = reader.sub_reader(4);
+            type_indicator(sub, item);
+            reader.skip(8);
+            item.value = reader.remaining_str();
+        }
+        void type_indicator(Reader &reader, ITMFItem &item) {
+            reader.skip(3);
+            item.type = reader.u8();
+        }
+    };
+
+    class ITMFSerializer {
+        class Writer {
+            std::vector<uint8_t> buffer;
+        public:
+            int position() {
+                return buffer.size();
+            }
+            const std::vector<uint8_t> &data() {
+                return buffer;
+            }
+            void write_bytes(const void *data, int len) {
+                const uint8_t *p = static_cast<const uint8_t*>(data);
+                std::copy(p, p + len, std::back_inserter(buffer));
+            }
+            void write_bytes_at(int pos, const void *data, int len) {
+                const uint8_t *p = static_cast<const uint8_t*>(data);
+                if (pos + len > buffer.size()) {
+                    buffer.resize(pos + len);
+                }
+                std::copy(p, p + len, &buffer[pos]);
+            }
+            void write_u32be(uint32_t n) {
+                uint8_t data[4] = { static_cast<uint8_t>(n>>24), static_cast<uint8_t>((n>>16) & 0xff), static_cast<uint8_t>((n>>8) & 0xff), static_cast<uint8_t>(n & 0xff) };
+                write_bytes(data, 4);
+            }
+            void write_u32be_at(int pos, uint32_t n) {
+                uint8_t data[4] = { static_cast<uint8_t>(n>>24), static_cast<uint8_t>((n>>16) & 0xff), static_cast<uint8_t>((n>>8) & 0xff), static_cast<uint8_t>(n & 0xff) };
+                write_bytes_at(pos, data, 4);
+            }
+        };
+        Writer writer;
+        std::vector<ITMFItem> items;
+    public:
+        ITMFSerializer(const std::vector<ITMFItem> &items) {
+            this->items = items;
+            write_meta();
+        }
+        const std::vector<uint8_t> &result() {
+            return writer.data();
+        }
+    private:
+        void write_meta() {
+            uint32_t position = writer.position();
+            writer.write_u32be(0);
+            writer.write_bytes("meta", 4);
+            writer.write_bytes("\x00\x00\x00\x00", 4); // version + flags
+            write_hdlr();
+            write_ilst();
+            writer.write_u32be_at(position, writer.position() - position);
+        }
+        void write_hdlr() {
+            uint32_t size = 8 + 4 + 4 + 4 + 4 * 3 + 1;
+            writer.write_u32be(size);
+            writer.write_bytes("hdlr", 4);
+            writer.write_bytes("\x00\x00\x00\x00", 4); // version + flags
+            writer.write_bytes("\x00\x00\x00\x00", 4); // reserved
+            writer.write_bytes("mdir", 4); // handler type
+            writer.write_bytes("appl\x00\x00\x00\x00\x00\x00\x00\x00", 12); // reserved
+            writer.write_bytes("\x00", 1); // empty name
+        }
+        void write_ilst() {
+            uint32_t position = writer.position();
+            writer.write_u32be(0);
+            writer.write_bytes("ilst", 4);
+            for (auto &&item: items) {
+                write_item(item);
+            }
+            writer.write_u32be_at(position, writer.position() - position);
+        }
+        void write_item(const ITMFItem& item) {
+            uint32_t position = writer.position();
+            writer.write_u32be(0);
+            writer.write_u32be(item.code);
+            if (item.code == '----') {
+                write_mean(item);
+                write_name(item);
+            }
+            write_data(item);
+            writer.write_u32be_at(position, writer.position() - position);
+        }
+        void write_mean(const ITMFItem& item) {
+            uint32_t size = item.mean.size() + 8 + 4;
+            writer.write_u32be(size);
+            writer.write_bytes("mean", 4);
+            writer.write_bytes("\x00\x00\x00\x00", 4); // version + flags
+            writer.write_bytes(item.mean.data(), item.mean.size());
+        }
+        void write_name(const ITMFItem& item) {
+            uint32_t size = item.name.size() + 8 + 4;
+            writer.write_u32be(size);
+            writer.write_bytes("name", 4);
+            writer.write_bytes("\x00\x00\x00\x00", 4); // version + flags
+            writer.write_bytes(item.name.data(), item.name.size());
+        }
+        void write_data(const ITMFItem& item) {
+            uint32_t size = item.value.size() + 8 + 8;
+            writer.write_u32be(size);
+            writer.write_bytes("data", 4);
+            writer.write_bytes("\x00\x00", 2); // reserved
+            writer.write_bytes("\x00", 1); // type_set_identifier
+            writer.write_bytes(&item.type, 1);
+            writer.write_bytes("\x00\x00\x00\x00", 4); // the_locale
+            writer.write_bytes(item.value.data(), item.value.size());
+        }
+    };
+
+    std::vector<ITMFItem> parseUdtaMeta(const void *udta, size_t len)
+    {
+        return ITMFParser(udta, len).result();
+    }
+
+    std::string parseValue(const ITMFItem &item)
+    {
+        uint32_t fcc = item.code;
+        auto &&value = item.value;
+        if (fcc == Tag::kGenreID3) {
+            unsigned v = (value[0] << 8) | value[1];
+            if (v > 0 && v < 255) {
+                return TagLib::ID3v1::genre(v - 1).to8Bit();
+            }
+        } else if (fcc == Tag::kDisk || fcc == Tag::kTrack) {
+            unsigned index = (value[2] << 8) | value[3];
+            unsigned total = (value[4] << 8) | value[5];
+            return strutil::format("%u/%u", index, total);
+        } else if (item.type == ITMF_TYPE_INTEGER) {
+            if (value.size() == 8) {
+                uint32_t high, low;
+                high = (value[0]<<24)|(value[1]<<16)|(value[2]<<8)|value[3];
+                low  = (value[4]<<24)|(value[5]<<16)|(value[6]<<8)|value[7];
+                uint64_t value64 = (static_cast<uint64_t>(high) << 32) | low;
+                return strutil::format("%lld", value64);
+            }
+            int v;
+            if (value.size() == 1)
+                v = value[0];
+            else if (value.size() == 2)
+                v = (value[0] << 8) | value[1];
+            else if (value.size() == 4)
+                v = (value[0]<<24)|(value[1]<<16)|(value[2]<<8)|value[3];
+            else
+                return "";
+            return strutil::format("%d", v);
+        } else {
+            return value;
+        }
+        return "";
+    }
+
+    std::map<std::string, std::string> convertToStringTags(const std::vector<ITMFItem> &tags)
+    {
+        std::map<std::string, std::string> result;
+        for (auto &&item: tags)
+        {
+            uint32_t fcc = item.code;
+            auto v = parseValue(item);
+            if (v.empty())
+                continue;
+            if (fcc == '----')
+                result.insert(std::make_pair(std::string(item.name), v));
+            else {
+                const char *name = getTagNameFromFourCC(fcc);
+                if (name)
+                    result.insert(std::make_pair(std::string(name), v));
+            }
+        }
+        return result;
+    }
+
+    std::vector<uint8_t> serializeUdtaMeta(const std::vector<ITMFItem> &items)
+    {
+        return ITMFSerializer(items).result();
+    }
+
+    uint8_t getTagTypeFromFourCC(uint32_t fcc, unsigned *size)
+    {
+        fcc2type_t search = { fcc, 0 };
+        auto end = itunes_fcc2type_map +
+            util::sizeof_array(itunes_fcc2type_map);
+        auto entry =
+            std::lower_bound(itunes_fcc2type_map, end, search,
+                             [](const fcc2type_t &a,
+                                const fcc2type_t &b) -> bool
+                             { return a.fcc < b.fcc; });
+        if (entry < end && entry->fcc == search.fcc) {
+            *size = entry->length;
+            return entry->type;
+        }
+        return ITMF_TYPE_UTF8;
+    }
+
+    std::vector<ITMFItem> convertToM4aTags(const std::map<std::string, std::string> tags)
+    {
+        std::vector<ITMFItem> result;
+        unsigned track = 0;
+        unsigned track_total = 0;
+        unsigned disc = 0;
+        unsigned disc_total = 0;
+
+        for (auto &&it: tags) {
+            ITMFItem item;
+            uint32_t fcc = getFourCCFromTagName(it.first.c_str());
+            if (fcc == 0) {
+                item.code = '----';
+                item.mean = "com.apple.iTunes";
+                item.name = it.first;
+                item.value = it.second;
+                if (item.name == "Encoding Params") {
+                    item.type = ITMF_TYPE_IMPLICIT;
+                } else {
+                    item.type = ITMF_TYPE_UTF8;
+                }
+            } else {
+                item.code = fcc;
+                unsigned size;
+                uint8_t type = getTagTypeFromFourCC(fcc, &size);
+                item.type = type;
+                if (type == ITMF_TYPE_INTEGER) {
+                    try {
+                        uint64_t value = std::stoull(it.second);
+                        if (size == 1) {
+                            std::array<uint8_t, 1> buf{};
+                            buf[0] = value;
+                            item.value = std::string(buf.begin(), buf.end());
+                        } else if (size == 2) {
+                            std::array<uint8_t, 2> buf{};
+                            buf[0] = value >> 8;
+                            buf[1] = value;
+                            item.value = std::string(buf.begin(), buf.end());
+                        } else if (size == 4) {
+                            uint32_t value4 = util::h2big32(static_cast<uint32_t>(value));
+                            std::array<uint8_t, 4> buf{};
+                            std::memcpy(buf.data(), &value4, 4);
+                            item.value = std::string(buf.begin(), buf.end());
+                        } else if (size == 8) {
+#ifdef _MSC_VER
+                            value = _byteswap_uint64(value);
+#else
+                            value = __builtin_bswap64(value);
+#endif
+                            std::array<uint8_t, 8> buf{};
+                            std::memcpy(buf.data(), &value, 8);
+                            item.value = std::string(buf.begin(), buf.end());
+                        }
+                    } catch (...) {
+                        continue;
+                    }
+                } else if (type == ITMF_TYPE_IMPLICIT) {
+                    int genreid;
+                    switch (fcc) {
+                    case Tag::kDisk:
+                        std::sscanf(it.second.c_str(), "%u/%u", &disc, &disc_total);
+                        continue;
+                    case Tag::kTrack:
+                        std::sscanf(it.second.c_str(), "%u/%u", &track, &track_total);
+                        continue;
+                    case TAG_TOTAL_DISCS:
+                        std::sscanf(it.second.c_str(), "%u", &disc_total);
+                        continue;
+                    case TAG_TOTAL_TRACKS:
+                        std::sscanf(it.second.c_str(), "%u", &track_total);
+                        continue;
+                    case Tag::kGenreID3:
+                    case Tag::kGenre:
+                        genreid = TagLib::ID3v1::genreIndex(it.second);
+                        if (genreid < 255) {
+                            std::array<uint8_t, 2> buf{};
+                            buf[1] = genreid + 1;
+                            item.value = std::string(buf.begin(), buf.end());
+                        } else {
+                            item.code = Tag::kGenre;
+                            item.value = it.second;
+                        }
+                        break;
+                    default:
+                        item.value = it.second;
+                        break;
+                    }
+                } else {
+                    item.value = it.second;
+                }
+            }
+            result.push_back(item);
+        }
+        if (track) {
+            ITMFItem item;
+            item.code = Tag::kTrack;
+            item.type = ITMF_TYPE_IMPLICIT;
+            std::array<uint8_t, 8> buf{};
+            buf[2] = track >> 8;
+            buf[3] = track;
+            buf[4] = track_total >> 8;
+            buf[5] = track_total;
+            item.value = std::string(buf.begin(), buf.end());
+            result.push_back(item);
+        }
+        if (disc) {
+            ITMFItem item;
+            item.code = Tag::kDisk;
+            item.type = ITMF_TYPE_IMPLICIT;
+            std::array<uint8_t, 6> buf{};
+            buf[2] = disc >> 8;
+            buf[3] = disc;
+            buf[4] = disc_total >> 8;
+            buf[5] = disc_total;
+            item.value = std::string(buf.begin(), buf.end());
+            result.push_back(item);
         }
         return result;
     }

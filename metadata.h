@@ -56,6 +56,41 @@ namespace ID3 {
 }
 
 namespace M4A {
+    enum
+    {
+        ITMF_TYPE_IMPLICIT  = 0,
+        ITMF_TYPE_UTF8      = 1,
+        ITMF_TYPE_UTF16     = 2,
+        ITMF_TYPE_SJIS      = 3,
+        ITMF_TYPE_HTML      = 6,
+        ITMF_TYPE_XML       = 7,
+        ITMF_TYPE_UUID      = 8,
+        ITMF_TYPE_ISRC      = 9,
+        ITMF_TYPE_MI3P      = 10,
+        ITMF_TYPE_GIF       = 12,
+        ITMF_TYPE_JPEG      = 13,
+        ITMF_TYPE_PNG       = 14,
+        ITMF_TYPE_URL       = 15,
+        ITMF_TYPE_DURATION  = 16,
+        ITMF_TYPE_DATETIME  = 17,
+        ITMF_TYPE_GENRES    = 18,
+        ITMF_TYPE_INTEGER   = 21,
+        ITMF_TYPE_RIAA_PA   = 24,
+        ITMF_TYPE_UPC       = 25,
+        ITMF_TYPE_BMP       = 27,
+
+        ITMF_TYPE_UNDEFINED = 255
+    };
+
+    struct ITMFItem {
+        uint32_t code;
+        std::string mean;
+        std::string name;
+        uint8_t type;
+        std::string value;
+
+        ITMFItem() : code(0), type(0) {}
+    };
     const char *getTagNameFromFourCC(uint32_t fcc);
 
     void convertToM4ATags(const std::map<std::string, std::string> &src,
@@ -63,6 +98,11 @@ namespace M4A {
                           std::map<std::string, std::string> *longTags);
 
     std::map<std::string, std::string> fetchTags(MP4FileX &file);
+
+    std::vector<ITMFItem> parseUdtaMeta(const void *udta, size_t len);
+    std::map<std::string, std::string> convertToStringTags(const std::vector<ITMFItem> &tags);
+    std::vector<ITMFItem> convertToM4aTags(const std::map<std::string, std::string> tags);
+    std::vector<uint8_t> serializeUdtaMeta(const std::vector<ITMFItem> &items);
 }
 
 namespace CAF {
