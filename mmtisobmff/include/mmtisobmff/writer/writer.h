@@ -406,6 +406,8 @@ struct CIsobmffFragMemoryWriter : CIsobmffBaseFragWriter {
 struct CIsobmffBaseWriter : CIsobmffWriter {
   CIsobmffBaseWriter(const std::string& outUri, const std::string& tmpUri,
                      const SMovieConfig& config, const bool memoryWriting = false);
+
+  void setUserData(const std::vector<ilo::ByteBuffer> &userData);
 };
 
 /*!

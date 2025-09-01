@@ -392,6 +392,11 @@ CIsobmffBaseWriter::CIsobmffBaseWriter(const std::string& outUri, const std::str
   p = ilo::make_unique<Pimpl>(pimplConfig);
 }
 
+void CIsobmffBaseWriter::setUserData(const std::vector<ilo::ByteBuffer> &userData) {
+  CTrakUserDataEnhancer{(*p->m_tree)[1], userData};
+}
+
+
 /* ######---FileWriter---###### */
 
 CIsobmffFileWriter::CIsobmffFileWriter(const SOutputConfig& outConf, const SMovieConfig& config)
