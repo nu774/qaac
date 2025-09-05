@@ -95,6 +95,7 @@ amm-info@iis.fraunhofer.de
 #include <cstdint>
 #include <algorithm>
 #include <type_traits>
+#include <map>
 
 // External includes
 #include "ilo/string_utils.h"
@@ -182,6 +183,9 @@ struct CTrackInfo {
   size_t sampleCount = 0;
   //! Edit list of the track
   SEditList editList;
+  //! Track reference
+  std::map<ilo::Fourcc, std::vector<uint32_t>> references;
+
   /*!
    * @brief User defined data at track level
    *

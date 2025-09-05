@@ -144,3 +144,5 @@ BOXREGISTRY_REGISTER_FOURCC(traf, CContainerType::isContainer);
 BOXREGISTRY_REGISTER_FOURCC(udta, CContainerType::isContainer);
 BOXREGISTRY_REGISTER_FOURCC(ludt, CContainerType::isContainer);
 BOXREGISTRY_REGISTER_FOURCC(jpvs, CContainerType::isContainer);
+BOXREGISTRY_REGISTER_FOURCC(gmhd, CContainerType::isContainer);
+BOXREGISTRY_REGISTER_FOURCC(tref, CContainerType::isContainer);

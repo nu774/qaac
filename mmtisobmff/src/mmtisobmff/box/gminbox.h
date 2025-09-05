@@ -1,7 +1,7 @@
 /*-----------------------------------------------------------------------------
 Software License for The Fraunhofer FDK MPEG-H Software
 
-Copyright (c) 2016 - 2023 Fraunhofer-Gesellschaft zur Förderung der angewandten
+Copyright (c) 2017 - 2023 Fraunhofer-Gesellschaft zur Förderung der angewandten
 Forschung e.V. and Contributors
 All rights reserved.
 
@@ -82,131 +82,69 @@ amm-info@iis.fraunhofer.de
 
 /*
  * Project: MPEG-4 ISO Base Media File Format (ISO BMFF) library
- * Content: mmtisobmff reader class(es)
+ * Content: Video media header box class
  */
 
-// System includes
+#pragma once
 
-// External includes
+// System headers
+#include <array>
 
-// Internal includes
-#include "mmtisobmff/reader/reader.h"
-#include "tree/boxtree.h"
-#include "box/mvhdbox.h"
-#include "box/ftypbox.h"
-#include "box/containerbox.h"
-#include "pimpl.h"
-#include "reader/readerinfo.h"
+// Internal headers
+#include "mmtisobmff/types.h"
+#include "box.h"
 
 namespace mmt {
 namespace isobmff {
+namespace box {
 
-bool checkIfTrackIdHasSampleData(CIsobmffReader::Pimpl& p, uint32_t trackId) {
-  bool hasSampleData = (p.trackIdToTrackSampleInfo().count(trackId) >= 1);
-  if (!hasSampleData) {
-    ILO_LOG_WARNING("Track with id %d does not have accessible sample data", trackId);
-  }
-  return hasSampleData;
-}
+// Generic media information box as defined in ISO/IEC 14496-12:2015
+class CGenericMediaInformationBox : public CFullBox {
+ public:
+  struct SGminBoxWriteConfig : SFullBoxWriteConfig {
+    uint16_t graphicsMode = 0x40;
+    std::array<uint16_t, 3> opcolor;
+    uint16_t balance = 0;
 
-size_t maxSampleSize(CIsobmffReader::Pimpl& p, uint32_t trackId) {
-  if (!checkIfTrackIdHasSampleData(p, trackId)) {
-    return 0;
-  }
-  size_t maxSize = 0;
-  if (verboseLogLevel) {
-    ILO_LOG_SCOPE_RET(maxSize, "trackId: %u", trackId);
-  }
-  for (const auto& sz : p.trackIdToTrackSampleInfo().at(trackId)) {
-    maxSize = std::max(maxSize, static_cast<size_t>(sz.size));
-  }
-  return maxSize;
-}
+    SGminBoxWriteConfig()
+    : SFullBoxWriteConfig(ilo::toFcc("gmin"), 0, 0)
+    , opcolor({1<<15, 1<<15, 1<<15})
+    {}
+  };
 
-uint64_t sampleDurationSum(CIsobmffReader::Pimpl& p, uint32_t trackId) {
-  if (!checkIfTrackIdHasSampleData(p, trackId)) {
-    return 0;
-  }
-  uint64_t duration = 0;
-  for (const auto& sample : p.trackIdToTrackSampleInfo().at(trackId)) {
-    duration += sample.duration;
-  }
-  return duration;
-}
+  //! constructor to init member variables through parsing
+  CGenericMediaInformationBox(ilo::ByteBuffer::const_iterator& begin,
+                       const ilo::ByteBuffer::const_iterator& end);
 
-size_t totalSampleCount(CIsobmffReader::Pimpl& p, uint32_t trackId) {
-  if (!checkIfTrackIdHasSampleData(p, trackId)) {
-    return 0;
-  }
-  return p.trackIdToTrackSampleInfo().at(trackId).size();
-}
+  //! constructor to init member variables by setting
+  explicit CGenericMediaInformationBox(const SGminBoxWriteConfig& gminWriteConfig);
 
-CTrackInfo createTrackInfoFromTrack(CIsobmffReader::Pimpl& p, const BoxElement& t) {
-  CTrackInfo ti;
+ public:
+  uint16_t graphicsMode() const { return m_graphicsMode; }
 
-  CHandlerExtractor::store(t, ti);
-  CCodingNameExtractor::store(t, ti);
-  CTrackIdExtractor::store(t, ti);
-  CMediaTimeInfoExtractor::store(t, ti);
-  if (ti.duration == 0) {
-    if (verboseLogLevel) {
-      ILO_LOG_INFO("duration is zero, summing up sample durations");
-    }
-    ti.duration = sampleDurationSum(p, ti.trackId);
-  }
-  CEditListExtractor::store(t, ti);
-  ti.maxSampleSize = maxSampleSize(p, ti.trackId);
-  ti.sampleCount = totalSampleCount(p, ti.trackId);
+  std::array<uint16_t, 3> opcolor() const { return m_opcolor; }
 
-  CTrackReferenceExtractor::store(t, ti);
-  CUserDataExtractor::store<CTrackInfo>(t, ti);
+  uint16_t balance() const { return m_balance; }
 
-  return ti;
-}
+  SAttributeList getAttributeList() const override;
 
-CIsobmffReader::CIsobmffReader(std::unique_ptr<IIsobmffInput>&& input) {
-  setupServicesOnce();
-  p = std::make_shared<Pimpl>(std::move(input));
-}
+ protected:
+  void updateSize(uint64_t size) final;
 
-CMovieInfo CIsobmffReader::movieInfo() const {
-  CMovieInfo result;
-  auto mvhd = findFirstBoxWithFourccAndType<box::CMovieHeaderBox>(p->tree(), ilo::toFcc("mvhd"));
-  ILO_ASSERT(mvhd != nullptr, "no mvhd box found");
-  result.creationTime = mvhd->creationTime();
-  result.modificationTime = mvhd->modificationTime();
-  result.timeScale = static_cast<uint32_t>(mvhd->timescale());
-  result.duration = mvhd->duration();
+  void writeBox(ilo::ByteBuffer& buffer, ilo::ByteBuffer::iterator& position) const override;
 
-  auto ftype = findFirstBoxWithFourccAndType<box::CFileTypeBox>(p->tree(), ilo::toFcc("ftyp"));
-  ILO_ASSERT(ftype != nullptr, "no ftyp box found");
-  result.majorBrand = ftype->majorBrand();
-  result.compatibleBrands = ftype->compatibleBrands();
+ private:
+  void parseBox(ilo::ByteBuffer::const_iterator& begin, const ilo::ByteBuffer::const_iterator& end);
 
-  auto moov =
-      findFirstElementWithFourccAndBoxType<box::CContainerBox>(p->tree(), ilo::toFcc("moov"));
+  void sanityCheck();
 
-  CUserDataExtractor::store<CMovieInfo>(moov, result);
+ private:
+  uint16_t m_graphicsMode;
+  std::array<uint16_t, 3> m_opcolor;
+  uint16_t m_balance;
+  uint16_t m_reserved;
+};
 
-  return result;
-}
-
-CTrackInfoVec CIsobmffReader::trackInfos() const {
-  CTrackInfoVec result;
-  auto traks =
-      findAllElementsWithFourccAndBoxType<box::CContainerBox>(p->tree(), ilo::toFcc("trak"));
-  uint32_t index = 0;
-  for (const auto& t : traks) {
-    auto ti = createTrackInfoFromTrack(*p, t.get());
-    ti.trackIndex = index++;
-    result.push_back(ti);
-  }
-  return result;
-}
-
-size_t CIsobmffReader::trackCount() const {
-  return static_cast<size_t>(
-      findAllBoxesWithFourccAndType<box::IBox>(p->tree(), ilo::toFcc("trak")).size());
-}
+}  // namespace box
 }  // namespace isobmff
 }  // namespace mmt

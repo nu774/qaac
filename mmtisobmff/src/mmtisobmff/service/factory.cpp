@@ -108,6 +108,8 @@ amm-info@iis.fraunhofer.de
 #include "box/containerbox.h"
 #include "box/alacsampleentry.h"
 #include "box/decoderconfigurationfullbox.h"
+#include "box/textbox.h"
+#include "box/textsampledescription.h"
 
 namespace mmt {
 namespace isobmff {
@@ -187,6 +189,12 @@ void CNodeFactory::createNode(BoxTree::NodeType& addTo, ilo::ByteBuffer::const_i
     } else {
       box = std::make_shared<box::CAlacSampleEntry>(begin, chopEnd);
     }
+  } else if (parent && boxSizeType.type == ilo_v1::toFcc("text")) {
+    if (parent->item->type() == ilo_v1::toFcc("gmhd")) {
+      box = std::make_shared<box::CTextBox>(begin, chopEnd);
+    } else {
+      box = std::make_shared<box::CTextSampleDescription>(begin, chopEnd);
+    }
   } else {
     auto boxfac = CServiceLocatorSingleton::instance().lock()->getService<IBoxFactory>().lock();
     box = boxfac->createBox(begin, chopEnd);
@@ -226,6 +234,14 @@ std::reference_wrapper<BoxElement> CNodeFactory::createNode(
     } else {
       auto config = dynamic_cast<const box::CAlacSampleEntry::SAlacSampleEntryWriteConfig&>(boxWriteConfig);
       box = std::make_shared<box::CAlacSampleEntry>(config);
+    }
+  } else if (parent && boxWriteConfig.getType() == ilo_v1::toFcc("text")) {
+    if (parent->item->type() == ilo_v1::toFcc("gmhd")) {
+      auto config = dynamic_cast<const box::CTextBox::STextBoxWriteConfig&>(boxWriteConfig);
+      box = std::make_shared<box::CTextBox>(config);
+    } else {
+      auto config = dynamic_cast<const box::CTextSampleDescription::STextWriteConfig&>(boxWriteConfig);
+      box = std::make_shared<box::CTextSampleDescription>(config);
     }
   } else {
     auto boxfac = CServiceLocatorSingleton::instance().lock()->getService<IBoxFactory>().lock();

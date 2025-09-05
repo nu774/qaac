@@ -174,6 +174,12 @@ static void registerBoxes(CBoxRegistry::CRegistryMap& boxes) {
   ADD_BOX_REGISTRY(dOpsBoxRegistryEntry);
   ADD_BOX_REGISTRY(ac3BoxRegistryEntry);
   ADD_BOX_REGISTRY(dac3BoxRegistryEntry);
+  ADD_BOX_REGISTRY(trefBoxRegistryEntry);
+  ADD_BOX_REGISTRY(gmhdBoxRegistryEntry);
+  ADD_BOX_REGISTRY(gminBoxRegistryEntry);
+  ADD_BOX_REGISTRY(nmhdBoxRegistryEntry);
+  ADD_BOX_REGISTRY(textBoxRegistryEntry);
+  ADD_BOX_REGISTRY(chapBoxRegistryEntry);
 }
 
 CBoxRegistry::CBoxRegistry() {

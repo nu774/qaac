@@ -90,7 +90,10 @@ amm-info@iis.fraunhofer.de
 #include <map>
 #include <type_traits>
 
+#include "box/trackreferencetypebox.h"
+#include "ilo/string_utils.h"
 #include "mmtisobmff/reader/reader.h"
+#include "mmtisobmff/types.h"
 #include "tree/boxtree.h"
 
 #include "box/elstbox.h"
@@ -228,5 +231,14 @@ struct CHandlerExtractor {
     }
   }
 };
+
+struct CTrackReferenceExtractor {
+  static void store(const BoxElement& t, CTrackInfo& ti) {
+    for (auto &&tref: findAllBoxesWithType<box::CTrackReferenceTypeBox>(t)) {
+      ti.references[tref->type()] = tref->trackIds();
+    }
+  }
+};
+
 }  // namespace isobmff
 }  // namespace mmt

@@ -82,131 +82,67 @@ amm-info@iis.fraunhofer.de
 
 /*
  * Project: MPEG-4 ISO Base Media File Format (ISO BMFF) library
- * Content: mmtisobmff reader class(es)
+ * Content: media header box class
  */
 
-// System includes
+// System headers
+#include <stdexcept>
+#include <limits>
+#include <algorithm>
 
-// External includes
+// External headers
+#include "ilo/common_types.h"
+#include "ilo/string_utils.h"
 
-// Internal includes
-#include "mmtisobmff/reader/reader.h"
-#include "tree/boxtree.h"
-#include "box/mvhdbox.h"
-#include "box/ftypbox.h"
-#include "box/containerbox.h"
-#include "pimpl.h"
-#include "reader/readerinfo.h"
+// Internal headers
+#include "nmhdbox.h"
+#include "common/logging.h"
 
 namespace mmt {
 namespace isobmff {
+namespace box {
 
-bool checkIfTrackIdHasSampleData(CIsobmffReader::Pimpl& p, uint32_t trackId) {
-  bool hasSampleData = (p.trackIdToTrackSampleInfo().count(trackId) >= 1);
-  if (!hasSampleData) {
-    ILO_LOG_WARNING("Track with id %d does not have accessible sample data", trackId);
-  }
-  return hasSampleData;
+CNullMediaHeaderBox::CNullMediaHeaderBox(ilo::ByteBuffer::const_iterator& begin,
+                                     const ilo::ByteBuffer::const_iterator& end)
+    : CFullBox(begin, end), m_entryCount(0) {
+  parseBox(begin, end);
 }
 
-size_t maxSampleSize(CIsobmffReader::Pimpl& p, uint32_t trackId) {
-  if (!checkIfTrackIdHasSampleData(p, trackId)) {
-    return 0;
-  }
-  size_t maxSize = 0;
-  if (verboseLogLevel) {
-    ILO_LOG_SCOPE_RET(maxSize, "trackId: %u", trackId);
-  }
-  for (const auto& sz : p.trackIdToTrackSampleInfo().at(trackId)) {
-    maxSize = std::max(maxSize, static_cast<size_t>(sz.size));
-  }
-  return maxSize;
+CNullMediaHeaderBox::CNullMediaHeaderBox(const SNmhdBoxWriteConfig& config)
+    : CFullBox(config) {
+  updateSize(0);
 }
 
-uint64_t sampleDurationSum(CIsobmffReader::Pimpl& p, uint32_t trackId) {
-  if (!checkIfTrackIdHasSampleData(p, trackId)) {
-    return 0;
-  }
-  uint64_t duration = 0;
-  for (const auto& sample : p.trackIdToTrackSampleInfo().at(trackId)) {
-    duration += sample.duration;
-  }
-  return duration;
+void CNullMediaHeaderBox::parseBox(ilo::ByteBuffer::const_iterator& begin,
+                                 const ilo::ByteBuffer::const_iterator& end) {
+  ILO_ASSERT_WITH(CFullBox::version() == 0, std::invalid_argument,
+                  "Version %s of dref box is not defined/implemented",
+                  std::to_string(CFullBox::version()).c_str());
 }
 
-size_t totalSampleCount(CIsobmffReader::Pimpl& p, uint32_t trackId) {
-  if (!checkIfTrackIdHasSampleData(p, trackId)) {
-    return 0;
-  }
-  return p.trackIdToTrackSampleInfo().at(trackId).size();
+void CNullMediaHeaderBox::updateSize(uint64_t sizeValue) {
+  CFullBox::updateSize(sizeValue);
 }
 
-CTrackInfo createTrackInfoFromTrack(CIsobmffReader::Pimpl& p, const BoxElement& t) {
-  CTrackInfo ti;
-
-  CHandlerExtractor::store(t, ti);
-  CCodingNameExtractor::store(t, ti);
-  CTrackIdExtractor::store(t, ti);
-  CMediaTimeInfoExtractor::store(t, ti);
-  if (ti.duration == 0) {
-    if (verboseLogLevel) {
-      ILO_LOG_INFO("duration is zero, summing up sample durations");
-    }
-    ti.duration = sampleDurationSum(p, ti.trackId);
-  }
-  CEditListExtractor::store(t, ti);
-  ti.maxSampleSize = maxSampleSize(p, ti.trackId);
-  ti.sampleCount = totalSampleCount(p, ti.trackId);
-
-  CTrackReferenceExtractor::store(t, ti);
-  CUserDataExtractor::store<CTrackInfo>(t, ti);
-
-  return ti;
+SAttributeList CNullMediaHeaderBox::getAttributeList() const {
+  SAttributeList attributesList;
+  return attributesList;
 }
 
-CIsobmffReader::CIsobmffReader(std::unique_ptr<IIsobmffInput>&& input) {
-  setupServicesOnce();
-  p = std::make_shared<Pimpl>(std::move(input));
+void CNullMediaHeaderBox::writeBox(ilo::ByteBuffer& buffer,
+                                 ilo::ByteBuffer::iterator& position) const {
 }
 
-CMovieInfo CIsobmffReader::movieInfo() const {
-  CMovieInfo result;
-  auto mvhd = findFirstBoxWithFourccAndType<box::CMovieHeaderBox>(p->tree(), ilo::toFcc("mvhd"));
-  ILO_ASSERT(mvhd != nullptr, "no mvhd box found");
-  result.creationTime = mvhd->creationTime();
-  result.modificationTime = mvhd->modificationTime();
-  result.timeScale = static_cast<uint32_t>(mvhd->timescale());
-  result.duration = mvhd->duration();
-
-  auto ftype = findFirstBoxWithFourccAndType<box::CFileTypeBox>(p->tree(), ilo::toFcc("ftyp"));
-  ILO_ASSERT(ftype != nullptr, "no ftyp box found");
-  result.majorBrand = ftype->majorBrand();
-  result.compatibleBrands = ftype->compatibleBrands();
-
-  auto moov =
-      findFirstElementWithFourccAndBoxType<box::CContainerBox>(p->tree(), ilo::toFcc("moov"));
-
-  CUserDataExtractor::store<CMovieInfo>(moov, result);
-
-  return result;
-}
-
-CTrackInfoVec CIsobmffReader::trackInfos() const {
-  CTrackInfoVec result;
-  auto traks =
-      findAllElementsWithFourccAndBoxType<box::CContainerBox>(p->tree(), ilo::toFcc("trak"));
-  uint32_t index = 0;
-  for (const auto& t : traks) {
-    auto ti = createTrackInfoFromTrack(*p, t.get());
-    ti.trackIndex = index++;
-    result.push_back(ti);
-  }
-  return result;
-}
-
-size_t CIsobmffReader::trackCount() const {
-  return static_cast<size_t>(
-      findAllBoxesWithFourccAndType<box::IBox>(p->tree(), ilo::toFcc("trak")).size());
-}
+}  // namespace box
 }  // namespace isobmff
 }  // namespace mmt
+
+#include "box/boxregistryentry.h"
+#include <memory>
+
+using namespace mmt;
+using namespace mmt::isobmff;
+using namespace mmt::isobmff::box;
+
+BOXREGISTRY_DECLARE(nmhd, CNullMediaHeaderBox, CNullMediaHeaderBox::SNmhdBoxWriteConfig,
+                    CContainerType::noContainer);
