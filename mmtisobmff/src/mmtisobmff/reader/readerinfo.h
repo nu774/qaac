@@ -109,7 +109,9 @@ struct CReaderMaps {
   CReaderMaps() {
     handlerToType.insert({{(ilo::toFcc("soun")), TrackType::audio},
                           {(ilo::toFcc("vide")), TrackType::video},
-                          {(ilo::toFcc("hint")), TrackType::hint}});
+                          {(ilo::toFcc("hint")), TrackType::hint},
+                          {(ilo::toFcc("text")), TrackType::text},
+                        });
 
     codingNameToCodec.insert({{ilo::toFcc("mp4a"), Codec::mp4a},
                               {ilo::toFcc("mha1"), Codec::mpegh_mha},
@@ -127,6 +129,8 @@ struct CReaderMaps {
                               {ilo::toFcc("alac"), Codec::alac},
                               {ilo::toFcc("fLaC"), Codec::flac},
                               {ilo::toFcc("Opus"), Codec::opus},
+                              {ilo::toFcc("text"), Codec::text},
+                              {ilo::toFcc("tx3g"), Codec::tx3g},
                             });
   }
 

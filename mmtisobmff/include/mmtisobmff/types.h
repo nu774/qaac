@@ -131,7 +131,8 @@ enum class TrackType : uint8_t {
   undefined = 0, /**< Unknown track */
   audio,         /**< Audio track */
   video,         /**< Video track */
-  hint           /**< Hint track */
+  hint,          /**< Hint track */
+  text,          /**< Text track */
 };
 
 /*!
@@ -157,6 +158,8 @@ enum class Codec : uint8_t {
   alac,
   flac,
   opus,
+  text,
+  tx3g,
 };
 
 /*!

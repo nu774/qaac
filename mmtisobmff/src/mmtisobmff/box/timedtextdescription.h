@@ -82,116 +82,106 @@ amm-info@iis.fraunhofer.de
 
 /*
  * Project: MPEG-4 ISO Base Media File Format (ISO BMFF) library
- * Content: box registry
+ * Content: abstract sample entry, audio sample entry and visual sample entry classes
  */
 
-// External includes
+#pragma once
+
+// System headers
+#include <string>
+#include <memory>
+#include <vector>
+
+// External headers
 #include "ilo/common_types.h"
 
-// Internal includes
-#include "boxregistry.h"
-
-#define ADD_BOX_REGISTRY(RegEntry)        \
-  extern box::CBoxRegistryEntry RegEntry; \
-  boxes[RegEntry.fcc] = RegEntry
+// Internal headers
+#include "mmtisobmff/types.h"
+#include "box.h"
+#include "sampleentry.h"
 
 namespace mmt {
 namespace isobmff {
-static void registerBoxes(CBoxRegistry::CRegistryMap& boxes) {
-  ADD_BOX_REGISTRY(ftypBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stypBoxRegistryEntry);
-  ADD_BOX_REGISTRY(moofBoxRegistryEntry);
-  ADD_BOX_REGISTRY(moovBoxRegistryEntry);
-  ADD_BOX_REGISTRY(trakBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mdiaBoxRegistryEntry);
-  ADD_BOX_REGISTRY(edtsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(avcCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(btrtBoxRegistryEntry);
-  ADD_BOX_REGISTRY(hdlrBoxRegistryEntry);
-  ADD_BOX_REGISTRY(hvcCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mdhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mdatBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mfhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mhaCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(esdsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mmpuBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mvhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(sidxBoxRegistryEntry);
-  ADD_BOX_REGISTRY(smhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(vmhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stcoBoxRegistryEntry);
-  ADD_BOX_REGISTRY(co64BoxRegistryEntry);
-  ADD_BOX_REGISTRY(stscBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stz2BoxRegistryEntry);
-  ADD_BOX_REGISTRY(stszBoxRegistryEntry);
-  ADD_BOX_REGISTRY(sttsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stssBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tfdtBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tfhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tkhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(trunBoxRegistryEntry);
-  ADD_BOX_REGISTRY(trexBoxRegistryEntry);
-  ADD_BOX_REGISTRY(minfBoxRegistryEntry);
-  ADD_BOX_REGISTRY(dinfBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stblBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mvexBoxRegistryEntry);
-  ADD_BOX_REGISTRY(trafBoxRegistryEntry);
-  ADD_BOX_REGISTRY(drefBoxRegistryEntry);
-  ADD_BOX_REGISTRY(urlBoxRegistryEntry);
-  ADD_BOX_REGISTRY(stsdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(cttsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mhm1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(mhm2BoxRegistryEntry);
-  ADD_BOX_REGISTRY(mha1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(mha2BoxRegistryEntry);
-  ADD_BOX_REGISTRY(hvc1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(hev1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(avc1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(avc3BoxRegistryEntry);
-  ADD_BOX_REGISTRY(mp4aBoxRegistryEntry);
-  ADD_BOX_REGISTRY(elstBoxRegistryEntry);
-  ADD_BOX_REGISTRY(sgpdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(sbgpBoxRegistryEntry);
-  ADD_BOX_REGISTRY(udtaBoxRegistryEntry);
-  ADD_BOX_REGISTRY(ludtBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tlouBoxRegistryEntry);
-  ADD_BOX_REGISTRY(alouBoxRegistryEntry);
-  ADD_BOX_REGISTRY(iodsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jxsmBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jpviBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jxplBoxRegistryEntry);
-  ADD_BOX_REGISTRY(colrBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jpvsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(jxsHBoxRegistryEntry);
-  ADD_BOX_REGISTRY(mhaPBoxRegistryEntry);
-  ADD_BOX_REGISTRY(vvc1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(vvi1BoxRegistryEntry);
-  ADD_BOX_REGISTRY(vvcCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(alacBoxRegistryEntry);
-  ADD_BOX_REGISTRY(fLaCBoxRegistryEntry);
-  ADD_BOX_REGISTRY(dfLaBoxRegistryEntry);
-  ADD_BOX_REGISTRY(OpusBoxRegistryEntry);
-  ADD_BOX_REGISTRY(dOpsBoxRegistryEntry);
-  ADD_BOX_REGISTRY(ac3BoxRegistryEntry);
-  ADD_BOX_REGISTRY(dac3BoxRegistryEntry);
-  ADD_BOX_REGISTRY(trefBoxRegistryEntry);
-  ADD_BOX_REGISTRY(gmhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(gminBoxRegistryEntry);
-  ADD_BOX_REGISTRY(nmhdBoxRegistryEntry);
-  ADD_BOX_REGISTRY(textBoxRegistryEntry);
-  ADD_BOX_REGISTRY(tx3gBoxRegistryEntry);
-  ADD_BOX_REGISTRY(chapBoxRegistryEntry);
-}
+namespace box {
 
-CBoxRegistry::CBoxRegistry() {
-  registerBoxes(m_boxes);
-}
+//! class implementing a text sample description
+class CTimedTextDescription : public CSampleEntry {
+ public:
+  struct STextWriteConfig : SSampleEntryWriteConfig {
+    uint32_t displayFlags = 0;
+    int8_t horizontalJustification = 0;
+    int8_t verticalJustification = 0;
+    std::array<uint8_t, 4> backgroundColor;
+    std::array<uint16_t, 4> defaultTextBox;
+    uint16_t startChar;
+    uint16_t endChar;
+    uint16_t fontId;
+    uint8_t faceStyleFlags;
+    uint8_t fontSize;
+    std::array<uint8_t, 4> textColor;
 
-bool CBoxRegistry::isContainer(const std::shared_ptr<box::IBox>& box) const {
-  auto boxreg = m_boxes.find(box->type());
-  if (boxreg != m_boxes.end())
-    return boxreg->second.containerType == box::CContainerType::isContainer;
-  return false;
-}
+    STextWriteConfig(ilo::Fourcc format)
+        : SSampleEntryWriteConfig(format),
+          backgroundColor({0, 0, 0, 0}),
+          defaultTextBox({0, 0, 0, 0}),
+          textColor({0, 0, 0}) {}
+  };
+
+  //! constructor to init member variables through parsing
+  CTimedTextDescription(ilo::ByteBuffer::const_iterator& begin,
+                     const ilo::ByteBuffer::const_iterator& end);
+
+  //! constructor to init member variables by setting
+  explicit CTimedTextDescription(const STextWriteConfig& textWriteConfig);
+
+  virtual uint32_t displayFlags() const { return m_displayFlags; }
+
+  virtual int8_t horizontalJustification() const { return m_horizontalJustification; }
+
+  virtual int8_t verticalJustification() const { return m_horizontalJustification; }
+
+  virtual std::array<uint8_t, 4> backgroundColor() const { return m_backgroundColor; }
+
+  virtual std::array<uint16_t, 4> defaultTextBox() const { return m_defaultTextBox; }
+
+  virtual uint16_t startChar() const { return m_startChar; }
+
+  virtual uint16_t endChar() const { return m_endChar; }
+
+  virtual uint16_t fontId() const { return m_fontId; }
+
+  virtual uint8_t faceStyleFlags() const { return m_faceStyleFlags; }
+
+  virtual uint8_t fontStyleSize() const { return m_fontSize; }
+
+  virtual std::array<uint8_t, 4> textColor() const { return m_textColor; }
+
+  SAttributeList getAttributeList() const override;
+
+ protected:
+  void updateSize(uint64_t size) override;
+
+  void writeHeader(ilo::ByteBuffer& buffer, ilo::ByteBuffer::iterator& position) const override;
+
+  void writeBox(ilo::ByteBuffer& buffer, ilo::ByteBuffer::iterator& position) const override;
+
+ private:
+  void parseBox(ilo::ByteBuffer::const_iterator& begin, const ilo::ByteBuffer::const_iterator& end);
+
+ private:
+  uint32_t m_displayFlags;
+  int8_t m_horizontalJustification;
+  int8_t m_verticalJustification;
+  std::array<uint8_t, 4> m_backgroundColor;
+  std::array<uint16_t, 4> m_defaultTextBox;
+  uint16_t m_startChar;
+  uint16_t m_endChar;
+  uint16_t m_fontId;
+  uint8_t m_faceStyleFlags;
+  uint8_t m_fontSize;
+  std::array<uint8_t, 4> m_textColor;
+};
+
+}  // namespace box
 }  // namespace isobmff
 }  // namespace mmt
