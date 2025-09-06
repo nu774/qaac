@@ -207,6 +207,9 @@ struct CTrackIdExtractor {
     auto tkhd = findFirstBoxWithFourccAndType<box::CTrackHeaderBox>(t, ilo::toFcc("tkhd"));
     ILO_ASSERT(tkhd.get() != nullptr, "tkhd box not found");
     ti.trackId = tkhd->trackID();
+    ti.enabled = tkhd->isEnabled();
+    ti.inMovie = tkhd->inMovie();
+    ti.inPreview = tkhd->inPreview();
   }
 };
 

@@ -171,6 +171,12 @@ struct CTrackInfo {
   TrackType type = TrackType::undefined;
   //! Track codec @see Codec
   Codec codec = Codec::undefined;
+  //! thkd flags: enabled
+  bool enabled = true;
+  //! thkd flags: inMovie
+  bool inMovie = true;
+  //! thkd flags: inPreview
+  bool inPreview = true;
   //! Track/media time scale
   uint32_t timescale = 0U;
   //! Track duration in time scale ticks
