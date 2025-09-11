@@ -124,19 +124,26 @@ SSampleExtraInfo CSampleReader::nextSample(CSample& sample, bool preallocate) {
 
   CMetaSample currentMetadataSample = m_trackSampleInfo[m_currentSampleNrToRead];
 
+  uint64_t size = currentMetadataSample.size;
   sample.duration = currentMetadataSample.duration;
   sample.ctsOffset = currentMetadataSample.ctsOffset;
   sample.isSyncSample = currentMetadataSample.isSyncSample;
   sample.fragmentNumber = currentMetadataSample.fragmentNumber;
   sample.sampleGroupInfo = currentMetadataSample.sampleGroupInfo;
 
+  while (size == 0) {
+    if (++m_currentSampleNrToRead >= m_trackSampleInfo.size())
+      return sExtraInfo;
+    currentMetadataSample = m_trackSampleInfo[m_currentSampleNrToRead];
+    size += currentMetadataSample.size;
+    sample.duration += currentMetadataSample.duration;
+  }
+
   if (preallocate && sample.rawData.capacity() < static_cast<size_t>(maxSampleSize())) {
     sample.rawData.reserve(static_cast<size_t>(maxSampleSize()));
   }
 
-  ILO_ASSERT(currentMetadataSample.size > 0, "Metadata sample has a size of 0");
-  sample.rawData.resize(static_cast<size_t>(currentMetadataSample.size));
-
+  sample.rawData.resize(static_cast<size_t>(size));
   m_input->seek(currentMetadataSample.offset, SeekingOrigin::beg);
   auto readCount = m_input->read(sample.rawData.begin(), sample.rawData.end());
   sample.rawData.resize(readCount);

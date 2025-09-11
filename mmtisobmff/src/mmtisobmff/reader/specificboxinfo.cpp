@@ -191,7 +191,7 @@ SMmtpInfo::SMmtpInfo(std::weak_ptr<CIsobmffReader::Pimpl> reader_pimpl) {
       } else if (tfhdBoxes[i]->defaultSampleSizePresent()) {
         sampleSize = tfhdBoxes[i]->defaultSampleSize();
       }
-      ILO_ASSERT(sampleSize != 0, "Found sample with size 0.");
+      //ILO_ASSERT(sampleSize != 0, "Found sample with size 0.");
       trunInfo.m_sampleSizes.push_back(sampleSize);
     }
     m_truns.push_back(trunInfo);
