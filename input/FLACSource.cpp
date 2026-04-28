@@ -96,10 +96,10 @@ void FLACSource::seekTo(int64_t count)
 size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 {
     if (!m_buffer.count()) {
-        if (m_module.stream_decoder_get_state(m_decoder.get()) ==
-                FLAC__STREAM_DECODER_END_OF_STREAM)
+        int res = m_module.stream_decoder_process_single(m_decoder.get());
+        if (res == 0) {
             return 0;
-        TRYFL(m_module.stream_decoder_process_single(m_decoder.get()));
+        }
     }
     uint32_t count = std::min(m_buffer.count(), nsamples);
     if (count) {
