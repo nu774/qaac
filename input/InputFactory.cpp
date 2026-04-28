@@ -17,6 +17,7 @@
 #endif
 #include "CAFSource.h"
 #include "SeekableInputStream.h"
+#include "MMTISOBMFFSource.h"
 
 std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
 {
@@ -51,6 +52,7 @@ std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
     } while (0)
 
     TRY_MAKE_SHARED(WaveSource, stream, m_ignore_length);
+    TRY_MAKE_SHARED(MMTISOBMFFSource, stream);
     TRY_MAKE_SHARED(MP4Source, stream);
     TRY_MAKE_SHARED(CAFSource, stream);
 #ifdef QAAC
