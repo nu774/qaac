@@ -21,6 +21,8 @@
 #include "CAFSink.h"
 #include "SoundIoOutDevice.h"
 #include "PeakSink.h"
+#include "MMTISOBMFFAACSink.h"
+#include "MMTISOBMFFALACSink.h"
 #include "cuesheet.h"
 #include "CompositeSource.h"
 #include "NullSource.h"
@@ -865,9 +867,10 @@ std::shared_ptr<ISink> open_sink(const std::string &ofilename,
         return std::make_shared<CAFSink>(ofilename, asbd, channel_layout,
                                          cookie);
     else if (opts.isALAC())
-        return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
+        return std::make_shared<MMTISOBMFFALACSink>(ofilename, cookie);
     else if (opts.isAAC())
-        return std::make_shared<MP4Sink>(ofilename, asc, !opts.no_optimize, opts.gapless_mode + 1);
+        return std::make_shared<MMTISOBMFFAACSink>(ofilename, cookie,
+                                                    opts.gapless_mode);
     throw std::runtime_error("XXX");
 }
 
@@ -1067,9 +1070,8 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
     if (opts.is_caf)
         sink = std::make_shared<CAFSink>(ofilename, oasbd,
                                          channel_layout, cookie);
-    else {
-        sink = std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
-    }
+    else
+        sink = std::make_shared<MMTISOBMFFALACSink>(ofilename, cookie);
     encoder.setSource(chain.back());
     encoder.setSink(sink);
     set_tags(chain[0].get(), sink.get(), opts, "Apple Lossless Encoder");
