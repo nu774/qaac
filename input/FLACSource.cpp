@@ -33,7 +33,7 @@ FLACSource::FLACSource(std::shared_ptr<IInputStream> stream):
     m_eof(false),
     m_giveup(false),
     m_initialize_done(false),
-    m_length(0),
+    m_length(~0ULL),
     m_position(0),
     m_stream(stream),
     m_module(FLACModule::instance())
@@ -95,6 +95,10 @@ void FLACSource::seekTo(int64_t count)
 
 size_t FLACSource::readSamples(void *buffer, size_t nsamples)
 {
+    if (m_length != ~0ULL && m_position + nsamples > m_length)
+        nsamples = static_cast<size_t>(m_length - m_position);
+    if (nsamples == 0)
+        return 0;
     if (!m_buffer.count()) {
         int res = m_module.stream_decoder_process_single(m_decoder.get());
         if (res == 0) {
@@ -114,8 +118,10 @@ FLAC__StreamDecoderReadStatus
 FLACSource::readCallback(FLAC__byte *buffer, size_t *bytes)
 {
     ssize_t n = m_stream->read(buffer, *bytes);
-    if (n <= 0) {
+    if (n < *bytes) {
         m_eof = true;
+    }
+    if (n <= 0) {
         return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
     }
     *bytes = n;
