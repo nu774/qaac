@@ -92,6 +92,9 @@ amm-info@iis.fraunhofer.de
 #include <type_traits>
 
 // External includes
+#include "box/boxregistryentry.h"
+#include "box/tkhdbox.h"
+#include "box/trackreferencetypebox.h"
 #include "ilo/memory.h"
 
 // Internal includes
@@ -99,6 +102,8 @@ amm-info@iis.fraunhofer.de
 #include "mmtisobmff/helper/commonhelpertools.h"
 #include "mmtisobmff/helper/videohelpertools.h"
 #include "common/logging.h"
+#include "mmtisobmff/types.h"
+#include "reader/readerinfo.h"
 #include "writer/trak_tree_enhancer.h"
 #include "writer/mpegh_tree_enhancer.h"
 #include "writer/mp4a_tree_enhancer.h"
@@ -107,11 +112,13 @@ amm-info@iis.fraunhofer.de
 #include "writer/jxs_tree_enhancer.h"
 #include "writer/vvc_tree_enhancer.h"
 #include "writer/alac_tree_enhancer.h"
+#include "writer/text_tree_enhancer.h"
 #include "writer/trak_sample_enhancer.h"
 #include "writer/mediafragment_tree_builder.h"
 #include "writer/traf_tree_enhancer.h"
 #include "writer/traf_sample_enhancer.h"
 #include "writer/writerpimpl.h"
+#include "trak_reference_enhancer.h"
 #include "tree/boxtree.h"
 #include "service/factory.h"
 #include "service/servicesingleton.h"
@@ -136,6 +143,11 @@ struct CTrackWriter::SPimpl {
     m_enhancerConfig.tkhdConfig.width = config.width;
     m_enhancerConfig.tkhdConfig.height = config.height;
   };
+
+  SPimpl(const STextTrackConfig& config) {
+    m_enhancerConfig.hdlrConfig.handlerType = ilo::toFcc("text");
+    m_enhancerConfig.tkhdConfig.trackIsEnabled = false;
+  }
 
   std::reference_wrapper<BoxElement> createTrack() {
     auto wPimpl = wP.lock();
@@ -524,6 +536,7 @@ void CVvcTrackWriter::addSample(const SVvcNalus& nalus) {
 CAlacTrackWriter::CAlacTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPimpl,
                                    const SAlacTrackConfig& config)
     : CTrackWriter(writerPimpl, config) {
+  
   auto trakBoxElement = m_pimpl->createTrack();
 
   auto stsdBoxElements = findAllElementsWithFourccAndBoxType<box::CSampleDescriptionBox>(
@@ -545,6 +558,62 @@ CAlacTrackWriter::CAlacTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPi
 }
 
 CAlacTrackWriter::~CAlacTrackWriter() = default;
+
+
+/* ######---TEXT Track Writer---###### */
+CTextTrackWriter::CTextTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPimpl,
+                                   const STextTrackConfig& config)
+    : CTrackWriter(writerPimpl, config) {
+  auto trakBoxElement = m_pimpl->createTrack();
+
+  auto stsdBoxElements = findAllElementsWithFourccAndBoxType<box::CSampleDescriptionBox>(
+      trakBoxElement, ilo::toFcc("stsd"));
+  ILO_ASSERT(stsdBoxElements.size() == 1,
+             "one and only one stsd box should be present for each trak");
+  BoxElement& stsdBoxElement = const_cast<BoxElement&>(stsdBoxElements[0].get());
+
+  STextEnhancerConfig textEnhancerConfig;
+  CTextTreeEnhancer{stsdBoxElement, textEnhancerConfig};
+
+  auto wPimpl = writerPimpl.lock();
+  auto trakBoxElements = findAllElementsWithFourccAndBoxType<box::CContainerBox>(
+        *(wPimpl->m_tree), ilo::toFcc("trak"));
+  for (auto &&trak: trakBoxElements) {
+    auto tkhdBox = findFirstBoxWithType<box::CTrackHeaderBox>(trak);
+    if (tkhdBox->trackID() != config.refTrackId)
+      continue;
+    auto trefElements = findAllElementsWithFourccAndBoxType<box::CContainerBox>(trak, ilo::toFcc("tref"));
+    if (trefElements.size()) {
+      auto chapBox = findFirstBoxWithType<box::CTrackReferenceTypeBox>(trefElements[0]);
+      chapBox->trackIds().push_back(m_pimpl->m_trackId);
+    } else {
+      STrackReferenceEnhancerConfig config;
+      config.config.trackIds.push_back(m_pimpl->m_trackId);
+      CTrakReferenceEnhancer{ const_cast<BoxElement&>(trak.get()), config };
+    }
+    break;
+  }
+
+  wPimpl->fillStaticMoovInfo();
+}
+
+CTextTrackWriter::~CTextTrackWriter() = default;
+
+void CTextTrackWriter::addSample(const CSample& sample) {
+  CTrackWriter::addSample(sample);
+}
+
+void CTextTrackWriter::addSample(const std::string& title, std::uint64_t duration) {
+  CSample sample;
+  sample.rawData.resize(title.size() + 14);
+  sample.rawData[0] = title.size() >> 8;
+  sample.rawData[1] = title.size() & 0xff;
+  std::memcpy(sample.rawData.data() + 2, title.data(), title.size());
+  std::memcpy(sample.rawData.data() + title.size() + 2, "\x00\x00\x00\x0c" "encd" "\x00\x00\x01\x00", 12);
+  sample.duration = duration;
+  sample.isSyncSample = true;
+  addSample(sample);
+}
 
 
 }  // namespace isobmff

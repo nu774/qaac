@@ -1,7 +1,7 @@
 /*-----------------------------------------------------------------------------
 Software License for The Fraunhofer FDK MPEG-H Software
 
-Copyright (c) 2017 - 2023 Fraunhofer-Gesellschaft zur Förderung der angewandten
+Copyright (c) 2018 - 2023 Fraunhofer-Gesellschaft zur Förderung der angewandten
 Forschung e.V. and Contributors
 All rights reserved.
 
@@ -82,71 +82,31 @@ amm-info@iis.fraunhofer.de
 
 /*
  * Project: MPEG-4 ISO Base Media File Format (ISO BMFF) library
- * Content: enhance an existing tree with track-related info
+ * Content: Enhance the trak with an udta box for user defined data
  */
 
-// System includes
-#include <memory>
+#pragma once
 
-// External includes
+// System headers
+#include <vector>
 
-// project includes
-#include "trak_tree_enhancer.h"
-#include "box/containerbox.h"
-#include "box/gminbox.h"
-#include "box/smhdbox.h"
-#include "box/textbox.h"
-#include "box/vmhdbox.h"
-#include "service/factory.h"
-#include "service/servicesingleton.h"
+// Internal headers
+#include "tree/boxtree.h"
+#include "treeenhancer.h"
+#include "box/trackreferencetypebox.h"
 
 namespace mmt {
 namespace isobmff {
-CTrakTreeEnhancer::CTrakTreeEnhancer(BoxElement& subTree,
-                                     const STrakTreeEnhancerConfig& trakconfig) {
-  ILO_ASSERT_WITH(subTree.item->type() == (ilo::toFcc("trak")), std::invalid_argument,
-                  "TrakTreeEnhancer: the trak box element was not provided!");
 
-  setupServicesOnce();
-  auto nodefactory = CServiceLocatorSingleton::instance().lock()->getService<INodeFactory>().lock();
-  nodefactory->createNode(subTree, trakconfig.tkhdConfig);
-  auto mdia = nodefactory->createNode(
-      subTree, box::CContainerBox::SContainerBoxWriteConfig(ilo::toFcc("mdia")));
-  nodefactory->createNode(mdia, trakconfig.mdhdConfig);
-  nodefactory->createNode(mdia, trakconfig.hdlrConfig);
-  auto minf = nodefactory->createNode(
-      mdia, box::CContainerBox::SContainerBoxWriteConfig(ilo::toFcc("minf")));
-  if (trakconfig.hdlrConfig.handlerType == ilo::toFcc("soun")) {
-    box::CSoundMediaHeaderBox::SSmhdBoxWriteConfig smhdConf;
-    nodefactory->createNode(minf, smhdConf);
-  } else if (trakconfig.hdlrConfig.handlerType == ilo::toFcc("vide")) {
-    box::CVideoMediaHeaderBox::SVmhdBoxWriteConfig vmhdConf;
-    nodefactory->createNode(minf, vmhdConf);
-  } else if (trakconfig.hdlrConfig.handlerType == ilo::toFcc("text")) {
-    auto gmhd = nodefactory->createNode(
-      minf, box::CContainerBox::SContainerBoxWriteConfig(ilo::toFcc("gmhd")));
-    box::CGenericMediaInformationBox::SGminBoxWriteConfig gminConf;
-    nodefactory->createNode(gmhd, gminConf);
-    box::CTextBox::STextBoxWriteConfig textConf;
-    nodefactory->createNode(gmhd, textConf);
-  } else if (trakconfig.hdlrConfig.handlerType == ilo::toFcc("hint")) {
-    throw std::invalid_argument(
-        "'Hmhd' box needed to write 'hint' handler tracks is not implemented yet");
-  } else {
-    ILO_LOG_WARNING("No media header available for unknown handler type of: %s",
-                    ilo::toString(trakconfig.hdlrConfig.type).c_str());
-  }
-  auto dinf = nodefactory->createNode(
-      minf, box::CContainerBox::SContainerBoxWriteConfig(ilo::toFcc("dinf")));
-  auto dref = nodefactory->createNode(dinf, trakconfig.drefConfig);
-  if (trakconfig.drefConfig.entryCount > 0) {
-    nodefactory->createNode(dref, trakconfig.urlConfig);
-  }
-  auto stbl = nodefactory->createNode(
-      minf, box::CContainerBox::SContainerBoxWriteConfig(ilo::toFcc("stbl")));
-  nodefactory->createNode(stbl, trakconfig.stsdConfig);
+struct STrackReferenceEnhancerConfig {
+  STrackReferenceEnhancerConfig() : config(ilo::toFcc("chap")) {}
+  box::CTrackReferenceTypeBox::STrackReferenceTypeBoxWriteConfig config;
+};
 
-  updateSizeAndReturnElementSize(subTree);
-}
+class CTrakReferenceEnhancer : public ITreeEnhancer {
+ public:
+  CTrakReferenceEnhancer(BoxElement& subTree, const STrackReferenceEnhancerConfig& config);
+};
+
 }  // namespace isobmff
 }  // namespace mmt

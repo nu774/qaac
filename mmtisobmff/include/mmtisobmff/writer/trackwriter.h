@@ -672,7 +672,7 @@ struct SAlacTrackConfig : SBaseAudioConfig {
 class CAlacTrackWriter : public CTrackWriter {
  public:
   /*!
-   * @brief Creates an MP4A based AAC track writer
+   * @brief Creates an ALAC track writer
    *
    * @note Needs to be created via CIsobmffWriter::trackWriter function call.
    * @code auto twriter = writer.trackWriter<CAlacTrackWriter>(config) @endcode
@@ -683,8 +683,37 @@ class CAlacTrackWriter : public CTrackWriter {
   virtual ~CAlacTrackWriter() override;
 };
 
+/* ######---TEXT Track Writer---###### */
 
+//! TEXT config for
+struct STextTrackConfig : STrackConfig {
+  STextTrackConfig() { codingName = ilo::toFcc("text"); }
+  uint32_t refTrackId = 0;
+};
 
+/*!
+ * @brief Track writer for the TEXT codec
+ *
+ * @note One @ref CSample shall only contain one TEXT AU.
+ *
+ * \ingroup mp4trackwriter
+ */
+class CTextTrackWriter : public CTrackWriter {
+ public:
+  /*!
+   * @brief Creates a Text track writer
+   *
+   * @note Needs to be created via CIsobmffWriter::trackWriter function call.
+   * @code auto twriter = writer.trackWriter<CTextTrackWriter>(config) @endcode
+   * @note The @ref CSample structure shall contain one raw access unit (AU).
+   */
+  CTextTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPimpl,
+                   const STextTrackConfig& config);
+  virtual ~CTextTrackWriter() override;
+
+  void addSample(const CSample& sample) override;
+  void addSample(const std::string& title, uint64_t duration);
+};
 
 }  // namespace isobmff
 }  // namespace mmt
