@@ -7,7 +7,7 @@
 #include "win32util.h"
 #include "misc.h"
 
-class MP4SinkBase: public ITagStore {
+class MP4SinkBase: public ITagStore, public IChapterWriter {
 protected:
     std::wstring m_filename;
     std::shared_ptr<FILE> m_fp;
@@ -33,10 +33,9 @@ public:
     {
         m_tags[key] = value;
     }
-    template <class InputIterator>
-    void setChapters(InputIterator first, InputIterator last)
+    void setChapters(const std::vector<misc::chapter_t> &chapters)
     {
-        m_chapters.assign(first, last);
+        m_chapters = chapters;
     }
     void addArtwork(const std::vector<char> &data)
     {

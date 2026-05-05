@@ -2,6 +2,7 @@
 #define _ISINK_H
 
 #include <string>
+#include "misc.h"
 
 struct ISink {
     virtual ~ISink() {}
@@ -12,6 +13,11 @@ struct ISink {
 struct ITagStore {
     virtual ~ITagStore() {}
     virtual void setTag(const std::string &key, const std::string &value) = 0;
+};
+
+struct IChapterWriter {
+    virtual ~IChapterWriter() {}
+    virtual void setChapters(const std::vector<misc::chapter_t> &chapters) = 0;
 };
 
 #endif

@@ -540,10 +540,18 @@ static
 void set_tags(ISource *src, ISink *sink, const Options &opts,
               const std::wstring encoder_config)
 {
-    ITagStore *tagstore = dynamic_cast<ITagStore*>(sink);
+    IChapterParser* cp = dynamic_cast<IChapterParser*>(src);
+    if (cp) {
+        auto& chapters = cp->getChapters();
+        IChapterWriter* cs = dynamic_cast<IChapterWriter*>(sink);
+        if (chapters.size() && cs) {
+            cs->setChapters(chapters);
+        }
+    }
+    ITagStore* tagstore = dynamic_cast<ITagStore*>(sink);
     if (!tagstore)
         return;
-    MP4SinkBase *mp4sink = dynamic_cast<MP4SinkBase*>(tagstore);
+    MP4SinkBase* mp4sink = dynamic_cast<MP4SinkBase*>(tagstore);
     ITagParser *parser = dynamic_cast<ITagParser*>(src);
     if (parser) {
         const std::map<std::string, std::string> &tags = parser->getTags();
@@ -560,14 +568,6 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
                 }
             } else if (accept_tag(ssi->first))
                 tagstore->setTag(ssi->first, ssi->second);
-        }
-        if (mp4sink) {
-            IChapterParser *cp = dynamic_cast<IChapterParser*>(src);
-            if (cp) {
-                auto &chapters = cp->getChapters();
-                if (chapters.size())
-                    mp4sink->setChapters(chapters.begin(), chapters.end());
-            }
         }
     }
     tagstore->setTag("encoding application",
@@ -733,7 +733,7 @@ void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
             double duration = stat->samplesRead() /
                 encoder->getInputDescription().mSampleRate;
             auto xs = misc::convertChaptersToQT(opts.chapters, duration);
-            sink->setChapters(xs.begin(), xs.end());
+            sink->setChapters(xs);
         } catch (const std::runtime_error &e) {
             LOG(L"WARNING: %s\n", errormsg(e).c_str());
         }
