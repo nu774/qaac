@@ -10,6 +10,7 @@
 #include <mpeg/id3v2/frames/textidentificationframe.h>
 #include <mpeg/id3v2/frames/attachedpictureframe.h>
 #include "metadata.h"
+#include "misc.h"
 #ifdef _WIN32
 #include "platformutil.h"
 #endif
@@ -567,119 +568,174 @@ namespace M4A {
         return result;
     }
 
+    class UDTAReader {
+        const uint8_t *ptr;
+        int size;
+    public:    
+        UDTAReader(const void *p, size_t len) {
+            ptr = static_cast<const uint8_t*>(p);
+            size = len;
+        }
+        int remaining() {
+            return size;
+        }
+        UDTAReader sub_reader(size_t len) {
+            return UDTAReader(ptr, len);
+        }
+        uint32_t u32be()
+        {
+            if (size < 4) return 0;
+            uint32_t rc = ptr[0]<<24 | ptr[1]<<16 |ptr[2]<<8 | ptr[3];
+            ptr += 4;
+            size -= 4;
+            return rc;
+        }
+        uint32_t u64be()
+        {
+            uint32_t high = u32be();
+            uint32_t lo = u32be();
+            return static_cast<uint64_t>(high)<<32 | lo;
+        }
+        uint8_t u8()
+        {
+            if (size == 0) return 0;
+            uint8_t value = *ptr++;
+            size--;
+            return value;
+        }
+        uint32_t header(uint32_t *len)
+        {
+            if (size < 8) {
+                *len = 0;
+                return 0;
+            }
+            *len = u32be() - 8;
+            return u32be();
+        }
+        std::string str(int len)
+        {
+            int n = std::min(len, size);
+            std::string res(ptr, ptr + n);
+            ptr += n;
+            size -= n;
+            return res;
+        }
+        std::string remaining_str()
+        {
+            std::string res(ptr, ptr + size);
+            ptr += size;
+            size = 0;
+            return res;
+        }
+        void skip(int len)
+        {
+            int n = std::min(len, size);
+            ptr += n;
+            size -= n;
+        }
+    };
+
+    class UDTAWriter {
+        std::vector<uint8_t> buffer;
+    public:
+        int position() {
+            return buffer.size();
+        }
+        const std::vector<uint8_t> &data() {
+            return buffer;
+        }
+        void write_bytes(const void *data, int len) {
+            const uint8_t *p = static_cast<const uint8_t*>(data);
+            std::copy(p, p + len, std::back_inserter(buffer));
+        }
+        void write_bytes_at(int pos, const void *data, int len) {
+            const uint8_t *p = static_cast<const uint8_t*>(data);
+            if (pos + len > buffer.size()) {
+                buffer.resize(pos + len);
+            }
+            std::copy(p, p + len, &buffer[pos]);
+        }
+        void write_u32be(uint32_t n) {
+            uint8_t data[4] = {
+                static_cast<uint8_t>(n>>24),
+                static_cast<uint8_t>((n>>16) & 0xff),
+                static_cast<uint8_t>((n>>8) & 0xff),
+                static_cast<uint8_t>(n & 0xff)
+            };
+            write_bytes(data, 4);
+        }
+        void write_u32be_at(int pos, uint32_t n) {
+            uint8_t data[4] = {
+                static_cast<uint8_t>(n>>24),
+                static_cast<uint8_t>((n>>16) & 0xff),
+                static_cast<uint8_t>((n>>8) & 0xff),
+                static_cast<uint8_t>(n & 0xff)
+            };
+            write_bytes_at(pos, data, 4);
+        }
+        void write_u64be(uint64_t n) {
+            write_u32be(n >> 32);
+            write_u32be(n & 0xffffffff);
+        }
+        void write_u64be_at(int pos, uint64_t n) {
+            write_u32be_at(pos, n >> 32);
+            write_u32be_at(pos + 4, n & 0xffffffff);
+        }
+    };
+
     class ITMFParser {
-        class Reader {
-            const uint8_t *ptr;
-            int size;
-        public:    
-            Reader(const void *p, size_t len) {
-                ptr = static_cast<const uint8_t*>(p);
-                size = len;
-            }
-            int remaining() {
-                return size;
-            }
-            Reader sub_reader(size_t len) {
-                return Reader(ptr, len);
-            }
-            uint32_t u32be()
-            {
-                if (size < 4) return 0;
-                uint32_t rc = ptr[0]<<24 | ptr[1]<<16 |ptr[2]<<8 | ptr[3];
-                ptr += 4;
-                size -= 4;
-                return rc;
-            }
-            uint8_t u8()
-            {
-                if (size == 0) return 0;
-                uint8_t value = *ptr++;
-                size--;
-                return value;
-            }
-            uint32_t header(uint32_t *len)
-            {
-                if (size < 8) {
-                    *len = 0;
-                    return 0;
-                }
-                *len = u32be() - 8;
-                return u32be();
-            }
-            std::string str(int len)
-            {
-                int n = std::min(len, size);
-                std::string res(ptr, ptr + n);
-                ptr += n;
-                size -= n;
-                return res;
-            }
-            std::string remaining_str()
-            {
-                std::string res(ptr, ptr + size);
-                ptr += size;
-                size = 0;
-                return res;
-            }
-            void skip(int len)
-            {
-                int n = std::min(len, size);
-                ptr += n;
-                size -= n;
-            }
-        };
         std::vector<ITMFItem> items;
     public:
         ITMFParser(const void *p, size_t len) {
-            Reader reader(p, len);
+            UDTAReader reader(p, len);
             udta(reader);
         }
         std::vector<ITMFItem> result() {
             return items;
         }
-        void udta(Reader &reader) {
+        void udta(UDTAReader &reader) {
             uint32_t size;
             while (true) {
                 uint32_t type = reader.header(&size);
                 if (!type) break;
                 if (type == 'meta') {
-                    Reader sub = reader.sub_reader(size);
+                    UDTAReader sub = reader.sub_reader(size);
                     meta(sub);
                 }
                 reader.skip(size);
             }
         }
-        void meta(Reader &reader) {
+        void meta(UDTAReader &reader) {
             reader.skip(4); // version: 0, flags: 0
             uint32_t size;
             while (true) {
                 uint32_t type = reader.header(&size);
                 if (!type) break;
                 if (type == 'ilst') {
-                    Reader sub = reader.sub_reader(size);
+                    UDTAReader sub = reader.sub_reader(size);
                     ilst(sub);
                 }
                 reader.skip(size);
             }
         }
-        void ilst(Reader &reader) {
+        void ilst(UDTAReader &reader) {
             uint32_t size;
             while (true) {
                 uint32_t type = reader.header(&size);
                 if (!type) break;
-                Reader sub = reader.sub_reader(size);
+                UDTAReader sub = reader.sub_reader(size);
                 ITMFItem item;
                 item.code = type;
                 this->item(sub, item);
                 reader.skip(size);
             }
         }
-        void item(Reader &reader, ITMFItem &item) {
+        void item(UDTAReader &reader, ITMFItem &item) {
             uint32_t size;
             while (true) {
                 uint32_t type = reader.header(&size);
                 if (!type) break;
-                Reader sub = reader.sub_reader(size);
+                UDTAReader sub = reader.sub_reader(size);
                 switch (type) {
                 case 'mean':
                     mean(sub, item);
@@ -695,57 +751,62 @@ namespace M4A {
             }
             items.push_back(item);
         }
-        void mean(Reader &reader, ITMFItem &item) {
+        void mean(UDTAReader &reader, ITMFItem &item) {
             reader.skip(4);
             item.mean = reader.remaining_str();
         }
-        void name(Reader &reader, ITMFItem &item) {
+        void name(UDTAReader &reader, ITMFItem &item) {
             reader.skip(4);
             item.name = reader.remaining_str();
         }
-        void data(Reader &reader, ITMFItem &item) {
+        void data(UDTAReader &reader, ITMFItem &item) {
             auto sub = reader.sub_reader(4);
             type_indicator(sub, item);
             reader.skip(8);
             item.value = reader.remaining_str();
         }
-        void type_indicator(Reader &reader, ITMFItem &item) {
+        void type_indicator(UDTAReader &reader, ITMFItem &item) {
             reader.skip(3);
             item.type = reader.u8();
         }
     };
 
-    class ITMFSerializer {
-        class Writer {
-            std::vector<uint8_t> buffer;
-        public:
-            int position() {
-                return buffer.size();
-            }
-            const std::vector<uint8_t> &data() {
-                return buffer;
-            }
-            void write_bytes(const void *data, int len) {
-                const uint8_t *p = static_cast<const uint8_t*>(data);
-                std::copy(p, p + len, std::back_inserter(buffer));
-            }
-            void write_bytes_at(int pos, const void *data, int len) {
-                const uint8_t *p = static_cast<const uint8_t*>(data);
-                if (pos + len > buffer.size()) {
-                    buffer.resize(pos + len);
+    class NeroChapterParser {
+        std::vector<misc::chapter_t> items;
+    public:
+        NeroChapterParser(const void *p, size_t len) {
+            UDTAReader reader(p, len);
+            udta(reader);
+        }
+        std::vector<misc::chapter_t> result() {
+            return items;
+        }
+        void udta(UDTAReader &reader) {
+            uint32_t size;
+            while (true) {
+                uint32_t type = reader.header(&size);
+                if (!type) break;
+                if (type == 'chpl') {
+                    UDTAReader sub = reader.sub_reader(size);
+                    chpl(sub);
                 }
-                std::copy(p, p + len, &buffer[pos]);
+                reader.skip(size);
             }
-            void write_u32be(uint32_t n) {
-                uint8_t data[4] = { static_cast<uint8_t>(n>>24), static_cast<uint8_t>((n>>16) & 0xff), static_cast<uint8_t>((n>>8) & 0xff), static_cast<uint8_t>(n & 0xff) };
-                write_bytes(data, 4);
+        }
+        void chpl(UDTAReader &reader) {
+            reader.skip(5); // version(u8), flags(u24), reserved(u8)
+            uint32_t count = reader.u32be();
+            for (uint32_t i = 0; i < count; ++i) {
+                uint64_t startTime = reader.u64be();
+                uint8_t len = reader.u8();
+                std::string title = reader.str(len);
+                items.emplace_back(title, startTime / 10000000.0);
             }
-            void write_u32be_at(int pos, uint32_t n) {
-                uint8_t data[4] = { static_cast<uint8_t>(n>>24), static_cast<uint8_t>((n>>16) & 0xff), static_cast<uint8_t>((n>>8) & 0xff), static_cast<uint8_t>(n & 0xff) };
-                write_bytes_at(pos, data, 4);
-            }
-        };
-        Writer writer;
+        }
+    };
+
+    class ITMFSerializer {
+        UDTAWriter writer;
         std::vector<ITMFItem> items;
     public:
         ITMFSerializer(const std::vector<ITMFItem> &items) {
@@ -821,9 +882,43 @@ namespace M4A {
         }
     };
 
+    class NeroChapterSerializer {
+        UDTAWriter writer;
+        std::vector<misc::chapter_t> items;
+    public:
+        NeroChapterSerializer(const std::vector<misc::chapter_t>& items) {
+            this->items = items;
+            write_chpl();
+        }
+        const std::vector<uint8_t>& result() {
+            return writer.data();
+        }
+    private:
+        void write_chpl() {
+            uint32_t position = writer.position();
+            writer.write_u32be(0);
+            writer.write_bytes("chpl", 4);
+            writer.write_bytes("\x01\x00\x00\x00\x00", 5); // version + flags + reserved
+            writer.write_u32be(items.size());
+            for (auto&& item : items) {
+                writer.write_u64be(static_cast<uint64_t>(item.second * 10000000));
+                std::string title = item.first;
+                uint8_t len = title.size();
+                writer.write_bytes(&len, 1);
+                writer.write_bytes(title.data(), title.size());
+            }
+            writer.write_u32be_at(position, writer.position() - position);
+        }
+    };
+
     std::vector<ITMFItem> parseUdtaMeta(const void *udta, size_t len)
     {
         return ITMFParser(udta, len).result();
+    }
+
+    std::vector<misc::chapter_t> parseUdtaChpl(const void *udta, size_t len)
+    {
+        return NeroChapterParser(udta, len).result();
     }
 
     std::string parseValue(const ITMFItem &item)
@@ -886,6 +981,11 @@ namespace M4A {
     std::vector<uint8_t> serializeUdtaMeta(const std::vector<ITMFItem> &items)
     {
         return ITMFSerializer(items).result();
+    }
+
+    std::vector<uint8_t> serializeUdtaChpl(const std::vector<misc::chapter_t>& items)
+    {
+        return NeroChapterSerializer(items).result();
     }
 
     uint8_t getTagTypeFromFourCC(uint32_t fcc, unsigned *size)

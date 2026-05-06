@@ -100,9 +100,12 @@ namespace M4A {
     std::map<std::string, std::string> fetchTags(MP4FileX &file);
 
     std::vector<ITMFItem> parseUdtaMeta(const void *udta, size_t len);
+    std::vector<misc::chapter_t> parseUdtaChpl(const void *udta, size_t len);
+    
     std::map<std::string, std::string> convertToStringTags(const std::vector<ITMFItem> &tags);
     std::vector<ITMFItem> convertToM4aTags(const std::map<std::string, std::string> tags);
     std::vector<uint8_t> serializeUdtaMeta(const std::vector<ITMFItem> &items);
+    std::vector<uint8_t> serializeUdtaChpl(const std::vector<misc::chapter_t>& items);
 }
 
 namespace CAF {
