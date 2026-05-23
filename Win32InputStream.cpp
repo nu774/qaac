@@ -69,7 +69,9 @@ int64_t Win32InputStream::seek(int64_t off, int whence)
         }
         if (m_eof && m_fd_pos < off)
             return -1;
-        return seek(off, SEEK_SET);
+
+        m_pos = off;
+        return m_pos;
     }
     return seekRaw(off);
 }
