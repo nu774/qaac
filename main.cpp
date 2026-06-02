@@ -1,6 +1,7 @@
 #include <clocale>
 #include <numeric>
 #include <regex>
+#include "ISink.h"
 #include "win32util.h"
 #include "options.h"
 #include "InputFactory.h"
@@ -551,20 +552,21 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
     ITagStore* tagstore = dynamic_cast<ITagStore*>(sink);
     if (!tagstore)
         return;
-    MP4SinkBase* mp4sink = dynamic_cast<MP4SinkBase*>(tagstore);
+    IArtworkWriter* artWriter = dynamic_cast<IArtworkWriter*>(tagstore);
     ITagParser *parser = dynamic_cast<ITagParser*>(src);
     if (parser) {
         const std::map<std::string, std::string> &tags = parser->getTags();
         std::map<std::string, std::string>::const_iterator ssi;
         for (ssi = tags.begin(); ssi != tags.end(); ++ssi) {
             if (!strcasecmp(ssi->first.c_str(), "cover art")) {
-                if (mp4sink && opts.copy_artwork && !opts.artworks.size()) {
+                if (opts.copy_artwork && !opts.artworks.size()) {
                     std::vector<char> vec(ssi->second.begin(),
                                           ssi->second.end());
                     if (opts.artwork_size)
                         WICConvertArtwork(vec.data(), vec.size(),
                                           opts.artwork_size, &vec);
-                    mp4sink->addArtwork(vec);
+                    if (artWriter)
+                        artWriter->addArtwork(vec);
                 }
             } else if (accept_tag(ssi->first))
                 tagstore->setTag(ssi->first, ssi->second);
@@ -582,9 +584,9 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
     for (auto swi = opts.longtags.begin(); swi != opts.longtags.end(); ++swi)
         tagstore->setTag(swi->first, swi->second);
 
-    if (mp4sink) {
+    if (artWriter) {
         for (size_t i = 0; i < opts.artworks.size(); ++i)
-            mp4sink->addArtwork(opts.artworks[i]);
+            artWriter->addArtwork(opts.artworks[i]);
     }
 }
 

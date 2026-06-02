@@ -21,6 +21,11 @@ struct ITagStore {
     virtual void setTag(const std::string &key, const std::string &value) = 0;
 };
 
+struct IArtworkWriter {
+    virtual ~IArtworkWriter() {}
+    virtual void addArtwork(const std::vector<char> &data) = 0;
+};
+
 struct IChapterWriter {
     virtual ~IChapterWriter() {}
     virtual void setChapters(const std::vector<misc::chapter_t> &chapters) = 0;

@@ -7,7 +7,7 @@
 #include "win32util.h"
 #include "misc.h"
 
-class MP4SinkBase: public ITagStore, public IChapterWriter {
+class MP4SinkBase: public ITagStore, public IChapterWriter, public IArtworkWriter {
 protected:
     std::wstring m_filename;
     std::shared_ptr<FILE> m_fp;
