@@ -99,6 +99,8 @@ namespace M4A {
 
     std::map<std::string, std::string> fetchTags(MP4FileX &file);
 
+    int getImageFileType(const void *data, size_t size);
+
     std::vector<ITMFItem> parseUdtaMeta(const void *udta, size_t len);
     std::vector<misc::chapter_t> parseUdtaChpl(const void *udta, size_t len);
     

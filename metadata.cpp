@@ -568,6 +568,28 @@ namespace M4A {
         return result;
     }
 
+    int getImageFileType(const void *data, size_t size)
+    {
+        if (size < 4) return 0;
+
+        const uint8_t *p = static_cast<const uint8_t *>(data);
+
+        uint32_t fcc = FOURCC(p[0], p[1], p[2], p[3]);
+
+        switch (fcc) {
+        case FOURCC('G','I','F','8'):
+            return ITMF_TYPE_GIF;
+        case FOURCC(0xff,0xd8,0xff,0xe0):
+            return ITMF_TYPE_JPEG;
+        case FOURCC(0x89,'P','N','G'):
+            return ITMF_TYPE_PNG;
+        }
+        if (p[0] == 'B' && p[1] == 'M') {
+            return ITMF_TYPE_BMP;
+        }
+        return 0;
+    }
+
     class UDTAReader {
         const uint8_t *ptr;
         int size;
