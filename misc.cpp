@@ -87,7 +87,7 @@ namespace misc
             }
             uchardet_data_end(detector.get());
             auto charset = uchardet_get_charset(detector.get());
-            if (charset < 0)
+            if (!charset)
                 throw std::runtime_error(strutil::w2us(path + L": cannot detect code page"));
             codepage = getCodePageFromCharset(charset);
             if (codepage < 0)
