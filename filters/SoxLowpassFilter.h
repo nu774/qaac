@@ -1,7 +1,7 @@
 #ifndef SOXLPF_H
 #define SOXLPF_H
 
-#include "SoxConvolverModule.h"
+#include "SoXConvolverModule.h"
 #include "FilterBase.h"
 #include "util.h"
 

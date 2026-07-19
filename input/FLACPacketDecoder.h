@@ -4,7 +4,7 @@
 #include <memory>
 #include "PacketDecoder.h"
 #include "util.h"
-#include "flacmodule.h"
+#include "FLACModule.h"
 
 class FLACPacketDecoder: public IPacketDecoder {
     typedef FLACPacketDecoder ThisType;

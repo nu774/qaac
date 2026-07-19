@@ -3,7 +3,7 @@
 
 #include <FLAC/all.h>
 #include "ISource.h"
-#include "flacmodule.h"
+#include "FLACModule.h"
 #include "IInputStream.h"
 
 class FLACSource: public ISeekableSource, public ITagParser

@@ -3,7 +3,7 @@
 
 #include "CoreAudioToolbox.h"
 #include "AudioConverterXX.h"
-#include "IEncoder.h"
+#include "iencoder.h"
 
 class CoreAudioEncoder: public IEncoder, public IEncoderStat {
     AudioConverterXX m_converter;

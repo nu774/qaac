@@ -1,7 +1,7 @@
 #ifndef ALACENC_H
 #define ALACENC_H
 
-#include "IEncoder.h"
+#include "iencoder.h"
 #include <stdint.h>
 #include <ALACEncoder.h>
 
