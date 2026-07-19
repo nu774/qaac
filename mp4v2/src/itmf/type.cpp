@@ -29,35 +29,43 @@ namespace mp4v2 { namespace impl {
 ///////////////////////////////////////////////////////////////////////////////
 
 template <>
-const itmf::EnumBasicType::Entry itmf::EnumBasicType::data[] = {
-    { mp4v2::impl::itmf::BT_IMPLICIT,  "implicit",  "implicit" },
-    { mp4v2::impl::itmf::BT_UTF8,      "utf8",      "UTF-8" },
-    { mp4v2::impl::itmf::BT_UTF16,     "utf16",     "UTF-16" },
-    { mp4v2::impl::itmf::BT_SJIS,      "sjis",      "S/JIS" },
-    { mp4v2::impl::itmf::BT_HTML,      "html",      "HTML" },
-    { mp4v2::impl::itmf::BT_XML,       "xml",       "XML" },
-    { mp4v2::impl::itmf::BT_UUID,      "uuid",      "UUID" },
-    { mp4v2::impl::itmf::BT_ISRC,      "isrc",      "ISRC" },
-    { mp4v2::impl::itmf::BT_MI3P,      "mi3p",      "MI3P" },
-    { mp4v2::impl::itmf::BT_GIF,       "gif",       "GIF" },
-    { mp4v2::impl::itmf::BT_JPEG,      "jpeg",      "JPEG" },
-    { mp4v2::impl::itmf::BT_PNG,       "png",       "PNG" },
-    { mp4v2::impl::itmf::BT_URL,       "url",       "URL" },
-    { mp4v2::impl::itmf::BT_DURATION,  "duration",  "duration" },
-    { mp4v2::impl::itmf::BT_DATETIME,  "datetime",  "date/time" },
-    { mp4v2::impl::itmf::BT_GENRES,    "genres",    "genres" },
-    { mp4v2::impl::itmf::BT_INTEGER,   "integer",   "integer" },
-    { mp4v2::impl::itmf::BT_RIAA_PA,   "riaapa",    "RIAA-PA" },
-    { mp4v2::impl::itmf::BT_UPC,       "upc",       "UPC" },
-    { mp4v2::impl::itmf::BT_BMP,       "bmp",       "BMP" },
+const itmf::EnumBasicType::Entry*
+itmf::EnumBasicType::data()
+{
+    static const Entry data[] = {
+        { mp4v2::impl::itmf::BT_IMPLICIT,  "implicit",  "implicit" },
+        { mp4v2::impl::itmf::BT_UTF8,      "utf8",      "UTF-8" },
+        { mp4v2::impl::itmf::BT_UTF16,     "utf16",     "UTF-16" },
+        { mp4v2::impl::itmf::BT_SJIS,      "sjis",      "S/JIS" },
+        { mp4v2::impl::itmf::BT_HTML,      "html",      "HTML" },
+        { mp4v2::impl::itmf::BT_XML,       "xml",       "XML" },
+        { mp4v2::impl::itmf::BT_UUID,      "uuid",      "UUID" },
+        { mp4v2::impl::itmf::BT_ISRC,      "isrc",      "ISRC" },
+        { mp4v2::impl::itmf::BT_MI3P,      "mi3p",      "MI3P" },
+        { mp4v2::impl::itmf::BT_GIF,       "gif",       "GIF" },
+        { mp4v2::impl::itmf::BT_JPEG,      "jpeg",      "JPEG" },
+        { mp4v2::impl::itmf::BT_PNG,       "png",       "PNG" },
+        { mp4v2::impl::itmf::BT_URL,       "url",       "URL" },
+        { mp4v2::impl::itmf::BT_DURATION,  "duration",  "duration" },
+        { mp4v2::impl::itmf::BT_DATETIME,  "datetime",  "date/time" },
+        { mp4v2::impl::itmf::BT_GENRES,    "genres",    "genres" },
+        { mp4v2::impl::itmf::BT_INTEGER,   "integer",   "integer" },
+        { mp4v2::impl::itmf::BT_RIAA_PA,   "riaapa",    "RIAA-PA" },
+        { mp4v2::impl::itmf::BT_UPC,       "upc",       "UPC" },
+        { mp4v2::impl::itmf::BT_BMP,       "bmp",       "BMP" },
 
-    { mp4v2::impl::itmf::BT_UNDEFINED } // must be last
-};
+        { mp4v2::impl::itmf::BT_UNDEFINED } // must be last
+    };
+    return data;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
 template <>
-const itmf::EnumGenreType::Entry itmf::EnumGenreType::data[] = {
+const itmf::EnumGenreType::Entry*
+itmf::EnumGenreType::data()
+{
+    static const Entry data[] = {
     { mp4v2::impl::itmf::GENRE_BLUES,             "blues",             "Blues" },
     { mp4v2::impl::itmf::GENRE_CLASSIC_ROCK,      "classicrock",       "Classic Rock" },
     { mp4v2::impl::itmf::GENRE_COUNTRY,           "country",           "Country" },
@@ -188,12 +196,17 @@ const itmf::EnumGenreType::Entry itmf::EnumGenreType::data[] = {
     { mp4v2::impl::itmf::GENRE_NONE,              "none",              "none" },
 
     { mp4v2::impl::itmf::GENRE_UNDEFINED } // must be last
-};
+    };
+    return data;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
 template <>
-const itmf::EnumStikType::Entry itmf::EnumStikType::data[] = {
+const itmf::EnumStikType::Entry*
+itmf::EnumStikType::data()
+{
+    static const Entry data[] = {
     { mp4v2::impl::itmf::STIK_OLD_MOVIE,    "oldmovie",    "Movie" },
     { mp4v2::impl::itmf::STIK_NORMAL,       "normal",      "Normal" },
     { mp4v2::impl::itmf::STIK_AUDIOBOOK,    "audiobook",   "Audio Book" },
@@ -204,22 +217,32 @@ const itmf::EnumStikType::Entry itmf::EnumStikType::data[] = {
     { mp4v2::impl::itmf::STIK_RINGTONE,     "ringtone",    "Ringtone" },
 
     { mp4v2::impl::itmf::STIK_UNDEFINED } // must be last
-};
+    };
+    return data;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
 template <>
-const itmf::EnumAccountType::Entry itmf::EnumAccountType::data[] = {
+const itmf::EnumAccountType::Entry*
+itmf::EnumAccountType::data()
+{
+    static const Entry data[] = {
     { mp4v2::impl::itmf::AT_ITUNES,  "itunes",   "iTunes" },
     { mp4v2::impl::itmf::AT_AOL,     "aol",      "AOL" },
 
     { mp4v2::impl::itmf::AT_UNDEFINED } // must be last
-};
+    };
+    return data;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
 template <>
-const itmf::EnumCountryCode::Entry itmf::EnumCountryCode::data[] = {
+const itmf::EnumCountryCode::Entry*
+itmf::EnumCountryCode::data()
+{
+    static const Entry data[] = {
     { mp4v2::impl::itmf::CC_USA,  "usa",   "United States" },
     { mp4v2::impl::itmf::CC_FRA,  "fra",   "France" },
     { mp4v2::impl::itmf::CC_DEU,  "ger",   "Germany" },
@@ -244,19 +267,26 @@ const itmf::EnumCountryCode::Entry itmf::EnumCountryCode::data[] = {
     { mp4v2::impl::itmf::CC_JPN,  "jpn",   "Japan" },
 
     { mp4v2::impl::itmf::CC_UNDEFINED } // must be last
-};
+    };
+    return data;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
 template <>
-const itmf::EnumContentRating::Entry itmf::EnumContentRating::data[] = {
+const itmf::EnumContentRating::Entry*
+itmf::EnumContentRating::data()
+{
+    static const Entry data[] = {
     { mp4v2::impl::itmf::CR_NONE,         "none",       "None" },
     { mp4v2::impl::itmf::CR_EXPLICIT,     "explicit",   "Explicit" },
     { mp4v2::impl::itmf::CR_CLEAN,        "clean",      "Clean" },
     { mp4v2::impl::itmf::CR_EXPLICIT_OLD, "explicit",   "Explicit" },
 
     { mp4v2::impl::itmf::CR_UNDEFINED } // must be last
-};
+    };
+    return data;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -264,7 +294,6 @@ namespace itmf {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// must come after static data init
 const EnumBasicType enumBasicType;
 const EnumGenreType enumGenreType;
 const EnumStikType enumStikType;

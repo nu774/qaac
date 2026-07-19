@@ -28,7 +28,10 @@ namespace mp4v2 { namespace impl {
 ///////////////////////////////////////////////////////////////////////////////
 
 template <>
-const bmff::EnumLanguageCode::Entry bmff::EnumLanguageCode::data[] = {
+const bmff::EnumLanguageCode::Entry*
+bmff::EnumLanguageCode::data()
+{
+    static const Entry data[] = {
     { mp4v2::impl::bmff::ILC_AAR,  "aar",  "Afar" },
     { mp4v2::impl::bmff::ILC_ABK,  "abk",  "Abkhazian" },
     { mp4v2::impl::bmff::ILC_ACE,  "ace",  "Achinese" },
@@ -515,7 +518,9 @@ const bmff::EnumLanguageCode::Entry bmff::EnumLanguageCode::data[] = {
     { mp4v2::impl::bmff::ILC_ZZA,  "zza",  "Zaza; Dimili; Dimli; Kirdki; Kirmanjki; Zazaki" },
 
     { mp4v2::impl::bmff::ILC_UNDEFINED } // must be last
-};
+    };
+    return data;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -523,7 +528,6 @@ namespace bmff {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// must come after static data init
 const EnumLanguageCode enumLanguageCode;
 
 ///////////////////////////////////////////////////////////////////////////////

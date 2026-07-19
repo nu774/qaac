@@ -35,7 +35,7 @@ Enum<T,UNDEFINED>::Enum()
     : mapToType   ( _mapToType )
     , mapToString ( _mapToString )
 {
-    for( const Entry* p = data; p->type != UNDEFINED; p++ ) {
+    for( const Entry* p = data(); p->type != UNDEFINED; p++ ) {
         _mapToType.insert( typename MapToType::value_type( p->compact, p ));
         _mapToString.insert( typename MapToString::value_type( p->type, p ));
     }

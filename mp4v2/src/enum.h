@@ -63,9 +63,12 @@ namespace mp4v2 { namespace impl {
 /// This template implementation itself should never be exposed. That is
 /// to say, the .tcc file must not be used by code outside this library.
 ///
-/// WARNING: since enum types are typically made static file scope,
-/// care must be taken to make sure Entry data[] initialization occurs
-/// in the <b>same file</b> and <b>before</b> instantiation.
+/// Entry data is provided via the data() function rather than a plain
+/// static array so that it is constructed on first use (a function-local
+/// static). This avoids relying on the relative dynamic-initialization
+/// order between data() and any Enum<> instance -- an order the C++
+/// standard only guarantees within a single translation unit, and which
+/// has been observed to not hold with every toolchain in practice.
 ///
 template <typename T, T UNDEFINED>
 class Enum
@@ -82,7 +85,7 @@ public:
     typedef map<T,const Entry*> MapToString;
 
 public:
-    static const Entry data[];
+    static const Entry* data();
 
 private:
     MapToType   _mapToType;
