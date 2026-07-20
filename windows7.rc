@@ -1,0 +1,4 @@
+// MinGW's linker has no /MANIFEST equivalent (unlike link.exe/lld-link in
+// MSVC mode), so the manifest has to be embedded as a Win32 resource instead.
+// 1 = CREATEPROCESS_MANIFEST_RESOURCE_ID, 24 = RT_MANIFEST.
+1 24 "windows7.manifest"

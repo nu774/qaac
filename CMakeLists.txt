@@ -34,8 +34,6 @@ else()
     add_link_options($<$<CONFIG:Release>:-Wl,/DEBUG>)
 endif()
 
-set_source_files_properties(windows7.manifest PROPERTIES HEADER_FILE_ONLY TRUE)
-
 # ---------------------------------------------------------------------------
 # alac
 # ---------------------------------------------------------------------------
@@ -414,6 +412,9 @@ add_executable(qaac
     version.cpp
     windows7.manifest
 )
+if(MINGW)
+    target_sources(qaac PRIVATE windows7.rc)
+endif()
 target_include_directories(qaac PRIVATE
     .
     input
@@ -495,6 +496,9 @@ add_executable(refalac
     version.cpp
     windows7.manifest
 )
+if(MINGW)
+    target_sources(refalac PRIVATE windows7.rc)
+endif()
 target_include_directories(refalac PRIVATE
     .
     input
