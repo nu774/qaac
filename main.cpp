@@ -1215,11 +1215,7 @@ struct COMInitializer {
 };
 
 
-#ifdef _MSC_VER
 int wmain(int argc, wchar_t **argv)
-#else
-int wmain1(int argc, wchar_t **argv)
-#endif
 {
     auto cmdline = std::wstring(GetCommandLineW()) + L"\n";
     OutputDebugStringW(cmdline.c_str());
@@ -1384,14 +1380,3 @@ int wmain1(int argc, wchar_t **argv)
     }
     return result;
 }
-
-#ifdef __MINGW32__
-int main()
-{
-    int argc;
-    wchar_t **argv, **envp;
-    _startupinfo si = { 0 };
-    __wgetmainargs(&argc, &argv, &envp, 1, &si);
-    return wmain1(argc, argv);
-}
-#endif
