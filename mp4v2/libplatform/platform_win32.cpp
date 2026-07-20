@@ -233,8 +233,8 @@ Utf8ToFilename::ConvertToUTF16 ( const string &utf8string )
     // two UTF-16 character elements.
     num_chars = utf8string.length();
 
-    LOG_PRINTF((MP4_LOG_VERBOSE4,"%s: entry point (%d character string)",
-                __FUNCTION__,num_chars));
+    LOG_PRINTF((MP4_LOG_VERBOSE4,"%s: entry point (%llu character string)",
+                __FUNCTION__,(uint64_t)num_chars));
 
     /*
     ** Allocate space for the decoded string.  Add one
@@ -244,7 +244,7 @@ Utf8ToFilename::ConvertToUTF16 ( const string &utf8string )
     retval = (wchar_t *)malloc(num_bytes);
     if (!retval)
     {
-        log.errorf("%s: error allocating memory for %d byte(s)",__FUNCTION__,num_bytes);
+        log.errorf("%s: error allocating memory for %llu byte(s)",__FUNCTION__,(uint64_t)num_bytes);
         return NULL;
     }
 
@@ -337,8 +337,8 @@ Utf8ToFilename::ConvertToUTF16Buf ( const char      *utf8,
     // input string.
     if (num_bytes < sizeof(wchar_t))
     {
-        log.errorf("%s: %u byte(s) is not enough to transform a %u byte UTF-8 string "
-                   "to NUL-terminated UTF-16",__FUNCTION__,num_bytes,num_input_bytes);
+        log.errorf("%s: %llu byte(s) is not enough to transform a %llu byte UTF-8 string "
+                   "to NUL-terminated UTF-16",__FUNCTION__,(uint64_t)num_bytes,(uint64_t)num_input_bytes);
         return 0;
     }
 
@@ -386,8 +386,8 @@ Utf8ToFilename::ConvertToUTF16Buf ( const char      *utf8,
             // to be anything wrong.
             if (i >= num_utf16_chars)
             {
-                log.errorf("%s: out of space in %u  byte output string to store surrogate "
-                           "pair low half (0x%04X)",__FUNCTION__,num_bytes,this_utf16[1]);
+                log.errorf("%s: out of space in %llu  byte output string to store surrogate "
+                           "pair low half (0x%04X)",__FUNCTION__,(uint64_t)num_bytes,this_utf16[1]);
                 return 0;
             }
              
@@ -407,8 +407,8 @@ Utf8ToFilename::ConvertToUTF16Buf ( const char      *utf8,
         // NUL-terminator, it's got to be bigger than
         // one here.
         ASSERT(num_input_bytes > 1);
-        log.errorf("%s: %u byte(s) of input string remain(s) undecoded (%s): out of space in "
-                   "%u byte output string",__FUNCTION__,(num_input_bytes - 1),p,num_bytes);
+        log.errorf("%s: %llu byte(s) of input string remain(s) undecoded (%s): out of space in "
+                   "%llu byte output string",__FUNCTION__,(uint64_t)(num_input_bytes - 1),p,(uint64_t)num_bytes);
         return 0;
     }
 
@@ -784,9 +784,9 @@ Utf8ToFilename::Utf8DecodeChar ( const uint8_t  *utf8_char,
     */
     if (len > num_bytes)
     {
-        log.errorf("%s: first byte 0x%02X indicates a %d byte "
-                   "UTF-8 character, but we only have %u valid byte(s)",
-                   __FUNCTION__,*p,len,num_bytes);
+        log.errorf("%s: first byte 0x%02X indicates a %u byte "
+                   "UTF-8 character, but we only have %llu valid byte(s)",
+                   __FUNCTION__,*p,len,(uint64_t)num_bytes);
         *utf16 = REPLACEMENT_CHAR;
         return p + 1;
     }
@@ -907,8 +907,8 @@ Utf8ToFilename::Utf8DecodeChar ( const uint8_t  *utf8_char,
     if (len != valid_len)
     {
         ASSERT(len > valid_len);
-        log.errorf("%s: overlong encoding(%s)...should be %d byte(s), not %d",__FUNCTION__,
-                   utf8_char,valid_len,len);
+        log.errorf("%s: overlong encoding(%s)...should be %llu byte(s), not %u",__FUNCTION__,
+                   utf8_char,(uint64_t)valid_len,len);
         *utf16 = REPLACEMENT_CHAR;
         return p;
     }
