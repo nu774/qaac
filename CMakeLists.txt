@@ -9,9 +9,11 @@ if(NOT MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     message(FATAL_ERROR "qaac is a Win32 console app and only builds with MSVC, clang-cl, or clang --target=*-windows-msvc")
 endif()
 
+set(CMAKE_CXX_STANDARD 11)
+
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:DebugDLL>")
-else()
+elseif(NOT MINGW)
     add_compile_options(
         $<$<CONFIG:Debug>:-fms-runtime-lib=dll_dbg>
         $<$<NOT:$<CONFIG:Debug>>:-fms-runtime-lib=dll>
@@ -465,12 +467,17 @@ else()
     # (relative to the build directory, so "file not found") rather than by
     # lld-link, which is what actually searches the LIB env var for it.
     target_link_options(qaac PRIVATE
+        -municode
         -Wl,/DELAYLOAD:CoreAudioToolbox.dll
         -Wl,/DELAYLOAD:CoreFoundation.dll
         $<$<CONFIG:Release>:-Wl,/OPT:REF>
         $<$<CONFIG:Release>:-Wl,/OPT:ICF>
-        -Wl,wsetargv.obj
     )
+    if(MINGW)
+	target_link_libraries(qaac PRIVATE ksguid.lib)
+    else()
+        target_link_options(qaac PRIVATE -Wl,wsetargv.obj)
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------
@@ -516,10 +523,15 @@ if(MSVC)
     )
 else()
     target_link_options(refalac PRIVATE
+        -municode
         $<$<CONFIG:Release>:-Wl,/OPT:REF>
         $<$<CONFIG:Release>:-Wl,/OPT:ICF>
-        -Wl,wsetargv.obj
     )
+    if (MINGW)
+	target_link_libraries(refalac PRIVATE ksguid.lib)
+    else()
+        target_link_options(refalac PRIVATE -Wl,wsetargv.obj)
+    endif()
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
