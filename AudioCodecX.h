@@ -1,6 +1,7 @@
 #ifndef AudioCodecX_H
 #define AudioCodecX_H
 
+#include <float.h>
 #include "CoreAudio/AudioCodec.h"
 #include "cautil.h"
 
