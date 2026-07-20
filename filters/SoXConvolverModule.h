@@ -1,6 +1,7 @@
 #ifndef SOXCMODULE_H
 #define SOXCMODULE_H
 
+#include <stdlib.h>
 #include "libsoxconvolver.h"
 #include "dl.h"
 
