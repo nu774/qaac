@@ -199,13 +199,13 @@ void LibSndfileSource::fetchVorbisTags(int codec)
     util::FilePositionSaver _(m_stream);
     m_stream->seek(0, SEEK_SET);
     TagLibX::IStreamReader reader(m_stream);
-    std::unique_ptr<TagLib::Ogg::File> file;
+    std::shared_ptr<TagLib::Ogg::File> file;
     if (codec == SF_FORMAT_OPUS)
-        file = std::make_unique<TagLib::Ogg::Opus::File>(&reader, false);
+        file = std::make_shared<TagLib::Ogg::Opus::File>(&reader, false);
     else if (codec == SF_FORMAT_VORBIS)
-        file = std::make_unique<TagLib::Ogg::Vorbis::File>(&reader, false);
+        file = std::make_shared<TagLib::Ogg::Vorbis::File>(&reader, false);
     else if (codec == SF_FORMAT_FLAC)
-        file = std::make_unique<TagLib::Ogg::FLAC::File>(&reader, false);
+        file = std::make_shared<TagLib::Ogg::FLAC::File>(&reader, false);
     else
         return;
     std::map<std::string, std::string> tags;
