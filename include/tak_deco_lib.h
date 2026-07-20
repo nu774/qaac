@@ -30,7 +30,7 @@ extern "C" {
 
 /*=== Elemental Types ===============================================*/
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 typedef __int32      TtakInt32;
 typedef unsigned int TtakUInt32;
 typedef __int64      TtakInt64;
