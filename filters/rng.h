@@ -12,11 +12,11 @@ namespace rng {
     public:
         typedef uint32_t result_type;
 
-#if _MSC_VER > 1800
+#if !defined(_MSC_VER) || _MSC_VER > 1800
         constexpr
 #endif
         static result_type (min)() { return 0; }
-#if _MSC_VER > 1800
+#if !defined(_MSC_VER) || _MSC_VER > 1800
         constexpr
 #endif
         static result_type (max)()
