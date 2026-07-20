@@ -49,4 +49,8 @@ private:
     Log& operator=(const Log&);
 };
 
+#ifdef __GNUC__
+#define LOG(fmt, ...) Log::instance().wprintf(fmt, ##__VA_ARGS__)
+#else
 #define LOG(fmt, ...) Log::instance().wprintf(fmt, __VA_ARGS__)
+#endif
