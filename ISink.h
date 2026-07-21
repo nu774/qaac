@@ -2,12 +2,18 @@
 #define _ISINK_H
 
 #include <string>
+#include "AudioFile.h"
 #include "misc.h"
 
 struct ISink {
     virtual ~ISink() {}
     virtual void writeSamples(
             const void *data, size_t len, size_t nsamples) = 0;
+};
+
+struct IFinishWriteSink {
+    virtual ~IFinishWriteSink() {}
+    virtual void finishWrite(const AudioFilePacketTableInfo &info) = 0;
 };
 
 struct ITagStore {

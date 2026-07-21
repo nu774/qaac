@@ -6,7 +6,7 @@
 #include "win32util.h"
 #include "AudioFile.h"
 
-class CAFSink : public ISink, public ITagStore {
+class CAFSink : public ISink, public ITagStore, public IFinishWriteSink {
     std::shared_ptr<FILE> m_file;
     bool m_seekable;
     uint32_t m_data_pos;

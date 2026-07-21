@@ -950,10 +950,11 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
         }
     }
     MP4SinkBase *mp4sinkbase = dynamic_cast<MP4SinkBase*>(sink.get());
+    IFinishWriteSink* fsink = dynamic_cast<IFinishWriteSink*>(sink.get());
     if (mp4sinkbase)
         finalize_m4a(mp4sinkbase, encoder.get(), ofilename, opts);
-    else if (cafsink)
-        cafsink->finishWrite(pti);
+    else if (fsink)
+        fsink->finishWrite(pti);
 }
 #endif // QAAC
 #ifdef REFALAC
@@ -995,10 +996,11 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
 
     MP4SinkBase *mp4sinkbase = dynamic_cast<MP4SinkBase*>(sink.get());
+    IFinishWriteSink* fsink = dynamic_cast<IFinishWriteSink*>(sink.get());
     if (mp4sinkbase)
         finalize_m4a(mp4sinkbase, &encoder, ofilename, opts);
-    else if (cafsink)
-        cafsink->finishWrite(AudioFilePacketTableInfo());
+    else if (fsink)
+        fsink->finishWrite(AudioFilePacketTableInfo());
 }
 #endif
 
