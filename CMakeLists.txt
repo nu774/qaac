@@ -308,6 +308,145 @@ if(MSVC)
 endif()
 
 # ---------------------------------------------------------------------------
+# mmtisobmff
+# ---------------------------------------------------------------------------
+add_library(mmtisobmff STATIC
+    mmtisobmff/src/ilo/async_fileio_not_supported.cpp
+    mmtisobmff/src/ilo/bitbuffer.cpp
+    mmtisobmff/src/ilo/bitparser.cpp
+    mmtisobmff/src/ilo/bytebuffertools.cpp
+    mmtisobmff/src/ilo/common_types.cpp
+    mmtisobmff/src/ilo/fileio.cpp
+    mmtisobmff/src/ilo/file_utils.cpp
+    mmtisobmff/src/ilo/logging_backend.cpp
+    mmtisobmff/src/ilo/string_utils.cpp
+    mmtisobmff/src/ilo/uuid_utils.cpp
+    mmtisobmff/src/mmtisobmff/box/ac3sampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/alacsampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/avcsampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/box.cpp
+    mmtisobmff/src/mmtisobmff/box/btrtbox.cpp
+    mmtisobmff/src/mmtisobmff/box/co64box.cpp
+    mmtisobmff/src/mmtisobmff/box/colrbox.cpp
+    mmtisobmff/src/mmtisobmff/box/containerbox.cpp
+    mmtisobmff/src/mmtisobmff/box/cttsbox.cpp
+    mmtisobmff/src/mmtisobmff/box/decoderconfigurationbox.cpp
+    mmtisobmff/src/mmtisobmff/box/decoderconfigurationfullbox.cpp
+    mmtisobmff/src/mmtisobmff/box/drefbox.cpp
+    mmtisobmff/src/mmtisobmff/box/elstbox.cpp
+    mmtisobmff/src/mmtisobmff/box/flacsampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/ftypbox.cpp
+    mmtisobmff/src/mmtisobmff/box/gminbox.cpp
+    mmtisobmff/src/mmtisobmff/box/hdlrbox.cpp
+    mmtisobmff/src/mmtisobmff/box/hevcsampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/invalidbox.cpp
+    mmtisobmff/src/mmtisobmff/box/iodsbox.cpp
+    mmtisobmff/src/mmtisobmff/box/jpvibox.cpp
+    mmtisobmff/src/mmtisobmff/box/jxplbox.cpp
+    mmtisobmff/src/mmtisobmff/box/jxssampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/loudnessbox.cpp
+    mmtisobmff/src/mmtisobmff/box/mdatbox.cpp
+    mmtisobmff/src/mmtisobmff/box/mdhdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/mfhdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/mhapbox.cpp
+    mmtisobmff/src/mmtisobmff/box/mhasampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/mhmsampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/mmpubox.cpp
+    mmtisobmff/src/mmtisobmff/box/mp4asampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/mvhdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/nmhdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/opussampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/sampleentry.cpp
+    mmtisobmff/src/mmtisobmff/box/samplegroupentry.cpp
+    mmtisobmff/src/mmtisobmff/box/sbgpbox.cpp
+    mmtisobmff/src/mmtisobmff/box/sgpdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/sidxbox.cpp
+    mmtisobmff/src/mmtisobmff/box/smhdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/stcobox.cpp
+    mmtisobmff/src/mmtisobmff/box/stscbox.cpp
+    mmtisobmff/src/mmtisobmff/box/stsdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/stssbox.cpp
+    mmtisobmff/src/mmtisobmff/box/stszbox.cpp
+    mmtisobmff/src/mmtisobmff/box/sttsbox.cpp
+    mmtisobmff/src/mmtisobmff/box/stypbox.cpp
+    mmtisobmff/src/mmtisobmff/box/stz2box.cpp
+    mmtisobmff/src/mmtisobmff/box/textbox.cpp
+    mmtisobmff/src/mmtisobmff/box/textsampledescription.cpp
+    mmtisobmff/src/mmtisobmff/box/tfdtbox.cpp
+    mmtisobmff/src/mmtisobmff/box/tfhdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/timedtextdescription.cpp
+    mmtisobmff/src/mmtisobmff/box/tkhdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/trackreferencetypebox.cpp
+    mmtisobmff/src/mmtisobmff/box/trexbox.cpp
+    mmtisobmff/src/mmtisobmff/box/trunbox.cpp
+    mmtisobmff/src/mmtisobmff/box/unknownbox.cpp
+    mmtisobmff/src/mmtisobmff/box/urlbox.cpp
+    mmtisobmff/src/mmtisobmff/box/vmhdbox.cpp
+    mmtisobmff/src/mmtisobmff/box/vvcsampleentry.cpp
+    mmtisobmff/src/mmtisobmff/common/bytebuffertools_extension.cpp
+    mmtisobmff/src/mmtisobmff/common/commonhelpertools.cpp
+    mmtisobmff/src/mmtisobmff/common/logging.cpp
+    mmtisobmff/src/mmtisobmff/common/printhelpertools.cpp
+    mmtisobmff/src/mmtisobmff/common/types.cpp
+    mmtisobmff/src/mmtisobmff/common/videohelpertools.cpp
+    mmtisobmff/src/mmtisobmff/configdescriptor/avc_decoderconfigrecord.cpp
+    mmtisobmff/src/mmtisobmff/configdescriptor/hevc_decoderconfigrecord.cpp
+    mmtisobmff/src/mmtisobmff/configdescriptor/jxs_decoderconfigrecord.cpp
+    mmtisobmff/src/mmtisobmff/configdescriptor/mha_decoderconfigrecord.cpp
+    mmtisobmff/src/mmtisobmff/configdescriptor/mp4a_decoderconfigrecord.cpp
+    mmtisobmff/src/mmtisobmff/configdescriptor/vvc_decoderconfigrecord.cpp
+    mmtisobmff/src/mmtisobmff/descriptor/basedescriptor.cpp
+    mmtisobmff/src/mmtisobmff/descriptor/decoderconfigdescriptor.cpp
+    mmtisobmff/src/mmtisobmff/descriptor/esdescriptor.cpp
+    mmtisobmff/src/mmtisobmff/descriptor/esidincdescriptor.cpp
+    mmtisobmff/src/mmtisobmff/descriptor/genericdecoderspecificinfo.cpp
+    mmtisobmff/src/mmtisobmff/descriptor/iodescriptor.cpp
+    mmtisobmff/src/mmtisobmff/descriptor/slconfigdescriptor.cpp
+    mmtisobmff/src/mmtisobmff/mmtisobmff_c.cpp
+    mmtisobmff/src/mmtisobmff/reader/reader.cpp
+    mmtisobmff/src/mmtisobmff/reader/readerinfo.cpp
+    mmtisobmff/src/mmtisobmff/reader/samplereader.cpp
+    mmtisobmff/src/mmtisobmff/reader/sample_extractor.cpp
+    mmtisobmff/src/mmtisobmff/reader/specificboxinfo.cpp
+    mmtisobmff/src/mmtisobmff/reader/trackreader.cpp
+    mmtisobmff/src/mmtisobmff/service/boxreader.cpp
+    mmtisobmff/src/mmtisobmff/service/boxregistry.cpp
+    mmtisobmff/src/mmtisobmff/service/factory.cpp
+    mmtisobmff/src/mmtisobmff/service/servicesingleton.cpp
+    mmtisobmff/src/mmtisobmff/tree/boxtree.cpp
+    mmtisobmff/src/mmtisobmff/writer/alac_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/avc_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/config_verifier.cpp
+    mmtisobmff/src/mmtisobmff/writer/hevc_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/initsegment_tree_builder.cpp
+    mmtisobmff/src/mmtisobmff/writer/jxs_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/mediafragment_tree_builder.cpp
+    mmtisobmff/src/mmtisobmff/writer/mp4a_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/mpegh_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/sample_store.cpp
+    mmtisobmff/src/mmtisobmff/writer/text_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/trackwriter.cpp
+    mmtisobmff/src/mmtisobmff/writer/traf_samplegroups_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/traf_sample_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/traf_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/trak_editlist_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/trak_reference_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/trak_samplegroups_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/trak_sample_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/trak_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/trak_userdata_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/vvc_tree_enhancer.cpp
+    mmtisobmff/src/mmtisobmff/writer/writer.cpp
+    mmtisobmff/src/mmtisobmff/writer/writerpimpl.cpp
+)
+target_include_directories(mmtisobmff PUBLIC mmtisobmff/include)
+target_include_directories(mmtisobmff PRIVATE mmtisobmff/src/mmtisobmff)
+target_compile_definitions(mmtisobmff PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_NONSTDC_NO_DEPRECATE)
+if(MSVC)
+    target_compile_options(mmtisobmff PRIVATE /wd4244 /wd4267)
+endif()
+
+# ---------------------------------------------------------------------------
 # uchardet
 # ---------------------------------------------------------------------------
 add_library(uchardet STATIC
@@ -471,6 +610,9 @@ add_library(common STATIC
     filters/StreamingConvolver.cpp
     fft4g/fft4g_float.c
     output/CAFSink.cpp
+    output/MMTISOBMFFAACSink.cpp
+    output/MMTISOBMFFALACSink.cpp
+    output/MMTISOBMFFSinkBase.cpp
     output/sink.cpp
     output/WaveSink.cpp
     bitstream.cpp
@@ -520,7 +662,7 @@ target_compile_definitions(common PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_N
 if(MSVC)
     target_compile_options(common PRIVATE /wd4018 /wd4244 /wd4267 /wd4838)
 endif()
-target_link_libraries(common PUBLIC mp4v2 taglib uchardet ogg)
+target_link_libraries(common PUBLIC mp4v2 taglib uchardet ogg mmtisobmff)
 target_link_libraries(common PUBLIC libsoundio)
 
 # ---------------------------------------------------------------------------
@@ -531,6 +673,7 @@ add_executable(qaac
     input/CAFSource.cpp
     input/CoreAudioPacketDecoder.cpp
     input/ExtAFSource.cpp
+    input/MMTISOBMFFSource.cpp
     input/MP4Source.cpp
     input/MPAHeader.cpp
     input/InputFactory.cpp
@@ -566,7 +709,7 @@ target_compile_definitions(qaac PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_
 if(MSVC)
     target_compile_options(qaac PRIVATE /wd4018 /wd4091 /wd4244 /wd4267 /wd4838)
 endif()
-target_link_libraries(qaac PRIVATE common mp4v2 taglib)
+target_link_libraries(qaac PRIVATE common mp4v2 taglib mmtisobmff)
 
 if(WIN32)
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -640,6 +783,7 @@ add_executable(refalac
     input/CAFSource.cpp
     input/ALACPacketDecoder.cpp
     input/InputFactory.cpp
+    input/MMTISOBMFFSource.cpp
     input/MP4Source.cpp
     ALACEncoderX.cpp
     ascutil.cpp
@@ -670,7 +814,7 @@ target_compile_definitions(refalac PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_
 if(MSVC)
     target_compile_options(refalac PRIVATE /wd4018 /wd4091 /wd4244 /wd4267 /wd4838)
 endif()
-target_link_libraries(refalac PRIVATE alac common mp4v2 taglib)
+target_link_libraries(refalac PRIVATE alac common mp4v2 taglib mmtisobmff)
 if(WIN32)
     target_link_libraries(refalac PRIVATE
         shlwapi.lib
