@@ -61,10 +61,12 @@ void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
 using mp4v2::impl::MP4Atom;
 
 MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
-        : m_filename(path), m_closed(false),
+        : m_filename(path), m_dest_filename(path),
+          m_optimize(temp), m_closed(false),
           m_edit_start(0), m_edit_duration(0),
           m_max_bitrate(0)
 {
+    m_optimize_cb = [](uint64_t, uint64_t) {};
     static const char * const compatibleBrands[] =
         { "M4A ", "mp42", "isom", "" };
     if (temp) m_filename = L"qaac.int";
@@ -161,6 +163,32 @@ void MP4SinkBase::close()
         } catch (mp4v2::impl::Exception *e) {
             handle_mp4error(e);
         }
+    }
+}
+
+void MP4SinkBase::finishWrite(const AudioFilePacketTableInfo &info)
+{
+    m_edit_start = info.mPrimingFrames;
+    m_edit_duration = info.mNumberValidFrames;
+    writeTags();
+    if (m_optimize)
+        optimize();
+    close();
+}
+
+void MP4SinkBase::optimize()
+{
+    try {
+        m_mp4file.FinishWriteX();
+        MP4FileCopy optimizer(&m_mp4file);
+        optimizer.start(strutil::w2us(m_dest_filename).c_str());
+        uint64_t total = optimizer.getTotalChunks();
+        for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
+            m_optimize_cb(i, total);
+        }
+        m_optimize_cb(0, 0);
+    } catch (mp4v2::impl::Exception *e) {
+        handle_mp4error(e);
     }
 }
 
@@ -361,9 +389,10 @@ void MP4SinkBase::writeStringTag(const char *fcc, const std::string &value)
 
 MP4Sink::MP4Sink(const std::wstring &path,
                  const std::vector<uint8_t> &config,
-                 bool temp)
+                 bool temp,
+                 int gapless_mode)
         : MP4SinkBase(path, temp),
-          m_gapless_mode(MODE_ITUNSMPB)
+          m_gapless_mode(gapless_mode)
 {
     std::memset(&m_priming_info, 0, sizeof m_priming_info);
     try {
@@ -424,7 +453,8 @@ void MP4Sink::writeTags()
 }
 
 ALACSink::ALACSink(const std::wstring &path,
-        const std::vector<uint8_t> &magicCookie, bool temp)
+                   const std::vector<uint8_t> &magicCookie,
+                   bool temp)
         : MP4SinkBase(path, temp)
 {
     try {

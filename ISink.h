@@ -31,5 +31,10 @@ struct IChapterWriter {
     virtual void setChapters(const std::vector<misc::chapter_t> &chapters) = 0;
 };
 
+struct IBitrateWriter {
+    virtual ~IBitrateWriter() {}
+    virtual void writeBitrates(int avgBitrate) = 0;
+};
+
 #endif
 

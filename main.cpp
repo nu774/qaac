@@ -52,6 +52,8 @@
 #define PROGNAME "qaac"
 #endif
 
+#include "PeriodicDisplay.h"
+
 static volatile bool g_interrupted = false;
 
 static
@@ -66,44 +68,6 @@ std::wstring errormsg(const std::exception &ex)
 {
     return strutil::us2w(ex.what());
 }
-
-class PeriodicDisplay {
-    uint32_t m_interval;
-    uint32_t m_last_tick_title;
-    uint32_t m_last_tick_stderr;
-    std::wstring m_message;
-    bool m_verbose;
-    bool m_console_visible;
-public:
-    PeriodicDisplay(uint32_t interval, bool verbose=true)
-        : m_interval(interval),
-          m_verbose(verbose)
-    {
-        m_console_visible = IsWindowVisible(GetConsoleWindow());
-        m_last_tick_title = m_last_tick_stderr = GetTickCount();
-    }
-    void put(const std::wstring &message) {
-        m_message = message;
-        uint32_t tick = GetTickCount();
-        if (tick - m_last_tick_stderr > m_interval) {
-            m_last_tick_stderr = tick;
-            flush();
-        }
-    }
-    void flush() {
-        if (m_verbose) std::fputws(m_message.c_str(), stderr);
-        if (m_verbose && m_console_visible &&
-            m_last_tick_stderr - m_last_tick_title > m_interval * 4)
-        {
-            std::vector<wchar_t> s(m_message.size() + 1);
-            std::wcscpy(&s[0], m_message.c_str());
-            strutil::squeeze(&s[0], L"\r");
-            std::wstring msg = strutil::format(L"%hs %s", PROGNAME, &s[0]);
-            SetConsoleTitleW(msg.c_str());
-            m_last_tick_title = m_last_tick_stderr;
-        }
-    }
-};
 
 class Progress {
     PeriodicDisplay m_disp;
@@ -705,46 +669,51 @@ void do_encode(IEncoder *encoder, const std::wstring &ofilename,
     }
 }
 
-static void do_optimize(MP4FileX *file, const std::wstring &dst, bool verbose)
+static
+void applyExternalChapterFile(const std::shared_ptr<ISink> &sink,
+                              IEncoder *encoder, const Options &opts)
 {
+    if (!opts.chapter_file)
+        return;
+    IChapterWriter *cw = dynamic_cast<IChapterWriter*>(sink.get());
+    if (!cw)
+        return;
     try {
-        file->FinishWriteX();
-        MP4FileCopy optimizer(file);
-        optimizer.start(strutil::w2us(dst).c_str());
-        uint64_t total = optimizer.getTotalChunks();
-        PeriodicDisplay disp(100, verbose);
-        for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
-            int percent = 100.0 * i / total + .5;
-            disp.put(strutil::format(L"\rOptimizing...%d%%",
-                                     percent).c_str());
-        }
-        disp.put(L"\rOptimizing...done\n");
-        disp.flush();
-    } catch (mp4v2::impl::Exception *e) {
-        handle_mp4error(e);
+        IEncoderStat *stat = dynamic_cast<IEncoderStat *>(encoder);
+        double duration = stat->samplesRead() /
+            encoder->getInputDescription().mSampleRate;
+        cw->setChapters(misc::convertChaptersToQT(opts.chapters, duration));
+    } catch (const std::runtime_error &e) {
+        LOG(L"WARNING: %s\n", errormsg(e).c_str());
     }
 }
 
 static
-void finalize_m4a(MP4SinkBase *sink, IEncoder *encoder,
-                   const std::wstring &ofilename, const Options &opts)
+void finishWriteSink(const std::shared_ptr<ISink> &sink, IEncoder *encoder,
+                     const AudioFilePacketTableInfo &pti, const Options &opts)
 {
-    IEncoderStat *stat = dynamic_cast<IEncoderStat *>(encoder);
-    if (opts.chapter_file) {
-        try {
-            double duration = stat->samplesRead() /
-                encoder->getInputDescription().mSampleRate;
-            auto xs = misc::convertChaptersToQT(opts.chapters, duration);
-            sink->setChapters(xs);
-        } catch (const std::runtime_error &e) {
-            LOG(L"WARNING: %s\n", errormsg(e).c_str());
-        }
+    IBitrateWriter *bw = dynamic_cast<IBitrateWriter*>(sink.get());
+    if (bw) {
+        IEncoderStat *stat = dynamic_cast<IEncoderStat *>(encoder);
+        bw->writeBitrates(stat->overallBitrate() * 1000.0 + .5);
     }
-    sink->writeTags();
-    sink->writeBitrates(stat->overallBitrate() * 1000.0 + .5);
-    if (!opts.no_optimize)
-        do_optimize(sink->getFile(), ofilename, opts.verbose);
-    sink->close();
+    MP4SinkBase *mp4sink = dynamic_cast<MP4SinkBase*>(sink.get());
+    if (mp4sink) {
+        PeriodicDisplay disp(100, opts.verbose);
+        auto optimize_cb = [disp](uint64_t i, uint64_t total) mutable {
+            if (total) {
+                int percent = 100.0 * i / total + .5;
+                disp.put(strutil::format(L"\rOptimizing...%d%%", percent).c_str());
+            } else {
+                disp.put(L"\rOptimizing...done\n");
+                disp.flush();
+            }
+        };
+        mp4sink->setOptimizeCallback(optimize_cb);
+    }
+    IFinishWriteSink *fsink = dynamic_cast<IFinishWriteSink*>(sink.get());
+    if (fsink)
+        fsink->finishWrite(pti);
 }
 
 #ifdef QAAC
@@ -771,7 +740,7 @@ std::shared_ptr<ISink> open_sink(const std::wstring &ofilename,
     else if (opts.isALAC())
         return std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
     else if (opts.isAAC())
-        return std::make_shared<MP4Sink>(ofilename, asc, !opts.no_optimize);
+        return std::make_shared<MP4Sink>(ofilename, asc, !opts.no_optimize, opts.gapless_mode + 1);
     throw std::runtime_error("XXX");
 }
 
@@ -945,18 +914,9 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     AudioFilePacketTableInfo pti = { 0 };
     if (opts.isAAC()) {
         pti = encoder->getGaplessInfo();
-        MP4Sink *mp4sink = dynamic_cast<MP4Sink*>(sink.get());
-        if (mp4sink) {
-            mp4sink->setGaplessMode(opts.gapless_mode + 1);
-            mp4sink->setGaplessInfo(pti);
-        }
     }
-    MP4SinkBase *mp4sinkbase = dynamic_cast<MP4SinkBase*>(sink.get());
-    IFinishWriteSink* fsink = dynamic_cast<IFinishWriteSink*>(sink.get());
-    if (mp4sinkbase)
-        finalize_m4a(mp4sinkbase, encoder.get(), ofilename, opts);
-    else if (fsink)
-        fsink->finishWrite(pti);
+    applyExternalChapterFile(sink, encoder.get(), opts);
+    finishWriteSink(sink, encoder.get(), pti, opts);
 }
 #endif // QAAC
 #ifdef REFALAC
@@ -985,8 +945,9 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     if (opts.is_caf)
         sink = std::make_shared<CAFSink>(ofilename, oasbd,
                                          channel_layout, cookie);
-    else
+    else {
         sink = std::make_shared<ALACSink>(ofilename, cookie, !opts.no_optimize);
+    }
     encoder.setSource(chain.back());
     encoder.setSink(sink);
     set_tags(src.get(), sink.get(), opts, L"Apple Lossless Encoder");
@@ -997,12 +958,8 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     do_encode(&encoder, ofilename, opts);
     LOG(L"Overall bitrate: %gkbps\n", encoder.overallBitrate());
 
-    MP4SinkBase *mp4sinkbase = dynamic_cast<MP4SinkBase*>(sink.get());
-    IFinishWriteSink* fsink = dynamic_cast<IFinishWriteSink*>(sink.get());
-    if (mp4sinkbase)
-        finalize_m4a(mp4sinkbase, &encoder, ofilename, opts);
-    else if (fsink)
-        fsink->finishWrite(AudioFilePacketTableInfo());
+    applyExternalChapterFile(sink, &encoder, opts);
+    finishWriteSink(sink, &encoder, AudioFilePacketTableInfo(), opts);
 }
 #endif
 

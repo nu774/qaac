@@ -1,15 +1,22 @@
 #ifndef _SINK_H
 #define _SINK_H
 
+#include <functional>
 #include "CoreAudioToolbox.h"
 #include "mp4v2wrapper.h"
 #include "ISink.h"
 #include "win32util.h"
 #include "misc.h"
 
-class MP4SinkBase: public ITagStore, public IChapterWriter, public IArtworkWriter {
+class MP4SinkBase: public ITagStore, public IChapterWriter, public IArtworkWriter, public IFinishWriteSink, public IBitrateWriter {
 protected:
     std::wstring m_filename;
+    // Final destination path. Equal to m_filename unless constructed with
+    // temp=true, in which case m_filename is overwritten with a scratch
+    // filename and finishWrite() later multiplexes into m_dest_filename.
+    std::wstring m_dest_filename;
+    bool m_optimize;
+    std::function<void(uint64_t, uint64_t)> m_optimize_cb;
     std::shared_ptr<FILE> m_fp;
     MP4FileX m_mp4file;
     MP4TrackId m_track_id;
@@ -21,7 +28,7 @@ protected:
     std::vector<std::vector<char> > m_artworks;
     unsigned m_max_bitrate;
 public:
-    MP4SinkBase(const std::wstring &path, bool temp=false);
+    MP4SinkBase(const std::wstring &path, bool temp);
     virtual ~MP4SinkBase() {}
 
     MP4FileX *getFile() { return &m_mp4file; }
@@ -41,8 +48,15 @@ public:
     {
         m_artworks.push_back(data);
     }
+    void setOptimizeCallback(std::function<void(uint64_t, uint64_t)> optimize_cb)
+    {
+        m_optimize_cb = optimize_cb;
+    }
+    void finishWrite(const AudioFilePacketTableInfo &info);
+protected:
     virtual void writeTags();
 private:
+    void optimize();
     void writeShortTag(uint32_t fcc, const std::string &value);
     void writeLongTag(const std::string &key, const std::string &value);
 
@@ -70,7 +84,7 @@ public:
         MODE_BOTH = 3,
     };
     MP4Sink(const std::wstring &path, const std::vector<uint8_t> &cookie,
-            bool temp=false);
+            bool temp, int gapless_mode);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
         try {
@@ -81,22 +95,14 @@ public:
             handle_mp4error(e);
         }
     }
-    void setGaplessInfo(const AudioFilePacketTableInfo &info)
-    {
-        m_edit_start = info.mPrimingFrames;
-        m_edit_duration = info.mNumberValidFrames;
-    }
-    void setGaplessMode(int mode)
-    {
-        m_gapless_mode = mode;
-    }
+protected:
     void writeTags();
 };
 
 class ALACSink: public ISink, public MP4SinkBase {
 public:
     ALACSink(const std::wstring &path, const std::vector<uint8_t> &magicCookie,
-             bool temp=false);
+             bool temp);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
         try {
