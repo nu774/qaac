@@ -927,11 +927,11 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     std::shared_ptr<ISink> sink;
     sink = open_sink(ofilename, opts, oasbd, channel_layout, cookie);
     encoder->setSink(sink);
-    if (opts.isAAC()) {
-        MP4Sink *mp4sink = dynamic_cast<MP4Sink*>(sink.get());
-        if (mp4sink) {
+    if (opts.isAAC() && !opts.is_caf) {
+        ITagStore *tagstore = dynamic_cast<ITagStore*>(sink.get());
+        if (tagstore) {
             std::string params = converter.getEncodingParamsTag();
-            mp4sink->setTag("Encoding Params", params);
+            tagstore->setTag("Encoding Params", params);
         }
     }
     set_tags(src.get(), sink.get(), opts, encoder_config);
