@@ -12,5 +12,14 @@ cf. https://hydrogenaud.io/index.php/topic,85135.msg1056191.html#msg1056191
 
 ## How to build
 
-You need Microsoft Visual C++ 2010 to build qaac/refalac.
-AMD64 build is only available for refalac.
+qaac/refalac are built with [CMake](https://cmake.org/) (`CMakeLists.txt` at
+the repository root).
+
+- From Visual Studio 2017 or later: use "Open > Folder..." on this
+  repository; Visual Studio's built-in CMake support will configure it and
+  you can build/debug directly from the IDE.
+- From the command line:
+  ```
+  cmake -B build
+  cmake --build build --config Release
+  ```

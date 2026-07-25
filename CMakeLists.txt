@@ -163,7 +163,7 @@ add_library(mp4v2 STATIC
     mp4v2/src/itmf/type.cpp
     mp4v2/src/bmff/typebmff.cpp
 )
-target_include_directories(mp4v2 PUBLIC mp4v2 mp4v2/include vcproject/mp4v2/include)
+target_include_directories(mp4v2 PUBLIC mp4v2 mp4v2/include)
 target_compile_definitions(mp4v2 PUBLIC MP4V2_USE_STATIC_LIB MP4V2_NO_STDINT_DEFS)
 target_compile_definitions(mp4v2 PRIVATE _CRT_SECURE_NO_DEPRECATE)
 if(MSVC)
