@@ -44,7 +44,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DisableSpecificWarnings>4018;4244;4267;4838;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;..\..\uchardet;..\..\include\opus;$(mp4v2Includes);$(taglibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..;..\..\input;..\..\output;..\..\filters;..\..\include;..\..\CoreAudio;..\..\alac;..\..\uchardet;..\..\include\opus;$(mp4v2Includes);$(taglibIncludes);$(oggIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;MP4V2_USE_STATIC_LIB;MP4V2_NO_STDINT_DEFS;TAGLIB_STATIC;WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -76,6 +76,8 @@
     <ClCompile Include="..\..\input\LibSndfileSource.cpp" />
     <ClCompile Include="..\..\input\LPCMPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\MP4Edits.cpp" />
+    <ClCompile Include="..\..\input\OggIndex.cpp" />
+    <ClCompile Include="..\..\input\OggSource.cpp" />
     <ClCompile Include="..\..\input\OpusPacketDecoder.cpp" />
     <ClCompile Include="..\..\input\RawSource.cpp" />
     <ClCompile Include="..\..\input\TakSource.cpp" />
@@ -114,6 +116,9 @@
   <ItemGroup>
     <ProjectReference Include="..\mp4v2\mp4v2.vcxproj">
       <Project>{86a064e2-c81b-4eee-8be0-a39a2e7c7c76}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ogg\ogg.vcxproj">
+      <Project>{f2a48e12-9e79-4651-b175-e96704daad82}</Project>
     </ProjectReference>
     <ProjectReference Include="..\taglib\taglib.vcxproj">
       <Project>{33d0f51e-2d54-4c00-a448-380af43bc782}</Project>

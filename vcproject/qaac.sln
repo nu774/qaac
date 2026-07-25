@@ -23,6 +23,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "refalac", "refalac\refalac.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "uchardet", "uchardet\uchardet.vcxproj", "{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ogg", "ogg\ogg.vcxproj", "{F2A48E12-9E79-4651-B175-E96704DAAD82}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -87,6 +89,14 @@ Global
 		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Release|Win32.Build.0 = Release|Win32
 		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Release|x64.ActiveCfg = Release|x64
 		{0805C2A4-8877-4F9A-A70A-CEA5D6B5EFC4}.Release|x64.Build.0 = Release|x64
+		{F2A48E12-9E79-4651-B175-E96704DAAD82}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F2A48E12-9E79-4651-B175-E96704DAAD82}.Debug|Win32.Build.0 = Debug|Win32
+		{F2A48E12-9E79-4651-B175-E96704DAAD82}.Debug|x64.ActiveCfg = Debug|x64
+		{F2A48E12-9E79-4651-B175-E96704DAAD82}.Debug|x64.Build.0 = Debug|x64
+		{F2A48E12-9E79-4651-B175-E96704DAAD82}.Release|Win32.ActiveCfg = Release|Win32
+		{F2A48E12-9E79-4651-B175-E96704DAAD82}.Release|Win32.Build.0 = Release|Win32
+		{F2A48E12-9E79-4651-B175-E96704DAAD82}.Release|x64.ActiveCfg = Release|x64
+		{F2A48E12-9E79-4651-B175-E96704DAAD82}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
