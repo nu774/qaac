@@ -39,6 +39,7 @@
 #include "chanmap.h"
 #include "ChannelMapper.h"
 #include "logging.h"
+#include "ilo/logging_backend.h"
 #include "Compressor.h"
 #include "metadata.h"
 #ifdef _WIN32
@@ -1598,6 +1599,8 @@ void play_jobs(std::vector<EncodeJob> &jobs, const Options &opts)
 static int app_main(int argc, char **argv)
 {
     Options opts;
+
+    ilo::impl::CLogger::instance().disable_logging();
 
 #ifdef _WIN32
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
