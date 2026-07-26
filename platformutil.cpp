@@ -1,4 +1,4 @@
-#include "win32util.h"
+#include "platformutil.h"
 #include "util.h"
 #include "strutil.h"
 #ifdef _WIN32
@@ -12,7 +12,7 @@
 #include <sys/mman.h>
 #endif
 
-namespace win32 {
+namespace platform {
 #ifdef _WIN32
     void throw_error(const std::string &msg, DWORD code)
     {
@@ -59,12 +59,12 @@ namespace win32 {
                 _O_BINARY|_O_RDWR);
         if (fd == -1) {
             CloseHandle(fh);
-            util::throw_crt_error("win32::tmpfile: open_osfhandle()");
+            util::throw_crt_error("platform::tmpfile: open_osfhandle()");
         }
         FILE *fp = _fdopen(fd, "w+");
         if (!fp) {
             _close(fd);
-            util::throw_crt_error("win32::tmpfile: _fdopen()");
+            util::throw_crt_error("platform::tmpfile: _fdopen()");
         }
         return fp;
     }
@@ -110,7 +110,7 @@ namespace win32 {
                                      MAKEINTRESOURCEW(VS_VERSION_INFO),
                                      langid);
         if (!hRes)
-            win32::throw_error("FindResourceExW", GetLastError());
+            platform::throw_error("FindResourceExW", GetLastError());
         std::string data;
         {
             DWORD cbres = SizeofResource(hDll, hRes);
@@ -157,12 +157,12 @@ namespace win32 {
         buf.push_back(0);
         int fd = mkstemp(buf.data());
         if (fd == -1)
-            util::throw_crt_error("win32::tmpfile: mkstemp()");
+            util::throw_crt_error("platform::tmpfile: mkstemp()");
         unlink(buf.data());
         FILE *fp = fdopen(fd, "w+");
         if (!fp) {
             close(fd);
-            util::throw_crt_error("win32::tmpfile: fdopen()");
+            util::throw_crt_error("platform::tmpfile: fdopen()");
         }
         return fp;
     }

@@ -3,7 +3,7 @@
 #include <locale>
 #include <regex>
 #include "cuesheet.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "metadata.h"
 #include "CompositeSource.h"
 #include "NullSource.h"
@@ -170,7 +170,7 @@ CueSheet::loadTracks(bool is_embedded, const std::string &path,
                 src = InputFactory::instance().open(path.c_str());
             } else {
                 std::string ifilename =
-                    win32::PathCombineX(path, seg.m_filename);
+                    platform::PathCombineX(path, seg.m_filename);
                 src = InputFactory::instance().open(ifilename.c_str());
             }
             if (src.get()) {

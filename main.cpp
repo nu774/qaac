@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #endif
 #include "ISink.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "options.h"
 #include "InputFactory.h"
 #include "sink.h"
@@ -103,7 +103,7 @@ class Progress {
     uint64_t m_total;
     uint32_t m_rate;
     std::string m_tstamp;
-    win32::Timer m_timer;
+    platform::Timer m_timer;
     bool m_console_visible;
     bool m_stderr_valid;
 public:
@@ -113,7 +113,7 @@ public:
     {
 #ifdef _WIN32
         m_stderr_valid =
-            GetFileType(win32::get_handle(_fileno(stderr))) != FILE_TYPE_UNKNOWN;
+            GetFileType(platform::get_handle(_fileno(stderr))) != FILE_TYPE_UNKNOWN;
         m_console_visible = IsWindowVisible(GetConsoleWindow());
 #else
         m_stderr_valid = true;
@@ -429,7 +429,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 p.m_attack, p.m_release);
         std::shared_ptr<FILE> stat_file;
         if (p.m_stat_file) {
-            FILE *fp = win32::wfopenx(p.m_stat_file, "wb");
+            FILE *fp = platform::wfopenx(p.m_stat_file, "wb");
             stat_file = std::shared_ptr<FILE>(fp, std::fclose);
         }
         std::shared_ptr<ISource>
@@ -639,12 +639,12 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
     if (opts.isLPCM()) {
         std::shared_ptr<FILE> fileptr;
         if (!opts.exec_command.empty()) {
-            std::string name = win32::PathReplaceExtension(ofilename, "");
+            std::string name = platform::PathReplaceExtension(ofilename, "");
             auto argv = expand_exec_template(opts.exec_command, name);
             child = std::make_shared<ChildProcess>(argv);
             fileptr = child->stdinFile();
         } else {
-            fileptr = win32::fopen(ofilename, "wb");
+            fileptr = platform::fopen(ofilename, "wb");
         }
         if (!opts.is_caf) {
             sink = std::make_shared<WaveSink>(fileptr, src->length(),
@@ -723,8 +723,8 @@ void do_encode(IEncoder *encoder, const std::string &ofilename,
     file_t statPtr;
     if (opts.save_stat) {
         std::string statname =
-            win32::PathReplaceExtension(ofilename, ".stat.txt");
-        statPtr = win32::fopen(statname, "w");
+            platform::PathReplaceExtension(ofilename, ".stat.txt");
+        statPtr = platform::fopen(statname, "w");
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 
@@ -736,7 +736,7 @@ void do_encode(IEncoder *encoder, const std::string &ofilename,
         while (!g_interrupted && encoder->encodeChunk(1)) {
             progress.update(src->getPosition());
             if (statfp && stat->framesWritten())
-                win32::fprintf(statfp, "%g\n", stat->currentBitrate());
+                platform::fprintf(statfp, "%g\n", stat->currentBitrate());
         }
         progress.finish(src->getPosition());
     } catch (...) {
@@ -804,9 +804,9 @@ std::shared_ptr<ISink> open_sink(const std::string &ofilename,
     if (opts.isAAC())
         asc = cautil::parseMagicCookieAAC(cookie);
 
-    win32::MakeSureDirectoryPathExistsX(ofilename);
+    platform::MakeSureDirectoryPathExistsX(ofilename);
     if (opts.isMP4()) {
-        std::shared_ptr<FILE> _ = win32::fopen(ofilename, "wb");
+        std::shared_ptr<FILE> _ = platform::fopen(ofilename, "wb");
     }
     if (opts.is_adts)
         return std::make_shared<ADTSSink>(ofilename, asc, false);
@@ -852,16 +852,16 @@ void show_available_codec_setttings(UInt32 fmt)
                     kAudioCodecBitRateControlMode_Constant);
             auto bits = converter.getApplicableEncodeBitRates();
 
-            win32::fprintf(stdout, "%s %gHz %s --",
+            platform::fprintf(stdout, "%s %gHz %s --",
                     fmt == 'aac ' ? "LC" : "HE",
                     srates[i].mMinimum, name.c_str());
             for (size_t k = 0; k < bits.size(); ++k) {
                 if (!bits[k].mMinimum) continue;
                 int delim = k == 0 ? ' ' : ',';
-                win32::fprintf(stdout, "%c%d", delim,
+                platform::fprintf(stdout, "%c%d", delim,
                               static_cast<int>(lrint(bits[k].mMinimum / 1000.0)));
             }
-            win32::fprintf(stdout, "\n");
+            platform::fprintf(stdout, "\n");
         }
     }
 }
@@ -890,7 +890,7 @@ void setup_aach_codec(HMODULE hDll)
 static
 FARPROC WINAPI DllImportHook(unsigned notify, PDelayLoadInfo pdli)
 {
-    win32::throw_error(pdli->szDll, pdli->dwLastError);
+    platform::throw_error(pdli->szDll, pdli->dwLastError);
     return 0;
 }
 */
@@ -923,7 +923,7 @@ void set_dll_directories(int verbose)
             }
         }
     } catch (const std::exception &) {}
-    std::wstring dir = strutil::us2w(win32::get_module_directory()) + L"QTfiles";
+    std::wstring dir = strutil::us2w(platform::get_module_directory()) + L"QTfiles";
 #ifdef _WIN64
     dir += L"64";
 #endif
@@ -1003,7 +1003,7 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
     encoder.setFastMode(opts.alac_fast);
     auto cookie = encoder.getMagicCookie();
 
-    win32::MakeSureDirectoryPathExistsX(ofilename);
+    platform::MakeSureDirectoryPathExistsX(ofilename);
     std::shared_ptr<ISink> sink;
     if (opts.is_caf)
         sink = std::make_shared<CAFSink>(ofilename, oasbd,
@@ -1296,7 +1296,7 @@ void load_track(const char *ifilename, const Options &opts,
         const char *base_p = strutil::basename(ifname);
         std::string cuedir =
             (base_p == ifname.c_str() ? "." : std::string(ifname.c_str(), base_p));
-        cuedir = win32::GetFullPathNameX(cuedir);
+        cuedir = platform::GetFullPathNameX(cuedir);
         std::string cuetext = misc::loadTextFile(ifname, opts.textcp);
         std::stringbuf istream(cuetext);
         load_cue_tracks(opts, &istream, false, cuedir, tracks);
@@ -1352,7 +1352,7 @@ void load_metadata_files(Options *opts)
     for (size_t i = 0; i < opts->artwork_files.size(); ++i) {
         try {
             uint64_t size;
-            char *data = win32::load_with_mmap(opts->artwork_files[i],
+            char *data = platform::load_with_mmap(opts->artwork_files[i],
                                                &size);
 #ifdef _WIN32
             std::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
@@ -1391,27 +1391,27 @@ std::string get_output_filename(const std::string &ifilename,
         return std::string("stdin") + ext;
 
     std::string obasename =
-        win32::PathReplaceExtension(strutil::basename(ifilename), ext);
+        platform::PathReplaceExtension(strutil::basename(ifilename), ext);
     std::string ofilename = strutil::format("%s/%s", outdir,
                                              obasename.c_str());
 
     /* test if ifilename and ofilename refer to the same file */
     std::shared_ptr<FILE> ifp, ofp;
     try {
-        ifp = win32::fopen(ifilename, "rb");
-        ofp = win32::fopen(ofilename, "rb");
+        ifp = platform::fopen(ifilename, "rb");
+        ofp = platform::fopen(ofilename, "rb");
     } catch (...) {
         return ofilename;
     }
 #ifdef _WIN32
-    if (!win32::is_same_file(_fileno(ifp.get()), _fileno(ofp.get())))
+    if (!platform::is_same_file(_fileno(ifp.get()), _fileno(ofp.get())))
 #else
-    if (!win32::is_same_file(fileno(ifp.get()), fileno(ofp.get())))
+    if (!platform::is_same_file(fileno(ifp.get()), fileno(ofp.get())))
 #endif
         return ofilename;
 
     std::string tl = strutil::format("_%s", ext);
-    return win32::PathReplaceExtension(ofilename, tl.c_str());
+    return platform::PathReplaceExtension(ofilename, tl.c_str());
 }
 
 #ifdef _WIN32
@@ -1508,10 +1508,10 @@ static int app_main(int argc, char **argv)
         set_dll_directories(opts.verbose);
         HMODULE hDll = LoadLibraryW(L"CoreAudioToolbox.dll");
         if (!hDll)
-            win32::throw_error("CoreAudioToolbox.dll", GetLastError());
+            platform::throw_error("CoreAudioToolbox.dll", GetLastError());
         else {
             WORD langid_us = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
-            std::string ver = win32::get_dll_version_for_locale(hDll, langid_us);
+            std::string ver = platform::get_dll_version_for_locale(hDll, langid_us);
             encoder_name = strutil::format("%s, CoreAudioToolbox %s",
                                            encoder_name.c_str(), ver.c_str());
             setup_aach_codec(hDll);

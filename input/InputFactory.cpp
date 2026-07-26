@@ -1,5 +1,5 @@
 #include "InputFactory.h"
-#include "win32util.h"
+#include "platformutil.h"
 #ifdef QAAC
 #include "ExtAFSource.h"
 #endif

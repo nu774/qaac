@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <string>
-#include "win32util.h"
+#include "platformutil.h"
 #include "strutil.h"
 
 #ifndef PROGNAME
@@ -27,18 +27,18 @@ public:
 #else
         m_console_visible = false;
 #endif
-        m_last_tick_title = m_last_tick_stderr = win32::tick_count_ms();
+        m_last_tick_title = m_last_tick_stderr = platform::tick_count_ms();
     }
     void put(const std::string &message) {
         m_message = message;
-        uint32_t tick = win32::tick_count_ms();
+        uint32_t tick = platform::tick_count_ms();
         if (tick - m_last_tick_stderr > m_interval) {
             m_last_tick_stderr = tick;
             flush();
         }
     }
     void flush() {
-        if (m_verbose) win32::write_utf8(stderr, m_message);
+        if (m_verbose) platform::write_utf8(stderr, m_message);
 #ifdef _WIN32
         if (m_verbose && m_console_visible &&
             m_last_tick_stderr - m_last_tick_title > m_interval * 4)

@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include "WaveSource.h"
 #include "util.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "chanmap.h"
 
 #define FOURCCR(a,b,c,d) ((a)|((b)<<8)|((c)<<16)|((d)<<24))

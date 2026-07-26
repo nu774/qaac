@@ -21,7 +21,7 @@ PipedReader::PipedReader(std::shared_ptr<ISource> &src):
     int fd;
     FILE *fp;
     if (!CreatePipe(&hr, &hw, 0, NSAMPLES * bpf * PIPE_BUF_FACTOR))
-        win32::throw_error("CreatePipe", GetLastError());
+        platform::throw_error("CreatePipe", GetLastError());
     CHECKCRT((fd = _open_osfhandle(reinterpret_cast<intptr_t>(hr),
                                    _O_RDONLY|_O_BINARY)) < 0);
     CHECKCRT((fp = _fdopen(fd, "rb")) == 0);

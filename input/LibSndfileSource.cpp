@@ -3,7 +3,7 @@
 #include <opusfile.h>
 #include <oggflacfile.h>
 #include "taglibhelper.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "metadata.h"
 #include "cautil.h"
 

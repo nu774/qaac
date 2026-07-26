@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <memory>
 #ifdef _WIN32
-#include "win32util.h"
+#include "platformutil.h"
 #else
 #include <dlfcn.h>
 #endif

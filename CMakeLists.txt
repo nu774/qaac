@@ -395,7 +395,7 @@ add_library(common STATIC
     strutil.cpp
     util.cpp
     SeekableInputStream.cpp
-    win32util.cpp
+    platformutil.cpp
 )
 if(WIN32)
     target_sources(common PRIVATE

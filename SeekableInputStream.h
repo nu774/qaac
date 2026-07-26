@@ -1,5 +1,5 @@
 #include "IInputStream.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include <vector>
 
 class SeekableInputStream: public IInputStream {

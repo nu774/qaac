@@ -1,5 +1,5 @@
-#ifndef _WIN32UTIL_H
-#define _WIN32UTIL_H
+#ifndef _PLATFORMUTIL_H
+#define _PLATFORMUTIL_H
 
 #include <cstdio>
 #include <cstdarg>
@@ -38,10 +38,10 @@
 #include "util.h"
 
 #ifdef _WIN32
-#define HR(expr) (void)(win32::throwIfError((expr), #expr))
+#define HR(expr) (void)(platform::throwIfError((expr), #expr))
 #endif
 
-namespace win32 {
+namespace platform {
 #ifdef _WIN32
     inline uint32_t tick_count_ms() { return GetTickCount(); }
 #else
@@ -164,7 +164,7 @@ namespace win32 {
 
     inline FILE *wfopenx(const std::string &path, const char *mode)
     {
-        std::wstring fullpath = win32::prefixed_path(strutil::us2w(path).c_str());
+        std::wstring fullpath = platform::prefixed_path(strutil::us2w(path).c_str());
         std::wstring wmode = strutil::us2w(mode);
         int share = _SH_DENYRW;
         if (std::wcschr(wmode.c_str(), L'r') && !std::wcschr(wmode.c_str(), L'+'))
@@ -311,9 +311,9 @@ namespace win32 {
         va_list ap;
         va_start(ap, fmt);
         // qualified: an unqualified call here is ambiguous between
-        // win32::vfprintf and ::vfprintf (ADL considers the global
+        // platform::vfprintf and ::vfprintf (ADL considers the global
         // namespace too, since FILE is declared there).
-        int rc = win32::vfprintf(fp, fmt, ap);
+        int rc = platform::vfprintf(fp, fmt, ap);
         va_end(ap);
         return rc;
     }

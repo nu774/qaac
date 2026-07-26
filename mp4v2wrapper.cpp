@@ -1,7 +1,7 @@
 #include "util.h"
 #include "mp4v2wrapper.h"
 #include "strutil.h"
-#include "win32util.h"
+#include "platformutil.h"
 #undef FindAtom // XXX: conflicts with kernel32 function macro
 
 using mp4v2::impl::MP4File;
@@ -374,7 +374,7 @@ void MP4FileCopy::start(const char *path)
 {
     m_mp4file->m_file = 0;
     try {
-        m_fp = std::shared_ptr<FILE>(win32::wfopenx(path, "wb"), fclose);
+        m_fp = std::shared_ptr<FILE>(platform::wfopenx(path, "wb"), fclose);
         static MP4StdIOCallbacks callbacks;
         m_mp4file->Open(path, File::MODE_CREATE, nullptr, &callbacks, m_fp.get());
     } catch (...) {

@@ -3,7 +3,7 @@
 #include "strutil.h"
 #include "metadata.h"
 #include "cautil.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "chanmap.h"
 
 namespace flac {

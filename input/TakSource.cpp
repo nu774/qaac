@@ -1,7 +1,7 @@
 #include <sys/stat.h>
 #include "TakSource.h"
 #include "strutil.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "metadata.h"
 #include <apefile.h>
 #include <apetag.h>

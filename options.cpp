@@ -1,6 +1,6 @@
 #include <limits>
 #include "options.h"
-#include "win32util.h"
+#include "platformutil.h"
 #ifdef _WIN32
 #include "win32/getopt.h"
 #else
@@ -120,7 +120,7 @@ const char *get_qaac_version();
 static
 void usage()
 {
-    win32::fprintf(stdout, "%s %s\n%s", PROGNAME, get_qaac_version(),
+    platform::fprintf(stdout, "%s %s\n%s", PROGNAME, get_qaac_version(),
 "Usage: " PROGNAME " [options] infiles....\n"
 "\n"
 "\"-\" as infile means stdin.\n"
@@ -368,7 +368,7 @@ void usage()
 
 static void complain(const char *s)
 {
-    win32::fprintf(stderr, "%s", s);
+    platform::fprintf(stderr, "%s", s);
 #ifdef _WIN32
     OutputDebugStringA(s);
 #endif
@@ -798,9 +798,9 @@ bool Options::parse(int &argc, char **&argv)
     }
     if (isMP4() && this->ofilename && !std::strcmp(this->ofilename, "-")) {
 #ifdef _WIN32
-        if (!win32::is_seekable(_fileno(stdout))) {
+        if (!platform::is_seekable(_fileno(stdout))) {
 #else
-        if (!win32::is_seekable(fileno(stdout))) {
+        if (!platform::is_seekable(fileno(stdout))) {
 #endif
             complain("MP4 piping is not supported.\n");
             return false;

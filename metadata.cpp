@@ -9,7 +9,7 @@
 #include <mpeg/id3v2/frames/attachedpictureframe.h>
 #include "metadata.h"
 #ifdef _WIN32
-#include "win32util.h"
+#include "platformutil.h"
 #endif
 #include "strutil.h"
 #include "mp4v2wrapper.h"

@@ -3,7 +3,7 @@
 #include <cmath>
 #include <float.h>
 #include "Normalizer.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "cautil.h"
 #ifndef _WIN32
 #include <unistd.h>
@@ -26,7 +26,7 @@ Normalizer::Normalizer(const std::shared_ptr<ISource> &src, bool seekable)
                                      asbd.mChannelsPerFrame,
                                      bits, kAudioFormatFlagIsFloat);
     if (!seekable) {
-        FILE *tmpfile = win32::tmpfile("qaac.norm");
+        FILE *tmpfile = platform::tmpfile("qaac.norm");
         m_tmpfile = std::shared_ptr<FILE>(tmpfile, std::fclose);
     }
 }

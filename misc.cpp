@@ -1,6 +1,6 @@
 #include "misc.h"
 #include "strutil.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "metadata.h"
 #include "expand.h"
 #include <cctype>
@@ -134,7 +134,7 @@ namespace misc
 
     std::string loadTextFile(const std::string &path, int codepage)
     {
-        auto fp = std::shared_ptr<FILE>(win32::wfopenx(path, "rb"), std::fclose);
+        auto fp = std::shared_ptr<FILE>(platform::wfopenx(path, "rb"), std::fclose);
         fseeko(fp.get(), 0, SEEK_END);
         int64_t fileSize = ftello(fp.get());
         fseeko(fp.get(), 0, SEEK_SET);
@@ -342,7 +342,7 @@ namespace misc
         if (SUCCEEDED(SHGetFolderPathW(0, CSIDL_APPDATA, 0, 0, path)))
             search_paths.push_back(
                 strutil::format("%s\\%s", strutil::w2us(path).c_str(), "qaac"));
-        search_paths.push_back(win32::get_module_directory());
+        search_paths.push_back(platform::get_module_directory());
         const char *sep = "\\";
 #else
         const char *home = getenv("HOME");
@@ -353,14 +353,14 @@ namespace misc
             search_paths.push_back(strutil::format("%s/qaac", xdg));
         else if (home)
             search_paths.push_back(strutil::format("%s/.config/qaac", home));
-        search_paths.push_back(win32::get_module_directory());
+        search_paths.push_back(platform::get_module_directory());
         const char *sep = "/";
 #endif
         for (size_t i = 0; i < search_paths.size(); ++i) {
             try {
                 std::string pathtry =
                     strutil::format("%s%s%s", search_paths[i].c_str(), sep, file);
-                return win32::fopen(pathtry, "r");
+                return platform::fopen(pathtry, "r");
             } catch (...) {
                 if (i == search_paths.size() - 1) throw;
             }
@@ -411,7 +411,7 @@ namespace misc
     std::vector<std::vector<complex_t>>
     loadRemixerMatrixFromFile(const char *path)
     {
-        return loadRemixerMatrix(win32::fopen(path, "r"));
+        return loadRemixerMatrix(platform::fopen(path, "r"));
     }
 
     std::vector<std::vector<complex_t>>

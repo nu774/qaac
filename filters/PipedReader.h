@@ -2,7 +2,7 @@
 #define PIPED_READER_H
 
 #include "FilterBase.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include <thread>
 
 class PipedReader: public FilterBase {

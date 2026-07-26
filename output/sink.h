@@ -5,7 +5,7 @@
 #include "CoreAudioToolbox.h"
 #include "mp4v2wrapper.h"
 #include "ISink.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "misc.h"
 
 class MP4SinkBase: public ITagStore, public IChapterWriter, public IArtworkWriter, public IFinishWriteSink, public IBitrateWriter {

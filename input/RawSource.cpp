@@ -1,5 +1,5 @@
 #include "RawSource.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "cautil.h"
 
 RawSource::RawSource(std::shared_ptr<IInputStream> stream,

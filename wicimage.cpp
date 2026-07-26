@@ -21,7 +21,7 @@ bool WICConvertArtwork(const void *data, size_t size, unsigned maxSize,
 #include <wincodec.h>
 #pragma warning(pop)
 #include "util.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "wicimage.h"
 
 _COM_SMARTPTR_TYPEDEF(IStream, __uuidof(IStream));

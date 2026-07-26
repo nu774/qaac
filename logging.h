@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <vector>
-#include "win32util.h"
+#include "platformutil.h"
 
 class Log {
     std::vector<std::shared_ptr<FILE>> m_streams;
@@ -18,7 +18,7 @@ public:
         // A GUI-subsystem process (or one otherwise launched with no
         // console) can have an invalid stderr handle; skip logging to it
         // in that case rather than fail later on every write.
-        if (GetFileType(win32::get_handle(2)) != FILE_TYPE_UNKNOWN)
+        if (GetFileType(platform::get_handle(2)) != FILE_TYPE_UNKNOWN)
             m_streams.push_back(std::shared_ptr<FILE>(stderr, [](FILE*){}));
 #else
         m_streams.push_back(std::shared_ptr<FILE>(stderr, [](FILE*){}));
@@ -27,7 +27,7 @@ public:
     void enable_file(const std::string &filename)
     {
         try {
-            FILE *fp = win32::wfopenx(filename, "w");
+            FILE *fp = platform::wfopenx(filename, "w");
             std::setbuf(fp, 0);
             m_streams.push_back(std::shared_ptr<FILE>(fp, std::fclose));
         } catch (...) {}
@@ -49,7 +49,7 @@ public:
         OutputDebugStringA(buffer.data());
 #endif
         for (size_t i = 0; i < m_streams.size(); ++i)
-            win32::write_utf8(m_streams[i].get(), buffer.data());
+            platform::write_utf8(m_streams[i].get(), buffer.data());
     }
     void printf(const char *fmt, ...)
     {

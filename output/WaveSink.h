@@ -2,7 +2,7 @@
 #define _WAVESINK_H
 
 #include "ISink.h"
-#include "win32util.h"
+#include "platformutil.h"
 
 class WaveSink : public ISink {
     std::shared_ptr<FILE> m_file;

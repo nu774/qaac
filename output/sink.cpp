@@ -5,7 +5,7 @@
 #include "bitstream.h"
 #include "metadata.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
-#include "win32util.h"
+#include "platformutil.h"
 #include <io.h>
 #include <fcntl.h>
 #endif
@@ -75,9 +75,9 @@ MP4SinkBase::MP4SinkBase(const std::string &path, bool temp)
         if (path == "-") {
             m_fp = std::shared_ptr<FILE>(stdout, [](FILE *){});
         } else if (temp) {
-            m_fp = std::shared_ptr<FILE>(win32::tmpfile(m_filename), fclose);
+            m_fp = std::shared_ptr<FILE>(platform::tmpfile(m_filename), fclose);
         } else {
-            m_fp = std::shared_ptr<FILE>(win32::wfopenx(m_filename, "wb"), fclose);
+            m_fp = std::shared_ptr<FILE>(platform::wfopenx(m_filename, "wb"), fclose);
         }
 
         m_mp4file.Create(m_filename.c_str(),
@@ -474,7 +474,7 @@ ALACSink::ALACSink(const std::string &path,
 ADTSSink::ADTSSink(const std::string &path,
                    const std::vector<uint8_t> &cookie,
                    bool append)
-    : m_fp(win32::fopen(path, append ? "ab" : "wb"))
+    : m_fp(platform::fopen(path, append ? "ab" : "wb"))
 {
     init(cookie);
 }
@@ -516,7 +516,7 @@ void ADTSSink::writeSamples(const void *data, size_t length, size_t nsamples)
 
 void ADTSSink::init(const std::vector<uint8_t> &config)
 {
-    m_seekable = win32::is_seekable(fileno(m_fp.get()));
+    m_seekable = platform::is_seekable(fileno(m_fp.get()));
     unsigned rate;
     size_t off = parseDecSpecificConfig(config, &m_sample_rate_index, &rate,
                                         &m_channel_config);

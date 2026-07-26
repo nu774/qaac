@@ -3,7 +3,7 @@
 
 #include "ISource.h"
 #include "cautil.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "IInputStream.h"
 
 namespace wave {

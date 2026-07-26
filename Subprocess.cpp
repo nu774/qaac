@@ -1,5 +1,5 @@
 #include "Subprocess.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "strutil.h"
 #include "util.h"
 #ifndef _WIN32
@@ -45,11 +45,11 @@ ChildProcess::ChildProcess(const std::vector<std::string> &argv)
     HANDLE hr, hw;
     SECURITY_ATTRIBUTES sa = { sizeof(sa), 0, TRUE };
     if (!CreatePipe(&hr, &hw, &sa, 0))
-        win32::throw_error("CreatePipe", GetLastError());
+        platform::throw_error("CreatePipe", GetLastError());
     std::shared_ptr<void> readEnd(hr, CloseHandle);
     if (!SetHandleInformation(hw, HANDLE_FLAG_INHERIT, 0)) {
         CloseHandle(hw);
-        win32::throw_error("SetHandleInformation", GetLastError());
+        platform::throw_error("SetHandleInformation", GetLastError());
     }
 
     std::wstring cmdline;
@@ -72,7 +72,7 @@ ChildProcess::ChildProcess(const std::vector<std::string> &argv)
     BOOL ok = CreateProcessW(0, buf.data(), 0, 0, TRUE, 0, 0, 0, &si, &pi);
     if (!ok) {
         CloseHandle(hw);
-        win32::throw_error(argv[0], GetLastError());
+        platform::throw_error(argv[0], GetLastError());
     }
     CloseHandle(pi.hThread);
     m_process.reset(pi.hProcess, CloseHandle);

@@ -2,7 +2,7 @@
 #define _RAWSOURCE_H
 
 #include "ISource.h"
-#include "win32util.h"
+#include "platformutil.h"
 #include "IInputStream.h"
 
 class RawSource: public ISeekableSource {
