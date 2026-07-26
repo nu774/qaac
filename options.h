@@ -127,6 +127,7 @@ struct Options {
     std::string encoder_name;
     std::vector<uint32_t> chanmap;
     std::vector<int> cue_tracks;
+    std::vector<std::string> exec_command;
 };
 
 #endif

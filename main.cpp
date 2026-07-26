@@ -26,6 +26,7 @@
 #include "Scaler.h"
 #include "Limiter.h"
 #include "PipedReader.h"
+#include "Subprocess.h"
 #include "TrimmedSource.h"
 #include "chanmap.h"
 #include "ChannelMapper.h"
@@ -599,9 +600,28 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
 }
 
 static
+std::vector<std::string> expand_exec_template(
+        const std::vector<std::string> &tmpl, const std::string &name)
+{
+    std::vector<std::string> result;
+    result.reserve(tmpl.size());
+    for (auto &&tok: tmpl) {
+        std::string expanded = tok;
+        size_t pos = 0;
+        while ((pos = expanded.find("{}", pos)) != std::string::npos) {
+            expanded.replace(pos, 2, name);
+            pos += name.size();
+        }
+        result.push_back(expanded);
+    }
+    return result;
+}
+
+static
 void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
                  const std::string &ofilename, const Options &opts)
 {
+    std::shared_ptr<ChildProcess> child;
     std::shared_ptr<ISink> sink;
     uint32_t chanmask = 0;
     CAFSink *cafsink = 0;
@@ -617,7 +637,15 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
         }
     }
     if (opts.isLPCM()) {
-        auto fileptr = win32::fopen(ofilename, "wb");
+        std::shared_ptr<FILE> fileptr;
+        if (!opts.exec_command.empty()) {
+            std::string name = win32::PathReplaceExtension(ofilename, "");
+            auto argv = expand_exec_template(opts.exec_command, name);
+            child = std::make_shared<ChildProcess>(argv);
+            fileptr = child->stdinFile();
+        } else {
+            fileptr = win32::fopen(ofilename, "wb");
+        }
         if (!opts.is_caf) {
             sink = std::make_shared<WaveSink>(fileptr, src->length(),
                                               sf, chanmask);
@@ -655,6 +683,14 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
     } else {
         PeakSink *p = dynamic_cast<PeakSink *>(sink.get());
         LOG("Peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
+    }
+    if (child) {
+        sink.reset();
+        int code = child->wait();
+        if (code != 0)
+            throw std::runtime_error(
+                strutil::format("--exec command exited with status %d",
+                                code));
     }
 }
 

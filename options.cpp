@@ -259,6 +259,23 @@ void usage()
 "                       Name generation can be tweaked by --fname-format.\n"
 "--fname-format <string>   Format string for output filename.\n"
 "\n"
+"Option for piping decoded output to an external command:\n"
+"--exec <command> <arg>...\n"
+"                       Decode (implies -D) and pipe the result to the\n"
+"                       given command's stdin instead of writing a file.\n"
+"                       Piped as a plain WAV by default; add --caf to pipe\n"
+"                       a CAF instead, which also carries tags/metadata\n"
+"                       through to the command (WAV does not). Must be the\n"
+"                       last option -- everything after it is taken\n"
+"                       literally as the command and its arguments, with no\n"
+"                       shell reinterpretation. One process is spawned per\n"
+"                       track. A literal {} in any argument is replaced\n"
+"                       with the output name that would otherwise have\n"
+"                       been used (per --fname-format, extension stripped\n"
+"                       -- the command supplies its own).\n"
+"                       Example:\n"
+"                         --exec ffmpeg -i - -c:a libopus {}.opus\n"
+"\n"
 "Option for single output:\n"
 "-o <filename>          Specify output filename\n"
 "--concat               Encodes whole inputs into a single file. \n"
@@ -366,6 +383,20 @@ static const char * const short_opts = "hDo:d:b:r:insRSNA";
 
 bool Options::parse(int &argc, char **&argv)
 {
+    for (int i = 0; i < argc; ++i) {
+        if (!std::strcmp(argv[i], "--exec")) {
+            for (int j = i + 1; j < argc; ++j)
+                this->exec_command.push_back(argv[j]);
+            if (this->exec_command.empty()) {
+                complain("--exec requires a command.\n");
+                return false;
+            }
+            argc = i;
+            this->output_format = 'lpcm';
+            break;
+        }
+    }
+
     int ch, pos;
     while ((ch = getopt_long(argc, argv,
                                    short_opts, long_options, 0)) != EOF)

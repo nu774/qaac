@@ -391,6 +391,7 @@ add_library(common STATIC
     metadata.cpp
     misc.cpp
     mp4v2wrapper.cpp
+    Subprocess.cpp
     strutil.cpp
     util.cpp
     Win32InputStream.cpp
