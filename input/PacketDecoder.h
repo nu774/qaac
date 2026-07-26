@@ -2,6 +2,7 @@
 #define PACKETDECODER_H
 
 #include <cstdint>
+#include <cstddef>
 #include <vector>
 #include "CoreAudioToolbox.h"
 

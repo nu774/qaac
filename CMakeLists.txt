@@ -5,22 +5,25 @@ cmake_policy(SET CMP0091 NEW)
 
 project(qaac LANGUAGES C CXX)
 
-if(NOT MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    message(FATAL_ERROR "qaac is a Win32 console app and only builds with MSVC, clang-cl, or clang --target=*-windows-msvc")
+if(WIN32)
+    if(NOT MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        message(FATAL_ERROR "qaac is a Win32 console app and only builds with MSVC, clang-cl, or clang --target=*-windows-msvc")
+    endif()
 endif()
 
 set(CMAKE_CXX_STANDARD 11)
 
-if(MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:DebugDLL>")
-elseif(NOT MINGW)
-    add_compile_options(
-        $<$<CONFIG:Debug>:-fms-runtime-lib=dll_dbg>
-        $<$<NOT:$<CONFIG:Debug>>:-fms-runtime-lib=dll>
-    )
+if(WIN32)
+    if(MSVC)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:DebugDLL>")
+    elseif(NOT MINGW)
+        add_compile_options(
+            $<$<CONFIG:Debug>:-fms-runtime-lib=dll_dbg>
+            $<$<NOT:$<CONFIG:Debug>>:-fms-runtime-lib=dll>
+        )
+    endif()
+    add_compile_definitions(UNICODE _UNICODE)
 endif()
-
-add_compile_definitions(UNICODE _UNICODE)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND MSVC)
     add_compile_options(/arch:IA32)
@@ -29,9 +32,11 @@ endif()
 if(MSVC)
     add_compile_options($<$<CONFIG:Release>:/Zi>)
     add_link_options($<$<CONFIG:Release>:/DEBUG>)
-else()
+elseif(WIN32)
     add_compile_options($<$<CONFIG:Release>:-g>)
     add_link_options($<$<CONFIG:Release>:-Wl,/DEBUG>)
+else()
+    add_compile_options($<$<CONFIG:Release>:-g>)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -49,8 +54,9 @@ add_library(alac STATIC
     ALAC/matrix_dec.c
     ALAC/matrix_enc.c
 )
-target_compile_definitions(alac PRIVATE inline=_inline TARGET_RT_LITTLE_ENDIAN TARGET_OS_WIN32)
+target_compile_definitions(alac PRIVATE TARGET_RT_LITTLE_ENDIAN TARGET_OS_WIN32)
 if(MSVC)
+    target_compile_definitions(alac PRIVATE inline=_inline)
     target_compile_options(alac PRIVATE /W2 /wd4146 /wd4244 /wd4805)
 endif()
 
@@ -67,7 +73,6 @@ target_include_directories(ogg PUBLIC ogg/include)
 # mp4v2
 # ---------------------------------------------------------------------------
 add_library(mp4v2 STATIC
-    mp4v2/libplatform/platform_win32.cpp
     mp4v2/src/3gp.cpp
     mp4v2/src/atom_ac3.cpp
     mp4v2/src/atom_amr.cpp
@@ -135,9 +140,7 @@ add_library(mp4v2 STATIC
     mp4v2/libplatform/sys/error.cpp
     mp4v2/src/exception.cpp
     mp4v2/libplatform/io/File.cpp
-    mp4v2/libplatform/io/File_win32.cpp
     mp4v2/libplatform/io/FileSystem.cpp
-    mp4v2/libplatform/io/FileSystem_win32.cpp
     mp4v2/src/itmf/generic.cpp
     mp4v2/src/isma.cpp
     mp4v2/src/mp4atom.cpp
@@ -154,15 +157,29 @@ add_library(mp4v2 STATIC
     mp4v2/libplatform/prog/option.cpp
     mp4v2/src/qtff/PictureAspectRatioBox.cpp
     mp4v2/src/qosqualifiers.cpp
-    mp4v2/libplatform/number/random_win32.cpp
     mp4v2/src/rtphint.cpp
     mp4v2/src/itmf/Tags.cpp
     mp4v2/src/text.cpp
     mp4v2/libplatform/time/time.cpp
-    mp4v2/libplatform/time/time_win32.cpp
     mp4v2/src/itmf/type.cpp
     mp4v2/src/bmff/typebmff.cpp
 )
+if(WIN32)
+    target_sources(mp4v2 PRIVATE mp4v2/libplatform/platform_win32.cpp)
+    target_sources(mp4v2 PRIVATE
+        mp4v2/libplatform/io/File_win32.cpp
+        mp4v2/libplatform/io/FileSystem_win32.cpp
+        mp4v2/libplatform/number/random_win32.cpp
+        mp4v2/libplatform/time/time_win32.cpp
+    )
+else()
+    target_sources(mp4v2 PRIVATE
+        mp4v2/libplatform/io/File_posix.cpp
+        mp4v2/libplatform/io/FileSystem_posix.cpp
+        mp4v2/libplatform/number/random_posix.cpp
+        mp4v2/libplatform/time/time_posix.cpp
+    )
+endif()
 target_include_directories(mp4v2 PUBLIC mp4v2 mp4v2/include)
 target_compile_definitions(mp4v2 PUBLIC MP4V2_USE_STATIC_LIB MP4V2_NO_STDINT_DEFS)
 target_compile_definitions(mp4v2 PRIVATE _CRT_SECURE_NO_DEPRECATE)
@@ -339,7 +356,6 @@ target_compile_definitions(uchardet PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_NONSTD
 # common (shared code linked into both qaac and refalac)
 # ---------------------------------------------------------------------------
 add_library(common STATIC
-    input/AvisynthSource.cpp
     input/CAFFile.cpp
     input/FLACModule.cpp
     input/FLACPacketDecoder.cpp
@@ -351,7 +367,6 @@ add_library(common STATIC
     input/OggSource.cpp
     input/OpusPacketDecoder.cpp
     input/RawSource.cpp
-    input/TakSource.cpp
     input/WaveSource.cpp
     input/WavpackSource.cpp
     filters/ChannelMapper.cpp
@@ -367,7 +382,6 @@ add_library(common STATIC
     filters/SoxrResampler.cpp
     output/CAFSink.cpp
     output/sink.cpp
-    output/WaveOutSink.cpp
     output/WaveSink.cpp
     bitstream.cpp
     chanmap.cpp
@@ -380,10 +394,17 @@ add_library(common STATIC
     strutil.cpp
     util.cpp
     wgetopt.cpp
-    wicimage.cpp
     Win32InputStream.cpp
     win32util.cpp
 )
+if(WIN32)
+    target_sources(common PRIVATE
+        wicimage.cpp
+        output/WaveOutSink.cpp
+        input/AvisynthSource.cpp
+        input/TakSource.cpp
+    )
+endif()
 target_include_directories(common PRIVATE
     .
     input
@@ -404,6 +425,7 @@ target_link_libraries(common PUBLIC mp4v2 taglib uchardet ogg)
 # ---------------------------------------------------------------------------
 # qaac
 # ---------------------------------------------------------------------------
+if(WIN32)
 add_executable(qaac
     input/CAFSource.cpp
     input/CoreAudioPacketDecoder.cpp
@@ -491,6 +513,7 @@ else()
         target_link_options(qaac PRIVATE -Wl,wsetargv.obj)
     endif()
 endif()
+endif() # WIN32 (qaac)
 
 # ---------------------------------------------------------------------------
 # refalac
@@ -505,10 +528,12 @@ add_executable(refalac
     main.cpp
     options.cpp
     version.cpp
-    windows7.manifest
 )
-if(MINGW)
-    target_sources(refalac PRIVATE windows7.rc)
+if(WIN32)
+    target_sources(refalac PRIVATE windows7.manifest)
+    if(MINGW)
+        target_sources(refalac PRIVATE windows7.rc)
+    endif()
 endif()
 target_include_directories(refalac PRIVATE
     .
@@ -524,11 +549,17 @@ target_compile_definitions(refalac PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_
 if(MSVC)
     target_compile_options(refalac PRIVATE /wd4018 /wd4091 /wd4244 /wd4267 /wd4838)
 endif()
-target_link_libraries(refalac PRIVATE alac common mp4v2 taglib
-    shlwapi.lib
-    advapi32.lib
-    winmm.lib
-)
+target_link_libraries(refalac PRIVATE alac common mp4v2 taglib)
+if(WIN32)
+    target_link_libraries(refalac PRIVATE
+        shlwapi.lib
+        advapi32.lib
+        winmm.lib
+    )
+else()
+    find_package(Threads REQUIRED)
+    target_link_libraries(refalac PRIVATE ${CMAKE_DL_LIBS} Threads::Threads)
+endif()
 if(MSVC)
     target_link_options(refalac PRIVATE
         $<$<CONFIG:Release>:/OPT:REF>
@@ -536,7 +567,7 @@ if(MSVC)
         $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:Clang>>>:/PROFILE>
         wsetargv.obj
     )
-else()
+elseif(WIN32)
     target_link_options(refalac PRIVATE
         -municode
         $<$<CONFIG:Release>:-Wl,/OPT:REF>
@@ -549,6 +580,6 @@ else()
     endif()
 endif()
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     set_target_properties(refalac PROPERTIES OUTPUT_NAME refalac64)
 endif()

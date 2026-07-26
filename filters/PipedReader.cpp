@@ -1,4 +1,7 @@
 #include "PipedReader.h"
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 namespace {
     const int NSAMPLES = 0x1000;
@@ -6,13 +9,17 @@ namespace {
 }
 
 PipedReader::PipedReader(std::shared_ptr<ISource> &src):
-    FilterBase(src), m_thread(0), m_position(0)
+    FilterBase(src),
+#ifndef _WIN32
+    m_writeFd(-1),
+#endif
+    m_position(0)
 {
+    uint32_t bpf = src->getSampleFormat().mBytesPerFrame;
+#ifdef _WIN32
     HANDLE hr, hw;
     int fd;
     FILE *fp;
-
-    uint32_t bpf = src->getSampleFormat().mBytesPerFrame;
     if (!CreatePipe(&hr, &hw, 0, NSAMPLES * bpf * PIPE_BUF_FACTOR))
         win32::throw_error("CreatePipe", GetLastError());
     CHECKCRT((fd = _open_osfhandle(reinterpret_cast<intptr_t>(hr),
@@ -20,18 +27,27 @@ PipedReader::PipedReader(std::shared_ptr<ISource> &src):
     CHECKCRT((fp = _fdopen(fd, "rb")) == 0);
     m_readPipe.reset(fp, std::fclose);
     m_writePipe.reset(hw, CloseHandle);
+#else
+    int fds[2];
+    if (pipe(fds) != 0)
+        util::throw_crt_error("pipe");
+    FILE *fp = fdopen(fds[0], "rb");
+    if (!fp) util::throw_crt_error("fdopen");
+    m_readPipe.reset(fp, std::fclose);
+    m_writeFd = fds[1];
+#endif
 }
 
 PipedReader::~PipedReader()
 {
-    if (m_thread.get()) {
-        /*
-         * Let InputThread quit if it's still running.
-         * (WriteFile() will immediately fail, even if it is blocking on it)
-         */
+    if (m_thread.joinable()) {
         m_readPipe.reset();
-        WaitForSingleObject(m_thread.get(), INFINITE);
+        m_thread.join();
     }
+#ifndef _WIN32
+    if (m_writeFd >= 0)
+        close(m_writeFd);
+#endif
 }
 
 size_t PipedReader::readSamples(void *buffer, size_t nsamples)
@@ -55,12 +71,30 @@ void PipedReader::inputThreadProc()
         uint32_t bpf = src->getSampleFormat().mBytesPerFrame;
         std::vector<uint8_t> buffer(NSAMPLES * bpf);
         uint8_t *bp = &buffer[0];
-        HANDLE ph = m_writePipe.get();
         size_t n;
+#ifdef _WIN32
+        HANDLE ph = m_writePipe.get();
         DWORD nb;
         while ((n = src->readSamples(bp, NSAMPLES)) > 0
                && WriteFile(ph, bp, n * bpf, &nb, 0))
             ;
+#else
+        while ((n = src->readSamples(bp, NSAMPLES)) > 0) {
+            size_t nbytes = n * bpf;
+            size_t off = 0;
+            bool ok = true;
+            while (off < nbytes) {
+                ssize_t w = write(m_writeFd, bp + off, nbytes - off);
+                if (w <= 0) { ok = false; break; }
+                off += static_cast<size_t>(w);
+            }
+            if (!ok) break;
+        }
+#endif
     } catch (...) {}
+#ifdef _WIN32
     m_writePipe.reset(); // close
+#else
+    if (m_writeFd >= 0) { close(m_writeFd); m_writeFd = -1; }
+#endif
 }

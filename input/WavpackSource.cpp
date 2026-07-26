@@ -1,4 +1,3 @@
-#include <io.h>
 #include <sys/stat.h>
 #include "WavpackSource.h"
 #include <wavpack.h>

@@ -5,6 +5,12 @@
 #include <string>
 #include <stdexcept>
 #include <stdint.h>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#include <sys/stat.h>
+#endif
 #undef FindAtom
 #include "src/impl.h"
 #include "util.h"
@@ -113,12 +119,22 @@ struct MP4StdIOCallbacks: public MP4IOCallbacks
     {
         FILE *fp = static_cast<FILE*>(handle);
         fflush(fp);
+#ifdef _WIN32
         return _filelengthi64(_fileno(fp));
+#else
+        struct stat st;
+        if (fstat(fileno(fp), &st) != 0) return -1;
+        return st.st_size;
+#endif
     }
     static int seek(void *handle, int64_t pos)
     {
         FILE *fp = static_cast<FILE*>(handle);
+#ifdef _WIN32
         return _fseeki64(fp, pos, SEEK_SET) < 0;
+#else
+        return fseeko(fp, pos, SEEK_SET) < 0;
+#endif
     }
     static int read(void *handle, void *buffer, int64_t size, int64_t *nin)
     {
@@ -136,7 +152,11 @@ struct MP4StdIOCallbacks: public MP4IOCallbacks
     {
         FILE *fp = static_cast<FILE*>(handle);
         fflush(fp);
+#ifdef _WIN32
         return _chsize(_fileno(fp), size) < 0;
+#else
+        return ftruncate(fileno(fp), size) < 0;
+#endif
     }
 };
 

@@ -8,8 +8,13 @@ class SOXRModule {
     DL m_dl;
 private:
     SOXRModule() {
+#ifdef _WIN32
         if (!load("libsoxr64.dll"))
             load("libsoxr.dll");
+#else
+        if (!load("libsoxr.so"))
+            load("libsoxr.so.0");
+#endif
     }
     SOXRModule(const SOXRModule&);
     SOXRModule& operator=(const SOXRModule&);

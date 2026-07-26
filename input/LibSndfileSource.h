@@ -13,9 +13,14 @@ class LibSndfileModule {
     DL m_dl;
 private:
     LibSndfileModule() {
+#ifdef _WIN32
         load("sndfile.dll");
         if (!loaded()) load("libsndfile.dll");
         if (!loaded()) load("libsndfile-1.dll");
+#else
+        load("libsndfile.so");
+        if (!loaded()) load("libsndfile.so.1");
+#endif
     }
     LibSndfileModule(const LibSndfileModule&);
     LibSndfileModule& operator=(const LibSndfileModule&);

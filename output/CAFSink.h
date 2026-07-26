@@ -56,16 +56,20 @@ private:
     {
         std::fwrite(data, 1, length, m_file.get());
         if (ferror(m_file.get()))
-            win32::throw_error("write failed", _doserrno);
+            util::throw_crt_error("write failed");
     }
     void write32(uint32_t x)
     {
-        x = _byteswap_ulong(x);
+        x = util::h2big32(x);
         write(&x, 4);
     }
     void write64(uint64_t x)
     {
+#ifdef _MSC_VER
         x = _byteswap_uint64(x);
+#else
+        x = __builtin_bswap64(x);
+#endif
         write(&x, 8);
     }
     void writef64(double x)

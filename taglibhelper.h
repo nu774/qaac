@@ -18,7 +18,11 @@ namespace TagLibX {
         std::shared_ptr<IInputStream> m_stream;
     public:
         IStreamReader(std::shared_ptr<IInputStream> stream): m_stream(stream) {}
+#ifdef _WIN32
         FileName name() const { return L"Dummy"; }
+#else
+        FileName name() const { return "Dummy"; }
+#endif
         ByteVector readBlock(ulong length)
         {
             ByteVector v(static_cast<uint>(length));

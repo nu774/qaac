@@ -24,6 +24,10 @@ ALACPacketDecoder::ALACPacketDecoder(const AudioStreamBasicDescription &asbd)
 
 size_t ALACPacketDecoder::decode(const std::vector<uint8_t> &packet, std::vector<uint8_t> *samples)
 {
+    if (packet.empty()) {
+        samples->resize(0);
+        return 0;
+    }
     BitBuffer bits;
     BitBufferInit(&bits, const_cast<uint8_t*>(packet.data()), packet.size());
     uint32_t ncount;

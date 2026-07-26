@@ -16,8 +16,13 @@ class WavpackModule {
     DL m_dl;
 private:
     WavpackModule() {
+#ifdef _WIN32
         if (!load("wavpackdll.dll"))
             load("libwavpack-1.dll");
+#else
+        if (!load("libwavpack.so"))
+            load("libwavpack.so.1");
+#endif
     }
     WavpackModule(const WavpackModule&);
     WavpackModule& operator=(const WavpackModule&);

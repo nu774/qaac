@@ -3,10 +3,11 @@
 #include <cmath>
 #include <float.h>
 #include "Normalizer.h"
-#ifdef _WIN32
 #include "win32util.h"
-#endif
 #include "cautil.h"
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 Normalizer::Normalizer(const std::shared_ptr<ISource> &src, bool seekable)
     : FilterBase(src),
@@ -62,7 +63,11 @@ size_t Normalizer::processT(size_t nsamples)
             if (x > m_peak) m_peak = x;
         }
     } else if (fd() > 0)
+#ifdef _WIN32
         CHECKCRT(_lseeki64(fd(), 0, SEEK_SET) < 0);
+#else
+        CHECKCRT(lseek(fd(), 0, SEEK_SET) < 0);
+#endif
     return nc;
 }
 

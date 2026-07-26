@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cwchar>
+#include <cmath>
 #include <string>
 #include <sstream>
 #include <algorithm>
@@ -13,7 +14,11 @@
 #include <memory>
 #include <stdint.h>
 #include <sys/stat.h>
+#ifdef _WIN32
 #include <io.h>
+#else
+#include <unistd.h>
+#endif
 #include "strutil.h"
 #include "IInputStream.h"
 
@@ -146,22 +151,17 @@ namespace util {
     inline uint32_t l2host32(uint32_t n) { return n; }
     inline uint64_t l2host64(uint64_t n) { return n; }
 
-    inline uint16_t b2host16(uint16_t n)
-    {
-        return _byteswap_ushort(n);
-    }
-    inline uint32_t b2host32(uint32_t n)
-    {
-        return _byteswap_ulong(n);
-    }
-    inline uint64_t b2host64(uint64_t n)
-    {
-        return _byteswap_uint64(n);
-    }
-    inline uint32_t h2big32(uint32_t n)
-    {
-        return _byteswap_ulong(n);
-    }
+#ifdef _MSC_VER
+    inline uint16_t b2host16(uint16_t n) { return _byteswap_ushort(n); }
+    inline uint32_t b2host32(uint32_t n) { return _byteswap_ulong(n); }
+    inline uint64_t b2host64(uint64_t n) { return _byteswap_uint64(n); }
+    inline uint32_t h2big32(uint32_t n) { return _byteswap_ulong(n); }
+#else
+    inline uint16_t b2host16(uint16_t n) { return __builtin_bswap16(n); }
+    inline uint32_t b2host32(uint32_t n) { return __builtin_bswap32(n); }
+    inline uint64_t b2host64(uint64_t n) { return __builtin_bswap64(n); }
+    inline uint32_t h2big32(uint32_t n) { return __builtin_bswap32(n); }
+#endif
 
     void bswapbuffer(void *buffer, size_t size, uint32_t width);
 

@@ -6,6 +6,7 @@
 #include "FilterBase.h"
 #include "SoXConvolverModule.h"
 #include "misc.h"
+#include "util.h"
 
 class MatrixMixer: public FilterBase {
     typedef misc::complex_t complex_t;

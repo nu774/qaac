@@ -1,15 +1,14 @@
 #include <cstdio>
 #include <algorithm>
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
+#include <atomic>
 #include "ISource.h"
 
 namespace {
-    static union uif_t {
+    union uif_t {
         uint32_t i;
         float    f;
-    } *h2s_table;
+    };
+    std::atomic<uif_t*> h2s_table(nullptr);
 
     inline float quantize(double v)
     {
@@ -40,11 +39,13 @@ namespace {
     }
     void init_h2s_table()
     {
-        if (!h2s_table) {
+        if (!h2s_table.load()) {
             uif_t *p = new uif_t[1<<16];
             for (unsigned n = 0; n < (1<<16); ++n)
                 p[n].i = half2single_(n);
-            InterlockedCompareExchangePointerRelease((void**)&h2s_table, p, 0);
+            uif_t *expected = nullptr;
+            if (!h2s_table.compare_exchange_strong(expected, p))
+                delete[] p; // another thread published a table first
         }
     }
 }

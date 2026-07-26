@@ -40,7 +40,7 @@
 #ifndef _GETOPT_H_
 #define _GETOPT_H_
 
-namespace getopt {
+namespace wgetopt {
 
 /*
  * GNU-like getopt_long()/getopt_long_only() with 4.4BSD optreset extension.

@@ -7,7 +7,7 @@ namespace util {
     void bswap16buffer(uint16_t *bp, size_t size)
     {
         for (uint16_t *endp = bp + size; bp != endp; ++bp)
-            *bp = _byteswap_ushort(*bp);
+            *bp = b2host16(*bp);
     }
 
     void bswap24buffer(uint8_t *buffer, size_t size)
@@ -22,13 +22,13 @@ namespace util {
     void bswap32buffer(uint32_t *bp, size_t size)
     {
         for (uint32_t *endp = bp + size; bp != endp; ++bp)
-            *bp = _byteswap_ulong(*bp);
+            *bp = b2host32(*bp);
     }
 
     void bswap64buffer(uint64_t *bp, size_t size)
     {
         for (uint64_t *endp = bp + size; bp != endp; ++bp)
-            *bp = _byteswap_uint64(*bp);
+            *bp = b2host64(*bp);
     }
 
     void bswapbuffer(void *buffer, size_t size, uint32_t width)

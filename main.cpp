@@ -1,6 +1,9 @@
 #include <clocale>
 #include <numeric>
 #include <regex>
+#ifndef _WIN32
+#include <sys/mman.h>
+#endif
 #include "ISink.h"
 #include "win32util.h"
 #include "options.h"
@@ -8,7 +11,9 @@
 #include "sink.h"
 #include "WaveSink.h"
 #include "CAFSink.h"
+#ifdef _WIN32
 #include "WaveOutSink.h"
+#endif
 #include "PeakSink.h"
 #include "cuesheet.h"
 #include "CompositeSource.h"
@@ -27,12 +32,18 @@
 #include "logging.h"
 #include "Compressor.h"
 #include "metadata.h"
+#ifdef _WIN32
 #include "wicimage.h"
+#endif
 #include "FLACModule.h"
 #include "LibSndfileSource.h"
+#ifdef _WIN32
 #include "TakSource.h"
+#endif
 #include "WavpackSource.h"
+#ifdef _WIN32
 #include "AvisynthSource.h"
+#endif
 #include "OpusPacketDecoder.h"
 #include "OggIndex.h"
 #include "OggSource.h"
@@ -47,7 +58,12 @@
 #include "CoreAudioPaddedEncoder.h"
 #include "CoreAudioResampler.h"
 #endif
+#ifdef _WIN32
 #include <crtdbg.h>
+#else
+#include <csignal>
+#include <cstdlib>
+#endif
 
 #ifdef REFALAC
 #define PROGNAME "refalac"
@@ -59,12 +75,20 @@
 
 static volatile bool g_interrupted = false;
 
+#ifdef _WIN32
 static
 BOOL WINAPI console_interrupt_handler(DWORD type)
 {
     g_interrupted = true;
     return TRUE;
 }
+#else
+static
+void console_interrupt_handler(int sig)
+{
+    g_interrupted = true;
+}
+#endif
 
 inline
 std::string errormsg(const std::exception &ex)
@@ -80,20 +104,26 @@ class Progress {
     std::string m_tstamp;
     win32::Timer m_timer;
     bool m_console_visible;
-    DWORD m_stderr_type;
+    bool m_stderr_valid;
 public:
     Progress(bool verbosity, uint64_t total, uint32_t rate)
         : m_disp(100, verbosity), m_verbose(verbosity),
           m_total(total), m_rate(rate)
     {
-        m_stderr_type = GetFileType(win32::get_handle(_fileno(stderr)));
+#ifdef _WIN32
+        m_stderr_valid =
+            GetFileType(win32::get_handle(_fileno(stderr))) != FILE_TYPE_UNKNOWN;
         m_console_visible = IsWindowVisible(GetConsoleWindow());
+#else
+        m_stderr_valid = true;
+        m_console_visible = false; // no title-bar update path on POSIX
+#endif
         if (total != ~0ULL)
             m_tstamp = util::format_seconds(static_cast<double>(total) / rate);
     }
     void update(uint64_t current)
     {
-        if ((!m_verbose || !m_stderr_type) && !m_console_visible) return;
+        if ((!m_verbose || !m_stderr_valid) && !m_console_visible) return;
         double fcurrent = current;
         double percent = 100.0 * fcurrent / m_total;
         double seconds = fcurrent / m_rate;
@@ -317,9 +347,14 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                             std::vector<std::shared_ptr<ISource> > &chain,
                             const Options &opts, bool normalize_pass=false)
 {
+#ifdef _WIN32
     SYSTEM_INFO si;
     GetSystemInfo(&si);
-    bool threading = opts.threading && si.dwNumberOfProcessors > 1;
+    unsigned nprocessors = si.dwNumberOfProcessors;
+#else
+    unsigned nprocessors = std::thread::hardware_concurrency();
+#endif
+    bool threading = opts.threading && nprocessors > 1;
 
     AudioStreamBasicDescription sasbd = src->getSampleFormat();
     manipulate_channels(chain, opts);
@@ -529,9 +564,15 @@ void set_tags(ISource *src, ISink *sink, const Options &opts,
                 if (opts.copy_artwork && !opts.artworks.size()) {
                     std::vector<char> vec(ssi->second.begin(),
                                           ssi->second.end());
+#ifdef _WIN32
                     if (opts.artwork_size)
                         WICConvertArtwork(vec.data(), vec.size(),
                                           opts.artwork_size, &vec);
+#else
+                    if (opts.artwork_size)
+                        LOG("WARNING: --artwork-size is not supported on "
+                            "this platform; embedding artwork as-is\n");
+#endif
                     if (artWriter)
                         artWriter->addArtwork(vec);
                 }
@@ -962,6 +1003,7 @@ void process_file(const std::shared_ptr<ISeekableSource> &src,
         encode_file(chain, ofilename, opts);
 }
 
+#ifdef _WIN32
 enum class PlaybackOutcome { Completed, PrevFile, Quit };
 
 enum class PlaybackCommand {
@@ -1062,6 +1104,7 @@ PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
     }
     return outcome;
 }
+#endif // _WIN32
 
 const char *get_qaac_version();
 
@@ -1275,13 +1318,24 @@ void load_metadata_files(Options *opts)
             uint64_t size;
             char *data = win32::load_with_mmap(opts->artwork_files[i],
                                                &size);
+#ifdef _WIN32
             std::shared_ptr<char> dataPtr(data, UnmapViewOfFile);
+#else
+            std::shared_ptr<char> dataPtr(data,
+                [size](char *p) { munmap(p, size); });
+#endif
             auto type = mp4v2::impl::itmf::computeBasicType(data, size);
             if (type == mp4v2::impl::itmf::BT_IMPLICIT)
                 throw std::runtime_error("Unknown artwork image type");
             std::vector<char> vec(data, data + size);
+#ifdef _WIN32
             if (opts->artwork_size)
                 WICConvertArtwork(data, size, opts->artwork_size, &vec);
+#else
+            if (opts->artwork_size)
+                LOG("WARNING: --artwork-size is not supported on this "
+                    "platform; embedding artwork as-is\n");
+#endif
             opts->artworks.push_back(vec);
         } catch (const std::exception &e) {
             LOG("WARNING: %s\n", errormsg(e).c_str());
@@ -1313,13 +1367,18 @@ std::string get_output_filename(const std::string &ifilename,
     } catch (...) {
         return ofilename;
     }
+#ifdef _WIN32
     if (!win32::is_same_file(_fileno(ifp.get()), _fileno(ofp.get())))
+#else
+    if (!win32::is_same_file(fileno(ifp.get()), fileno(ofp.get())))
+#endif
         return ofilename;
 
     std::string tl = strutil::format("_%s", ext);
     return win32::PathReplaceExtension(ofilename, tl.c_str());
 }
 
+#ifdef _WIN32
 struct ConsoleTitleSaver {
     wchar_t title[1024];
     ConsoleTitleSaver()
@@ -1342,7 +1401,12 @@ struct COMInitializer {
         CoUninitialize();
     }
 };
+#else
+struct ConsoleTitleSaver {};
+struct COMInitializer {};
+#endif
 
+#ifdef _WIN32
 static
 void play_jobs(std::vector<EncodeJob> &jobs, const Options &opts)
 {
@@ -1361,38 +1425,23 @@ void play_jobs(std::vector<EncodeJob> &jobs, const Options &opts)
             break;
     }
 }
-
-int wmain(int argc, wchar_t **wargv)
-{
-    auto cmdline = std::wstring(GetCommandLineW()) + L"\n";
-    OutputDebugStringW(cmdline.c_str());
-
-#ifdef _DEBUG
-//    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF);
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_LEAK_CHECK_DF);
 #endif
+
+static int app_main(int argc, char **argv)
+{
     Options opts;
 
+#ifdef _WIN32
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
     SetDllDirectoryW(L"");
+#endif
     std::setlocale(LC_CTYPE, "");
     std::setbuf(stderr, 0);
+#ifdef _WIN32
     _setmode(0, _O_BINARY);
     _setmaxstdio(2048);
-
-    std::vector<std::string> uargs(argc);
-    std::vector<char*> uargv(argc + 1);
-    for (int i = 0; i < argc; ++i) {
-        uargs[i] = strutil::w2us(wargv[i]);
-        uargv[i] = &uargs[i][0];
-    }
-    uargv[argc] = 0;
-    char **argv = &uargv[0];
-
-#if 0
-    FILE *fp = std::fopen("CON", "r");
-    std::getc(fp);
 #endif
+
     int result = 0;
     if (!opts.parse(argc, argv))
         return 1;
@@ -1408,8 +1457,13 @@ int wmain(int argc, wchar_t **wargv)
         if (opts.logfilename)
             logger.enable_file(opts.logfilename);
 
+#ifdef _WIN32
         if (opts.nice)
             SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+#else
+        if (opts.nice)
+            nice(10);
+#endif
 
         std::string encoder_name;
         encoder_name = strutil::format(PROGNAME " %s", get_qaac_version());
@@ -1445,6 +1499,7 @@ int wmain(int argc, wchar_t **wargv)
             if (WavpackModule::instance().loaded())
                 LOG("wavpackdll %s\n",
                     WavpackModule::instance().GetLibraryVersionString());
+#ifdef _WIN32
             if (TakModule::instance().loaded()) {
                 TtakInt32 var, comp;
                 TakModule::instance().GetLibraryVersion(&var, &comp);
@@ -1453,6 +1508,7 @@ int wmain(int argc, wchar_t **wargv)
                         TakModule::instance().compatible() ? "compatible"
                                                           : "incompatible");
             }
+#endif
             if (LibOpusModule::instance().loaded())
                 LOG("%s\n", LibOpusModule::instance().get_version_string());
             return 0;
@@ -1468,14 +1524,20 @@ int wmain(int argc, wchar_t **wargv)
 
         load_metadata_files(&opts);
         if (opts.tmpdir) {
+#ifdef _WIN32
             // env var write is a genuine CRT/Win32 boundary
             std::wstring env(L"TMP=");
             env += strutil::us2w(opts.tmpdir);
             _wputenv(env.c_str());
+#else
+            setenv("TMPDIR", opts.tmpdir, 1);
+#endif
         }
 
+#ifdef _WIN32
         if (opts.ofilename && !std::strcmp(opts.ofilename, "-"))
             _setmode(1, _O_BINARY);
+#endif
 
         if (opts.sort_args) {
             std::sort(&argv[0], &argv[argc],
@@ -1483,7 +1545,12 @@ int wmain(int argc, wchar_t **wargv)
                           return std::strcmp(a, b) < 0;
                       });
         }
+#ifdef _WIN32
         SetConsoleCtrlHandler(console_interrupt_handler, TRUE);
+#else
+        signal(SIGINT, console_interrupt_handler);
+        signal(SIGPIPE, SIG_IGN);
+#endif
 
         if (opts.is_raw) {
             InputFactory::instance().setRawFormat(getRawFormat(opts));
@@ -1493,7 +1560,9 @@ int wmain(int argc, wchar_t **wargv)
         struct CleanupScope {
             ~CleanupScope() {
                 InputFactory::instance().close();
+#ifdef _WIN32
                 WaveOutDevice::instance().close();
+#endif
             }
         } __cleanup__;
 
@@ -1515,9 +1584,14 @@ int wmain(int argc, wchar_t **wargv)
                              get_output_filename(argv[0], opts) });
         }
 
-        if (opts.isWaveOut())
+        if (opts.isWaveOut()) {
+#ifdef _WIN32
             play_jobs(jobs, opts);
-        else {
+#else
+            throw std::runtime_error(
+                "--play is not supported on this platform");
+#endif
+        } else {
             for (ssize_t i = 0; i < (ssize_t)jobs.size() && !g_interrupted; ++i) {
                 const EncodeJob &job = jobs[i];
                 LOG("\n%s\n",
@@ -1533,3 +1607,32 @@ int wmain(int argc, wchar_t **wargv)
     }
     return result;
 }
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t **wargv)
+{
+    auto cmdline = std::wstring(GetCommandLineW()) + L"\n";
+    OutputDebugStringW(cmdline.c_str());
+
+#ifdef _DEBUG
+//    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF);
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_LEAK_CHECK_DF);
+#endif
+
+    std::vector<std::string> uargs(argc);
+    std::vector<char*> uargv(argc + 1);
+    for (int i = 0; i < argc; ++i) {
+        uargs[i] = strutil::w2us(wargv[i]);
+        uargv[i] = &uargs[i][0];
+    }
+    uargv[argc] = 0;
+    char **argv = &uargv[0];
+
+    return app_main(argc, argv);
+}
+#else
+int main(int argc, char **argv)
+{
+    return app_main(argc, argv);
+}
+#endif

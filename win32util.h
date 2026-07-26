@@ -3,10 +3,14 @@
 
 #include <cstdio>
 #include <cstdarg>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <memory>
+#include <chrono>
+
+#ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
 #include <share.h>
@@ -22,11 +26,35 @@
 #pragma warning(disable: 4091)
 #include <shlobj.h>
 #pragma warning(pop)
+#else
+#include <unistd.h>
+#include <fcntl.h>
+#include <cstdlib>
+#include <cerrno>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <limits.h>
+#endif
 #include "util.h"
 
+#ifdef _WIN32
 #define HR(expr) (void)(win32::throwIfError((expr), #expr))
+#endif
 
 namespace win32 {
+#ifdef _WIN32
+    inline uint32_t tick_count_ms() { return GetTickCount(); }
+#else
+    inline uint32_t tick_count_ms()
+    {
+        using namespace std::chrono;
+        return static_cast<uint32_t>(
+            duration_cast<milliseconds>(
+                steady_clock::now().time_since_epoch()).count());
+    }
+#endif
+
+#ifdef _WIN32
     class Timer {
         DWORD m_ticks;
     public:
@@ -35,7 +63,19 @@ namespace win32 {
             return (static_cast<double>(GetTickCount()) - m_ticks) / 1000.0;
         }
     };
+#else
+    class Timer {
+        std::chrono::steady_clock::time_point m_start;
+    public:
+        Timer() : m_start(std::chrono::steady_clock::now()) {}
+        double ellapsed() {
+            return std::chrono::duration<double>(
+                std::chrono::steady_clock::now() - m_start).count();
+        }
+    };
+#endif
 
+#ifdef _WIN32
     void throw_error(const std::string& msg, DWORD error);
 
     inline void throwIfError(HRESULT expr, const char *msg)
@@ -136,6 +176,71 @@ namespace win32 {
         }
         return fp;
     }
+#else
+    inline std::string GetFullPathNameX(const std::string &path)
+    {
+        char buf[PATH_MAX];
+        if (!realpath(path.c_str(), buf))
+            return path;
+        return buf;
+    }
+
+    inline std::string PathReplaceExtension(const std::string &path,
+                                            const char *ext)
+    {
+        size_t slash = path.find_last_of('/');
+        size_t dot = path.find_last_of('.');
+        std::string base = (dot == std::string::npos ||
+                            (slash != std::string::npos && dot < slash))
+                          ? path : path.substr(0, dot);
+        return base + ext;
+    }
+
+    inline std::string PathCombineX(const std::string &basedir,
+                                    const std::string &filename)
+    {
+        if (filename.size() && filename[0] == '/')
+            return filename;
+        if (basedir.empty())
+            return filename;
+        if (basedir.back() == '/')
+            return basedir + filename;
+        return basedir + "/" + filename;
+    }
+
+    inline bool MakeSureDirectoryPathExistsX(const std::string &path)
+    {
+        std::string full = GetFullPathNameX(path);
+        size_t pos = 0;
+        bool ok = true;
+        while ((pos = full.find('/', pos + 1)) != std::string::npos) {
+            std::string dir = full.substr(0, pos);
+            if (!dir.empty() && mkdir(dir.c_str(), 0777) != 0 && errno != EEXIST)
+                ok = false;
+        }
+        return ok;
+    }
+
+    inline std::string get_module_directory(void* = 0)
+    {
+        char buf[PATH_MAX];
+        ssize_t n = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+        if (n <= 0)
+            return "./";
+        buf[n] = 0;
+        std::string path(buf);
+        size_t slash = path.find_last_of('/');
+        return slash == std::string::npos ? "./" : path.substr(0, slash + 1);
+    }
+
+    inline FILE *wfopenx(const std::string &path, const char *mode)
+    {
+        FILE *fp = std::fopen(path.c_str(), mode);
+        if (!fp) util::throw_crt_error(path);
+        return fp;
+    }
+#endif
+
     inline std::shared_ptr<FILE> fopen(const std::string &path,
                                        const char *mode)
     {
@@ -149,6 +254,7 @@ namespace win32 {
             return std::shared_ptr<FILE>(stdout, noop_close);
     }
 
+#ifdef _WIN32
     inline HANDLE get_handle(int fd)
     {
         return reinterpret_cast<HANDLE>(_get_osfhandle(fd));
@@ -161,9 +267,17 @@ namespace win32 {
     {
         return is_seekable(get_handle(fd));
     }
+#else
+    inline bool is_seekable(int fd)
+    {
+        struct stat st;
+        return fstat(fd, &st) == 0 && S_ISREG(st.st_mode);
+    }
+#endif
 
     inline void write_utf8(FILE *fp, const std::string &utf8text)
     {
+#ifdef _WIN32
         HANDLE h = get_handle(_fileno(fp));
         DWORD mode;
         if (GetConsoleMode(h, &mode)) {
@@ -171,16 +285,21 @@ namespace win32 {
             DWORD written;
             WriteConsoleW(h, wtext.c_str(),
                          static_cast<DWORD>(wtext.size()), &written, 0);
-        } else {
-            std::fwrite(utf8text.data(), 1, utf8text.size(), fp);
+            return;
         }
+#endif
+        std::fwrite(utf8text.data(), 1, utf8text.size(), fp);
     }
 
     inline int vfprintf(FILE *fp, const char *fmt, va_list args)
     {
         va_list args2;
         va_copy(args2, args);
+#ifdef _WIN32
         int rc = _vscprintf(fmt, args);
+#else
+        int rc = std::vsnprintf(nullptr, 0, fmt, args);
+#endif
         std::vector<char> buffer(rc + 1);
         vsnprintf(buffer.data(), buffer.size(), fmt, args2);
         va_end(args2);
@@ -205,13 +324,10 @@ namespace win32 {
 
     int create_named_pipe(const std::string &path);
 
+#ifdef _WIN32
     std::string get_dll_version_for_locale(HMODULE hDll, WORD langid);
+#endif
 
-    bool is_same_file(HANDLE ha, HANDLE hb);
-
-    inline bool is_same_file(int fda, int fdb)
-    {
-        return is_same_file(get_handle(fda), get_handle(fdb));
-    }
+    bool is_same_file(int fda, int fdb);
 }
 #endif

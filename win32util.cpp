@@ -1,10 +1,19 @@
 #include "win32util.h"
 #include "util.h"
+#include "strutil.h"
+#ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
-#include "strutil.h"
+#else
+#include <unistd.h>
+#include <fcntl.h>
+#include <cstdlib>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#endif
 
 namespace win32 {
+#ifdef _WIN32
     void throw_error(const std::string &msg, DWORD code)
     {
         LPWSTR pszMsg = 0;
@@ -128,8 +137,9 @@ namespace win32 {
         return "";
     }
 
-    bool is_same_file(HANDLE ha, HANDLE hb)
+    bool is_same_file(int fda, int fdb)
     {
+        HANDLE ha = get_handle(fda), hb = get_handle(fdb);
         BY_HANDLE_FILE_INFORMATION bhfia, bhfib;
 
         if (!GetFileInformationByHandle(ha, &bhfia)) return false;
@@ -138,4 +148,54 @@ namespace win32 {
             && bhfia.nFileIndexHigh == bhfib.nFileIndexHigh
             && bhfia.nFileIndexLow == bhfib.nFileIndexLow;
     }
+#else
+    FILE *tmpfile(const std::string &prefix)
+    {
+        std::string dir = getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp";
+        std::string tmpl = dir + "/" + prefix + ".XXXXXX";
+        std::vector<char> buf(tmpl.begin(), tmpl.end());
+        buf.push_back(0);
+        int fd = mkstemp(buf.data());
+        if (fd == -1)
+            util::throw_crt_error("win32::tmpfile: mkstemp()");
+        unlink(buf.data());
+        FILE *fp = fdopen(fd, "w+");
+        if (!fp) {
+            close(fd);
+            util::throw_crt_error("win32::tmpfile: fdopen()");
+        }
+        return fp;
+    }
+
+    char *load_with_mmap(const std::string &path, uint64_t *size)
+    {
+        int fd = open(path.c_str(), O_RDONLY);
+        if (fd == -1)
+            util::throw_crt_error(path);
+        struct stat st;
+        if (fstat(fd, &st) != 0) {
+            close(fd);
+            util::throw_crt_error(path);
+        }
+        *size = static_cast<uint64_t>(st.st_size);
+        void *view = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        close(fd);
+        if (view == MAP_FAILED)
+            util::throw_crt_error(path);
+        return static_cast<char*>(view);
+    }
+
+    int create_named_pipe(const std::string &)
+    {
+        throw std::runtime_error("create_named_pipe: not implemented");
+    }
+
+    bool is_same_file(int fda, int fdb)
+    {
+        struct stat sta, stb;
+        if (fstat(fda, &sta) != 0) return false;
+        if (fstat(fdb, &stb) != 0) return false;
+        return sta.st_dev == stb.st_dev && sta.st_ino == stb.st_ino;
+    }
+#endif
 }

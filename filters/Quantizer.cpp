@@ -1,3 +1,4 @@
+#include <climits>
 #include "Quantizer.h"
 
 template <typename T>

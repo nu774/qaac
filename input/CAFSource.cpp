@@ -59,7 +59,7 @@ void CAFSource::seekTo(int64_t count)
     m_position = count;
     m_decoder->reset();
     int64_t offsetInMediaTime = m_position + m_file->start_offset();
-    m_currentPacket = std::max((offsetInMediaTime - getMaxFrameDependency() * asbd.mFramesPerPacket) / asbd.mFramesPerPacket, 0LL);
+    m_currentPacket = std::max<int64_t>((offsetInMediaTime - getMaxFrameDependency() * asbd.mFramesPerPacket) / asbd.mFramesPerPacket, 0LL);
     int prerollSamples = offsetInMediaTime - m_currentPacket * asbd.mFramesPerPacket;
     while (prerollSamples > 0) {
         readPacket(& m_packetBuffer);
@@ -90,7 +90,7 @@ void CAFSource::fillDecodeBuffer()
         bool ok = readPacket(&m_packetBuffer);
         int nsamples = m_decoder->decode(m_packetBuffer, &m_rawDecodeBuffer);
         if (m_position + m_decodeBuffer.count() + nsamples > m_file->duration()) {
-            nsamples = std::max(0LL, m_file->duration() - m_position - int(m_decodeBuffer.count()));
+            nsamples = std::max<int64_t>(0LL, m_file->duration() - m_position - int(m_decodeBuffer.count()));
         }
         if (!ok && nsamples == 0) break;
         if (nsamples > 0) {

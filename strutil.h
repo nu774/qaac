@@ -2,6 +2,8 @@
 #define STRUTIL_HPP_INCLUDED
 
 #include <cwchar>
+#include <cstring>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <locale>

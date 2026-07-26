@@ -5,14 +5,14 @@ typedef unsigned char      UInt8;
 typedef signed char        SInt8;
 typedef unsigned short     UInt16;
 typedef signed short       SInt16;
-typedef unsigned long      UInt32;
-typedef signed long        SInt32;
+typedef unsigned int       UInt32;
+typedef signed int         SInt32;
 typedef signed long long   SInt64;
 typedef unsigned long long UInt64;
 typedef float              Float32;
 typedef double             Float64;
 
-typedef unsigned long      FourCharCode;
+typedef unsigned int       FourCharCode;
 typedef SInt32             OSStatus;
 typedef FourCharCode       OSType;
 typedef unsigned char      Boolean;

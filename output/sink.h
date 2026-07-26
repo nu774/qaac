@@ -132,8 +132,12 @@ private:
     void init(const std::vector<uint8_t> &cookie);
     void write(const void *data, size_t size)
     {
+#ifdef _WIN32
         if (_write(fileno(m_fp.get()), data, size) < 0)
-            win32::throw_error("write failed", _doserrno);
+#else
+        if (::write(fileno(m_fp.get()), data, size) < 0)
+#endif
+            util::throw_crt_error("write failed");
     }
 };
 

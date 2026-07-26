@@ -1,6 +1,11 @@
 #include "Win32InputStream.h"
 #include "strutil.h"
+#ifdef _WIN32
 #include <io.h>
+#else
+#include <unistd.h>
+#include <fcntl.h>
+#endif
 #include <sys/stat.h>
 
 Win32InputStream::Win32InputStream(const std::string &path)
@@ -10,24 +15,43 @@ Win32InputStream::Win32InputStream(const std::string &path)
     , m_seekable(false)
     , m_size(-1)
 {
+#ifdef _WIN32
     if (path == "-")
         m_fd = _fileno(stdin);
     else
         m_fd = _wsopen(strutil::us2w(path).c_str(), _O_RDONLY|_O_BINARY, _SH_DENYWR);
+#else
+    if (path == "-")
+        m_fd = fileno(stdin);
+    else
+        m_fd = open(path.c_str(), O_RDONLY);
+#endif
     if (m_fd == -1) {
         util::throw_crt_error(path);
     }
+#ifdef _WIN32
     struct _stat64 stb = { 0 };
     if (_fstat64(m_fd, &stb) == 0 && (stb.st_mode & _S_IFMT) == _S_IFREG) {
         m_size = stb.st_size;
         m_seekable = true;
     }
+#else
+    struct stat stb = { 0 };
+    if (fstat(m_fd, &stb) == 0 && S_ISREG(stb.st_mode)) {
+        m_size = stb.st_size;
+        m_seekable = true;
+    }
+#endif
     m_buffer.reserve(0x800000); // 8MiB
 }
 
 Win32InputStream::~Win32InputStream()
 {
+#ifdef _WIN32
     _close(m_fd);
+#else
+    close(m_fd);
+#endif
 }
 
 int Win32InputStream::read(void *buf, unsigned size)
@@ -84,7 +108,11 @@ void Win32InputStream::fillBuffer()
     }
     size_t osize = m_buffer.size();
     m_buffer.resize(osize + 0x80000); // 512KiB
+#ifdef _WIN32
     int n = _read(m_fd, m_buffer.data() + osize, m_buffer.size() - osize);
+#else
+    ssize_t n = ::read(m_fd, m_buffer.data() + osize, m_buffer.size() - osize);
+#endif
     if (n <= 0) {
         m_eof = true;
         m_buffer.resize(osize);
@@ -97,7 +125,11 @@ void Win32InputStream::fillBuffer()
 int64_t Win32InputStream::seekRaw(int64_t pos)
 {
     m_eof = false;
+#ifdef _WIN32
     int64_t off = _lseeki64(m_fd, pos, SEEK_SET);
+#else
+    int64_t off = lseek(m_fd, pos, SEEK_SET);
+#endif
     m_buffer.clear();
     if (off < 0) {
         m_eof = true;

@@ -2,6 +2,7 @@
 #define MP4_EDITS_H
 
 #include <cstdint>
+#include <cstddef>
 #include <vector>
 
 class MP4Edits {

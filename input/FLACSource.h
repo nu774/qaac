@@ -5,6 +5,7 @@
 #include "ISource.h"
 #include "FLACModule.h"
 #include "IInputStream.h"
+#include "util.h"
 
 class FLACSource: public ISeekableSource, public ITagParser
 {

@@ -12,8 +12,13 @@ class LibOpusModule {
     DL m_dl;
 private:    
     LibOpusModule() {
+#ifdef _WIN32
         load("opus.dll");
         if (!loaded()) load("libopus-0.dll");
+#else
+        load("libopus.so");
+        if (!loaded()) load("libopus.so.0");
+#endif
     }
     LibOpusModule(const LibOpusModule&);
     LibOpusModule& operator=(const LibOpusModule&);

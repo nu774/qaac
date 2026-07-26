@@ -33,7 +33,7 @@ private:
     {
         std::fwrite(data, 1, length, m_file.get());
         if (ferror(m_file.get()))
-            win32::throw_error("write failed", _doserrno);
+            util::throw_crt_error("write failed");
     }
 };
 

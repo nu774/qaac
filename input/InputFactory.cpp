@@ -6,11 +6,15 @@
 #include "FLACSource.h"
 #include "LibSndfileSource.h"
 #include "RawSource.h"
+#ifdef _WIN32
 #include "TakSource.h"
+#endif
 #include "WaveSource.h"
 #include "WavpackSource.h"
 #include "MP4Source.h"
+#ifdef _WIN32
 #include "AvisynthSource.h"
+#endif
 #include "CAFSource.h"
 #include "Win32InputStream.h"
 
@@ -29,8 +33,10 @@ std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
         m_sources[path] = src;
         return src;
     }
+#ifdef _WIN32
     if (strutil::slower(ext) == ".avs")
         return std::make_shared<AvisynthSource>(path);
+#endif
 
 #define TRY_MAKE_SHARED(type, ...) \
     do { \
@@ -52,7 +58,9 @@ std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
 #endif
     TRY_MAKE_SHARED(FLACSource, stream);
     TRY_MAKE_SHARED(WavpackSource, stream, path);
+#ifdef _WIN32
     TRY_MAKE_SHARED(TakSource, stream);
+#endif
     TRY_MAKE_SHARED(LibSndfileSource, stream);
     throw std::runtime_error("Not available input file format");
 }

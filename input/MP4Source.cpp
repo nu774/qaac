@@ -180,7 +180,7 @@ void MP4Source::fillDecodeBuffer()
         bool ok = readPacket(&m_packetBuffer);
         int nsamples = m_decoder->decode(m_packetBuffer, &m_rawDecodeBuffer);
         if (m_position + m_decodeBuffer.count() + nsamples > m_currentEditEndPosition) {
-            nsamples = std::max(0LL, m_currentEditEndPosition - m_position - int(m_decodeBuffer.count()));
+            nsamples = std::max<int64_t>(0LL, m_currentEditEndPosition - m_position - int(m_decodeBuffer.count()));
         }
         if (!ok && nsamples == 0) break;
         if (nsamples > 0) {

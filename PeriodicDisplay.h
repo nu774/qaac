@@ -22,12 +22,16 @@ public:
         : m_interval(interval),
           m_verbose(verbose)
     {
+#ifdef _WIN32
         m_console_visible = IsWindowVisible(GetConsoleWindow());
-        m_last_tick_title = m_last_tick_stderr = GetTickCount();
+#else
+        m_console_visible = false;
+#endif
+        m_last_tick_title = m_last_tick_stderr = win32::tick_count_ms();
     }
     void put(const std::string &message) {
         m_message = message;
-        uint32_t tick = GetTickCount();
+        uint32_t tick = win32::tick_count_ms();
         if (tick - m_last_tick_stderr > m_interval) {
             m_last_tick_stderr = tick;
             flush();
@@ -35,6 +39,7 @@ public:
     }
     void flush() {
         if (m_verbose) win32::write_utf8(stderr, m_message);
+#ifdef _WIN32
         if (m_verbose && m_console_visible &&
             m_last_tick_stderr - m_last_tick_title > m_interval * 4)
         {
@@ -44,6 +49,7 @@ public:
             SetConsoleTitleW(strutil::us2w(msg).c_str());
             m_last_tick_title = m_last_tick_stderr;
         }
+#endif
     }
 };
 

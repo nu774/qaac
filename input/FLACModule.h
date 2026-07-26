@@ -8,9 +8,16 @@ class FLACModule {
     DL m_dl;
 private:
     FLACModule() {
+#ifdef _WIN32
         load("libFLAC_dynamic.dll");
         if (!loaded()) load("libFLAC.dll");
         if (!loaded()) load("libFLAC-8.dll");
+#else
+        load("libFLAC.so");
+        if (!loaded()) load("libFLAC.so.14");
+        if (!loaded()) load("libFLAC.so.12");
+        if (!loaded()) load("libFLAC.so.8");
+#endif
     }
     FLACModule(const FLACModule&);
     FLACModule& operator=(const FLACModule&);

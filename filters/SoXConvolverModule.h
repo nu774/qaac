@@ -11,8 +11,11 @@ private:
     SoXConvolverModule() {
 #ifdef _WIN64
         load("libsoxconvolver64.dll");
-#else
+#elif defined(_WIN32)
         load("libsoxconvolver.dll");
+#else
+        load("libsoxconvolver.so");
+        if (!loaded()) load("libsoxconvolver.so.0");
 #endif
     }
     SoXConvolverModule(const SoXConvolverModule&);
