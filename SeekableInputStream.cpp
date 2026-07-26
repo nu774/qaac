@@ -1,4 +1,4 @@
-#include "Win32InputStream.h"
+#include "SeekableInputStream.h"
 #include "strutil.h"
 #ifdef _WIN32
 #include <io.h>
@@ -8,7 +8,7 @@
 #endif
 #include <sys/stat.h>
 
-Win32InputStream::Win32InputStream(const std::string &path)
+SeekableInputStream::SeekableInputStream(const std::string &path)
     : m_pos(0)
     , m_fd_pos(0)
     , m_eof(false)
@@ -45,7 +45,7 @@ Win32InputStream::Win32InputStream(const std::string &path)
     m_buffer.reserve(0x800000); // 8MiB
 }
 
-Win32InputStream::~Win32InputStream()
+SeekableInputStream::~SeekableInputStream()
 {
 #ifdef _WIN32
     _close(m_fd);
@@ -54,7 +54,7 @@ Win32InputStream::~Win32InputStream()
 #endif
 }
 
-int Win32InputStream::read(void *buf, unsigned size)
+int SeekableInputStream::read(void *buf, unsigned size)
 {
     uint8_t *p = static_cast<uint8_t*>(buf);
     unsigned nc = 0;
@@ -74,7 +74,7 @@ int Win32InputStream::read(void *buf, unsigned size)
     return nc;
 }
 
-int64_t Win32InputStream::seek(int64_t off, int whence)
+int64_t SeekableInputStream::seek(int64_t off, int whence)
 {
     if (whence == SEEK_CUR) {
         off += m_pos;
@@ -101,7 +101,7 @@ int64_t Win32InputStream::seek(int64_t off, int whence)
     return seekRaw(off);
 }
 
-void Win32InputStream::fillBuffer()
+void SeekableInputStream::fillBuffer()
 {
     if (m_buffer.size() > m_buffer.capacity() - 0x80000) {
         m_buffer.erase(std::begin(m_buffer), std::begin(m_buffer) + m_buffer.capacity() / 2);
@@ -122,7 +122,7 @@ void Win32InputStream::fillBuffer()
     }
 }
 
-int64_t Win32InputStream::seekRaw(int64_t pos)
+int64_t SeekableInputStream::seekRaw(int64_t pos)
 {
     m_eof = false;
 #ifdef _WIN32

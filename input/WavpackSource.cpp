@@ -7,7 +7,7 @@
 #include "cautil.h"
 #include "win32util.h"
 #include "WaveSource.h"
-#include "Win32InputStream.h"
+#include "SeekableInputStream.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -114,7 +114,7 @@ WavpackSource::WavpackSource(std::shared_ptr<IInputStream> stream, const std::st
     };
     if (!m_module.loaded()) throw std::runtime_error("libwavpack not loaded");
     m_stream = stream;
-    try { m_cstream = std::make_shared<Win32InputStream>(path + "c"); } catch(...) {}
+    try { m_cstream = std::make_shared<SeekableInputStream>(path + "c"); } catch(...) {}
 
     int flags = OPEN_TAGS | OPEN_NORMALIZE | OPEN_DSD_AS_PCM
               | (m_cstream ? OPEN_WVC : 0);

@@ -16,7 +16,7 @@
 #include "AvisynthSource.h"
 #endif
 #include "CAFSource.h"
-#include "Win32InputStream.h"
+#include "SeekableInputStream.h"
 
 std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
 {
@@ -26,7 +26,7 @@ std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
         return pos->second;
 
     const char *ext = strutil::file_extension(path);
-    std::shared_ptr<IInputStream> stream = std::make_shared<Win32InputStream>(path);
+    std::shared_ptr<IInputStream> stream = std::make_shared<SeekableInputStream>(path);
     if (m_is_raw) {
         std::shared_ptr<RawSource> src =
             std::make_shared<RawSource>(stream, m_raw_format);

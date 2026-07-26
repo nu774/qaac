@@ -2,18 +2,18 @@
 #include "win32util.h"
 #include <vector>
 
-class Win32InputStream: public IInputStream {
+class SeekableInputStream: public IInputStream {
 public:
-    Win32InputStream(const std::string &path);
-    ~Win32InputStream();
+    SeekableInputStream(const std::string &path);
+    ~SeekableInputStream();
     bool seekable() override { return m_seekable; }
     int read(void *buf, unsigned size) override;
     int64_t seek(int64_t off, int whence) override;
     int64_t tell() override { return m_pos; }
     int64_t size() override { return m_size; }
 private:
-    Win32InputStream(const Win32InputStream&);
-    Win32InputStream & operator=(const Win32InputStream &);
+    SeekableInputStream(const SeekableInputStream&);
+    SeekableInputStream & operator=(const SeekableInputStream &);
 
     void fillBuffer();
     void clearBuffer();

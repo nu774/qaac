@@ -48,7 +48,7 @@
 #include "OpusPacketDecoder.h"
 #include "OggIndex.h"
 #include "OggSource.h"
-#include "Win32InputStream.h"
+#include "SeekableInputStream.h"
 #ifdef REFALAC
 #include "ALACEncoderX.h"
 #endif
@@ -1303,7 +1303,7 @@ void load_track(const char *ifilename, const Options &opts,
         return;
     }
 
-    auto oggStream = std::make_shared<Win32InputStream>(ifilename);
+    auto oggStream = std::make_shared<SeekableInputStream>(ifilename);
     if (looksLikeOggOpusOrFlac(oggStream)) {
         load_ogg_tracks(ifilename, opts, oggStream, tracks);
         return;

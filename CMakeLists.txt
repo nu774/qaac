@@ -394,7 +394,7 @@ add_library(common STATIC
     Subprocess.cpp
     strutil.cpp
     util.cpp
-    Win32InputStream.cpp
+    SeekableInputStream.cpp
     win32util.cpp
 )
 if(WIN32)
