@@ -3,7 +3,7 @@
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!!!"); } \
     while (0)
 
-bool SOXRModule::load(const std::wstring &path)
+bool SOXRModule::load(const std::string &path)
 {
     if (!m_dl.load(path)) return false;
     try {

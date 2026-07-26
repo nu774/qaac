@@ -147,28 +147,28 @@ namespace util {
         return total > 0 ? total : n;
     }
 
-    bool parse_timespec(const wchar_t *spec, double sample_rate,
+    bool parse_timespec(const char *spec, double sample_rate,
                         int64_t *result)
     {
         int hh, mm, s, ff, sign = 1;
-        wchar_t a, b;
+        char a, b;
         double ss;
         if (!spec || !*spec)
             return false;
-        if (std::swscanf(spec, L"%lld%c%c", result, &a, &b) == 2 && a == L's')
+        if (std::sscanf(spec, "%lld%c%c", result, &a, &b) == 2 && a == 's')
             return true;
-        if (spec[0] == L'-') {
+        if (spec[0] == '-') {
             sign = -1;
             ++spec;
         }
-        if (std::swscanf(spec, L"%d:%d:%d%c%c", &mm, &s, &ff, &a, &b) == 4 &&
-            a == L'f')
+        if (std::sscanf(spec, "%d:%d:%d%c%c", &mm, &s, &ff, &a, &b) == 4 &&
+            a == 'f')
             ss = mm * 60 + s + ff / 75.0;
-        else if (std::swscanf(spec, L"%d:%d:%lf%c", &hh, &mm, &ss, &a) == 3)
+        else if (std::sscanf(spec, "%d:%d:%lf%c", &hh, &mm, &ss, &a) == 3)
             ss = ss + ((hh * 60.0) + mm) * 60.0;
-        else if (std::swscanf(spec, L"%d:%lf%c", &mm, &ss, &a) == 2)
+        else if (std::sscanf(spec, "%d:%lf%c", &mm, &ss, &a) == 2)
             ss = ss + mm * 60.0;
-        else if (std::swscanf(spec, L"%lf%c", &ss, &a) != 1)
+        else if (std::sscanf(spec, "%lf%c", &ss, &a) != 1)
             return false;
 
         *result = sign * static_cast<int64_t>(sample_rate * ss + .5);

@@ -6,85 +6,85 @@
 
 static getopt::option long_options[] = {
 #ifdef QAAC
-    { L"formats", no_argument, 0, 'fmts' },
-    { L"abr", required_argument, 0, 'a' },
-    { L"tvbr", required_argument, 0, 'V' },
-    { L"cvbr", required_argument, 0, 'v' },
-    { L"cbr", required_argument, 0, 'c' },
-    { L"he", no_argument, 0, 'aach' },
-    { L"quality", required_argument, 0, 'q' },
-    { L"adts", no_argument, 0, 'ADTS' },
-    { L"no-smart-padding", no_argument, 0, 'nspd' },
-    { L"native-resampler", optional_argument, 0, 'nsrc' },
+    { "formats", no_argument, 0, 'fmts' },
+    { "abr", required_argument, 0, 'a' },
+    { "tvbr", required_argument, 0, 'V' },
+    { "cvbr", required_argument, 0, 'v' },
+    { "cbr", required_argument, 0, 'c' },
+    { "he", no_argument, 0, 'aach' },
+    { "quality", required_argument, 0, 'q' },
+    { "adts", no_argument, 0, 'ADTS' },
+    { "no-smart-padding", no_argument, 0, 'nspd' },
+    { "native-resampler", optional_argument, 0, 'nsrc' },
 #endif
 #ifdef REFALAC
-    { L"fast", no_argument, 0, 'afst' },
+    { "fast", no_argument, 0, 'afst' },
 #endif
-    { L"check", no_argument, 0, 'chck' },
-    { L"alac", no_argument, 0, 'A' },
-    { L"decode", no_argument, 0, 'D' },
-    { L"play", no_argument, 0, 'play' },
-    { L"caf", no_argument, 0, 'caff' },
-    { L"no-optimize", no_argument, 0, 'noop' },
-    { L"bits-per-sample", required_argument, 0, 'b' },
-    { L"no-dither", no_argument, 0, 'ndit' },
-    { L"rate", required_argument, 0, 'r' },
-    { L"lowpass", required_argument, 0, 'lpf ' },
-    { L"peak", no_argument, 0, 'peak' },
-    { L"normalize", no_argument, 0, 'N' },
-    { L"gain", required_argument, 0, 'gain' },
-    { L"drc", required_argument, 0, 'drc ' },
-    { L"limiter", no_argument, 0, 'limt' },
-    { L"start", required_argument, 0, 'from' },
-    { L"end", required_argument, 0, 'end ' },
-    { L"delay", required_argument, 0, 'dlay' },
-    { L"no-delay", no_argument, 0, 'ndly' },
-    { L"num-priming", required_argument, 0, 'encd' },
-    { L"gapless-mode", required_argument, 0, 'gapm' },
-    { L"matrix-preset", required_argument, 0, 'mixp' },
-    { L"matrix-file", required_argument, 0, 'mixm' },
-    { L"no-matrix-normalize", no_argument, 0, 'nmxn' },
-    { L"chanmap", required_argument, 0, 'cmap' },
-    { L"chanmask", required_argument, 0, 'mask' },
-    { L"help", no_argument, 0, 'h' },
-    { L"silent", no_argument, 0, 's' },
-    { L"verbose", no_argument, 0, 'verb' },
-    { L"stat", no_argument, 0, 'S' },
-    { L"threading", no_argument, 0, 'thrd' },
-    { L"nice", no_argument, 0, 'n' },
-    { L"sort-args", no_argument, 0, 'soar' },
-    { L"tmpdir", required_argument, 0, 'tmpd' },
-    { L"text-codepage", required_argument, 0, 'txcp' },
-    { L"raw", no_argument, 0, 'R' },
-    { L"raw-channels", required_argument, 0,  'Rchn' },
-    { L"raw-rate", required_argument, 0,  'Rrat' },
-    { L"raw-format", required_argument, 0,  'Rfmt' },
-    { L"ignorelength", no_argument, 0, 'i' },
-    { L"concat", no_argument, 0, 'cat ' },
-    { L"cue-tracks", required_argument, 0, 'ctrk' },
-    { L"fname-from-tag", no_argument, 0, 'fftg' },
-    { L"fname-format", required_argument, 0, 'nfmt' },
-    { L"log", required_argument, 0, 'log ' },
-    { L"title", required_argument, 0, (int)Tag::kTitle },
-    { L"artist", required_argument, 0, (int)Tag::kArtist },
-    { L"band", required_argument, 0, (int)Tag::kAlbumArtist },
-    { L"album", required_argument, 0, (int)Tag::kAlbum },
-    { L"grouping", required_argument, 0, (int)Tag::kGrouping },
-    { L"composer", required_argument, 0, (int)Tag::kComposer },
-    { L"comment", required_argument, 0, (int)Tag::kComment },
-    { L"genre", required_argument, 0, (int)Tag::kGenre },
-    { L"date", required_argument, 0, (int)Tag::kDate },
-    { L"track", required_argument, 0, (int)Tag::kTrack },
-    { L"disk", required_argument, 0, (int)Tag::kDisk },
-    { L"compilation", optional_argument, 0, (int)Tag::kCompilation },
-    { L"lyrics", required_argument, 0, (int)Tag::kLyrics },
-    { L"artwork", required_argument, 0, (int)Tag::kArtwork },
-    { L"artwork-size", required_argument, 0, 'atsz' },
-    { L"copy-artwork", no_argument, 0, 'cpat' },
-    { L"chapter", required_argument, 0, 'chap' },
-    { L"tag", required_argument, 0, 'tag ' },
-    { L"long-tag", required_argument, 0, 'ltag' },
-    { L"tag-from-file", required_argument, 0, 'tagf' },
+    { "check", no_argument, 0, 'chck' },
+    { "alac", no_argument, 0, 'A' },
+    { "decode", no_argument, 0, 'D' },
+    { "play", no_argument, 0, 'play' },
+    { "caf", no_argument, 0, 'caff' },
+    { "no-optimize", no_argument, 0, 'noop' },
+    { "bits-per-sample", required_argument, 0, 'b' },
+    { "no-dither", no_argument, 0, 'ndit' },
+    { "rate", required_argument, 0, 'r' },
+    { "lowpass", required_argument, 0, 'lpf ' },
+    { "peak", no_argument, 0, 'peak' },
+    { "normalize", no_argument, 0, 'N' },
+    { "gain", required_argument, 0, 'gain' },
+    { "drc", required_argument, 0, 'drc ' },
+    { "limiter", no_argument, 0, 'limt' },
+    { "start", required_argument, 0, 'from' },
+    { "end", required_argument, 0, 'end ' },
+    { "delay", required_argument, 0, 'dlay' },
+    { "no-delay", no_argument, 0, 'ndly' },
+    { "num-priming", required_argument, 0, 'encd' },
+    { "gapless-mode", required_argument, 0, 'gapm' },
+    { "matrix-preset", required_argument, 0, 'mixp' },
+    { "matrix-file", required_argument, 0, 'mixm' },
+    { "no-matrix-normalize", no_argument, 0, 'nmxn' },
+    { "chanmap", required_argument, 0, 'cmap' },
+    { "chanmask", required_argument, 0, 'mask' },
+    { "help", no_argument, 0, 'h' },
+    { "silent", no_argument, 0, 's' },
+    { "verbose", no_argument, 0, 'verb' },
+    { "stat", no_argument, 0, 'S' },
+    { "threading", no_argument, 0, 'thrd' },
+    { "nice", no_argument, 0, 'n' },
+    { "sort-args", no_argument, 0, 'soar' },
+    { "tmpdir", required_argument, 0, 'tmpd' },
+    { "text-codepage", required_argument, 0, 'txcp' },
+    { "raw", no_argument, 0, 'R' },
+    { "raw-channels", required_argument, 0,  'Rchn' },
+    { "raw-rate", required_argument, 0,  'Rrat' },
+    { "raw-format", required_argument, 0,  'Rfmt' },
+    { "ignorelength", no_argument, 0, 'i' },
+    { "concat", no_argument, 0, 'cat ' },
+    { "cue-tracks", required_argument, 0, 'ctrk' },
+    { "fname-from-tag", no_argument, 0, 'fftg' },
+    { "fname-format", required_argument, 0, 'nfmt' },
+    { "log", required_argument, 0, 'log ' },
+    { "title", required_argument, 0, (int)Tag::kTitle },
+    { "artist", required_argument, 0, (int)Tag::kArtist },
+    { "band", required_argument, 0, (int)Tag::kAlbumArtist },
+    { "album", required_argument, 0, (int)Tag::kAlbum },
+    { "grouping", required_argument, 0, (int)Tag::kGrouping },
+    { "composer", required_argument, 0, (int)Tag::kComposer },
+    { "comment", required_argument, 0, (int)Tag::kComment },
+    { "genre", required_argument, 0, (int)Tag::kGenre },
+    { "date", required_argument, 0, (int)Tag::kDate },
+    { "track", required_argument, 0, (int)Tag::kTrack },
+    { "disk", required_argument, 0, (int)Tag::kDisk },
+    { "compilation", optional_argument, 0, (int)Tag::kCompilation },
+    { "lyrics", required_argument, 0, (int)Tag::kLyrics },
+    { "artwork", required_argument, 0, (int)Tag::kArtwork },
+    { "artwork-size", required_argument, 0, 'atsz' },
+    { "copy-artwork", no_argument, 0, 'cpat' },
+    { "chapter", required_argument, 0, 'chap' },
+    { "tag", required_argument, 0, 'tag ' },
+    { "long-tag", required_argument, 0, 'ltag' },
+    { "tag-from-file", required_argument, 0, 'tagf' },
     { 0, 0, 0, 0 }
 };
 static const uint32_t tag_keys[] = {
@@ -116,7 +116,7 @@ const char *get_qaac_version();
 static
 void usage()
 {
-    std::wprintf(L"%hs %hs\n%hs", PROGNAME, get_qaac_version(),
+    win32::fprintf(stdout, "%s %s\n%s", PROGNAME, get_qaac_version(),
 "Usage: " PROGNAME " [options] infiles....\n"
 "\n"
 "\"-\" as infile means stdin.\n"
@@ -169,7 +169,7 @@ void usage()
 "                       Apple default.\n"
 "-b, --bits-per-sample <n>\n"
 "                       Bits per sample of output (for WAV/ALAC only)\n"
-"--no-dither            Turn off dither when quantizing to lower bit depth.\n" 
+"--no-dither            Turn off dither when quantizing to lower bit depth.\n"
 "--peak                 Scan + print peak (don't generate output file).\n"
 "                       Cannot be used with encoding mode or -D.\n"
 "                       When DSP options are set, peak is computed \n"
@@ -345,20 +345,20 @@ void usage()
     );
 }
 
-static void complain(const wchar_t *s)
+static void complain(const char *s)
 {
-    std::fputws(s, stderr);
-    OutputDebugStringW(s);
+    win32::fprintf(stderr, "%s", s);
+    OutputDebugStringA(s);
 }
 
 #ifdef QAAC
-static const wchar_t * const short_opts = L"hDo:d:b:r:insRSNAa:V:v:c:q:";
+static const char * const short_opts = "hDo:d:b:r:insRSNAa:V:v:c:q:";
 #endif
 #ifdef REFALAC
-static const wchar_t * const short_opts = L"hDo:d:b:r:insRSNA";
+static const char * const short_opts = "hDo:d:b:r:insRSNA";
 #endif
 
-bool Options::parse(int &argc, wchar_t **&argv)
+bool Options::parse(int &argc, char **&argv)
 {
     int ch, pos;
     while ((ch = getopt::getopt_long(argc, argv,
@@ -376,46 +376,46 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->outdir = getopt::optarg;
         else if (ch < 0xff && (pos = strutil::strindex("cavV", ch)) >= 0) {
             if ((this->output_format && !isAAC()) || this->method != -1) {
-                complain(L"Encoding mode options are exclusive.\n");
+                complain("Encoding mode options are exclusive.\n");
                 return false;
             }
             this->method = pos;
-            if (std::swscanf(getopt::optarg, L"%lf", &this->bitrate) != 1) {
-                complain(L"AAC Bitrate/Quality must be an integer.\n");
+            if (std::sscanf(getopt::optarg, "%lf", &this->bitrate) != 1) {
+                complain("AAC Bitrate/Quality must be an integer.\n");
                 return false;
             }
         }
         else if (ch == 'A') {
             if ((this->output_format && !isALAC()) || this->method != -1) {
-                complain(L"Encoding mode options are exclusive.\n");
+                complain("Encoding mode options are exclusive.\n");
                 return false;
             }
             this->output_format = 'alac';
         }
         else if (ch == 'D') {
             if (this->output_format && !isLPCM()) {
-                complain(L"Encoding mode options are exclusive.\n");
+                complain("Encoding mode options are exclusive.\n");
                 return false;
             }
             this->output_format = 'lpcm';
         }
         else if (ch == 'aach') {
             if (this->output_format && !isAAC()) {
-                complain(L"--he is only available for AAC.\n");
+                complain("--he is only available for AAC.\n");
                 return false;
             }
             this->output_format = 'aach';
         }
         else if (ch == 'play') {
             if (this->output_format && !isWaveOut()) {
-                complain(L"--play cannot be specified with encoding mode.\n");
+                complain("--play cannot be specified with encoding mode.\n");
                 return false;
             }
             this->output_format = 'play';
         }
         else if (ch == 'peak') {
             if (this->output_format && !isPeak()) {
-                complain(L"--peak cannot be specified with encoding mode.\n");
+                complain("--peak cannot be specified with encoding mode.\n");
                 return false;
             }
             this->output_format = 'peak';
@@ -423,8 +423,8 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'caff')
             this->is_caf = true;
         else if (ch == 'q') {
-            if (std::swscanf(getopt::optarg, L"%u", &this->quality) != 1) {
-                complain(L"-q requires an integer.\n");
+            if (std::sscanf(getopt::optarg, "%u", &this->quality) != 1) {
+                complain("-q requires an integer.\n");
                 return false;
             }
         }
@@ -435,17 +435,17 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'nsrc') {
             this->native_resampler = true;
             if (getopt::optarg) {
-                strutil::Tokenizer<wchar_t> tokens(getopt::optarg, L",");
-                wchar_t *tok;
+                strutil::Tokenizer<char> tokens(getopt::optarg, ",");
+                char *tok;
                 while ((tok = tokens.next())) {
                     int n;
-                    if (std::swscanf(tok, L"%u", &n) == 1)
+                    if (std::sscanf(tok, "%u", &n) == 1)
                         this->native_resampler_quality = n;
-                    else if (std::wcslen(tok) == 4)
+                    else if (std::strlen(tok) == 4)
                         this->native_resampler_complexity =
-                            util::fourcc(strutil::w2us(tok).c_str());
+                            util::fourcc(tok);
                     else {
-                        complain(L"Invalid arg for --native-resampler.\n");
+                        complain("Invalid arg for --native-resampler.\n");
                         return false;
                     }
                 }
@@ -480,14 +480,14 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'nmxn')
             this->no_matrix_normalize = true;
         else if (ch == 'cmap') {
-            strutil::Tokenizer<wchar_t> tokens(getopt::optarg, L",");
-            wchar_t *tok;
+            strutil::Tokenizer<char> tokens(getopt::optarg, ",");
+            char *tok;
             while ((tok = tokens.next()) != 0) {
                 unsigned n;
-                if (std::swscanf(tok, L"%u", &n) == 1)
+                if (std::sscanf(tok, "%u", &n) == 1)
                     this->chanmap.push_back(n);
                 else {
-                    complain(L"Invalid arg for --chanmap.\n");
+                    complain("Invalid arg for --chanmap.\n");
                     return false;
                 }
             }
@@ -499,34 +499,34 @@ bool Options::parse(int &argc, wchar_t **&argv)
                 if (n > high) high = n;
             }
             if (low < 1 || high > this->chanmap.size()) {
-                complain(L"Invalid arg for --chanmap.\n");
+                complain("Invalid arg for --chanmap.\n");
                 return false;
             }
         }
         else if (ch == 'r') {
-            if (!std::wcscmp(getopt::optarg, L"keep"))
+            if (!std::strcmp(getopt::optarg, "keep"))
                 this->rate = -1;
-            else if (!std::wcscmp(getopt::optarg, L"auto"))
+            else if (!std::strcmp(getopt::optarg, "auto"))
                 this->rate = 0;
-            else if (std::swscanf(getopt::optarg, L"%u", &this->rate) != 1) {
-                complain(L"Invalid arg for --rate.\n");
+            else if (std::sscanf(getopt::optarg, "%u", &this->rate) != 1) {
+                complain("Invalid arg for --rate.\n");
                 return false;
             }
         }
         else if (ch == 'lpf ') {
-            if (std::swscanf(getopt::optarg, L"%u", &this->lowpass) != 1) {
-                complain(L"--lowpass requires an integer.\n");
+            if (std::sscanf(getopt::optarg, "%u", &this->lowpass) != 1) {
+                complain("--lowpass requires an integer.\n");
                 return false;
             }
         }
         else if (ch == 'b') {
             uint32_t n;
-            if (std::swscanf(getopt::optarg, L"%u", &n) != 1) {
-                complain(L"-b requires an integer.\n");
+            if (std::sscanf(getopt::optarg, "%u", &n) != 1) {
+                complain("-b requires an integer.\n");
                 return false;
             }
             if (n <= 1 || n > 32) {
-                complain(L"Bits per sample is too low or too high.\n");
+                complain("Bits per sample is too low or too high.\n");
                 return false;
             }
             this->bits_per_sample = n;
@@ -535,33 +535,33 @@ bool Options::parse(int &argc, wchar_t **&argv)
             this->no_dither = true;
         }
         else if (ch == 'mask') {
-            if (std::swscanf(getopt::optarg, L"%i", &this->chanmask) != 1) {
-                complain(L"--chanmask requires an integer.\n");
+            if (std::sscanf(getopt::optarg, "%i", &this->chanmask) != 1) {
+                complain("--chanmask requires an integer.\n");
                 return false;
             }
         }
         else if (ch == 'Rchn') {
-            if (std::swscanf(getopt::optarg, L"%u", &this->raw_channels) != 1) {
-                complain(L"--raw-channels requires an integer.\n");
+            if (std::sscanf(getopt::optarg, "%u", &this->raw_channels) != 1) {
+                complain("--raw-channels requires an integer.\n");
                 return false;
             }
             if (this->raw_channels == 0) {
-                complain(L"Invalid --raw-channels value.\n");
+                complain("Invalid --raw-channels value.\n");
                 return false;
             }
             if (this->raw_channels > 8) {
-                complain(L"--raw-channels too large.\n");
+                complain("--raw-channels too large.\n");
                 return false;
             }
         }
         else if (ch == 'Rrat') {
-            if (std::swscanf(getopt::optarg, L"%u",
+            if (std::sscanf(getopt::optarg, "%u",
                              &this->raw_sample_rate) != 1) {
-                complain(L"--raw-rate requires an integer.\n");
+                complain("--raw-rate requires an integer.\n");
                 return false;
             }
             if (this->raw_sample_rate == 0) {
-                complain(L"Invalid --raw-rate value.\n");
+                complain("Invalid --raw-rate value.\n");
                 return false;
             }
         }
@@ -570,46 +570,46 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'afst')
             this->alac_fast = true;
         else if (ch == 'gain') {
-            if (std::swscanf(getopt::optarg, L"%lf", &this->gain) != 1) {
-                complain(L"--gain requires an floating point number.\n");
+            if (std::sscanf(getopt::optarg, "%lf", &this->gain) != 1) {
+                complain("--gain requires an floating point number.\n");
                 return false;
             }
         }
         else if (ch == 'drc ') {
             double threshold, ratio, knee, attack, release;
-            if (std::swscanf(getopt::optarg,
-                             L"%lf:%lf:%lf:%lf:%lf",
+            if (std::sscanf(getopt::optarg,
+                             "%lf:%lf:%lf:%lf:%lf",
                              &threshold,
                              &ratio,
                              &knee,
                              &attack,
                              &release) != 5) {
-                complain(L"--drc requires 5 parameters.\n");
+                complain("--drc requires 5 parameters.\n");
                 return false;
             }
             if (threshold >= 0.0) {
-                complain(L"DRC threshold cannot be positive.\n");
+                complain("DRC threshold cannot be positive.\n");
                 return false;
             }
             if (ratio <= 1.0) {
-                complain(L"DRC ratio has to be greater than 1.0\n");
+                complain("DRC ratio has to be greater than 1.0\n");
                 return false;
             }
             if (knee < 0.0) {
-                complain(L"DRC knee width cannot be negative.\n");
+                complain("DRC knee width cannot be negative.\n");
                 return false;
             }
             if (attack < 0.0) {
-                complain(L"DRC attack time cannot be negative.\n");
+                complain("DRC attack time cannot be negative.\n");
                 return false;
             }
             if (release < 0.0) {
-                complain(L"DRC release time cannot be negative.\n");
+                complain("DRC release time cannot be negative.\n");
                 return false;
             }
-            const wchar_t *p = getopt::optarg;
+            const char *p = getopt::optarg;
             for (int i = 0; i < 5; ++i) {
-                p = wcschr(p, L':');
+                p = strchr(p, ':');
                 if (p) ++p;
             }
             this->drc_params.push_back(DRCParams(threshold, ratio, knee,
@@ -626,39 +626,39 @@ bool Options::parse(int &argc, wchar_t **&argv)
         else if (ch == 'ndly')
             this->num_priming = 0;
         else if (ch == 'encd') {
-            if (std::swscanf(getopt::optarg, L"%u", &this->num_priming) != 1) {
-                complain(L"Invalid arg for --num-priming.\n");
+            if (std::sscanf(getopt::optarg, "%u", &this->num_priming) != 1) {
+                complain("Invalid arg for --num-priming.\n");
                 return false;
             }
             if (this->num_priming > 2112) {
-                complain(L"num-priming must not be greater than 2112.\n");
+                complain("num-priming must not be greater than 2112.\n");
                 return false;
             }
         }
         else if (ch == 'soar')
             this->sort_args = true;
         else if (ch == 'gapm') {
-            if (std::swscanf(getopt::optarg, L"%u", &this->gapless_mode) != 1) {
-                complain(L"Invalid arg for --gapless-mode.\n");
+            if (std::sscanf(getopt::optarg, "%u", &this->gapless_mode) != 1) {
+                complain("Invalid arg for --gapless-mode.\n");
                 return false;
             }
         }
         else if (ch == 'txcp') {
-            if (std::swscanf(getopt::optarg, L"%u", &this->textcp) != 1) {
-                complain(L"--text-codepage requires code page number.\n");
+            if (std::sscanf(getopt::optarg, "%u", &this->textcp) != 1) {
+                complain("--text-codepage requires code page number.\n");
                 return false;
             }
         }
         else if (ch == 'ctrk') {
             if (!strutil::parse_numeric_ranges(getopt::optarg,
                                                &this->cue_tracks)) {
-                complain(L"Invalid arg for --cue-tracks.\n");
+                complain("Invalid arg for --cue-tracks.\n");
                 return false;
             }
         }
         else if (ch == 'atsz') {
-            if (std::swscanf(getopt::optarg, L"%u", &this->artwork_size) != 1) {
-                complain(L"--artwork-size requires an integer.\n");
+            if (std::sscanf(getopt::optarg, "%u", &this->artwork_size) != 1) {
+                complain("--artwork-size requires an integer.\n");
                 return false;
             }
         }
@@ -670,32 +670,33 @@ bool Options::parse(int &argc, wchar_t **&argv)
             if (ch == Tag::kLyrics)
                 this->ftagopts[ch] = getopt::optarg;
             else if (ch != Tag::kCompilation)
-                this->tagopts[ch] = strutil::w2us(getopt::optarg);
+                this->tagopts[ch] = getopt::optarg;
             else if (!getopt::optarg)
                 this->tagopts[ch] = "1";
             else {
                 int n;
-                if (std::swscanf(getopt::optarg, L"%d", &n) != 1) {
-                    complain(L"Invalid --compilation option arg.\n");
+                if (std::sscanf(getopt::optarg, "%d", &n) != 1) {
+                    complain("Invalid --compilation option arg.\n");
                     return false;
                 }
-                this->tagopts[ch] = strutil::w2us(getopt::optarg);
+                this->tagopts[ch] = getopt::optarg;
             }
         }
         else if (ch == 'tag ' || ch == 'tagf') {
-            strutil::Tokenizer<wchar_t> tokens(getopt::optarg, L":");
-            wchar_t *key = tokens.next();
-            wchar_t *value = tokens.rest();
-            size_t keylen = std::wcslen(key);
+            strutil::Tokenizer<char> tokens(getopt::optarg, ":");
+            char *key = tokens.next();
+            char *value = tokens.rest();
+            std::wstring wkey = strutil::us2w(key ? key : "");
+            size_t keylen = wkey.size();
             if (!value || (keylen != 3 && keylen != 4)) {
-                complain(L"Invalid --tag option arg.\n");
+                complain("Invalid --tag option arg.\n");
                 return false;
             }
             uint32_t fcc = (keylen == 3) ? 0xa9 : 0;
-            wchar_t wc;
-            while ((wc = *key++) != 0) {
+            for (size_t i = 0; i < wkey.size(); ++i) {
+                wchar_t wc = wkey[i];
                 if (wc != 0xa9 && (wc < 0x20 || wc > 0x7e)) {
-                    complain(L"Invalid fourcc for --tag.\n");
+                    complain("Invalid fourcc for --tag.\n");
                     return false;
                 }
                 fcc = ((fcc << 8) | wc);
@@ -703,19 +704,19 @@ bool Options::parse(int &argc, wchar_t **&argv)
             if (fcc == Tag::kArtwork)
                 this->artwork_files.push_back(value);
             else if (ch == 'tag ')
-                this->tagopts[fcc] = strutil::w2us(value);
+                this->tagopts[fcc] = value;
             else
                 this->ftagopts[fcc] = value;
         }
         else if (ch == 'ltag') {
-            strutil::Tokenizer<wchar_t> tokens(getopt::optarg, L":");
-            wchar_t *key = tokens.next();
-            wchar_t *value = tokens.rest();
+            strutil::Tokenizer<char> tokens(getopt::optarg, ":");
+            char *key = tokens.next();
+            char *value = tokens.rest();
             if (!value) {
-                complain(L"Invalid arg for --long-tag.\n");
+                complain("Invalid arg for --long-tag.\n");
                 return false;
             }
-            this->longtags[strutil::w2us(key)] = strutil::w2us(value);
+            this->longtags[key] = value;
         }
         else if (ch == 'chap')
             this->chapter_file = getopt::optarg;
@@ -735,12 +736,12 @@ bool Options::parse(int &argc, wchar_t **&argv)
         if (getopt::optind == 1)
             return usage(), false;
         else {
-            complain(L"Input file name is required.\n");
+            complain("Input file name is required.\n");
             return false;
         }
     }
     if (argc > 1 && this->ofilename && !this->concat) {
-        complain(L"-o is not available for multiple output.\n");
+        complain("-o is not available for multiple output.\n");
         return false;
     }
     if (!this->output_format) {
@@ -751,46 +752,46 @@ bool Options::parse(int &argc, wchar_t **&argv)
 #endif
     }
     if (isSBR() && this->method == kTVBR) {
-        complain(L"TVBR is not available for HE.\n");
+        complain("TVBR is not available for HE.\n");
         return false;
     }
     if (isAAC() && this->method == -1) {
         this->method = isSBR() ? kCVBR : kTVBR;
         this->bitrate = isSBR() ? 0 : 90;
     }
-    if (isMP4() && this->ofilename && !std::wcscmp(this->ofilename, L"-")) {
+    if (isMP4() && this->ofilename && !std::strcmp(this->ofilename, "-")) {
         if (!win32::is_seekable(_fileno(stdout))) {
-            complain(L"MP4 piping is not supported.\n");
+            complain("MP4 piping is not supported.\n");
             return false;
         }
     }
     if (!isAAC() && this->is_adts) {
-        complain(L"--adts is only available for AAC.\n");
+        complain("--adts is only available for AAC.\n");
         return false;
     }
     if (!isAAC() && this->quality != -1) {
-        complain(L"-q is only available for AAC.\n");
+        complain("-q is only available for AAC.\n");
         return false;
     }
     if (this->is_caf && this->is_adts) {
-        complain(L"Can't use --caf and --adts at the same time.\n");
+        complain("Can't use --caf and --adts at the same time.\n");
         return false;
     }
     if (this->ignore_length && this->is_raw) {
-        complain(L"Can't use --ignorelength and --raw at the same time.\n");
+        complain("Can't use --ignorelength and --raw at the same time.\n");
         return false;
     }
     if (this->concat && argc > 1 && !this->ofilename &&
         !this->isPeak() && !this->isWaveOut()) {
-        complain(L"--concat requires output filename (use -o option).\n");
+        complain("--concat requires output filename (use -o option).\n");
         return false;
     }
     if ((!isAAC() || isSBR()) && this->num_priming != 2112) {
-        complain(L"--num-priming is only applicable for AAC LC.\n");
+        complain("--num-priming is only applicable for AAC LC.\n");
         return false;
     }
     if (this->delay && this->start) {
-        complain(L"Can't use --start and --delay at the same time.\n");
+        complain("Can't use --start and --delay at the same time.\n");
         return false;
     }
     if (this->quality == -1)

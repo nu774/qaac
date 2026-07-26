@@ -37,10 +37,6 @@ inline int lrint(double x)
 #endif
 #endif
 
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-inline int _wtoi(const wchar_t *s) { return std::wcstol(s, 0, 10); }
-#endif
-
 #ifdef _MSC_VER
 #define fseeko _fseeki64
 #define ftello _ftelli64
@@ -176,13 +172,6 @@ namespace util {
         throw std::runtime_error(ss.str());
     }
 
-    inline void throw_crt_error(const std::wstring &message)
-    {
-        std::stringstream ss;
-        ss << strutil::w2us(message) << ": " << std::strerror(errno);
-        throw std::runtime_error(ss.str());
-    }
-
     class FilePositionSaver
     {
     private:
@@ -219,7 +208,7 @@ namespace util {
         return 20 * std::log10(scale);
     }
 
-    bool parse_timespec(const wchar_t *spec, double sample_rate,
+    bool parse_timespec(const char *spec, double sample_rate,
                         int64_t *result);
 
     inline void seconds_to_HMS(double seconds, int *h, int *m, int *s,
@@ -233,12 +222,12 @@ namespace util {
         *millis = (seconds - *s) * 1000;
     }
 
-    inline std::wstring format_seconds(double seconds)
+    inline std::string format_seconds(double seconds)
     {
         int h, m, s, millis;
         seconds_to_HMS(seconds, &h, &m, &s, &millis);
-        return h ? strutil::format(L"%d:%02d:%02d.%03d", h, m, s, millis)
-                 : strutil::format(L"%d:%02d.%03d", m, s, millis);
+        return h ? strutil::format("%d:%02d:%02d.%03d", h, m, s, millis)
+                 : strutil::format("%d:%02d.%03d", m, s, millis);
     }
 }
 

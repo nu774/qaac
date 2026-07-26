@@ -25,7 +25,7 @@ Normalizer::Normalizer(const std::shared_ptr<ISource> &src, bool seekable)
                                      asbd.mChannelsPerFrame,
                                      bits, kAudioFormatFlagIsFloat);
     if (!seekable) {
-        FILE *tmpfile = win32::tmpfile(L"qaac.norm");
+        FILE *tmpfile = win32::tmpfile("qaac.norm");
         m_tmpfile = std::shared_ptr<FILE>(tmpfile, std::fclose);
     }
 }

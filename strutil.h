@@ -128,6 +128,11 @@ namespace strutil {
     {
         return w2m(src, std::codecvt_utf8<wchar_t>());
     }
+    inline
+    std::string us2m(const std::string &src)
+    {
+        return w2m(us2w(src));
+    }
 
     std::string format(const char *fmt, ...);
     std::wstring format(const wchar_t *fmt, ...);
@@ -174,8 +179,23 @@ namespace strutil {
         }
     };
 
-    bool parse_numeric_ranges(const wchar_t *s, std::vector<int> *nums,
+    bool parse_numeric_ranges(const char *s, std::vector<int> *nums,
                               int vmin=0, int vmax=99);
+
+    inline const char *file_extension(const std::string &path)
+    {
+        size_t slash = path.find_last_of("/\\");
+        size_t dot = path.find_last_of('.');
+        if (dot == std::string::npos ||
+            (slash != std::string::npos && dot < slash))
+            return path.c_str() + path.size();
+        return path.c_str() + dot;
+    }
+    inline const char *basename(const std::string &path)
+    {
+        size_t slash = path.find_last_of("/\\");
+        return path.c_str() + (slash == std::string::npos ? 0 : slash + 1);
+    }
 }
 
 #endif

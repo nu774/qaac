@@ -16,8 +16,8 @@ class WavpackModule {
     DL m_dl;
 private:
     WavpackModule() {
-        if (!load(L"wavpackdll.dll"))
-            load(L"libwavpack-1.dll");
+        if (!load("wavpackdll.dll"))
+            load("libwavpack-1.dll");
     }
     WavpackModule(const WavpackModule&);
     WavpackModule& operator=(const WavpackModule&);
@@ -26,7 +26,7 @@ public:
         static WavpackModule self;
         return self;
     }
-    bool load(const std::wstring &path);
+    bool load(const std::string &path);
     bool loaded() const { return m_dl.loaded(); }
 
     const char *(*GetLibraryVersionString)();
@@ -68,7 +68,7 @@ class WavpackSource: public ISeekableSource, public ITagParser
     AudioStreamBasicDescription m_asbd;
     WavpackModule &m_module;
 public:
-    WavpackSource(std::shared_ptr<IInputStream> stream, const std::wstring &path);
+    WavpackSource(std::shared_ptr<IInputStream> stream, const std::string &path);
     ~WavpackSource() { m_wpc.reset(); }
     uint64_t length() const { return m_length; }
     const AudioStreamBasicDescription &getSampleFormat() const

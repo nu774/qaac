@@ -4,7 +4,7 @@
 
 class Win32InputStream: public IInputStream {
 public:
-    Win32InputStream(const std::wstring &path);
+    Win32InputStream(const std::string &path);
     ~Win32InputStream();
     bool seekable() override { return m_seekable; }
     int read(void *buf, unsigned size) override;

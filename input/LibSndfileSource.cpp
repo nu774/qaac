@@ -42,7 +42,7 @@ uint32_t convert_chanmap(uint32_t value)
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
-bool LibSndfileModule::load(const std::wstring &path)
+bool LibSndfileModule::load(const std::string &path)
 {
     if (!m_dl.load(path))
         return false;
@@ -214,8 +214,7 @@ void LibSndfileSource::fetchVorbisTags(int codec)
     auto &map = tag->fieldListMap();
     for (auto it = map.begin(); it != map.end(); ++it) {
         std::string key = it->first.toCString();
-        std::wstring value = it->second.toString().toWString();
-        tags[key] = strutil::w2us(value);
+        tags[key] = it->second.toString().to8Bit(true);
     }
     m_tags = TextBasedTag::normalizeTags(tags);
 

@@ -10,11 +10,11 @@
 
 class MP4SinkBase: public ITagStore, public IChapterWriter, public IArtworkWriter, public IFinishWriteSink, public IBitrateWriter {
 protected:
-    std::wstring m_filename;
+    std::string m_filename;
     // Final destination path. Equal to m_filename unless constructed with
     // temp=true, in which case m_filename is overwritten with a scratch
     // filename and finishWrite() later multiplexes into m_dest_filename.
-    std::wstring m_dest_filename;
+    std::string m_dest_filename;
     bool m_optimize;
     std::function<void(uint64_t, uint64_t)> m_optimize_cb;
     std::shared_ptr<FILE> m_fp;
@@ -28,7 +28,7 @@ protected:
     std::vector<std::vector<char> > m_artworks;
     unsigned m_max_bitrate;
 public:
-    MP4SinkBase(const std::wstring &path, bool temp);
+    MP4SinkBase(const std::string &path, bool temp);
     virtual ~MP4SinkBase() {}
 
     MP4FileX *getFile() { return &m_mp4file; }
@@ -83,7 +83,7 @@ public:
         MODE_EDTS = 2,
         MODE_BOTH = 3,
     };
-    MP4Sink(const std::wstring &path, const std::vector<uint8_t> &cookie,
+    MP4Sink(const std::string &path, const std::vector<uint8_t> &cookie,
             bool temp, int gapless_mode);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
@@ -101,7 +101,7 @@ protected:
 
 class ALACSink: public ISink, public MP4SinkBase {
 public:
-    ALACSink(const std::wstring &path, const std::vector<uint8_t> &magicCookie,
+    ALACSink(const std::string &path, const std::vector<uint8_t> &magicCookie,
              bool temp);
     void writeSamples(const void *data, size_t length, size_t nsamples)
     {
@@ -123,7 +123,7 @@ class ADTSSink: public ISink {
     bool m_seekable;
     std::vector<uint8_t> m_pce_data;
 public:
-    ADTSSink(const std::wstring &path, const std::vector<uint8_t> &cookie,
+    ADTSSink(const std::string &path, const std::vector<uint8_t> &cookie,
              bool append=false);
     ADTSSink(const std::shared_ptr<FILE> &fp,
              const std::vector<uint8_t> &cookie);

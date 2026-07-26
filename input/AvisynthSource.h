@@ -9,7 +9,7 @@ class AvisynthModule {
     DL m_dl;
 private:
     AvisynthModule() {
-        load(L"avisynth.dll");
+        load("avisynth.dll");
     }
     AvisynthModule(const AvisynthModule&);
     AvisynthModule& operator=(const AvisynthModule&);
@@ -18,7 +18,7 @@ public:
         static AvisynthModule self;
         return self;
     }
-    bool load(const std::wstring &path);
+    bool load(const std::string &path);
     bool loaded() const { return m_dl.loaded(); }
 
     AVS_ScriptEnvironment * (__stdcall *create_script_environment)(int);
@@ -43,7 +43,7 @@ class AvisynthSource: public ISeekableSource
     AudioStreamBasicDescription m_asbd;
     AvisynthModule &m_module;
 public:
-    AvisynthSource(const std::wstring &path);
+    AvisynthSource(const std::string &path);
     uint64_t length() const { return m_duration; }
     const AudioStreamBasicDescription &getSampleFormat() const
     {

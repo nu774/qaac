@@ -16,7 +16,7 @@ const uint8_t vorbis_channel_layout[8][8] = {
     { 0, 2, 1, 7, 5, 6, 3, 4 },
 };
 
-bool LibOpusModule::load(const std::wstring &path)
+bool LibOpusModule::load(const std::string &path)
 {
     if (!m_dl.load(path))
         return false;

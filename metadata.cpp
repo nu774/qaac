@@ -213,11 +213,11 @@ namespace ID3 {
                 auto txframe =
                   dynamic_cast<TagLib::ID3v2::TextIdentificationFrame*>(frame);
                 auto fields = txframe->fieldList();
-                auto k = fields.begin()->toWString();
-                auto v = (++fields.begin())->toWString();
-                tags[strutil::w2us(k)] = strutil::w2us(v);
+                auto k = fields.begin()->to8Bit(true);
+                auto v = (++fields.begin())->to8Bit(true);
+                tags[k] = v;
             } else if (sID == "TCON") {
-                tags["genre"] = strutil::w2us(tag->genre().toWString());
+                tags["genre"] = tag->genre().to8Bit(true);
             } else if (sID == "APIC") {
                 auto picframe =
                     dynamic_cast<TagLib::ID3v2::AttachedPictureFrame*>(frame);
@@ -231,7 +231,7 @@ namespace ID3 {
                 auto end = known_keys + util::sizeof_array(known_keys);
                 auto key = lookup_by_key(known_keys, end, sID.c_str());
                 if (key)
-                    tags[key] = strutil::w2us(frame->toString().toWString());
+                    tags[key] = frame->toString().to8Bit(true);
             }
         });
         return TextBasedTag::normalizeTags(tags);

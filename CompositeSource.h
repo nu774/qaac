@@ -47,11 +47,11 @@ public:
     }
     void addSource(const std::shared_ptr<ISeekableSource> &src);
     void addSourceWithChapter(const std::shared_ptr<ISeekableSource> &src,
-                              const std::wstring &title);
+                              const std::string &title);
     size_t count() const { return m_sources.size(); }
 private:
     std::shared_ptr<ISeekableSource> first() const { return m_sources[0]; }
-    void addChapter(std::wstring title, double length)
+    void addChapter(std::string title, double length)
     {
         m_chapters.push_back(std::make_pair(title, length));
     }

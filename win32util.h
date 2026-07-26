@@ -2,6 +2,7 @@
 #define _WIN32UTIL_H
 
 #include <cstdio>
+#include <cstdarg>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -35,19 +36,14 @@ namespace win32 {
         }
     };
 
-    void throw_error(const std::wstring& msg, DWORD error);
-
-    inline void throw_error(const std::string& msg, DWORD error)
-    {
-        throw_error(strutil::us2w(msg), error);
-    }
+    void throw_error(const std::string& msg, DWORD error);
 
     inline void throwIfError(HRESULT expr, const char *msg)
     {
         if (FAILED(expr)) throw_error(msg, expr);
     }
 
-    inline std::wstring GetFullPathNameX(const std::wstring &path)
+    inline std::wstring GetFullPathNameW_(const std::wstring &path)
     {
         DWORD length = GetFullPathNameW(path.c_str(), 0, 0, 0);
         std::vector<wchar_t> vec(length);
@@ -56,24 +52,30 @@ namespace win32 {
         return std::wstring(&vec[0], &vec[length]);
     }
 
-    inline std::wstring PathReplaceExtension(const std::wstring &path,
-                                             const wchar_t *ext)
+    inline std::string GetFullPathNameX(const std::string &path)
     {
-        const wchar_t *beg = path.c_str();
+        return strutil::w2us(GetFullPathNameW_(strutil::us2w(path)));
+    }
+
+    inline std::string PathReplaceExtension(const std::string &path,
+                                            const char *ext)
+    {
+        std::wstring wpath = strutil::us2w(path);
+        const wchar_t *beg = wpath.c_str();
         const wchar_t *end = PathFindExtensionW(beg);
         std::wstring s(beg, end);
-        //if (ext[0] != L'.') s.push_back(L'.');
-        s += ext;
-        return s;
+        s += strutil::us2w(ext);
+        return strutil::w2us(s);
     }
 
     // XXX: limited to MAX_PATH
-    inline std::wstring PathCombineX(const std::wstring &basedir,
-                                     const std::wstring &filename)
+    inline std::string PathCombineX(const std::string &basedir,
+                                    const std::string &filename)
     {
         wchar_t buffer[MAX_PATH];
-        PathCombineW(buffer, basedir.c_str(), filename.c_str());
-        return buffer;
+        PathCombineW(buffer, strutil::us2w(basedir).c_str(),
+                     strutil::us2w(filename).c_str());
+        return strutil::w2us(buffer);
     }
 
     inline std::wstring GetModuleFileNameX(HMODULE module)
@@ -89,10 +91,10 @@ namespace win32 {
         return std::wstring(&buffer[0], &buffer[cclen]);
     }
 
-    inline bool MakeSureDirectoryPathExistsX(const std::wstring &path)
+    inline bool MakeSureDirectoryPathExistsX(const std::string &path)
     {
         // SHCreateDirectoryEx() doesn't work with relative path
-        std::wstring fullpath = GetFullPathNameX(path);
+        std::wstring fullpath = GetFullPathNameW_(strutil::us2w(path));
         std::vector<wchar_t> buf(fullpath.begin(), fullpath.end());
         buf.push_back(0);
         wchar_t *pos = PathFindFileNameW(buf.data());
@@ -101,16 +103,16 @@ namespace win32 {
         return rc == ERROR_SUCCESS;
     }
 
-    inline std::wstring get_module_directory(HMODULE module=0)
+    inline std::string get_module_directory(HMODULE module=0)
     {
         std::wstring path = GetModuleFileNameX(module);
         const wchar_t *fpos = PathFindFileNameW(path.c_str());
-        return path.substr(0, fpos - path.c_str());
+        return strutil::w2us(path.substr(0, fpos - path.c_str()));
     }
 
     inline std::wstring prefixed_path(const wchar_t *path)
     {
-        std::wstring fullpath = GetFullPathNameX(path);
+        std::wstring fullpath = GetFullPathNameW_(path);
         if (fullpath.size() < 256)
             return fullpath;
         if (fullpath.size() > 2 && fullpath.substr(0, 2) == L"\\\\")
@@ -120,27 +122,28 @@ namespace win32 {
         return fullpath;
     }
 
-    inline FILE *wfopenx(const wchar_t *path, const wchar_t *mode)
+    inline FILE *wfopenx(const std::string &path, const char *mode)
     {
-        std::wstring fullpath = win32::prefixed_path(path);
+        std::wstring fullpath = win32::prefixed_path(strutil::us2w(path).c_str());
+        std::wstring wmode = strutil::us2w(mode);
         int share = _SH_DENYRW;
-        if (std::wcschr(mode, L'r') && !std::wcschr(mode, L'+'))
+        if (std::wcschr(wmode.c_str(), L'r') && !std::wcschr(wmode.c_str(), L'+'))
             share = _SH_DENYWR;
-        FILE *fp = _wfsopen(fullpath.c_str(), mode, share);
+        FILE *fp = _wfsopen(fullpath.c_str(), wmode.c_str(), share);
         if (!fp) {
-            if (_doserrno) throw_error(fullpath.c_str(), _doserrno);
-            util::throw_crt_error(fullpath);
+            if (_doserrno) throw_error(path, _doserrno);
+            util::throw_crt_error(path);
         }
         return fp;
     }
-    inline std::shared_ptr<FILE> fopen(const std::wstring &path,
-                                       const wchar_t *mode)
+    inline std::shared_ptr<FILE> fopen(const std::string &path,
+                                       const char *mode)
     {
         auto noop_close = [](FILE *){};
-        if (path != L"-")
-            return std::shared_ptr<FILE>(wfopenx(path.c_str(), mode),
+        if (path != "-")
+            return std::shared_ptr<FILE>(wfopenx(path, mode),
                                          std::fclose);
-        else if (std::wcschr(mode, L'r'))
+        else if (std::strchr(mode, 'r'))
             return std::shared_ptr<FILE>(stdin, noop_close);
         else
             return std::shared_ptr<FILE>(stdout, noop_close);
@@ -159,11 +162,48 @@ namespace win32 {
         return is_seekable(get_handle(fd));
     }
 
-    FILE *tmpfile(const wchar_t *prefix);
+    inline void write_utf8(FILE *fp, const std::string &utf8text)
+    {
+        HANDLE h = get_handle(_fileno(fp));
+        DWORD mode;
+        if (GetConsoleMode(h, &mode)) {
+            std::wstring wtext = strutil::us2w(utf8text);
+            DWORD written;
+            WriteConsoleW(h, wtext.c_str(),
+                         static_cast<DWORD>(wtext.size()), &written, 0);
+        } else {
+            std::fwrite(utf8text.data(), 1, utf8text.size(), fp);
+        }
+    }
 
-    char *load_with_mmap(const wchar_t *path, uint64_t *size);
+    inline int vfprintf(FILE *fp, const char *fmt, va_list args)
+    {
+        va_list args2;
+        va_copy(args2, args);
+        int rc = _vscprintf(fmt, args);
+        std::vector<char> buffer(rc + 1);
+        vsnprintf(buffer.data(), buffer.size(), fmt, args2);
+        va_end(args2);
+        write_utf8(fp, buffer.data());
+        return rc;
+    }
+    inline int fprintf(FILE *fp, const char *fmt, ...)
+    {
+        va_list ap;
+        va_start(ap, fmt);
+        // qualified: an unqualified call here is ambiguous between
+        // win32::vfprintf and ::vfprintf (ADL considers the global
+        // namespace too, since FILE is declared there).
+        int rc = win32::vfprintf(fp, fmt, ap);
+        va_end(ap);
+        return rc;
+    }
 
-    int create_named_pipe(const wchar_t *path);
+    FILE *tmpfile(const std::string &prefix);
+
+    char *load_with_mmap(const std::string &path, uint64_t *size);
+
+    int create_named_pipe(const std::string &path);
 
     std::string get_dll_version_for_locale(HMODULE hDll, WORD langid);
 

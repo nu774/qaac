@@ -14,7 +14,7 @@ class PeriodicDisplay {
     uint32_t m_interval;
     uint32_t m_last_tick_title;
     uint32_t m_last_tick_stderr;
-    std::wstring m_message;
+    std::string m_message;
     bool m_verbose;
     bool m_console_visible;
 public:
@@ -25,7 +25,7 @@ public:
         m_console_visible = IsWindowVisible(GetConsoleWindow());
         m_last_tick_title = m_last_tick_stderr = GetTickCount();
     }
-    void put(const std::wstring &message) {
+    void put(const std::string &message) {
         m_message = message;
         uint32_t tick = GetTickCount();
         if (tick - m_last_tick_stderr > m_interval) {
@@ -34,15 +34,14 @@ public:
         }
     }
     void flush() {
-        if (m_verbose) std::fputws(m_message.c_str(), stderr);
+        if (m_verbose) win32::write_utf8(stderr, m_message);
         if (m_verbose && m_console_visible &&
             m_last_tick_stderr - m_last_tick_title > m_interval * 4)
         {
-            std::vector<wchar_t> s(m_message.size() + 1);
-            std::wcscpy(&s[0], m_message.c_str());
-            strutil::squeeze(&s[0], L"\r");
-            std::wstring msg = strutil::format(L"%hs %s", PROGNAME, &s[0]);
-            SetConsoleTitleW(msg.c_str());
+            std::string s = m_message;
+            strutil::squeeze(&s[0], "\r");
+            std::string msg = strutil::format("%s %s", PROGNAME, s.c_str());
+            SetConsoleTitleW(strutil::us2w(msg).c_str());
             m_last_tick_title = m_last_tick_stderr;
         }
     }

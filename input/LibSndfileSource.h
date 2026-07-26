@@ -13,9 +13,9 @@ class LibSndfileModule {
     DL m_dl;
 private:
     LibSndfileModule() {
-        load(L"sndfile.dll");
-        if (!loaded()) load(L"libsndfile.dll");
-        if (!loaded()) load(L"libsndfile-1.dll");
+        load("sndfile.dll");
+        if (!loaded()) load("libsndfile.dll");
+        if (!loaded()) load("libsndfile-1.dll");
     }
     LibSndfileModule(const LibSndfileModule&);
     LibSndfileModule& operator=(const LibSndfileModule&);
@@ -24,7 +24,7 @@ public:
         static LibSndfileModule self;
         return self;
     }
-    bool load(const std::wstring &path);
+    bool load(const std::string &path);
     bool loaded() const { return m_dl.loaded(); }
 
     const char *(*version_string)();

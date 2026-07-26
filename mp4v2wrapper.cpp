@@ -374,7 +374,7 @@ void MP4FileCopy::start(const char *path)
 {
     m_mp4file->m_file = 0;
     try {
-        m_fp = std::shared_ptr<FILE>(win32::wfopenx(strutil::us2w(path).c_str(), L"wb"), fclose);
+        m_fp = std::shared_ptr<FILE>(win32::wfopenx(path, "wb"), fclose);
         static MP4StdIOCallbacks callbacks;
         m_mp4file->Open(path, File::MODE_CREATE, nullptr, &callbacks, m_fp.get());
     } catch (...) {
@@ -466,7 +466,7 @@ bool MP4FileX::GetQTChapters(std::vector<misc::chapter_t> *chapterList)
         const char * title = reinterpret_cast<const char *>(sp + 2);
         int titleLen = std::min((sp[0]<<8)|sp[1], MP4V2_CHAPTER_TITLE_MAX);
         std::string stitle(title, title + titleLen);
-        chapters.push_back(std::make_pair(strutil::us2w(stitle),
+        chapters.push_back(std::make_pair(stitle,
                                           duration / timescale));
     }
     chapterList->swap(chapters);
@@ -499,14 +499,14 @@ bool MP4FileX::GetNeroChapters(std::vector<misc::chapter_t> *chapterList,
     const char *name = pName->GetValue(0);
     for (uint32_t i = 1; i < count; ++i) {
         int64_t start = pStartTime->GetValue(i);
-        chapters.push_back(std::make_pair(strutil::us2w(name),
+        chapters.push_back(std::make_pair(std::string(name),
                                           (start - prev) / scale));
         name = pName->GetValue(i);
         prev = start;
     }
     int64_t end =
         static_cast<double>(GetDuration()) / GetTimeScale() * scale + 0.5;
-    chapters.push_back(std::make_pair(strutil::us2w(name),
+    chapters.push_back(std::make_pair(std::string(name),
                                       (end - prev) / scale));
     chapterList->swap(chapters);
     return chapterList->size() > 0;

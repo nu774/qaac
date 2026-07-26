@@ -128,16 +128,16 @@ namespace strutil {
      * TERM ::= NUMBER | NUMBER"-"NUMBER
      * RANGES ::= TERM | RANGES","TERM
      */
-    bool parse_numeric_ranges(const wchar_t *s, std::vector<int> *nums,
+    bool parse_numeric_ranges(const char *s, std::vector<int> *nums,
                               int vmin, int vmax)
     {
         enum { NUMBER, TERM };
-        wchar_t *end;
+        char *end;
         std::vector<int> result;
         int n, state = NUMBER;
 
         do {
-            n = wcstoul(s, &end, 10);
+            n = strtoul(s, &end, 10);
             if (end == s || n < vmin || n > vmax)
                 return false;
             if (state == NUMBER)
@@ -149,9 +149,9 @@ namespace strutil {
                 for (int k = result.back() + 1; k <= n; ++k)
                     result.push_back(k);
             }
-            if (*end == L',')
+            if (*end == ',')
                 state = NUMBER;
-            else if (*end == L'-') {
+            else if (*end == '-') {
                 if (state == TERM)
                     return false;
                 else

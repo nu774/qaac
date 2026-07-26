@@ -60,7 +60,7 @@ void parseMagicCookieALAC(const std::vector<uint8_t> &cookie,
 
 using mp4v2::impl::MP4Atom;
 
-MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
+MP4SinkBase::MP4SinkBase(const std::string &path, bool temp)
         : m_filename(path), m_dest_filename(path),
           m_optimize(temp), m_closed(false),
           m_edit_start(0), m_edit_duration(0),
@@ -69,18 +69,18 @@ MP4SinkBase::MP4SinkBase(const std::wstring &path, bool temp)
     m_optimize_cb = [](uint64_t, uint64_t) {};
     static const char * const compatibleBrands[] =
         { "M4A ", "mp42", "isom", "" };
-    if (temp) m_filename = L"qaac.int";
+    if (temp) m_filename = "qaac.int";
     try {
         static MP4StdIOCallbacks callbacks;
-        if (path == L"-") {
+        if (path == "-") {
             m_fp = std::shared_ptr<FILE>(stdout, [](FILE *){});
         } else if (temp) {
-            m_fp = std::shared_ptr<FILE>(win32::tmpfile(m_filename.c_str()), fclose);
+            m_fp = std::shared_ptr<FILE>(win32::tmpfile(m_filename), fclose);
         } else {
-            m_fp = std::shared_ptr<FILE>(win32::wfopenx(m_filename.c_str(), L"wb"), fclose);
+            m_fp = std::shared_ptr<FILE>(win32::wfopenx(m_filename, "wb"), fclose);
         }
 
-        m_mp4file.Create(strutil::w2us(m_filename).c_str(),
+        m_mp4file.Create(m_filename.c_str(),
                          &callbacks,
                          m_fp.get(),
                          0, // flags
@@ -126,8 +126,7 @@ void MP4SinkBase::writeTags()
             double off = static_cast<double>(m_edit_start) / timeScale;
             std::vector<misc::chapter_t>::const_iterator chap;
             for (chap = m_chapters.begin(); chap != m_chapters.end(); ++chap) {
-                std::string name = strutil::w2us(chap->first);
-                const char *namep = name.c_str();
+                const char *namep = chap->first.c_str();
                 m_mp4file.AddChapter(track, chap->second * timeScale + 0.5,
                                      namep);
                 int64_t stamp = off * 10000000.0 + 0.5;
@@ -181,7 +180,7 @@ void MP4SinkBase::optimize()
     try {
         m_mp4file.FinishWriteX();
         MP4FileCopy optimizer(&m_mp4file);
-        optimizer.start(strutil::w2us(m_dest_filename).c_str());
+        optimizer.start(m_dest_filename.c_str());
         uint64_t total = optimizer.getTotalChunks();
         for (uint64_t i = 1; optimizer.copyNextChunk(); ++i) {
             m_optimize_cb(i, total);
@@ -387,7 +386,7 @@ void MP4SinkBase::writeStringTag(const char *fcc, const std::string &value)
     m_mp4file.SetMetadataString(fcc, s.c_str());
 }
 
-MP4Sink::MP4Sink(const std::wstring &path,
+MP4Sink::MP4Sink(const std::string &path,
                  const std::vector<uint8_t> &config,
                  bool temp,
                  int gapless_mode)
@@ -452,7 +451,7 @@ void MP4Sink::writeTags()
     MP4SinkBase::writeTags();
 }
 
-ALACSink::ALACSink(const std::wstring &path,
+ALACSink::ALACSink(const std::string &path,
                    const std::vector<uint8_t> &magicCookie,
                    bool temp)
         : MP4SinkBase(path, temp)
@@ -472,10 +471,10 @@ ALACSink::ALACSink(const std::wstring &path,
     }
 }
 
-ADTSSink::ADTSSink(const std::wstring &path,
+ADTSSink::ADTSSink(const std::string &path,
                    const std::vector<uint8_t> &cookie,
                    bool append)
-    : m_fp(win32::fopen(path, append ? L"ab" : L"wb"))
+    : m_fp(win32::fopen(path, append ? "ab" : "wb"))
 {
     init(cookie);
 }

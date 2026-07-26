@@ -1,18 +1,19 @@
 #include "Win32InputStream.h"
+#include "strutil.h"
 #include <io.h>
 #include <sys/stat.h>
 
-Win32InputStream::Win32InputStream(const std::wstring &path)
+Win32InputStream::Win32InputStream(const std::string &path)
     : m_pos(0)
     , m_fd_pos(0)
     , m_eof(false)
     , m_seekable(false)
     , m_size(-1)
 {
-    if (path == L"-")
+    if (path == "-")
         m_fd = _fileno(stdin);
     else
-        m_fd = _wsopen(path.c_str(), _O_RDONLY|_O_BINARY, _SH_DENYWR);
+        m_fd = _wsopen(strutil::us2w(path).c_str(), _O_RDONLY|_O_BINARY, _SH_DENYWR);
     if (m_fd == -1) {
         util::throw_crt_error(path);
     }

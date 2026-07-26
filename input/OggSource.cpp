@@ -343,8 +343,7 @@ void OggSource::fetchTags()
     auto &map = tag->fieldListMap();
     for (auto it = map.begin(); it != map.end(); ++it) {
         std::string key = it->first.toCString();
-        std::wstring value = it->second.toString().toWString();
-        tags[key] = strutil::w2us(value);
+        tags[key] = it->second.toString().to8Bit(true);
     }
     m_tags = TextBasedTag::normalizeTags(tags);
 

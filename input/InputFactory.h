@@ -7,7 +7,7 @@ class InputFactory {
     AudioStreamBasicDescription m_raw_format;
     bool m_is_raw;
     bool m_ignore_length;
-    std::map<std::wstring, std::shared_ptr<ISeekableSource> > m_sources;
+    std::map<std::string, std::shared_ptr<ISeekableSource> > m_sources;
 private:
     InputFactory() : m_is_raw(false), m_ignore_length(false) {}
     InputFactory(const InputFactory&);
@@ -18,7 +18,7 @@ public:
         static InputFactory self;
         return self;
     }
-    std::shared_ptr<ISeekableSource> open(const wchar_t *path);
+    std::shared_ptr<ISeekableSource> open(const std::string &path);
     void setRawFormat(const AudioStreamBasicDescription &asbd)
     {
         m_raw_format = asbd;

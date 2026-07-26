@@ -66,7 +66,6 @@ bool CueTokenizer<CharT>::nextline()
 }
 
 template struct CueTokenizer<char>;
-template struct CueTokenizer<wchar_t>;
 
 void CueTrack::addSegment(const CueSegment &seg)
 {
@@ -99,50 +98,50 @@ std::map<std::string, std::string> CueTrack::getTags() const
     auto result = m_cuesheet->getTags();
     std::for_each(m_meta.begin(), m_meta.end(),
                   [&](decltype(*m_meta.begin()) &tag) {
-                      auto key = strutil::w2us(tag.first);
+                      auto key = tag.first;
                       if (key == "PERFORMER")
                           key = "artist";
-                      result[key] = strutil::w2us(tag.second);
+                      result[key] = tag.second;
                   });
     result["track number"]
         = strutil::format("%u/%u", number(), m_cuesheet->count());
     return TextBasedTag::normalizeTags(result);
 }
 
-void CueSheet::parse(std::wstreambuf *src)
+void CueSheet::parse(std::streambuf *src)
 {
     static struct handler_t {
-        const wchar_t *cmd;
-        void (CueSheet::*mf)(const std::wstring *args);
+        const char *cmd;
+        void (CueSheet::*mf)(const std::string *args);
         size_t nargs;
     } handlers[] = {
-        { L"FILE", &CueSheet::parseFile, 3 },
-        { L"TRACK", &CueSheet::parseTrack, 3 },
-        { L"INDEX", &CueSheet::parseIndex, 3 },
-        { L"POSTGAP", &CueSheet::parsePostgap, 2 },
-        { L"PREGAP", &CueSheet::parsePregap, 2 },
-        { L"REM", &CueSheet::parseRem, 3 },
-        { L"CATALOG", &CueSheet::parseMeta, 2 },
-        { L"ISRC", &CueSheet::parseMeta, 2 },
-        { L"PERFORMER", &CueSheet::parseMeta, 2 },
-        { L"SONGWRITER", &CueSheet::parseMeta, 2 },
-        { L"TITLE", &CueSheet::parseMeta, 2 },
+        { "FILE", &CueSheet::parseFile, 3 },
+        { "TRACK", &CueSheet::parseTrack, 3 },
+        { "INDEX", &CueSheet::parseIndex, 3 },
+        { "POSTGAP", &CueSheet::parsePostgap, 2 },
+        { "PREGAP", &CueSheet::parsePregap, 2 },
+        { "REM", &CueSheet::parseRem, 3 },
+        { "CATALOG", &CueSheet::parseMeta, 2 },
+        { "ISRC", &CueSheet::parseMeta, 2 },
+        { "PERFORMER", &CueSheet::parseMeta, 2 },
+        { "SONGWRITER", &CueSheet::parseMeta, 2 },
+        { "TITLE", &CueSheet::parseMeta, 2 },
         { 0, 0, 0 }
     };
 
-    CueTokenizer<wchar_t> tokenizer(src);
+    CueTokenizer<char> tokenizer(src);
     while (tokenizer.nextline()) {
         if (!tokenizer.m_fields.size())
             continue;
         m_lineno = tokenizer.m_lineno;
-        std::wstring cmd = tokenizer.m_fields[0];
+        std::string cmd = tokenizer.m_fields[0];
         for (handler_t *p = handlers; p->cmd; ++p) {
             if (cmd != p->cmd)
                 continue;
             if (tokenizer.m_fields.size() == p->nargs)
                 (this->*p->mf)(&tokenizer.m_fields[0]);
-            else if (cmd != L"REM")
-                die(strutil::format("wrong num args for %ls command", p->cmd));
+            else if (cmd != "REM")
+                die(strutil::format("wrong num args for %s command", p->cmd));
             break;
         }
         // if (!p->cmd) die("Unknown command");
@@ -151,7 +150,7 @@ void CueSheet::parse(std::wstreambuf *src)
 }
 
 std::vector<std::shared_ptr<ISeekableSource>>
-CueSheet::loadTracks(bool is_embedded, const std::wstring &path,
+CueSheet::loadTracks(bool is_embedded, const std::string &path,
                      const std::vector<int> &selection)
 {
     std::vector<std::shared_ptr<ISeekableSource>> tracks;
@@ -164,13 +163,13 @@ CueSheet::loadTracks(bool is_embedded, const std::wstring &path,
         std::shared_ptr<CompositeSource> track_source(new CompositeSource());
         std::for_each(track->begin(), track->end(), [&](const CueSegment &seg) {
             std::shared_ptr<ISeekableSource> src;
-            if (seg.m_filename == L"__GAP__") {
+            if (seg.m_filename == "__GAP__") {
                 if (tracks.size())
                     src.reset(new NullSource(src->getSampleFormat()));
             } else if (is_embedded) {
                 src = InputFactory::instance().open(path.c_str());
             } else {
-                std::wstring ifilename =
+                std::string ifilename =
                     win32::PathCombineX(path, seg.m_filename);
                 src = InputFactory::instance().open(ifilename.c_str());
             }
@@ -210,8 +209,8 @@ std::map<std::string, std::string> CueSheet::getTags() const
     std::map<std::string, std::string> result;
     std::for_each(m_meta.begin(), m_meta.end(),
                   [&](decltype(*m_meta.begin()) &tag) {
-        std::string key = strutil::w2us(tag.first);
-        std::string val = strutil::w2us(tag.second);
+        std::string key = tag.first;
+        std::string val = tag.second;
 
         if (key == "PERFORMER") {
             result["artist"] = val;
@@ -242,31 +241,31 @@ void CueSheet::validate()
     };
 }
 
-void CueSheet::parseFile(const std::wstring *args)
+void CueSheet::parseFile(const std::string *args)
 {
     if (!m_cur_file.empty() && m_cur_file != args[1])
         this->m_has_multiple_files = true;
     m_cur_file = args[1];
 }
-void CueSheet::parseTrack(const std::wstring *args)
+void CueSheet::parseTrack(const std::string *args)
 {
-    if (args[2] == L"AUDIO") {
+    if (args[2] == "AUDIO") {
         unsigned no;
-        if (std::swscanf(args[1].c_str(), L"%d", &no) != 1)
+        if (std::sscanf(args[1].c_str(), "%d", &no) != 1)
             die("Invalid TRACK number");
         m_tracks.push_back(CueTrack(this, no));
     }
 }
-void CueSheet::parseIndex(const std::wstring *args)
+void CueSheet::parseIndex(const std::string *args)
 {
     if (!m_tracks.size())
         die("INDEX command before TRACK");
     if (m_cur_file.empty())
         die("INDEX command before FILE");
     unsigned no, mm, ss, ff, nframes;
-    if (std::swscanf(args[1].c_str(), L"%u", &no) != 1)
+    if (std::sscanf(args[1].c_str(), "%u", &no) != 1)
         die("Invalid INDEX number");
-    if (std::swscanf(args[2].c_str(), L"%u:%u:%u", &mm, &ss, &ff) != 3)
+    if (std::sscanf(args[2].c_str(), "%u:%u:%u", &mm, &ss, &ff) != 3)
         die("Invalid INDEX time format");
     if (ss > 59 || ff > 74)
         die("Invalid INDEX time format");
@@ -285,37 +284,37 @@ void CueSheet::parseIndex(const std::wstring *args)
         if (m_tracks.size() == 1) {
             /* HTOA */
             m_tracks.insert(m_tracks.begin(), CueTrack(this, 0));
-            m_tracks[0].setMeta(L"title", L"(HTOA)");
+            m_tracks[0].setMeta("title", "(HTOA)");
             segment.m_index = 1;
         } else
             segment.m_index = 0x7fffffff;
         m_tracks[m_tracks.size() - 2].addSegment(segment);
     }
 }
-void CueSheet::parsePostgap(const std::wstring *args)
+void CueSheet::parsePostgap(const std::string *args)
 {
     if (!m_tracks.size())
         die("POSTGAP command before TRACK");
     unsigned mm, ss, ff;
-    if (std::swscanf(args[1].c_str(), L"%u:%u:%u", &mm, &ss, &ff) != 3)
+    if (std::sscanf(args[1].c_str(), "%u:%u:%u", &mm, &ss, &ff) != 3)
         die("Invalid POSTGAP time format");
-    CueSegment segment(std::wstring(L"__GAP__"), 0x7ffffffe);
+    CueSegment segment(std::string("__GAP__"), 0x7ffffffe);
     segment.m_end = msf2frames(mm, ss, ff);
     m_tracks.back().addSegment(segment);
 }
-void CueSheet::parsePregap(const std::wstring *args)
+void CueSheet::parsePregap(const std::string *args)
 {
     if (!m_tracks.size())
         die("PREGAP command before TRACK");
     unsigned mm, ss, ff;
-    if (std::swscanf(args[1].c_str(), L"%u:%u:%u", &mm, &ss, &ff) != 3)
+    if (std::sscanf(args[1].c_str(), "%u:%u:%u", &mm, &ss, &ff) != 3)
         die("Invalid PREGAP time format");
-    CueSegment segment(std::wstring(L"__GAP__"), 0x7fffffff);
+    CueSegment segment(std::string("__GAP__"), 0x7fffffff);
     segment.m_end = msf2frames(mm, ss, ff);
     if (m_tracks.size() > 1)
         m_tracks[m_tracks.size() - 2].addSegment(segment);
 }
-void CueSheet::parseMeta(const std::wstring *args)
+void CueSheet::parseMeta(const std::string *args)
 {
     if (m_tracks.size())
         m_tracks.back().setMeta(args[0], args[1]);

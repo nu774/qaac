@@ -14,14 +14,14 @@
 #include "CAFSource.h"
 #include "Win32InputStream.h"
 
-std::shared_ptr<ISeekableSource> InputFactory::open(const wchar_t *path)
+std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
 {
-    std::map<std::wstring, std::shared_ptr<ISeekableSource> >::iterator
+    std::map<std::string, std::shared_ptr<ISeekableSource> >::iterator
         pos = m_sources.find(path);
     if (pos != m_sources.end())
         return pos->second;
 
-    const wchar_t *ext = PathFindExtensionW(path);
+    const char *ext = strutil::file_extension(path);
     std::shared_ptr<IInputStream> stream = std::make_shared<Win32InputStream>(path);
     if (m_is_raw) {
         std::shared_ptr<RawSource> src =
@@ -29,7 +29,7 @@ std::shared_ptr<ISeekableSource> InputFactory::open(const wchar_t *path)
         m_sources[path] = src;
         return src;
     }
-    if (strutil::wslower(ext) == L".avs")
+    if (strutil::slower(ext) == ".avs")
         return std::make_shared<AvisynthSource>(path);
 
 #define TRY_MAKE_SHARED(type, ...) \

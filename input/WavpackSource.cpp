@@ -13,7 +13,7 @@
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
 
-bool WavpackModule::load(const std::wstring &path)
+bool WavpackModule::load(const std::string &path)
 {
     if (!m_dl.load(path)) return false;
     try {
@@ -100,7 +100,7 @@ namespace wavpack {
     }
 }
 
-WavpackSource::WavpackSource(std::shared_ptr<IInputStream> stream, const std::wstring &path)
+WavpackSource::WavpackSource(std::shared_ptr<IInputStream> stream, const std::string &path)
     : m_module(WavpackModule::instance())
 {
     char error[0x100];
@@ -115,7 +115,7 @@ WavpackSource::WavpackSource(std::shared_ptr<IInputStream> stream, const std::ws
     };
     if (!m_module.loaded()) throw std::runtime_error("libwavpack not loaded");
     m_stream = stream;
-    try { m_cstream = std::make_shared<Win32InputStream>(path + L"c"); } catch(...) {}
+    try { m_cstream = std::make_shared<Win32InputStream>(path + "c"); } catch(...) {}
 
     int flags = OPEN_TAGS | OPEN_NORMALIZE | OPEN_DSD_AS_PCM
               | (m_cstream ? OPEN_WVC : 0);

@@ -17,30 +17,32 @@ public:
         if (GetFileType(win32::get_handle(2)) != FILE_TYPE_UNKNOWN)
             m_streams.push_back(std::shared_ptr<FILE>(stderr, [](FILE*){}));
     }
-    void enable_file(const wchar_t *filename)
+    void enable_file(const std::string &filename)
     {
         try {
-            FILE *fp = win32::wfopenx(filename, L"w");
-            _setmode(_fileno(fp), _O_U8TEXT);
+            FILE *fp = win32::wfopenx(filename, "w");
             std::setbuf(fp, 0);
             m_streams.push_back(std::shared_ptr<FILE>(fp, std::fclose));
         } catch (...) {}
     }
-    void vwprintf(const wchar_t *fmt, va_list args)
+    void vprintf(const char *fmt, va_list args)
     {
-        int rc = _vscwprintf(fmt, args);
-        std::vector<wchar_t> buffer(rc + 1);
-        rc = _vsnwprintf(buffer.data(), buffer.size(), fmt, args);
+        va_list args2;
+        va_copy(args2, args);
+        int rc = _vscprintf(fmt, args);
+        std::vector<char> buffer(rc + 1);
+        vsnprintf(buffer.data(), buffer.size(), fmt, args2);
+        va_end(args2);
 
-        OutputDebugStringW(buffer.data());
+        OutputDebugStringA(buffer.data());
         for (size_t i = 0; i < m_streams.size(); ++i)
-            std::fputws(buffer.data(), m_streams[i].get());
+            win32::write_utf8(m_streams[i].get(), buffer.data());
     }
-    void wprintf(const wchar_t *fmt, ...)
+    void printf(const char *fmt, ...)
     {
         va_list ap;
         va_start(ap, fmt);
-        vwprintf(fmt, ap);
+        vprintf(fmt, ap);
         va_end(ap);
     }
 private:
@@ -50,7 +52,7 @@ private:
 };
 
 #ifdef __GNUC__
-#define LOG(fmt, ...) Log::instance().wprintf(fmt, ##__VA_ARGS__)
+#define LOG(fmt, ...) Log::instance().printf(fmt, ##__VA_ARGS__)
 #else
-#define LOG(fmt, ...) Log::instance().wprintf(fmt, __VA_ARGS__)
+#define LOG(fmt, ...) Log::instance().printf(fmt, __VA_ARGS__)
 #endif

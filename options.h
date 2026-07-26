@@ -8,7 +8,7 @@
 
 struct DRCParams {
     double   m_threshold, m_ratio, m_knee_width, m_attack, m_release;
-    const wchar_t *m_stat_file;
+    const char *m_stat_file;
 
     DRCParams():
         m_threshold(0.0), m_ratio(0.0), m_knee_width(0.0),
@@ -16,7 +16,7 @@ struct DRCParams {
         m_stat_file(0)
     {}
     DRCParams(double threshold, double ratio, double knee_width,
-              double attack, double release, const wchar_t *stat_file)
+              double attack, double release, const char *stat_file)
         : m_threshold(threshold), m_ratio(ratio), m_knee_width(knee_width),
           m_attack(attack), m_release(release),
           m_stat_file(stat_file)
@@ -38,8 +38,8 @@ struct Options {
         artwork_size(0), native_resampler_complexity(0), textcp(0),
         gapless_mode(0),
 
-        ofilename(0), outdir(0), raw_format(L"S16LE"),
-        fname_format(L"${tracknumber}${title& }${title}"),
+        ofilename(0), outdir(0), raw_format("S16LE"),
+        fname_format("${tracknumber}${title& }${title}"),
         chapter_file(0), logfilename(0), remix_preset(0), remix_file(0),
         tmpdir(0), start(0), end(0), delay(0),
 
@@ -56,7 +56,7 @@ struct Options {
 
         output_format(0)
     {}
-    bool parse(int &argc, wchar_t **&argv);
+    bool parse(int &argc, char **&argv);
 
     bool isMP4() const
     {
@@ -86,13 +86,13 @@ struct Options {
     {
         return output_format == 'peak';
     }
-    const wchar_t *extension() const
+    const char *extension() const
     {
-        if (is_caf) return L".caf";
-        else if (isMP4()) return L".m4a";
-        else if (isLPCM()) return L".wav";
-        else if (isWaveOut() || isPeak()) return L"";
-        else return L".aac";
+        if (is_caf) return ".caf";
+        else if (isMP4()) return ".m4a";
+        else if (isLPCM()) return ".wav";
+        else if (isWaveOut() || isPeak()) return "";
+        else return ".aac";
     }
 
     int32_t method, quality;
@@ -105,7 +105,7 @@ struct Options {
     uint32_t bits_per_sample, raw_channels, raw_sample_rate,
              artwork_size, native_resampler_complexity, textcp,
              gapless_mode;
-    const wchar_t
+    const char
             *ofilename, *outdir, *raw_format, *fname_format, *chapter_file,
             *logfilename, *remix_preset, *remix_file, *tmpdir,
             *start, *end, *delay;
@@ -119,12 +119,12 @@ struct Options {
     uint32_t output_format;
     std::vector<DRCParams> drc_params;
     std::map<uint32_t, std::string> tagopts;
-    std::map<uint32_t, std::wstring> ftagopts;
+    std::map<uint32_t, std::string> ftagopts;
     std::map<std::string, std::string> longtags;
     std::vector<misc::chapter_t> chapters;
-    std::vector<std::wstring> artwork_files;
+    std::vector<std::string> artwork_files;
     std::vector<std::vector<char> > artworks;
-    std::wstring encoder_name;
+    std::string encoder_name;
     std::vector<uint32_t> chanmap;
     std::vector<int> cue_tracks;
 };

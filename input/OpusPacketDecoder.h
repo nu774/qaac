@@ -12,8 +12,8 @@ class LibOpusModule {
     DL m_dl;
 private:    
     LibOpusModule() {
-        load(L"opus.dll");
-        if (!loaded()) load(L"libopus-0.dll");
+        load("opus.dll");
+        if (!loaded()) load("libopus-0.dll");
     }
     LibOpusModule(const LibOpusModule&);
     LibOpusModule& operator=(const LibOpusModule&);
@@ -22,7 +22,7 @@ public:
         static LibOpusModule self;
         return self;
     }
-    bool load(const std::wstring &path);
+    bool load(const std::string &path);
     bool loaded() const { return m_dl.loaded(); }
     
     const char *(*get_version_string)();

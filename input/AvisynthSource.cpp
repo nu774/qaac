@@ -3,7 +3,7 @@
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
-bool AvisynthModule::load(const std::wstring &path)
+bool AvisynthModule::load(const std::string &path)
 {
     if (!m_dl.load(path)) return false;
     try {
@@ -26,7 +26,7 @@ bool AvisynthModule::load(const std::wstring &path)
 }
 
 
-AvisynthSource::AvisynthSource(const std::wstring &path)
+AvisynthSource::AvisynthSource(const std::string &path)
     : m_position(0),
       m_module(AvisynthModule::instance())
 {
@@ -39,7 +39,9 @@ AvisynthSource::AvisynthSource(const std::wstring &path)
         throw std::runtime_error(error);
     std::string spath;
     try {
-        spath = strutil::w2m(path);
+        // Avisynth's C API is ANSI-codepage-native, not UTF-8 -- this is
+        // the one place in the app where that distinction matters.
+        spath = strutil::us2m(path);
     } catch (...) {
         throw std::runtime_error("Unicode path is not available for avs");
     }

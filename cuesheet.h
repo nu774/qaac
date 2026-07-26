@@ -24,10 +24,10 @@ struct CueTokenizer {
 };
 
 struct CueSegment {
-    CueSegment(const std::wstring &filename, unsigned index)
+    CueSegment(const std::string &filename, unsigned index)
         : m_filename(filename), m_index(index), m_begin(0), m_end(~0U)
     {}
-    std::wstring m_filename;
+    std::string m_filename;
     unsigned m_index;
     unsigned m_begin;
     unsigned m_end;
@@ -39,22 +39,22 @@ class CueTrack {
     CueSheet *m_cuesheet;
     unsigned m_number;
     std::vector<CueSegment> m_segments;
-    std::map<std::wstring, std::wstring> m_meta;
+    std::map<std::string, std::string> m_meta;
 public:
     typedef std::vector<CueSegment>::iterator iterator;
     typedef std::vector<CueSegment>::const_iterator const_iterator;
 
     CueTrack(CueSheet *cuesheet, unsigned number)
         : m_cuesheet(cuesheet), m_number(number) {}
-    std::wstring name() const
+    std::string name() const
     {
-        std::map<std::wstring, std::wstring>::const_iterator
-            it = m_meta.find(L"TITLE");
-        return it == m_meta.end() ? L"" : it->second;
+        std::map<std::string, std::string>::const_iterator
+            it = m_meta.find("TITLE");
+        return it == m_meta.end() ? "" : it->second;
     }
     unsigned number() const { return m_number; }
     void addSegment(const CueSegment &seg);
-    void setMeta(const std::wstring &key, const std::wstring &value)
+    void setMeta(const std::string &key, const std::string &value)
     {
         m_meta[key] = value;
     }
@@ -73,18 +73,18 @@ public:
 class CueSheet {
     bool m_has_multiple_files;
     size_t m_lineno;
-    std::wstring m_cur_file;
+    std::string m_cur_file;
     std::vector<CueTrack> m_tracks;
-    std::map<std::wstring, std::wstring> m_meta;
+    std::map<std::string, std::string> m_meta;
 public:
     typedef std::vector<CueTrack>::iterator iterator;
     typedef std::vector<CueTrack>::const_iterator const_iterator;
 
     CueSheet(): m_has_multiple_files(false) {}
-    void parse(std::wstreambuf *src);
+    void parse(std::streambuf *src);
     std::vector<std::shared_ptr<ISeekableSource>>
         loadTracks(bool is_embedded,
-                   const std::wstring &cue_or_container_path,
+                   const std::string &cue_or_container_path,
                    const std::vector<int> &selection);
     std::map<std::string, std::string> getTags() const;
 
@@ -95,13 +95,13 @@ public:
     const_iterator end() const { return m_tracks.end(); }
 private:
     void validate();
-    void parseFile(const std::wstring *args);
-    void parseTrack(const std::wstring *args);
-    void parseIndex(const std::wstring *args);
-    void parsePostgap(const std::wstring *args);
-    void parsePregap(const std::wstring *args);
-    void parseMeta(const std::wstring *args);
-    void parseRem(const std::wstring *args) { parseMeta(args + 1); }
+    void parseFile(const std::string *args);
+    void parseTrack(const std::string *args);
+    void parseIndex(const std::string *args);
+    void parsePostgap(const std::string *args);
+    void parsePregap(const std::string *args);
+    void parseMeta(const std::string *args);
+    void parseRem(const std::string *args) { parseMeta(args + 1); }
     void die(const std::string &msg)
     {
         throw std::runtime_error(strutil::format("cuesheet: %s at line %d",

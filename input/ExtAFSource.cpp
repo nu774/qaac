@@ -15,9 +15,8 @@ namespace audiofile {
             return;
         std::map<std::string, std::string> *tag =
             static_cast<std::map<std::string, std::string>*>(ctx);
-        std::wstring wskey = cautil::CF2W(static_cast<CFStringRef>(key));
-        std::wstring wsval = cautil::CF2W(static_cast<CFStringRef>(value));
-        (*tag)[strutil::w2us(wskey)] = strutil::w2us(wsval);
+        (*tag)[cautil::CF2US(static_cast<CFStringRef>(key))] =
+            cautil::CF2US(static_cast<CFStringRef>(value));
     }
 
     std::map<std::string, std::string> fetchTags(AudioFileX &af)

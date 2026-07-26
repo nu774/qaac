@@ -52,7 +52,7 @@ namespace getopt {
 
 struct option {
     /* name of long option */
-    const wchar_t *name;
+    const char *name;
     /*
      * one of no_argument, required_argument, and optional_argument:
      * whether option takes an argument
@@ -64,15 +64,15 @@ struct option {
     int val;
 };
 
-int getopt_long(int, wchar_t * const *, const wchar_t *,
+int getopt_long(int, char * const *, const char *,
     const struct option *, int *);
-int getopt_long_only(int, wchar_t * const *, const wchar_t *,
+int getopt_long_only(int, char * const *, const char *,
     const struct option *, int *);
 #ifndef _GETOPT_DECLARED
 #define _GETOPT_DECLARED
-int  getopt(int, wchar_t * const [], const wchar_t *);
+int  getopt(int, char * const [], const char *);
 
-extern const wchar_t *optarg;         /* getopt(3) external variables */
+extern const char *optarg;         /* getopt(3) external variables */
 extern int optind, opterr, optopt;
 #endif
 #ifndef _OPTRESET_DECLARED

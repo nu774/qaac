@@ -11,7 +11,7 @@ class TakModule {
     bool m_compatible;
 private:
     TakModule(): m_compatible(false) {
-        load(L"tak_deco_lib.dll");
+        load("tak_deco_lib.dll");
     }
     TakModule(const TakModule&);
     TakModule& operator=(const TakModule&);
@@ -20,7 +20,7 @@ public:
         static TakModule self;
         return self;
     }
-    bool load(const std::wstring &path);
+    bool load(const std::string &path);
     bool loaded() const { return m_dl.loaded(); }
     bool compatible() const { return m_compatible; }
 
