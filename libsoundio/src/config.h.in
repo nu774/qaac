@@ -1,0 +1,22 @@
+/*
+ * Copyright (c) 2015 Andrew Kelley
+ *
+ * This file is part of libsoundio, which is MIT licensed.
+ * See http://opensource.org/licenses/MIT
+ */
+
+#ifndef SOUNDIO_CONFIG_H
+#define SOUNDIO_CONFIG_H
+
+#define SOUNDIO_VERSION_MAJOR @LIBSOUNDIO_VERSION_MAJOR@
+#define SOUNDIO_VERSION_MINOR @LIBSOUNDIO_VERSION_MINOR@
+#define SOUNDIO_VERSION_PATCH @LIBSOUNDIO_VERSION_PATCH@
+#define SOUNDIO_VERSION_STRING "@LIBSOUNDIO_VERSION@"
+
+#cmakedefine SOUNDIO_HAVE_JACK
+#cmakedefine SOUNDIO_HAVE_PULSEAUDIO
+#cmakedefine SOUNDIO_HAVE_ALSA
+#cmakedefine SOUNDIO_HAVE_COREAUDIO
+#cmakedefine SOUNDIO_HAVE_WASAPI
+
+#endif

@@ -353,6 +353,60 @@ add_library(uchardet STATIC
 target_compile_definitions(uchardet PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_NONSTDC_NO_DEPRECATE)
 
 # ---------------------------------------------------------------------------
+# libsoundio (vendored subset: WASAPI + ALSA + dummy backends only -- see
+# libsoundio/README.md for what was left out and why)
+# ---------------------------------------------------------------------------
+add_library(libsoundio STATIC
+    libsoundio/src/soundio.c
+    libsoundio/src/util.c
+    libsoundio/src/os.c
+    libsoundio/src/dummy.c
+    libsoundio/src/channel_layout.c
+    libsoundio/src/ring_buffer.c
+)
+if(WIN32)
+    target_sources(libsoundio PRIVATE libsoundio/src/wasapi.c)
+    set(SOUNDIO_HAVE_WASAPI true)
+endif()
+if(NOT WIN32)
+    find_package(ALSA)
+    if(ALSA_FOUND)
+        target_sources(libsoundio PRIVATE libsoundio/src/alsa.c)
+        set(SOUNDIO_HAVE_ALSA true)
+        target_include_directories(libsoundio PRIVATE ${ALSA_INCLUDE_DIRS})
+        target_link_libraries(libsoundio PUBLIC ${ALSA_LIBRARIES})
+    else()
+        message(WARNING "ALSA development headers not found -- libsoundio "
+                        "will only have the dummy backend on this platform, "
+                        "so --play won't produce audible output")
+    endif()
+endif()
+set(LIBSOUNDIO_VERSION_MAJOR 2)
+set(LIBSOUNDIO_VERSION_MINOR 0)
+set(LIBSOUNDIO_VERSION_PATCH 0)
+set(LIBSOUNDIO_VERSION "${LIBSOUNDIO_VERSION_MAJOR}.${LIBSOUNDIO_VERSION_MINOR}.${LIBSOUNDIO_VERSION_PATCH}")
+configure_file(
+    libsoundio/src/config.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/libsoundio_config/config.h
+)
+target_include_directories(libsoundio PUBLIC libsoundio)
+target_include_directories(libsoundio PRIVATE
+    libsoundio/src
+    ${CMAKE_CURRENT_BINARY_DIR}/libsoundio_config
+)
+if(MSVC)
+    target_compile_options(libsoundio PRIVATE /TP)
+endif()
+if(WIN32)
+    target_link_libraries(libsoundio PUBLIC ole32)
+    target_compile_definitions(libsoundio PUBLIC SOUNDIO_STATIC_LIBRARY)
+    target_compile_definitions(libsoundio PRIVATE _CRT_NONSTDC_NO_DEPRECATE)
+else()
+    find_package(Threads REQUIRED)
+    target_link_libraries(libsoundio PUBLIC Threads::Threads)
+endif()
+
+# ---------------------------------------------------------------------------
 # common (shared code linked into both qaac and refalac)
 # ---------------------------------------------------------------------------
 add_library(common STATIC
@@ -406,12 +460,10 @@ if(WIN32)
         win32/getopt.cpp
     )
 endif()
-if(NOT WIN32)
-    target_sources(common PRIVATE
-        output/ConsoleInputParser.cpp
-        output/PlaybackNotifier.cpp
-    )
-endif()
+target_sources(common PRIVATE
+    output/ConsoleInputParser.cpp
+    output/PlaybackNotifier.cpp
+)
 target_include_directories(common PRIVATE
     .
     input
@@ -428,6 +480,7 @@ if(MSVC)
     target_compile_options(common PRIVATE /wd4018 /wd4244 /wd4267 /wd4838)
 endif()
 target_link_libraries(common PUBLIC mp4v2 taglib uchardet ogg)
+target_link_libraries(common PUBLIC libsoundio)
 
 # ---------------------------------------------------------------------------
 # qaac
