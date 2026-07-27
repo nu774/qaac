@@ -409,6 +409,7 @@ endif()
 if(NOT WIN32)
     target_sources(common PRIVATE
         output/ConsoleInputParser.cpp
+        output/PlaybackNotifier.cpp
     )
 endif()
 target_include_directories(common PRIVATE
