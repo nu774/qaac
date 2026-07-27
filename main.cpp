@@ -792,6 +792,37 @@ void finishWriteSink(const std::shared_ptr<ISink> &sink, IEncoder *encoder,
         fsink->finishWrite(pti);
 }
 
+static
+AudioStreamBasicDescription prepare_encode_target(
+        std::vector<std::shared_ptr<ISource> > &chain, const Options &opts,
+        uint32_t *channel_layout, AudioStreamBasicDescription *iasbd)
+{
+    *channel_layout = map_to_aac_channels(chain, opts);
+    *iasbd = chain.back()->getSampleFormat();
+    return get_encoding_ASBD(chain.back().get(), opts.output_format);
+}
+
+static
+void run_encode(IEncoder *encoder, const std::shared_ptr<ISink> &sink,
+               const std::string &ofilename, const Options &opts)
+{
+    CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
+    if (cafsink)
+        cafsink->beginWrite();
+
+    do_encode(encoder, ofilename, opts);
+    LOG("Overall bitrate: %gkbps\n",
+        dynamic_cast<IEncoderStat*>(encoder)->overallBitrate());
+}
+
+static
+void finish_encode(IEncoder *encoder, const std::shared_ptr<ISink> &sink,
+                   const AudioFilePacketTableInfo &pti, const Options &opts)
+{
+    applyExternalChapterFile(sink, encoder, opts);
+    finishWriteSink(sink, encoder, pti, opts);
+}
+
 #ifdef QAAC
 static
 std::shared_ptr<ISink> open_sink(const std::string &ofilename,
@@ -935,10 +966,10 @@ static
 void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
                  const std::string &ofilename, const Options &opts)
 {
-    uint32_t channel_layout = map_to_aac_channels(chain, opts);
-    AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
+    uint32_t channel_layout;
+    AudioStreamBasicDescription iasbd;
     AudioStreamBasicDescription oasbd =
-        get_encoding_ASBD(chain.back().get(), opts.output_format);
+        prepare_encode_target(chain, opts, &channel_layout, &iasbd);
     AudioConverterXX converter(iasbd, oasbd);
     AudioChannelLayout acl = { 0 };
     acl.mChannelLayoutTag = channel_layout;
@@ -963,8 +994,8 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
         encoder = std::make_shared<CoreAudioEncoder>(converter);
 
     encoder->setSource(chain.back());
-    std::shared_ptr<ISink> sink;
-    sink = open_sink(ofilename, opts, oasbd, channel_layout, cookie);
+    std::shared_ptr<ISink> sink =
+        open_sink(ofilename, opts, oasbd, channel_layout, cookie);
     encoder->setSink(sink);
     if (opts.isAAC() && !opts.is_caf) {
         ITagStore *tagstore = dynamic_cast<ITagStore*>(sink.get());
@@ -974,19 +1005,13 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
         }
     }
     set_tags(chain[0].get(), sink.get(), opts, encoder_config);
-    CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
-    if (cafsink)
-        cafsink->beginWrite();
 
-    do_encode(encoder.get(), ofilename, opts);
-    LOG("Overall bitrate: %gkbps\n", encoder->overallBitrate());
+    run_encode(encoder.get(), sink, ofilename, opts);
 
     AudioFilePacketTableInfo pti = { 0 };
-    if (opts.isAAC()) {
+    if (opts.isAAC())
         pti = encoder->getGaplessInfo();
-    }
-    applyExternalChapterFile(sink, encoder.get(), opts);
-    finishWriteSink(sink, encoder.get(), pti, opts);
+    finish_encode(encoder.get(), sink, pti, opts);
 }
 #endif // QAAC
 #ifdef REFALAC
@@ -995,10 +1020,10 @@ static
 void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
         const std::string &ofilename, const Options &opts)
 {
-    uint32_t channel_layout = map_to_aac_channels(chain, opts);
-    AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
+    uint32_t channel_layout;
+    AudioStreamBasicDescription iasbd;
     AudioStreamBasicDescription oasbd =
-        get_encoding_ASBD(chain.back().get(), opts.output_format);
+        prepare_encode_target(chain, opts, &channel_layout, &iasbd);
     ALACEncoderX encoder(iasbd);
     encoder.setFastMode(opts.alac_fast);
     auto cookie = encoder.getMagicCookie();
@@ -1014,15 +1039,9 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
     encoder.setSource(chain.back());
     encoder.setSink(sink);
     set_tags(chain[0].get(), sink.get(), opts, "Apple Lossless Encoder");
-    CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
-    if (cafsink)
-        cafsink->beginWrite();
 
-    do_encode(&encoder, ofilename, opts);
-    LOG("Overall bitrate: %gkbps\n", encoder.overallBitrate());
-
-    applyExternalChapterFile(sink, &encoder, opts);
-    finishWriteSink(sink, &encoder, AudioFilePacketTableInfo(), opts);
+    run_encode(&encoder, sink, ofilename, opts);
+    finish_encode(&encoder, sink, AudioFilePacketTableInfo(), opts);
 }
 #endif
 
