@@ -1,8 +1,11 @@
+#include <chrono>
 #include <clocale>
 #include <numeric>
 #include <regex>
 #ifndef _WIN32
 #include <sys/mman.h>
+#include <termios.h>
+#include <unistd.h>
 #endif
 #include "ISink.h"
 #include "platformutil.h"
@@ -11,9 +14,7 @@
 #include "sink.h"
 #include "WaveSink.h"
 #include "CAFSink.h"
-#ifdef _WIN32
-#include "WaveOutSink.h"
-#endif
+#include "SoundIoOutDevice.h"
 #include "PeakSink.h"
 #include "cuesheet.h"
 #include "CompositeSource.h"
@@ -125,10 +126,11 @@ class Progress {
     platform::Timer m_timer;
     bool m_console_visible;
     bool m_stderr_valid;
+    bool m_show_eta;
 public:
-    Progress(bool verbosity, uint64_t total, uint32_t rate)
+    Progress(bool verbosity, uint64_t total, uint32_t rate, bool showEta = true)
         : m_disp(100, verbosity), m_verbose(verbosity),
-          m_total(total), m_rate(rate)
+          m_total(total), m_rate(rate), m_show_eta(showEta)
     {
 #ifdef _WIN32
         m_stderr_valid =
@@ -148,12 +150,18 @@ public:
         double percent = 100.0 * fcurrent / m_total;
         double seconds = fcurrent / m_rate;
         double ellapsed = m_timer.ellapsed();
-        double eta = ellapsed * (m_total / fcurrent - 1);
         double speed = ellapsed ? seconds/ellapsed : 0.0;
         if (m_total == ~0ULL)
             m_disp.put(strutil::format("\r%s (%.1fx)   ",
                 util::format_seconds(seconds).c_str(), speed));
-        else {
+        else if (!m_show_eta) {
+            std::string msg =
+                strutil::format("\r[%.1f%%] %s/%s (%.1fx)  ",
+                                percent, util::format_seconds(seconds).c_str(),
+                                m_tstamp.c_str(), speed);
+            m_disp.put(msg);
+        } else {
+            double eta = fcurrent > 0 ? ellapsed * (m_total / fcurrent - 1) : 0.0;
             std::string msg =
                 strutil::format("\r[%.1f%%] %s/%s (%.1fx), ETA %s  ",
                                 percent, util::format_seconds(seconds).c_str(),
@@ -1077,32 +1085,31 @@ void process_file(const std::shared_ptr<ISeekableSource> &src,
         encode_file(chain, ofilename, opts);
 }
 
-#ifdef _WIN32
-enum class PlaybackOutcome { Completed, PrevFile, Quit };
+enum class PlaybackOutcome { Completed, PrevFile, PrevFileTail, Quit };
 
 enum class PlaybackCommand {
     None, SeekBack, SeekForward, SeekHome, NextTrack, PrevOrRestart, Quit
 };
 
 static
-PlaybackCommand translatePlaybackKey(DWORD vk)
+PlaybackCommand translatePlaybackKey(PlaybackKey key)
 {
-    switch (vk) {
-    case VK_LEFT:   return PlaybackCommand::SeekBack;
-    case VK_RIGHT:  return PlaybackCommand::SeekForward;
-    case VK_HOME:   return PlaybackCommand::SeekHome;
-    case VK_END:
-    case VK_NEXT:   return PlaybackCommand::NextTrack;
-    case VK_PRIOR:  return PlaybackCommand::PrevOrRestart;
-    case VK_ESCAPE:
-    case 'Q':       return PlaybackCommand::Quit;
-    default:        return PlaybackCommand::None;
+    switch (key) {
+    case PlaybackKey::Left:     return PlaybackCommand::SeekBack;
+    case PlaybackKey::Right:    return PlaybackCommand::SeekForward;
+    case PlaybackKey::Home:     return PlaybackCommand::SeekHome;
+    case PlaybackKey::End:
+    case PlaybackKey::PageDown: return PlaybackCommand::NextTrack;
+    case PlaybackKey::PageUp:   return PlaybackCommand::PrevOrRestart;
+    case PlaybackKey::Quit:     return PlaybackCommand::Quit;
+    default:                    return PlaybackCommand::None;
     }
 }
 
 static
 PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
-                        const Options &opts)
+                        const std::string &ofilename, const Options &opts,
+                        bool hasPrevTrack, bool isLastTrack)
 {
     const std::shared_ptr<ISource> src = chain.back();
     const AudioStreamBasicDescription &sf = src->getSampleFormat();
@@ -1119,28 +1126,39 @@ PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
     if (!chanmask)
         chanmask = chanmap::defaultChannelMask(sf.mChannelsPerFrame);
 
-    WaveOutSink sink(sf, chanmask);
-    WaveOutDevice &waveout = WaveOutDevice::instance();
+    SoundIoOutDevice &soundio = SoundIoOutDevice::instance();
+    soundio.open(sf, chanmask);
     ISeekableSource *ss = dynamic_cast<ISeekableSource*>(chain.front().get());
 
-    Progress progress(opts.verbose, src->length(), sf.mSampleRate);
+    Progress progress(opts.verbose, src->length(), sf.mSampleRate, false);
     uint32_t bpf = sf.mBytesPerFrame;
     std::vector<uint8_t> buffer(4096 * bpf);
     PlaybackOutcome outcome = PlaybackOutcome::Completed;
+    bool reachedEnd = false;
     try {
         while (!g_interrupted) {
+            int64_t chunkStart = src->getPosition();
             size_t nread = src->readSamples(&buffer[0], 4096);
-            if (nread == 0) break;
-            progress.update(src->getPosition());
-            sink.writeSamples(&buffer[0], nread * bpf, nread);
+            if (nread == 0) { reachedEnd = true; break; }
+            soundio.pushSamples(&buffer[0], nread * bpf, nread, ofilename,
+                               chunkStart);
 
-            PlaybackKeyEvent event = {};
-            if (ss && waveout.takePendingKeyEvent(&event)) {
-                int64_t lookahead = waveout.queuedFrames() *
+            std::string audibleTrack;
+            if (soundio.checkTrackChange(&audibleTrack))
+                LOG("\n%s\n", audibleTrack == "-" ? "<stdout>"
+                                                  : strutil::basename(audibleTrack));
+            int64_t audiblePosition;
+            if (soundio.getAudiblePosition(&audibleTrack, &audiblePosition)
+                && audibleTrack == ofilename)
+                progress.update(audiblePosition);
+
+            PlaybackKeyEvent event;
+            if (ss && soundio.takePendingKeyEvent(&event)) {
+                int64_t lookahead = soundio.queuedFramesAtLastKeyEvent() *
                     ss->getSampleFormat().mSampleRate / sf.mSampleRate;
                 int64_t pos = (std::max)(ss->getPosition() - lookahead,
                                          (int64_t)0);
-                int64_t samples = ss->getSampleFormat().mSampleRate * event.repeat;
+                int64_t samples = static_cast<int64_t>(ss->getSampleFormat().mSampleRate);
                 bool stopReading = false;
                 switch (translatePlaybackKey(event.key)) {
                 case PlaybackCommand::SeekHome:
@@ -1150,7 +1168,10 @@ PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
                     stopReading = true;
                     break;
                 case PlaybackCommand::SeekBack:
-                    ss->seekTo((std::max)(pos - samples, (int64_t)0));
+                    if (hasPrevTrack && pos < samples)
+                        outcome = PlaybackOutcome::PrevFileTail;
+                    else
+                        ss->seekTo((std::max)(pos - samples, (int64_t)0));
                     break;
                 case PlaybackCommand::SeekForward:
                     ss->seekTo((std::min)(pos + samples, (int64_t)ss->length()));
@@ -1172,13 +1193,32 @@ PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
                     break;
             }
         }
+        if (reachedEnd) {
+            if (isLastTrack) {
+                // The decoder is exhausted, but up to ~1s of already-decoded
+                // audio can still be sitting in the ring buffer. Poll the
+                // actually-audible position until it drains, so the display
+                // doesn't reach 100% before playback has truly finished.
+                auto deadline = std::chrono::steady_clock::now()
+                    + std::chrono::seconds(5);
+                std::string audibleTrack;
+                int64_t audiblePosition;
+                while (!g_interrupted
+                       && std::chrono::steady_clock::now() < deadline
+                       && soundio.getAudiblePosition(&audibleTrack, &audiblePosition)
+                       && audibleTrack == ofilename) {
+                    progress.update(audiblePosition);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+                }
+            }
+            progress.update(src->length());
+        }
         progress.finish(src->getPosition());
     } catch (const std::exception &e) {
         LOG("\nERROR: %s\n", errormsg(e).c_str());
     }
     return outcome;
 }
-#endif // _WIN32
 
 const char *get_qaac_version();
 
@@ -1481,25 +1521,66 @@ struct COMInitializer {};
 #endif
 
 #ifdef _WIN32
+struct TtyRawModeGuard {};
+#else
+struct TtyRawModeGuard {
+    struct termios m_orig;
+    bool m_active = false;
+    TtyRawModeGuard()
+    {
+        if (tcgetattr(STDIN_FILENO, &m_orig) != 0)
+            return; // stdin isn't a real tty (e.g. redirected): leave it alone
+        struct termios raw = m_orig;
+        // cbreak, not full raw: leave ISIG on so Ctrl-C still delivers
+        // SIGINT through the normal path (see install_signal_handlers()).
+        raw.c_lflag &= ~(ICANON | ECHO);
+        raw.c_cc[VMIN] = 1;
+        raw.c_cc[VTIME] = 0;
+        if (tcsetattr(STDIN_FILENO, TCSANOW, &raw) == 0)
+            m_active = true;
+    }
+    ~TtyRawModeGuard()
+    {
+        if (m_active)
+            tcsetattr(STDIN_FILENO, TCSANOW, &m_orig);
+    }
+};
+#endif
+
 static
 void play_jobs(std::vector<EncodeJob> &jobs, const Options &opts)
 {
+    TtyRawModeGuard ttyRawMode;
+    int64_t pendingSeekPos = -1;
+    bool quit = false;
     for (ssize_t i = 0; i < (ssize_t)jobs.size() && !g_interrupted; ++i) {
         const EncodeJob &job = jobs[i];
-        LOG("\n%s\n",
-            job.ofilename == "-" ? "<stdout>"
-                                 : strutil::basename(job.ofilename));
-        job.src->seekTo(0);
+        job.src->seekTo(pendingSeekPos >= 0 ? pendingSeekPos : 0);
+        pendingSeekPos = -1;
         std::vector<std::shared_ptr<ISource> > chain;
         build_filter_chain(job.src, chain, opts);
-        PlaybackOutcome outcome = play_file(chain, opts);
+        bool hasPrevTrack = i > 0;
+        bool isLastTrack = i == (ssize_t)jobs.size() - 1;
+        PlaybackOutcome outcome = play_file(chain, job.ofilename, opts,
+                                           hasPrevTrack, isLastTrack);
         if (outcome == PlaybackOutcome::PrevFile)
             i = std::max(i - 2, (ssize_t)-1);
-        else if (outcome == PlaybackOutcome::Quit)
+        else if (outcome == PlaybackOutcome::PrevFileTail) {
+            ssize_t target = i - 1;
+            const std::shared_ptr<ISeekableSource> &prevSrc = jobs[target].src;
+            int64_t step =
+                static_cast<int64_t>(prevSrc->getSampleFormat().mSampleRate);
+            pendingSeekPos = (std::max)(
+                static_cast<int64_t>(prevSrc->length()) - 2 * step, (int64_t)0);
+            i = target - 1;
+        } else if (outcome == PlaybackOutcome::Quit) {
+            quit = true;
             break;
+        }
     }
+    if (!quit && !g_interrupted)
+        SoundIoOutDevice::instance().drain();
 }
-#endif
 
 static int app_main(int argc, char **argv)
 {
@@ -1633,9 +1714,7 @@ static int app_main(int argc, char **argv)
         struct CleanupScope {
             ~CleanupScope() {
                 InputFactory::instance().close();
-#ifdef _WIN32
-                WaveOutDevice::instance().close();
-#endif
+                SoundIoOutDevice::instance().close();
             }
         } __cleanup__;
 
@@ -1658,12 +1737,7 @@ static int app_main(int argc, char **argv)
         }
 
         if (opts.isWaveOut()) {
-#ifdef _WIN32
             play_jobs(jobs, opts);
-#else
-            throw std::runtime_error(
-                "--play is not supported on this platform");
-#endif
         } else {
             for (ssize_t i = 0; i < (ssize_t)jobs.size() && !g_interrupted; ++i) {
                 const EncodeJob &job = jobs[i];
