@@ -406,6 +406,11 @@ if(WIN32)
         win32/getopt.cpp
     )
 endif()
+if(NOT WIN32)
+    target_sources(common PRIVATE
+        output/ConsoleInputParser.cpp
+    )
+endif()
 target_include_directories(common PRIVATE
     .
     input
