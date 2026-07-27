@@ -59,10 +59,10 @@
 #include "CoreAudioPaddedEncoder.h"
 #include "CoreAudioResampler.h"
 #endif
+#include <csignal>
 #ifdef _WIN32
 #include <crtdbg.h>
 #else
-#include <csignal>
 #include <cstdlib>
 #endif
 
@@ -74,20 +74,39 @@
 
 #include "PeriodicDisplay.h"
 
-static volatile bool g_interrupted = false;
+static volatile sig_atomic_t g_interrupted = 0;
 
 #ifdef _WIN32
 static
 BOOL WINAPI console_interrupt_handler(DWORD type)
 {
-    g_interrupted = true;
+    g_interrupted = 1;
     return TRUE;
 }
 #else
 static
 void console_interrupt_handler(int sig)
 {
-    g_interrupted = true;
+    g_interrupted = 1;
+}
+
+static
+void install_signal_handlers()
+{
+    struct sigaction sa = { 0 };
+    sa.sa_handler = console_interrupt_handler;
+    sigemptyset(&sa.sa_mask);
+    sigaddset(&sa.sa_mask, SIGINT);
+    sigaddset(&sa.sa_mask, SIGTERM);
+    sigaddset(&sa.sa_mask, SIGHUP);
+    sigaction(SIGINT, &sa, 0);
+    sigaction(SIGTERM, &sa, 0);
+    sigaction(SIGHUP, &sa, 0);
+
+    struct sigaction ignore = { 0 };
+    ignore.sa_handler = SIG_IGN;
+    sigemptyset(&ignore.sa_mask);
+    sigaction(SIGPIPE, &ignore, 0);
 }
 #endif
 
@@ -1603,8 +1622,7 @@ static int app_main(int argc, char **argv)
 #ifdef _WIN32
         SetConsoleCtrlHandler(console_interrupt_handler, TRUE);
 #else
-        signal(SIGINT, console_interrupt_handler);
-        signal(SIGPIPE, SIG_IGN);
+        install_signal_handlers();
 #endif
 
         if (opts.is_raw) {
