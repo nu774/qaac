@@ -214,6 +214,10 @@ namespace util {
     inline void seconds_to_HMS(double seconds, int *h, int *m, int *s,
                                int *millis)
     {
+        if (!std::isfinite(seconds) || seconds < 0)
+            seconds = 0;
+        else if (seconds > 359999.0)
+            seconds = 359999.0;
         *h = seconds / 3600;
         seconds -= *h * 3600;
         *m = seconds / 60;
