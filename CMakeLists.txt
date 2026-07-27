@@ -463,6 +463,7 @@ endif()
 target_sources(common PRIVATE
     output/ConsoleInputParser.cpp
     output/PlaybackNotifier.cpp
+    output/SoundIoOutDevice.cpp
 )
 target_include_directories(common PRIVATE
     .
