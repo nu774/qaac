@@ -2,15 +2,14 @@
 #define STRUTIL_HPP_INCLUDED
 
 #include <cwchar>
+#include <cwctype>
 #include <cstring>
 #include <cstdlib>
 #include <string>
 #include <vector>
-#include <locale>
 #include <stdexcept>
 #include <algorithm>
 #include <iterator>
-#include <codecvt>
 
 #if defined _MSC_VER
 #ifndef strcasecmp
@@ -26,12 +25,6 @@ namespace strutil {
     template<typename T> T *strsep(T **strp, const T *sep);
     template<> char *strsep(char **strp, const char *sep);
     template<> wchar_t *strsep(wchar_t **strp, const wchar_t *sep);
-
-    std::wstring &m2w(std::wstring &dst, const char *src, size_t srclen,
-            const std::codecvt<wchar_t, char, std::mbstate_t> &cvt);
-
-    std::string &w2m(std::string &dst, const wchar_t *src, size_t srclen,
-                   const std::codecvt<wchar_t, char, std::mbstate_t> &cvt);
 
     template <typename T, typename Conv>
     inline
@@ -92,49 +85,12 @@ namespace strutil {
         return result;
     }
 
-    inline
-    std::wstring m2w(const std::string &src,
-                     const std::codecvt<wchar_t, char, std::mbstate_t> &cvt)
-    {
-        std::wstring result;
-        return m2w(result, src.c_str(), src.size(), cvt);
-    }
-    inline
-    std::wstring m2w(const std::string &src)
-    {
-        typedef std::codecvt<wchar_t, char, std::mbstate_t> cvt_t;
-        std::locale loc("");
-        return m2w(src, std::use_facet<cvt_t>(loc));
-    }
-    inline
-    std::wstring us2w(const std::string &src)
-    {
-        return m2w(src, std::codecvt_utf8<wchar_t>());
-    }
-    inline
-    std::string w2m(const std::wstring& src,
-                    const std::codecvt<wchar_t, char, std::mbstate_t> &cvt)
-    {
-        std::string result;
-        return w2m(result, src.c_str(), src.size(), cvt);
-    }
-    inline
-    std::string w2m(const std::wstring &src)
-    {
-        typedef std::codecvt<wchar_t, char, std::mbstate_t> cvt_t;
-        std::locale loc("");
-        return w2m(src, std::use_facet<cvt_t>(loc));
-    }
-    inline
-    std::string w2us(const std::wstring &src)
-    {
-        return w2m(src, std::codecvt_utf8<wchar_t>());
-    }
-    inline
-    std::string us2m(const std::string &src)
-    {
-        return w2m(us2w(src));
-    }
+#ifdef _WIN32
+    std::wstring us2w(const std::string &src);
+    std::string w2us(const std::wstring &src);
+
+    std::string us2m(const std::string &src);
+#endif
 
     std::string format(const char *fmt, ...);
     std::wstring format(const wchar_t *fmt, ...);

@@ -62,6 +62,7 @@ namespace cautil {
                 reinterpret_cast<const UniChar*>(s.c_str()), s.size());
         return CFStringPtr(sref, CFRelease);
     }
+#ifdef _WIN32
     inline std::string CF2US(CFStringRef str)
     {
         return strutil::w2us(CF2W(str));
@@ -70,6 +71,7 @@ namespace cautil {
     {
         return W2CF(strutil::us2w(s));
     }
+#endif
 
     CFMutableDictionaryRef CreateDictionary(CFIndex capacity);
 

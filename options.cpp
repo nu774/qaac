@@ -8,6 +8,31 @@
 #endif
 #include "metadata.h"
 
+static std::vector<uint32_t> decodeUtf8ToCodepoints(const char *s)
+{
+    std::vector<uint32_t> result;
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(s);
+    while (*p) {
+        uint32_t cp;
+        int extra;
+        if (*p < 0x80)             { cp = *p;        extra = 0; }
+        else if ((*p & 0xe0) == 0xc0) { cp = *p & 0x1f; extra = 1; }
+        else if ((*p & 0xf0) == 0xe0) { cp = *p & 0x0f; extra = 2; }
+        else if ((*p & 0xf8) == 0xf0) { cp = *p & 0x07; extra = 3; }
+        else
+            throw std::runtime_error("invalid UTF-8 sequence");
+        ++p;
+        for (int i = 0; i < extra; ++i) {
+            if ((*p & 0xc0) != 0x80)
+                throw std::runtime_error("invalid UTF-8 sequence");
+            cp = (cp << 6) | (*p & 0x3f);
+            ++p;
+        }
+        result.push_back(cp);
+    }
+    return result;
+}
+
 static struct option long_options[] = {
 #ifdef QAAC
     { "formats", no_argument, 0, 'fmts' },
@@ -723,20 +748,26 @@ bool Options::parse(int &argc, char **&argv)
             strutil::Tokenizer<char> tokens(optarg, ":");
             char *key = tokens.next();
             char *value = tokens.rest();
-            std::wstring wkey = strutil::us2w(key ? key : "");
-            size_t keylen = wkey.size();
+            std::vector<uint32_t> keycps;
+            try {
+                keycps = decodeUtf8ToCodepoints(key ? key : "");
+            } catch (const std::exception&) {
+                complain("Invalid --tag option arg.\n");
+                return false;
+            }
+            size_t keylen = keycps.size();
             if (!value || (keylen != 3 && keylen != 4)) {
                 complain("Invalid --tag option arg.\n");
                 return false;
             }
             uint32_t fcc = (keylen == 3) ? 0xa9 : 0;
-            for (size_t i = 0; i < wkey.size(); ++i) {
-                wchar_t wc = wkey[i];
-                if (wc != 0xa9 && (wc < 0x20 || wc > 0x7e)) {
+            for (size_t i = 0; i < keycps.size(); ++i) {
+                uint32_t cp = keycps[i];
+                if (cp != 0xa9 && (cp < 0x20 || cp > 0x7e)) {
                     complain("Invalid fourcc for --tag.\n");
                     return false;
                 }
-                fcc = ((fcc << 8) | wc);
+                fcc = ((fcc << 8) | cp);
             }
             if (fcc == Tag::kArtwork)
                 this->artwork_files.push_back(value);

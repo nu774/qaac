@@ -1,5 +1,15 @@
 #include <stdarg.h>
+#include <stdexcept>
 #include "strutil.h"
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 namespace strutil {
     template<> char *strsep(char **strp, const char *sep)
@@ -29,49 +39,51 @@ namespace strutil {
         return tok;
     }
 
-    std::wstring &m2w(std::wstring &dst, const char *src, size_t srclen,
-            const std::codecvt<wchar_t, char, std::mbstate_t> &cvt)
+#ifdef _WIN32
+    std::wstring us2w(const std::string &src)
     {
-        typedef std::codecvt<wchar_t, char, std::mbstate_t> cvt_t;
-        wchar_t buffer[0x100];
-        std::mbstate_t state = { 0 };
-        const char *pend = src + srclen, *pnext = src;
-        wchar_t *pwbegin = buffer,
-                *pwend = buffer + sizeof(buffer)/sizeof(buffer[0]),
-                *pwnext = pwbegin;
-        dst.clear();
-        while (src < pend) {
-            if (cvt.in(state, src, pend, pnext,
-                        pwbegin, pwend, pwnext) == cvt_t::error)
-                throw std::runtime_error("conversion failed");
-            dst.append(pwbegin, pwnext - pwbegin);
-            pwnext = pwbegin;
-            src = pnext;
-        }
+        if (src.empty()) return std::wstring();
+        int nc = MultiByteToWideChar(CP_UTF8, 0, src.data(),
+                                     static_cast<int>(src.size()), 0, 0);
+        if (nc <= 0)
+            throw std::runtime_error("us2w: conversion failed");
+        std::wstring dst(nc, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, src.data(),
+                            static_cast<int>(src.size()), &dst[0], nc);
         return dst;
     }
 
-    std::string &w2m(std::string &dst, const wchar_t *src, size_t srclen,
-                   const std::codecvt<wchar_t, char, std::mbstate_t> &cvt)
+    std::string w2us(const std::wstring &src)
     {
-        typedef std::codecvt<wchar_t, char, std::mbstate_t> cvt_t;
-        char buffer[0x100];
-        std::mbstate_t state = { 0 };
-        const wchar_t *pwend = src + srclen, *pwnext = src;
-        char *pbegin = buffer,
-             *pend = buffer + sizeof(buffer),
-             *pnext = pbegin;
-        dst.clear();
-        while (src < pwend) {
-            if (cvt.out(state, src, pwend, pwnext,
-                        pbegin, pend, pnext) == cvt_t::error)
-                throw std::runtime_error("conversion failed");
-            dst.append(pbegin, pnext - pbegin);
-            pnext = pbegin;
-            src = pwnext;
-        }
+        if (src.empty()) return std::string();
+        int nc = WideCharToMultiByte(CP_UTF8, 0, src.data(),
+                                     static_cast<int>(src.size()),
+                                     0, 0, 0, 0);
+        if (nc <= 0)
+            throw std::runtime_error("w2us: conversion failed");
+        std::string dst(nc, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, src.data(),
+                            static_cast<int>(src.size()),
+                            &dst[0], nc, 0, 0);
         return dst;
     }
+
+    std::string us2m(const std::string &src)
+    {
+        std::wstring wide = us2w(src);
+        if (wide.empty()) return std::string();
+        int nc = WideCharToMultiByte(CP_ACP, 0, wide.data(),
+                                     static_cast<int>(wide.size()),
+                                     0, 0, 0, 0);
+        if (nc <= 0)
+            throw std::runtime_error("us2m: conversion failed");
+        std::string dst(nc, '\0');
+        WideCharToMultiByte(CP_ACP, 0, wide.data(),
+                            static_cast<int>(wide.size()),
+                            &dst[0], nc, 0, 0);
+        return dst;
+    }
+#endif
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #ifndef vsnprintf
