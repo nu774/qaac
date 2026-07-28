@@ -797,11 +797,7 @@ bool Options::parse(int &argc, char **&argv)
         this->bitrate = isSBR() ? 0 : 90;
     }
     if (isMP4() && this->ofilename && !std::strcmp(this->ofilename, "-")) {
-#ifdef _WIN32
-        if (!platform::is_seekable(_fileno(stdout))) {
-#else
         if (!platform::is_seekable(fileno(stdout))) {
-#endif
             complain("MP4 piping is not supported.\n");
             return false;
         }

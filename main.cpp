@@ -1476,11 +1476,7 @@ std::string get_output_filename(const std::string &ifilename,
     } catch (...) {
         return ofilename;
     }
-#ifdef _WIN32
-    if (!platform::is_same_file(_fileno(ifp.get()), _fileno(ofp.get())))
-#else
     if (!platform::is_same_file(fileno(ifp.get()), fileno(ofp.get())))
-#endif
         return ofilename;
 
     std::string tl = strutil::format("_%s", ext);

@@ -15,17 +15,15 @@ SeekableInputStream::SeekableInputStream(const std::string &path)
     , m_seekable(false)
     , m_size(-1)
 {
-#ifdef _WIN32
-    if (path == "-")
-        m_fd = _fileno(stdin);
-    else
-        m_fd = _wsopen(strutil::us2w(path).c_str(), _O_RDONLY|_O_BINARY, _SH_DENYWR);
-#else
     if (path == "-")
         m_fd = fileno(stdin);
-    else
+    else {
+#ifdef _WIN32
+        m_fd = _wsopen(strutil::us2w(path).c_str(), _O_RDONLY|_O_BINARY, _SH_DENYWR);
+#else
         m_fd = open(path.c_str(), O_RDONLY);
 #endif
+    }
     if (m_fd == -1) {
         util::throw_crt_error(path);
     }
@@ -47,11 +45,7 @@ SeekableInputStream::SeekableInputStream(const std::string &path)
 
 SeekableInputStream::~SeekableInputStream()
 {
-#ifdef _WIN32
-    _close(m_fd);
-#else
     close(m_fd);
-#endif
 }
 
 int SeekableInputStream::read(void *buf, unsigned size)
@@ -108,11 +102,7 @@ void SeekableInputStream::fillBuffer()
     }
     size_t osize = m_buffer.size();
     m_buffer.resize(osize + 0x80000); // 512KiB
-#ifdef _WIN32
-    int n = _read(m_fd, m_buffer.data() + osize, m_buffer.size() - osize);
-#else
     ssize_t n = ::read(m_fd, m_buffer.data() + osize, m_buffer.size() - osize);
-#endif
     if (n <= 0) {
         m_eof = true;
         m_buffer.resize(osize);
