@@ -130,11 +130,7 @@ struct MP4StdIOCallbacks: public MP4IOCallbacks
     static int seek(void *handle, int64_t pos)
     {
         FILE *fp = static_cast<FILE*>(handle);
-#ifdef _WIN32
-        return _fseeki64(fp, pos, SEEK_SET) < 0;
-#else
         return fseeko(fp, pos, SEEK_SET) < 0;
-#endif
     }
     static int read(void *handle, void *buffer, int64_t size, int64_t *nin)
     {
