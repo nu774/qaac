@@ -42,9 +42,6 @@
 #endif
 
 namespace platform {
-#ifdef _WIN32
-    inline uint32_t tick_count_ms() { return GetTickCount(); }
-#else
     inline uint32_t tick_count_ms()
     {
         using namespace std::chrono;
@@ -52,18 +49,7 @@ namespace platform {
             duration_cast<milliseconds>(
                 steady_clock::now().time_since_epoch()).count());
     }
-#endif
 
-#ifdef _WIN32
-    class Timer {
-        DWORD m_ticks;
-    public:
-        Timer() { m_ticks = GetTickCount(); };
-        double ellapsed() {
-            return (static_cast<double>(GetTickCount()) - m_ticks) / 1000.0;
-        }
-    };
-#else
     class Timer {
         std::chrono::steady_clock::time_point m_start;
     public:
@@ -73,7 +59,6 @@ namespace platform {
                 std::chrono::steady_clock::now() - m_start).count();
         }
     };
-#endif
 
 #ifdef _WIN32
     void throw_error(const std::string& msg, DWORD error);
