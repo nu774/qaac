@@ -2,6 +2,7 @@
 #include <clocale>
 #include <numeric>
 #include <regex>
+#include <thread>
 #ifndef _WIN32
 #include <sys/mman.h>
 #include <termios.h>
@@ -375,13 +376,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                             std::vector<std::shared_ptr<ISource> > &chain,
                             const Options &opts, bool normalize_pass=false)
 {
-#ifdef _WIN32
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    unsigned nprocessors = si.dwNumberOfProcessors;
-#else
     unsigned nprocessors = std::thread::hardware_concurrency();
-#endif
     bool threading = opts.threading && nprocessors > 1;
 
     AudioStreamBasicDescription sasbd = src->getSampleFormat();
