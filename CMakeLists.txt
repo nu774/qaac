@@ -29,6 +29,10 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND MSVC)
     add_compile_options(/arch:IA32)
 endif()
 
+if(NOT MSVC)
+    add_compile_options(-Wno-multichar)
+endif()
+
 if(MSVC)
     add_compile_options($<$<CONFIG:Release>:/Zi>)
     add_link_options($<$<CONFIG:Release>:/DEBUG>)
