@@ -31,6 +31,7 @@
 #include "aglib.h"
 #include "ALACBitUtilities.h"
 #include "ALACAudioTypes.h"
+#include "EndianPortable.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -146,9 +147,9 @@ static /*inline*/ uint32_t ALWAYS_INLINE read32bit( uint8_t * buffer )
 static /*inline*/ uint32_t ALWAYS_INLINE read32bit_ex( uint8_t * buffer, uint8_t * end )
 {
 	uint32_t		value ;
-#ifdef _M_IX86
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 	if (buffer + 4 <= end) {
-		return _byteswap_ulong(*(uint32_t*)buffer);
+		return Swap32BtoN(*(uint32_t*)buffer);
 	}
 #endif
 	// embedded CPUs typically can't read unaligned 32-bit words so just read the bytes
