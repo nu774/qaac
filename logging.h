@@ -27,7 +27,7 @@ public:
     void enable_file(const std::string &filename)
     {
         try {
-            FILE *fp = platform::wfopenx(filename, "w");
+            FILE *fp = platform::fopen(filename, "w");
             std::setbuf(fp, 0);
             m_streams.push_back(std::shared_ptr<FILE>(fp, std::fclose));
         } catch (...) {}

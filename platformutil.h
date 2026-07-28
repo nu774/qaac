@@ -147,7 +147,7 @@ namespace platform {
         return fullpath;
     }
 
-    inline FILE *wfopenx(const std::string &path, const char *mode)
+    inline FILE *fopen(const std::string &path, const char *mode)
     {
         std::wstring fullpath = platform::prefixed_path(strutil::us2w(path).c_str());
         std::wstring wmode = strutil::us2w(mode);
@@ -218,7 +218,7 @@ namespace platform {
         return slash == std::string::npos ? "./" : path.substr(0, slash + 1);
     }
 
-    inline FILE *wfopenx(const std::string &path, const char *mode)
+    inline FILE *fopen(const std::string &path, const char *mode)
     {
         FILE *fp = std::fopen(path.c_str(), mode);
         if (!fp) util::throw_crt_error(path);
@@ -226,13 +226,12 @@ namespace platform {
     }
 #endif
 
-    inline std::shared_ptr<FILE> fopen(const std::string &path,
-                                       const char *mode)
+    inline std::shared_ptr<FILE> openFileOrStd(const std::string &path,
+                                               const char *mode)
     {
         auto noop_close = [](FILE *){};
         if (path != "-")
-            return std::shared_ptr<FILE>(wfopenx(path, mode),
-                                         std::fclose);
+            return std::shared_ptr<FILE>(fopen(path, mode), std::fclose);
         else if (std::strchr(mode, 'r'))
             return std::shared_ptr<FILE>(stdin, noop_close);
         else

@@ -149,7 +149,7 @@ namespace misc
 
     std::string loadTextFile(const std::string &path, int codepage)
     {
-        auto fp = std::shared_ptr<FILE>(platform::wfopenx(path, "rb"), std::fclose);
+        auto fp = std::shared_ptr<FILE>(platform::fopen(path, "rb"), std::fclose);
         fseeko(fp.get(), 0, SEEK_END);
         int64_t fileSize = ftello(fp.get());
         fseeko(fp.get(), 0, SEEK_SET);
@@ -356,7 +356,8 @@ namespace misc
             try {
                 std::string pathtry =
                     strutil::format("%s%s%s", search_paths[i].c_str(), sep, file);
-                return platform::fopen(pathtry, "r");
+                return std::shared_ptr<FILE>(platform::fopen(pathtry, "r"),
+                                             std::fclose);
             } catch (...) {
                 if (i == search_paths.size() - 1) throw;
             }
@@ -407,7 +408,8 @@ namespace misc
     std::vector<std::vector<complex_t>>
     loadRemixerMatrixFromFile(const char *path)
     {
-        return loadRemixerMatrix(platform::fopen(path, "r"));
+        return loadRemixerMatrix(
+            std::shared_ptr<FILE>(platform::fopen(path, "r"), std::fclose));
     }
 
     std::vector<std::vector<complex_t>>

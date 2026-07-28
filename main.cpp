@@ -451,7 +451,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 p.m_attack, p.m_release);
         std::shared_ptr<FILE> stat_file;
         if (p.m_stat_file) {
-            FILE *fp = platform::wfopenx(p.m_stat_file, "wb");
+            FILE *fp = platform::fopen(p.m_stat_file, "wb");
             stat_file = std::shared_ptr<FILE>(fp, std::fclose);
         }
         std::shared_ptr<ISource>
@@ -666,7 +666,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
             child = std::make_shared<ChildProcess>(argv);
             fileptr = child->stdinFile();
         } else {
-            fileptr = platform::fopen(ofilename, "wb");
+            fileptr = platform::openFileOrStd(ofilename, "wb");
         }
         if (!opts.is_caf) {
             sink = std::make_shared<WaveSink>(fileptr, src->length(),
@@ -746,7 +746,7 @@ void do_encode(IEncoder *encoder, const std::string &ofilename,
     if (opts.save_stat) {
         std::string statname =
             platform::PathReplaceExtension(ofilename, ".stat.txt");
-        statPtr = platform::fopen(statname, "w");
+        statPtr = file_t(platform::fopen(statname, "w"), std::fclose);
     }
     IEncoderStat *stat = dynamic_cast<IEncoderStat*>(encoder);
 
@@ -859,7 +859,7 @@ std::shared_ptr<ISink> open_sink(const std::string &ofilename,
 
     platform::MakeSureDirectoryPathExistsX(ofilename);
     if (opts.isMP4()) {
-        std::shared_ptr<FILE> _ = platform::fopen(ofilename, "wb");
+        std::shared_ptr<FILE> _ = platform::openFileOrStd(ofilename, "wb");
     }
     if (opts.is_adts)
         return std::make_shared<ADTSSink>(ofilename, asc, false);
@@ -1471,8 +1471,8 @@ std::string get_output_filename(const std::string &ifilename,
     /* test if ifilename and ofilename refer to the same file */
     std::shared_ptr<FILE> ifp, ofp;
     try {
-        ifp = platform::fopen(ifilename, "rb");
-        ofp = platform::fopen(ofilename, "rb");
+        ifp = std::shared_ptr<FILE>(platform::fopen(ifilename, "rb"), std::fclose);
+        ofp = std::shared_ptr<FILE>(platform::fopen(ofilename, "rb"), std::fclose);
     } catch (...) {
         return ofilename;
     }

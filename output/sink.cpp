@@ -77,7 +77,7 @@ MP4SinkBase::MP4SinkBase(const std::string &path, bool temp)
         } else if (temp) {
             m_fp = std::shared_ptr<FILE>(platform::tmpfile(m_filename), fclose);
         } else {
-            m_fp = std::shared_ptr<FILE>(platform::wfopenx(m_filename, "wb"), fclose);
+            m_fp = std::shared_ptr<FILE>(platform::fopen(m_filename, "wb"), fclose);
         }
 
         m_mp4file.Create(m_filename.c_str(),
@@ -474,7 +474,7 @@ ALACSink::ALACSink(const std::string &path,
 ADTSSink::ADTSSink(const std::string &path,
                    const std::vector<uint8_t> &cookie,
                    bool append)
-    : m_fp(platform::fopen(path, append ? "ab" : "wb"))
+    : m_fp(platform::openFileOrStd(path, append ? "ab" : "wb"))
 {
     init(cookie);
 }

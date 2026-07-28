@@ -374,7 +374,7 @@ void MP4FileCopy::start(const char *path)
 {
     m_mp4file->m_file = 0;
     try {
-        m_fp = std::shared_ptr<FILE>(platform::wfopenx(path, "wb"), fclose);
+        m_fp = std::shared_ptr<FILE>(platform::fopen(path, "wb"), fclose);
         static MP4StdIOCallbacks callbacks;
         m_mp4file->Open(path, File::MODE_CREATE, nullptr, &callbacks, m_fp.get());
     } catch (...) {
