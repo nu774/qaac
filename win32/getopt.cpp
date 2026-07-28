@@ -67,9 +67,7 @@ static char *rcsid = "$OpenBSD: getopt_long.c,v 1.16 2004/02/04 18:17:25 millert
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
-#include "wgetopt.h"
-
-namespace wgetopt {
+#include "getopt.h"
 
 #define GNU_COMPATIBLE      /* Be more compatible, configure's use us! */
 
@@ -629,6 +627,4 @@ getopt_long_only(int nargc, char * const *nargv, const char *options,
 
     return (getopt_internal(nargc, nargv, options, long_options, idx,
         FLAG_PERMUTE|FLAG_LONGONLY));
-}
-
 }

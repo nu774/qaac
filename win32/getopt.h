@@ -40,12 +40,6 @@
 #ifndef _GETOPT_H_
 #define _GETOPT_H_
 
-namespace wgetopt {
-
-/*
- * GNU-like getopt_long()/getopt_long_only() with 4.4BSD optreset extension.
- * getopt() is declared here too for GNU programs.
- */
 #define no_argument        0
 #define required_argument  1
 #define optional_argument  2
@@ -79,7 +73,5 @@ extern int optind, opterr, optopt;
 #define _OPTRESET_DECLARED
 extern int optreset;            /* getopt(3) external variable */
 #endif
- 
-}
 
 #endif /* !_GETOPT_H_ */

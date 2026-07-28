@@ -393,7 +393,6 @@ add_library(common STATIC
     mp4v2wrapper.cpp
     strutil.cpp
     util.cpp
-    wgetopt.cpp
     Win32InputStream.cpp
     win32util.cpp
 )
@@ -403,6 +402,7 @@ if(WIN32)
         output/WaveOutSink.cpp
         input/AvisynthSource.cpp
         input/TakSource.cpp
+        win32/getopt.cpp
     )
 endif()
 target_include_directories(common PRIVATE
