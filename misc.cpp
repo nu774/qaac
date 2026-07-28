@@ -75,6 +75,21 @@ namespace misc
         }
         return -1;
     }
+
+    std::string codepage_to_utf8(int codepage, const char *data, size_t len)
+    {
+        if (codepage == 0) {
+            return strutil::w2us(std::wstring(
+                reinterpret_cast<const wchar_t*>(data), len / sizeof(wchar_t)));
+        }
+        int nc = MultiByteToWideChar(codepage, 0, data,
+                                     static_cast<int>(len), nullptr, 0);
+        std::vector<wchar_t> obuf(nc);
+        if (nc > 0)
+            MultiByteToWideChar(codepage, 0, data, static_cast<int>(len),
+                                 obuf.data(), nc);
+        return strutil::w2us(std::wstring(obuf.data(), obuf.size()));
+    }
 #else
     std::string codepageToIconvName(int codepage)
     {
@@ -101,7 +116,7 @@ namespace misc
         return strutil::format("CP%d", codepage);
     }
 
-    std::string iconv_to_utf8(const char *charset, const char *data, size_t len)
+    std::string charset_to_utf8(const char *charset, const char *data, size_t len)
     {
         iconv_t cd = iconv_open("UTF-8", charset);
         if (cd == (iconv_t)-1)
@@ -144,38 +159,9 @@ namespace misc
         std::vector<char> ibuf(fileSize);
         int n = std::fread(ibuf.data(), 1, fileSize, fp.get());
         ibuf.resize(n);
-#ifdef _WIN32
+
+        std::string detectedCharset;
         if (!codepage) {
-            auto detector = std::shared_ptr<uchardet>(uchardet_new(), uchardet_delete);
-            if (uchardet_handle_data(detector.get(), ibuf.data(), ibuf.size())) {
-                throw std::runtime_error(path + ": uchardet_handle_data() failed");
-            }
-            uchardet_data_end(detector.get());
-            auto charset = uchardet_get_charset(detector.get());
-            if (!charset)
-                throw std::runtime_error(path + ": cannot detect code page");
-            codepage = getCodePageFromCharset(charset);
-            if (codepage < 0)
-                throw std::runtime_error(path + ": unknown charset");
-        }
-        std::vector<wchar_t> obuf;
-        if (codepage == 0) {
-            obuf.resize(ibuf.size() / sizeof(wchar_t));
-            std::memcpy(obuf.data(), ibuf.data(), ibuf.size());
-        } else {
-            int nc = MultiByteToWideChar(codepage, 0, ibuf.data(), ibuf.size(), nullptr, 0);
-            obuf.resize(nc);
-            MultiByteToWideChar(codepage, 0, ibuf.data(), ibuf.size(), obuf.data(), obuf.size());
-        }
-        obuf.push_back(0);
-        // chop off BOM
-        size_t bom = (obuf.size() && obuf[0] == 0xfeff) ? 1 : 0;
-        return strutil::w2us(strutil::normalize_crlf(&obuf[bom], L"\n"));
-#else
-        std::string charset;
-        if (codepage)
-            charset = codepageToIconvName(codepage);
-        else {
             auto detector = std::shared_ptr<uchardet>(uchardet_new(), uchardet_delete);
             if (uchardet_handle_data(detector.get(), ibuf.data(), ibuf.size())) {
                 throw std::runtime_error(path + ": uchardet_handle_data() failed");
@@ -184,9 +170,20 @@ namespace misc
             auto detected = uchardet_get_charset(detector.get());
             if (!detected || !*detected)
                 throw std::runtime_error(path + ": cannot detect code page");
-            charset = detected;
+            detectedCharset = detected;
         }
-        std::string decoded = iconv_to_utf8(charset.c_str(), ibuf.data(), ibuf.size());
+#ifdef _WIN32
+        int cp = codepage;
+        if (!cp) {
+            cp = getCodePageFromCharset(detectedCharset.c_str());
+            if (cp < 0)
+                throw std::runtime_error(path + ": unknown charset");
+        }
+        std::string decoded = codepage_to_utf8(cp, ibuf.data(), ibuf.size());
+#else
+        std::string charset = codepage ? codepageToIconvName(codepage) : detectedCharset;
+        std::string decoded = charset_to_utf8(charset.c_str(), ibuf.data(), ibuf.size());
+#endif
         // chop off BOM
         if (decoded.size() >= 3 &&
             (unsigned char)decoded[0] == 0xef &&
@@ -194,7 +191,6 @@ namespace misc
             (unsigned char)decoded[2] == 0xbf)
             decoded.erase(0, 3);
         return strutil::normalize_crlf(decoded.c_str(), "\n");
-#endif
     }
 
     class TagLookup {
