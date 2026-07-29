@@ -11,7 +11,39 @@
 // Simple wrappers around atomic values so that the compiler will catch it if
 // I accidentally use operators such as +, -, += on them.
 
-#ifdef __cplusplus
+#if defined(_MSC_VER) && _MSC_VER < 1900
+
+#include <intrin.h>
+
+struct SoundIoAtomicLong {
+    long x;
+};
+
+struct SoundIoAtomicInt {
+    long x;
+};
+
+struct SoundIoAtomicBool {
+    long x;
+};
+
+struct SoundIoAtomicFlag {
+    long x;
+};
+
+struct SoundIoAtomicULong {
+    long x;
+};
+
+#define SOUNDIO_ATOMIC_LOAD(a) (*(long volatile *)&(a).x)
+#define SOUNDIO_ATOMIC_FETCH_ADD(a, delta) _InterlockedExchangeAdd((long volatile *)&(a).x, (long)(delta))
+#define SOUNDIO_ATOMIC_STORE(a, value) (*(long volatile *)&(a).x = (long)(value))
+#define SOUNDIO_ATOMIC_EXCHANGE(a, value) _InterlockedExchange((long volatile *)&(a).x, (long)(value))
+#define SOUNDIO_ATOMIC_FLAG_TEST_AND_SET(a) (_InterlockedExchange((long volatile *)&(a).x, 1) != 0)
+#define SOUNDIO_ATOMIC_FLAG_CLEAR(a) ((void)_InterlockedExchange((long volatile *)&(a).x, 0))
+#define SOUNDIO_ATOMIC_FLAG_INIT {0}
+
+#elif defined(__cplusplus)
 
 #include <atomic>
 
