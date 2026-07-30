@@ -24,13 +24,14 @@
 #include "soundio_private.h"
 
 #include <stdio.h>
+#include <limits.h>
 
 // Some HRESULT values are not defined by the windows headers
 #ifndef E_NOTFOUND
 #define E_NOTFOUND 0x80070490
 #endif //E_NOTFOUND
 
-// And some GUID are never implemented (Ignoring the INITGUID define)
+#if !defined(__MINGW32__) && !defined(__CYGWIN__)
 static const CLSID CLSID_MMDeviceEnumerator = {
     0xbcde0395, 0xe52f, 0x467c, {0x8e, 0x3d, 0xc4, 0x57, 0x92, 0x91, 0x69, 0x2e}
 };
@@ -74,6 +75,7 @@ static const IID IID_ISimpleAudioVolume = {
     //MIDL_INTERFACE("87ce5498-68d6-44e5-9215-6da47ef883d8")
     0x87ce5498, 0x68d6, 0x44e5,{ 0x92, 0x15, 0x6d, 0xa4, 0x7e, 0xf8, 0x83, 0xd8 }
 };
+#endif
 
 #ifdef __cplusplus
 // In C++ mode, IsEqualGUID() takes its arguments by reference
