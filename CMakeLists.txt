@@ -5,12 +5,6 @@ cmake_policy(SET CMP0091 NEW)
 
 project(qaac LANGUAGES C CXX)
 
-if(WIN32)
-    if(NOT MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        message(FATAL_ERROR "qaac is a Win32 console app and only builds with MSVC, clang-cl, or clang --target=*-windows-msvc")
-    endif()
-endif()
-
 set(CMAKE_CXX_STANDARD 11)
 
 if(WIN32)
@@ -566,6 +560,7 @@ else()
     # (relative to the build directory, so "file not found") rather than by
     # lld-link, which is what actually searches the LIB env var for it.
     target_link_options(qaac PRIVATE
+        -fuse-ld=lld
         -municode
         -Wl,/DELAYLOAD:CoreAudioToolbox.dll
         -Wl,/DELAYLOAD:CoreFoundation.dll
