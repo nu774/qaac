@@ -76,7 +76,7 @@ void CAFSink::writeBER(uint32_t n)
     buf[0] ^= 0x80;
 
     for (--i; i >= 0; --i)
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
         _putc_nolock(buf[i], m_file.get());
 #else
         putc_unlocked(buf[i], m_file.get());
