@@ -254,6 +254,28 @@ std::vector<uint32_t> getChannels(const AudioChannelLayout *acl)
         layout = "\x07\x08\x01\x02\x0A\x0B\x05\x06"; break;
     case kAudioChannelLayoutTag_DTS_8_0_B:
         layout = "\x07\x03\x08\x01\x02\x0A\x09\x0B"; break;
+    /* 5ch */
+    case kAudioChannelLayoutTag_Ogg_5_0:
+        layout = "\x01\x03\x02\x05\x06"; break;
+    case kAudioChannelLayoutTag_MPEG_5_0_E:
+        layout = "\x01\x02\x05\x06\x03"; break;
+    /* 5.1ch */
+    case kAudioChannelLayoutTag_Ogg_5_1:
+        layout = "\x01\x03\x02\x05\x06\x04"; break;
+    case kAudioChannelLayoutTag_MPEG_5_1_E:
+        layout = "\x01\x02\x05\x06\x03\x04"; break;
+    /* 6.1ch */
+    case kAudioChannelLayoutTag_Ogg_6_1:
+        layout = "\x01\x03\x02\x0A\x0B\x09\x04"; break;
+    case kAudioChannelLayoutTag_MPEG_6_1_B:
+        layout = "\x01\x02\x0A\x0B\x03\x09\x04"; break;
+    /* 7.1ch */
+    case kAudioChannelLayoutTag_CICP_14:
+        layout = "\x01\x02\x03\x04\x0A\x0B\x0D\x0F"; break;
+    case kAudioChannelLayoutTag_Ogg_7_1:
+        layout = "\x01\x03\x02\x0A\x0B\x05\x06\x04"; break;
+    case kAudioChannelLayoutTag_MPEG_7_1_D:
+        layout = "\x01\x02\x05\x06\x0A\x0B\x03\x04"; break;
     default:
         throw std::runtime_error("Unsupported channel layout");
     }
