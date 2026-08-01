@@ -61,11 +61,27 @@ endif()
 # ---------------------------------------------------------------------------
 # ogg
 # ---------------------------------------------------------------------------
+include(CheckIncludeFiles)
+check_include_files(inttypes.h INCLUDE_INTTYPES_H)
+check_include_files(stdint.h INCLUDE_STDINT_H)
+check_include_files(sys/types.h INCLUDE_SYS_TYPES_H)
+set(SIZE16 int16_t)
+set(USIZE16 uint16_t)
+set(SIZE32 int32_t)
+set(USIZE32 uint32_t)
+set(SIZE64 int64_t)
+set(USIZE64 uint64_t)
+configure_file(
+    ogg/include/ogg/config_types.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/ogg_config/ogg/config_types.h
+    @ONLY
+)
+
 add_library(ogg STATIC
     ogg/src/bitwise.c
     ogg/src/framing.c
 )
-target_include_directories(ogg PUBLIC ogg/include)
+target_include_directories(ogg PUBLIC ogg/include ${CMAKE_CURRENT_BINARY_DIR}/ogg_config)
 
 # ---------------------------------------------------------------------------
 # mp4v2
