@@ -1869,6 +1869,8 @@ int soundio_alsa_init(struct SoundIoPrivate *si) {
 
     sia->notify_fd = -1;
     sia->notify_wd = -1;
+    sia->notify_pipe_fd[0] = -1;
+    sia->notify_pipe_fd[1] = -1;
     SOUNDIO_ATOMIC_FLAG_TEST_AND_SET(sia->abort_flag);
 
     sia->mutex = soundio_os_mutex_create();
