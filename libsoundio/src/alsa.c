@@ -1908,14 +1908,12 @@ int soundio_alsa_init(struct SoundIoPrivate *si) {
         assert(err != EFAULT);
         assert(err != EINVAL);
         assert(err != ENAMETOOLONG);
-        destroy_alsa(si);
         if (err == ENOSPC) {
+            destroy_alsa(si);
             return SoundIoErrorSystemResources;
         } else if (err == ENOMEM) {
+            destroy_alsa(si);
             return SoundIoErrorNoMem;
-        } else {
-            // Kernel must not have ALSA support.
-            return SoundIoErrorInitAudioBackend;
         }
     }
 
