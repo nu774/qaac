@@ -3,18 +3,101 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-    build:
-        strategy:
-            matrix:
-                platform: [Win32, x64]
-        runs-on: windows-latest
-        env:
-            ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v3
-            - name: Add MSBuild to PATH
-              uses: microsoft/setup-msbuild@v1.3.1
-            - name: Build
-              run: |
-                  MSBuild.exe vcproject/qaac.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }}
+  windows-msvc:
+    strategy:
+      matrix:
+        arch: [x86, x64]
+        compiler:
+          - { cc: "cl", cxx: "cl" }
+    runs-on: windows-latest
+    env:
+      CC: ${{ matrix.compiler.cc }}
+      CXX: ${{ matrix.compiler.cxx }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Visual Studio developer command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+      - name: Configure
+        run: cmake -B build -G Ninja .
+      - name: Build
+        run: cmake --build build
+  windows-clang:
+    strategy:
+      matrix:
+        arch:
+          - { short: "x86", long: "i686" }
+          - { short: "x64", long: "x86_64" }
+        compiler:
+          - { cc: "clang-cl", cxx: "clang-cl" }
+          - { cc: "clang", cxx: "clang++" }
+    runs-on: windows-latest
+    env:
+      CC: "${{ matrix.compiler.cc }} --target=${{ matrix.arch.long }}-pc-windows-msvc"
+      CXX: "${{ matrix.compiler.cxx }} --target=${{ matrix.arch.long }}-pc-windows-msvc"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Visual Studio developer command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch.short }}
+      - name: Configure
+        run: cmake -B build -G Ninja .
+      - name: Build
+        run: cmake --build build
+  windows-gcc:
+    runs-on: windows-latest
+    env:
+      CC: gcc
+      CXX: g++
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -G Ninja .
+      - name: Build
+        run: cmake --build build
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: install libs
+        run: sudo apt-get install libasound2-dev
+      - name: Configure
+        run: cmake -B build -G Ninja .
+      - name: Build
+        run: cmake --build build
+  linux-clang-mingw:
+    strategy:
+      matrix:
+        arch:
+          - { short: "x86", triple: "i686-w64-mingw32" }
+          - { short: "x64", triple: "x86_64-w64-mingw32" }
+    runs-on: ubuntu-latest
+    env:
+      # https://github.com/mstorsjo/llvm-mingw/releases -- bump alongside the
+      # UCRT variant (matches the UCRT mingw-w64/gcc already used by the
+      # windows-gcc job) when a newer release is needed.
+      LLVM_MINGW_VERSION: "20260616"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install llvm-mingw
+        run: |
+          dir="llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-ubuntu-22.04-x86_64"
+          curl -fsSL -o llvm-mingw.tar.xz "https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/${dir}.tar.xz"
+          tar xf llvm-mingw.tar.xz
+          echo "$PWD/$dir/bin" >> "$GITHUB_PATH"
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=${{ matrix.arch.triple }}-clang \
+            -DCMAKE_CXX_COMPILER=${{ matrix.arch.triple }}-clang++ \
+            .
+      - name: Build
+        run: cmake --build build
