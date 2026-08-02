@@ -677,7 +677,15 @@ AVSC_API(long, avs_get_cpu_flags)(AVS_ScriptEnvironment *);
 AVSC_API(int, avs_check_version)(AVS_ScriptEnvironment *, int version);
 
 AVSC_API(char *, avs_save_string)(AVS_ScriptEnvironment *, const char* s, int length);
-AVSC_API(char *, avs_sprintf)(AVS_ScriptEnvironment *, const char * fmt, ...);
+// Commented out (deviation from upstream AviSynthPlus): __stdcall combined
+// with a variadic parameter list is invalid -- cl.exe silently downgrades
+// such declarations to __cdecl, but clang-cl enforces the restriction and
+// hard-errors on it (only surfaces when targeting x86; __stdcall doesn't
+// exist on x64). qaac never calls avs_sprintf() -- see AvisynthModule in
+// input/AvisynthSource.h, which only loads the handful of avs_* functions
+// it actually uses -- so the declaration is dropped rather than worked
+// around.
+// AVSC_API(char *, avs_sprintf)(AVS_ScriptEnvironment *, const char * fmt, ...);
 
 AVSC_API(char *, avs_vsprintf)(AVS_ScriptEnvironment *, const char * fmt, void* val);
  // note: val is really a va_list; I hope everyone typedefs va_list to a pointer
@@ -803,7 +811,9 @@ struct AVS_Library {
   AVSC_DECLARE_FUNC(avs_set_to_clip);
   AVSC_DECLARE_FUNC(avs_set_var);
   AVSC_DECLARE_FUNC(avs_set_working_dir);
-  AVSC_DECLARE_FUNC(avs_sprintf);
+  // avs_sprintf_func no longer exists -- see the commented-out
+  // AVSC_API(avs_sprintf) declaration above.
+  // AVSC_DECLARE_FUNC(avs_sprintf);
   AVSC_DECLARE_FUNC(avs_subframe);
   AVSC_DECLARE_FUNC(avs_subframe_planar);
   AVSC_DECLARE_FUNC(avs_take_clip);
@@ -862,7 +872,7 @@ AVSC_INLINE AVS_Library * avs_load_library() {
   AVSC_LOAD_FUNC(avs_set_to_clip);
   AVSC_LOAD_FUNC(avs_set_var);
   AVSC_LOAD_FUNC(avs_set_working_dir);
-  AVSC_LOAD_FUNC(avs_sprintf);
+  // AVSC_LOAD_FUNC(avs_sprintf); -- see the commented-out declaration above.
   AVSC_LOAD_FUNC(avs_subframe);
   AVSC_LOAD_FUNC(avs_subframe_planar);
   AVSC_LOAD_FUNC(avs_take_clip);
