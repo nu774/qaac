@@ -19,10 +19,6 @@ if(WIN32)
     add_compile_definitions(UNICODE _UNICODE)
 endif()
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND MSVC)
-    add_compile_options(/arch:IA32)
-endif()
-
 if(NOT MSVC)
     add_compile_options(-Wno-multichar)
 endif()
