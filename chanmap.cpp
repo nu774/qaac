@@ -78,7 +78,7 @@ std::vector<uint32_t> getChannels(const AudioChannelLayout *acl)
         const AudioChannelDescription *desc = acl->mChannelDescriptions;
         for (size_t i = 0; i < acl->mNumberChannelDescriptions; ++i)
             channels.push_back(desc[i].mChannelLabel);
-        return channels;
+        return convertFromAppleLayout(channels);
     }
     /* 1ch */
     case kAudioChannelLayoutTag_Mono:
@@ -287,12 +287,6 @@ std::vector<uint32_t> getChannels(const AudioChannelLayout *acl)
 std::vector<uint32_t>
 convertFromAppleLayout(const std::vector<uint32_t> &channels)
 {
-    if (!std::count_if(channels.begin(), channels.end(),
-                       [](uint32_t c) {
-                           return c > 18;
-                       }))
-        return channels;
-
     std::vector<uint32_t> v(channels.size());
     std::transform(channels.begin(), channels.end(), v.begin(),
                    [](uint32_t x) -> uint32_t {
@@ -313,16 +307,16 @@ convertFromAppleLayout(const std::vector<uint32_t> &channels)
                   std::count(v.begin(), v.end(), kAudioChannelLabel_RightSurroundDirect);
     size_t rear = std::count(v.begin(), v.end(), kAudioChannelLabel_RearSurroundLeft) +
                   std::count(v.begin(), v.end(), kAudioChannelLabel_RearSurroundRight);
-    if (rear) {
+    if (back || rear) {
         std::transform(v.begin(), v.end(), v.begin(), [&](uint32_t c) -> uint32_t {
             switch (c) {
             case kAudioChannelLabel_LeftSurround:
             case kAudioChannelLabel_RightSurround:
-                if (!side) c += 5;
+                c += 5;
                 break;
             case kAudioChannelLabel_RearSurroundLeft:
             case kAudioChannelLabel_RearSurroundRight:
-                if (!back || !side) c -= 28;
+                c -= 28;
                 break;
             };
             return c;
