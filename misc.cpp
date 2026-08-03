@@ -144,9 +144,13 @@ namespace misc
         strutil::Tokenizer<wchar_t> tokens(res, L"/");
         wchar_t *tok;
         while ((tok = tokens.next())) {
-            if (wcslen(tok) > 250)
-                tok[250] = 0;
-            comp.push_back(tok);
+            std::wstring t(tok);
+            size_t b = t.find_first_not_of(L" \t");
+            t = (b == std::wstring::npos) ? L""
+                : t.substr(b, t.find_last_not_of(L" \t") - b + 1);
+            if (t.size() > 250)
+                t.resize(250);
+            comp.push_back(t);
         }
         res.clear();
         for (size_t i = 0; i < comp.size() - 1; ++i)
