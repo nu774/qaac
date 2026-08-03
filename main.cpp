@@ -584,11 +584,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
             set_tags(chain[0].get(), cafsink, opts, L"");
             cafsink->beginWrite();
         }
-    } else if (opts.isWaveOut()) {
-        if (!chanmask)
-            chanmask = chanmap::defaultChannelMask(sf.mChannelsPerFrame);
-        sink = std::make_shared<WaveOutSink>(sf, chanmask);
-    } else if (opts.isPeak())
+    } else /* opts.isPeak() */
         sink = std::make_shared<PeakSink>(sf);
 
     Progress progress(opts.verbose, src->length(), sf.mSampleRate);
@@ -612,7 +608,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
             wavsink->finishWrite();
         else if (cafsink)
             cafsink->finishWrite(AudioFilePacketTableInfo());
-    } else if (opts.isPeak()) {
+    } else {
         PeakSink *p = dynamic_cast<PeakSink *>(sink.get());
         LOG(L"Peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
     }
@@ -855,16 +851,9 @@ void set_dll_directories(int verbose)
 }
 
 static
-void encode_file(const std::shared_ptr<ISeekableSource> &src,
+void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
                  const std::wstring &ofilename, const Options &opts)
 {
-    std::vector<std::shared_ptr<ISource> > chain;
-    build_filter_chain(src, chain, opts);
-
-    if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
-        decode_file(chain, ofilename, opts);
-        return;
-    }
     uint32_t channel_layout = map_to_aac_channels(chain, opts);
     AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
     AudioStreamBasicDescription oasbd =
@@ -903,7 +892,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
             tagstore->setTag("Encoding Params", params);
         }
     }
-    set_tags(src.get(), sink.get(), opts, encoder_config);
+    set_tags(chain[0].get(), sink.get(), opts, encoder_config);
     CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
     if (cafsink)
         cafsink->beginWrite();
@@ -922,16 +911,9 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
 #ifdef REFALAC
 
 static
-void encode_file(const std::shared_ptr<ISeekableSource> &src,
+void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
         const std::wstring &ofilename, const Options &opts)
 {
-    std::vector<std::shared_ptr<ISource> > chain;
-    build_filter_chain(src, chain, opts);
-
-    if (opts.isLPCM() || opts.isWaveOut() || opts.isPeak()) {
-        decode_file(chain, ofilename, opts);
-        return;
-    }
     uint32_t channel_layout = map_to_aac_channels(chain, opts);
     AudioStreamBasicDescription iasbd = chain.back()->getSampleFormat();
     AudioStreamBasicDescription oasbd =
@@ -950,7 +932,7 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     }
     encoder.setSource(chain.back());
     encoder.setSink(sink);
-    set_tags(src.get(), sink.get(), opts, L"Apple Lossless Encoder");
+    set_tags(chain[0].get(), sink.get(), opts, L"Apple Lossless Encoder");
     CAFSink *cafsink = dynamic_cast<CAFSink*>(sink.get());
     if (cafsink)
         cafsink->beginWrite();
@@ -962,6 +944,58 @@ void encode_file(const std::shared_ptr<ISeekableSource> &src,
     finishWriteSink(sink, &encoder, AudioFilePacketTableInfo(), opts);
 }
 #endif
+
+static
+void process_file(const std::shared_ptr<ISeekableSource> &src,
+                  const std::wstring &ofilename, const Options &opts)
+{
+    std::vector<std::shared_ptr<ISource> > chain;
+    build_filter_chain(src, chain, opts);
+
+    if (opts.isLPCM() || opts.isPeak())
+        decode_file(chain, ofilename, opts);
+    else
+        encode_file(chain, ofilename, opts);
+}
+
+static
+void play_file(const std::vector<std::shared_ptr<ISource> > &chain,
+               const Options &opts)
+{
+    const std::shared_ptr<ISource> src = chain.back();
+    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    const std::vector<uint32_t> *channels = src->getChannels();
+    uint32_t chanmask = 0;
+
+    if (channels) {
+        chanmask = chanmap::getChannelMask(*channels);
+        if (opts.verbose > 1) {
+            LOG(L"Output layout: %hs\n",
+                chanmap::getChannelNames(*channels).c_str());
+        }
+    }
+    if (!chanmask)
+        chanmask = chanmap::defaultChannelMask(sf.mChannelsPerFrame);
+
+    WaveOutSink sink(sf, chanmask);
+    WaveOutDevice &waveout = WaveOutDevice::instance();
+    ISeekableSource *ss = dynamic_cast<ISeekableSource*>(chain.front().get());
+
+    Progress progress(opts.verbose, src->length(), sf.mSampleRate);
+    uint32_t bpf = sf.mBytesPerFrame;
+    std::vector<uint8_t> buffer(4096 * bpf);
+    try {
+        while (!g_interrupted) {
+            size_t nread = src->readSamples(&buffer[0], 4096);
+            if (nread == 0) break;
+            progress.update(src->getPosition());
+            sink.writeSamples(&buffer[0], nread * bpf, nread);
+        }
+        progress.finish(src->getPosition());
+    } catch (const std::exception &e) {
+        LOG(L"\nERROR: %s\n", errormsg(e).c_str());
+    }
+}
 
 const char *get_qaac_version();
 
@@ -1029,6 +1063,11 @@ trim_input(std::shared_ptr<ISeekableSource> src, const Options & opts)
 }
 
 typedef std::pair<std::wstring, std::shared_ptr<ISeekableSource>> workItem;
+
+struct EncodeJob {
+    std::shared_ptr<ISeekableSource> src;
+    std::wstring ofilename;
+};
 
 static
 void load_cue_tracks(const Options &opts, std::wstreambuf *sb, bool is_embedded,
@@ -1175,6 +1214,20 @@ struct COMInitializer {
     }
 };
 
+static
+void play_jobs(std::vector<EncodeJob> &jobs, const Options &opts)
+{
+    for (ssize_t i = 0; i < (ssize_t)jobs.size() && !g_interrupted; ++i) {
+        const EncodeJob &job = jobs[i];
+        LOG(L"\n%s\n",
+            job.ofilename == L"-" ? L"<stdout>"
+                                  : PathFindFileNameW(job.ofilename.c_str()));
+        job.src->seekTo(0);
+        std::vector<std::shared_ptr<ISource> > chain;
+        build_filter_chain(job.src, chain, opts);
+        play_file(chain, opts);
+    }
+}
 
 int wmain(int argc, wchar_t **argv)
 {
@@ -1310,30 +1363,31 @@ int wmain(int argc, wchar_t **argv)
         for (int i = 0; i < argc; ++i)
             load_track(argv[i], opts, workItems);
 
+        std::vector<EncodeJob> jobs;
         if (!opts.concat) {
-            for (size_t i = 0; i < workItems.size() && !g_interrupted; ++i) {
-                std::wstring ofilename =
-                    get_output_filename(workItems[i].first, opts);
-                LOG(L"\n%s\n",
-                    ofilename == L"-" ? L"<stdout>"
-                                      : PathFindFileNameW(ofilename.c_str()));
-                auto src = trim_input(workItems[i].second, opts);
-                src->seekTo(0);
-                encode_file(src, ofilename, opts);
-            }
+            jobs.reserve(workItems.size());
+            for (size_t i = 0; i < workItems.size(); ++i)
+                jobs.push_back({ trim_input(workItems[i].second, opts),
+                                 get_output_filename(workItems[i].first, opts) });
         } else {
-            std::wstring ofilename = get_output_filename(argv[0], opts);
-            LOG(L"\n%s\n",
-                ofilename == L"-" ? L"<stdout>"
-                                  : PathFindFileNameW(ofilename.c_str()));
-
             auto cs = std::make_shared<CompositeSource>();
             for (size_t i = 0; i < workItems.size(); ++i)
                 cs->addSourceWithChapter(workItems[i].second, L"");
+            jobs.push_back({ trim_input(cs, opts),
+                             get_output_filename(argv[0], opts) });
+        }
 
-            auto src = trim_input(cs, opts);
-            src->seekTo(0);
-            encode_file(src, ofilename, opts);
+        if (opts.isWaveOut())
+            play_jobs(jobs, opts);
+        else {
+            for (ssize_t i = 0; i < (ssize_t)jobs.size() && !g_interrupted; ++i) {
+                const EncodeJob &job = jobs[i];
+                LOG(L"\n%s\n",
+                    job.ofilename == L"-" ? L"<stdout>"
+                                          : PathFindFileNameW(job.ofilename.c_str()));
+                job.src->seekTo(0);
+                process_file(job.src, job.ofilename, opts);
+            }
         }
     } catch (const std::exception &e) {
         LOG(L"ERROR: %s\n", errormsg(e).c_str());
