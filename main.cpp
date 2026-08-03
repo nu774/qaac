@@ -958,9 +958,31 @@ void process_file(const std::shared_ptr<ISeekableSource> &src,
         encode_file(chain, ofilename, opts);
 }
 
+enum class PlaybackOutcome { Completed, PrevFile, Quit };
+
+enum class PlaybackCommand {
+    None, SeekBack, SeekForward, SeekHome, NextTrack, PrevOrRestart, Quit
+};
+
 static
-void play_file(const std::vector<std::shared_ptr<ISource> > &chain,
-               const Options &opts)
+PlaybackCommand translatePlaybackKey(DWORD vk)
+{
+    switch (vk) {
+    case VK_LEFT:   return PlaybackCommand::SeekBack;
+    case VK_RIGHT:  return PlaybackCommand::SeekForward;
+    case VK_HOME:   return PlaybackCommand::SeekHome;
+    case VK_END:
+    case VK_NEXT:   return PlaybackCommand::NextTrack;
+    case VK_PRIOR:  return PlaybackCommand::PrevOrRestart;
+    case VK_ESCAPE:
+    case 'Q':       return PlaybackCommand::Quit;
+    default:        return PlaybackCommand::None;
+    }
+}
+
+static
+PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
+                        const Options &opts)
 {
     const std::shared_ptr<ISource> src = chain.back();
     const AudioStreamBasicDescription &sf = src->getSampleFormat();
@@ -984,17 +1006,57 @@ void play_file(const std::vector<std::shared_ptr<ISource> > &chain,
     Progress progress(opts.verbose, src->length(), sf.mSampleRate);
     uint32_t bpf = sf.mBytesPerFrame;
     std::vector<uint8_t> buffer(4096 * bpf);
+    PlaybackOutcome outcome = PlaybackOutcome::Completed;
     try {
         while (!g_interrupted) {
             size_t nread = src->readSamples(&buffer[0], 4096);
             if (nread == 0) break;
             progress.update(src->getPosition());
             sink.writeSamples(&buffer[0], nread * bpf, nread);
+
+            PlaybackKeyEvent event = {};
+            if (ss && waveout.takePendingKeyEvent(&event)) {
+                int64_t lookahead = waveout.queuedFrames() *
+                    ss->getSampleFormat().mSampleRate / sf.mSampleRate;
+                int64_t pos = (std::max)(ss->getPosition() - lookahead,
+                                         (int64_t)0);
+                int64_t samples = ss->getSampleFormat().mSampleRate * event.repeat;
+                bool stopReading = false;
+                switch (translatePlaybackKey(event.key)) {
+                case PlaybackCommand::SeekHome:
+                    ss->seekTo(0);
+                    break;
+                case PlaybackCommand::NextTrack:
+                    stopReading = true;
+                    break;
+                case PlaybackCommand::SeekBack:
+                    ss->seekTo((std::max)(pos - samples, (int64_t)0));
+                    break;
+                case PlaybackCommand::SeekForward:
+                    ss->seekTo((std::min)(pos + samples, (int64_t)ss->length()));
+                    break;
+                case PlaybackCommand::PrevOrRestart:
+                    if (pos >= ss->length() / 10 ||
+                        pos >= ss->getSampleFormat().mSampleRate * 5)
+                        ss->seekTo(0);
+                    else
+                        outcome = PlaybackOutcome::PrevFile;
+                    break;
+                case PlaybackCommand::Quit:
+                    outcome = PlaybackOutcome::Quit;
+                    break;
+                case PlaybackCommand::None:
+                    break;
+                }
+                if (outcome != PlaybackOutcome::Completed || stopReading)
+                    break;
+            }
         }
         progress.finish(src->getPosition());
     } catch (const std::exception &e) {
         LOG(L"\nERROR: %s\n", errormsg(e).c_str());
     }
+    return outcome;
 }
 
 const char *get_qaac_version();
@@ -1225,7 +1287,11 @@ void play_jobs(std::vector<EncodeJob> &jobs, const Options &opts)
         job.src->seekTo(0);
         std::vector<std::shared_ptr<ISource> > chain;
         build_filter_chain(job.src, chain, opts);
-        play_file(chain, opts);
+        PlaybackOutcome outcome = play_file(chain, opts);
+        if (outcome == PlaybackOutcome::PrevFile)
+            i = std::max(i - 2, (ssize_t)-1);
+        else if (outcome == PlaybackOutcome::Quit)
+            break;
     }
 }
 

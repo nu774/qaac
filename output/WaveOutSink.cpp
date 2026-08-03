@@ -29,6 +29,7 @@ void WaveOutDevice::open(const AudioStreamBasicDescription &format,
         m_packets[i].dwFlags = WHDR_DONE;
         m_events[i] = CreateEventW(0, 1, 1, 0); /* initially set. */
     }
+    m_events[NUMBUFFERS] = m_stdin;
 
     WAVEFORMATEXTENSIBLE wfex = {{ 0 }};
     WAVEFORMATEX &wfx = wfex.Format;
@@ -78,18 +79,37 @@ void WaveOutDevice::writeSamples(const void *data, size_t length,
     if (m_ibuffer.size() < m_asbd.mSampleRate * nbpc / NUMBUFFERS)
         return;
 
-    DWORD n = WaitForMultipleObjects(util::sizeof_array(m_events), m_events,
-                                     0, INFINITE);
-    n -= WAIT_OBJECT_0;
-    ResetEvent(m_events[n]);
-    WAVEHDR& wh = m_packets[n];
-    TRYMM(waveOutUnprepareHeader(m_device.get(), &wh, sizeof wh));
-    m_buffers[n] = m_ibuffer;
-    m_ibuffer.clear();
-    wh.lpData = &m_buffers[n][0];
-    wh.dwBufferLength = m_buffers[n].size();
-    TRYMM(waveOutPrepareHeader(m_device.get(), &wh, sizeof wh));
-    TRYMM(waveOutWrite(m_device.get(), &wh, sizeof wh));
+    while (true) {
+        DWORD n = WaitForMultipleObjects(NUMBUFFERS + m_isatty, m_events, 0, INFINITE);
+        n -= WAIT_OBJECT_0;
+        if (n == NUMBUFFERS) {
+            handleConsoleInput();
+            if (m_hasPendingKeyEvent) return;
+            continue;
+        }
+        ResetEvent(m_events[n]);
+        WAVEHDR& wh = m_packets[n];
+        TRYMM(waveOutUnprepareHeader(m_device.get(), &wh, sizeof wh));
+        m_buffers[n] = m_ibuffer;
+        m_ibuffer.clear();
+        wh.lpData = &m_buffers[n][0];
+        wh.dwBufferLength = m_buffers[n].size();
+        TRYMM(waveOutPrepareHeader(m_device.get(), &wh, sizeof wh));
+        TRYMM(waveOutWrite(m_device.get(), &wh, sizeof wh));
+        break;
+    }
+}
+
+int64_t WaveOutDevice::queuedFrames() const
+{
+    unsigned nbpc = ((m_asbd.mBitsPerChannel + 7) & ~7) >> 3;
+    unsigned bpf = nbpc * m_asbd.mChannelsPerFrame;
+    if (!bpf) return 0;
+    size_t bytes = m_ibuffer.size();
+    for (size_t i = 0; i < NUMBUFFERS; ++i)
+        if (WaitForSingleObject(m_events[i], 0) != WAIT_OBJECT_0)
+            bytes += m_buffers[i].size();
+    return bytes / bpf;
 }
 
 void WaveOutDevice::close()
@@ -109,5 +129,29 @@ WaveOutDevice::waveOutProc(UINT uMsg, DWORD_PTR dwParam1, DWORD_PTR)
     if (uMsg == WOM_DONE) {
         LPWAVEHDR lpwh = reinterpret_cast<LPWAVEHDR>(dwParam1);
         SetEvent(m_events[lpwh - m_packets]);
+    }
+}
+
+void WaveOutDevice::handleConsoleInput()
+{
+    INPUT_RECORD ir = { 0 };
+    DWORD nr = 0;
+    ReadConsoleInputW(m_stdin, &ir, 1, &nr);
+    if (ir.EventType == KEY_EVENT && ir.Event.KeyEvent.bKeyDown) {
+        switch (ir.Event.KeyEvent.wVirtualKeyCode) {
+        case VK_ESCAPE:
+        case VK_PRIOR:
+        case VK_NEXT:
+        case VK_LEFT:
+        case VK_RIGHT:
+        case VK_HOME:
+        case VK_END:
+        case 'Q':
+            waveOutReset(m_device.get());
+            m_hasPendingKeyEvent = true;
+            m_pendingKeyEvent.key = ir.Event.KeyEvent.wVirtualKeyCode;
+            m_pendingKeyEvent.repeat = ir.Event.KeyEvent.wRepeatCount;
+            break;
+        }
     }
 }
