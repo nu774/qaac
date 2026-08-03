@@ -34,6 +34,9 @@
 #include "WavpackSource.h"
 #include "AvisynthSource.h"
 #include "OpusPacketDecoder.h"
+#include "OggIndex.h"
+#include "OggSource.h"
+#include "Win32InputStream.h"
 #ifdef REFALAC
 #include "ALACEncoderX.h"
 #endif
@@ -1149,6 +1152,62 @@ void load_cue_tracks(const Options &opts, std::wstreambuf *sb, bool is_embedded,
 }
 
 static
+bool looksLikeOggOpusOrFlac(const std::shared_ptr<IInputStream> &stream)
+{
+    unsigned char buf[64] = { 0 };
+    stream->seek(0, SEEK_SET);
+    if (stream->read(buf, sizeof buf) < 28 || std::memcmp(buf, "OggS", 4))
+        return false;
+    unsigned nsegs = buf[26];
+    size_t packetOffset = 27 + nsegs;
+    if (packetOffset + 8 > sizeof buf)
+        return false; // unusually large page header; not worth special-casing
+    return !std::memcmp(buf + packetOffset, "OpusHead", 8)
+        || (buf[packetOffset] == 0x7f
+            && !std::memcmp(buf + packetOffset + 1, "FLAC", 4));
+}
+
+static
+void load_ogg_tracks(const wchar_t *ifilename, const Options &opts,
+                     std::shared_ptr<IInputStream> stream,
+                     std::vector<workItem> &tracks)
+{
+    auto index = std::make_shared<std::vector<OggChainInfo>>();
+    OggIndex ix;
+    ix.build(stream);
+    *index = ix.chains();
+
+    std::wstring basename(ifilename);
+    const wchar_t *ext = PathFindExtensionW(basename.c_str());
+    std::wstring stem(basename.c_str(), ext);
+
+    for (size_t i = 0; i < index->size(); ++i) {
+        const OggChainInfo &chain = (*index)[i];
+        if (chain.codec != "opus" && chain.codec != "flac") {
+            LOG(L"WARNING: %s: chain %d has unsupported codec (%hs), skipped\n",
+                PathFindFileNameW(ifilename), (int)i + 1, chain.codec.c_str());
+            continue;
+        }
+        auto src = std::make_shared<OggSource>(stream, index, i);
+
+        std::wstring name;
+        if (index->size() > 1) {
+            const wchar_t *spec = opts.fname_format;
+            if (!spec) spec = L"${tracknumber}${title& }${title}";
+            auto fn = misc::generateFileName(spec, src->getTags());
+            if (fn.size()) name = fn + L".stub";
+            else name = strutil::format(L"%s-%d%s", stem.c_str(), (int)i + 1, ext);
+        } else if (opts.filename_from_tag && opts.fname_format) {
+            auto fn = misc::generateFileName(opts.fname_format, src->getTags());
+            if (fn.size()) name = fn + L".stub";
+        }
+        if (name.empty())
+            name = basename;
+        tracks.push_back(std::make_pair(name, src));
+    }
+}
+
+static
 void load_track(const wchar_t *ifilename, const Options &opts,
                 std::vector<workItem> &tracks)
 {
@@ -1160,6 +1219,12 @@ void load_track(const wchar_t *ifilename, const Options &opts,
         std::wstring cuetext = misc::loadTextFile(ifilename, opts.textcp);
         std::wstringbuf istream(cuetext);
         load_cue_tracks(opts, &istream, false, cuedir, tracks);
+        return;
+    }
+
+    auto oggStream = std::make_shared<Win32InputStream>(ifilename);
+    if (looksLikeOggOpusOrFlac(oggStream)) {
+        load_ogg_tracks(ifilename, opts, oggStream, tracks);
         return;
     }
 

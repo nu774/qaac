@@ -55,6 +55,15 @@ if(MSVC)
 endif()
 
 # ---------------------------------------------------------------------------
+# ogg
+# ---------------------------------------------------------------------------
+add_library(ogg STATIC
+    ogg/src/bitwise.c
+    ogg/src/framing.c
+)
+target_include_directories(ogg PUBLIC ogg/include)
+
+# ---------------------------------------------------------------------------
 # mp4v2
 # ---------------------------------------------------------------------------
 add_library(mp4v2 STATIC
@@ -338,6 +347,8 @@ add_library(common STATIC
     input/LibSndfileSource.cpp
     input/LPCMPacketDecoder.cpp
     input/MP4Edits.cpp
+    input/OggIndex.cpp
+    input/OggSource.cpp
     input/OpusPacketDecoder.cpp
     input/RawSource.cpp
     input/TakSource.cpp
@@ -388,7 +399,7 @@ target_compile_definitions(common PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_N
 if(MSVC)
     target_compile_options(common PRIVATE /wd4018 /wd4244 /wd4267 /wd4838)
 endif()
-target_link_libraries(common PUBLIC mp4v2 taglib uchardet)
+target_link_libraries(common PUBLIC mp4v2 taglib uchardet ogg)
 
 # ---------------------------------------------------------------------------
 # qaac
