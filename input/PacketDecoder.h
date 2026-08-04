@@ -4,7 +4,12 @@
 #include <cstdint>
 #include <cstddef>
 #include <vector>
-#include "CoreAudioToolbox.h"
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/CoreAudioTypes.h"
+#endif
 
 struct IPacketDecoder {
     virtual ~IPacketDecoder() {}

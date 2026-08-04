@@ -4,7 +4,6 @@
 #include "strutil.h"
 #include "metadata.h"
 #include "chanmap.h"
-#include "cautil.h"
 #include "platformutil.h"
 #include "WaveSource.h"
 #include "SeekableInputStream.h"

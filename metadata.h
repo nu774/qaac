@@ -3,8 +3,7 @@
 
 #include <iterator>
 #include "mp4v2wrapper.h"
-#include "cautil.h"
-#include "CoreAudio/AudioFile.h"
+#include "misc.h"
 #include "IInputStream.h"
 
 namespace Tag {

@@ -5,7 +5,12 @@
 #include <memory>
 #include <string>
 #include <vector>
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/AudioConverter.h"
+#endif
 
 class AudioConverterX {
     std::shared_ptr<OpaqueAudioConverter> m_converter;

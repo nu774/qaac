@@ -3,7 +3,12 @@
 
 #include <memory>
 #include <vector>
-#include "CoreAudioToolbox.h"
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/CoreAudioTypes.h"
+#endif
 #include "ISource.h"
 #include "ISink.h"
 

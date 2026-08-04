@@ -1,5 +1,12 @@
 #include "CoreAudioEncoder.h"
 #include "cautil.h"
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/AudioFile.h"
+#include "CoreAudio/AudioFormat.h"
+#endif
 
 CoreAudioEncoder::CoreAudioEncoder(AudioConverterXX &converter)
     : m_converter(converter),

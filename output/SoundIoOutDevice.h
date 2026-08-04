@@ -8,7 +8,12 @@
 #include <string>
 #include <vector>
 #include <soundio/soundio.h>
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/CoreAudioTypes.h"
+#endif
 #include "ConsoleInputParser.h"
 #include "PlaybackNotifier.h"
 

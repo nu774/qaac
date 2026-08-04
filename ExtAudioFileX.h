@@ -1,8 +1,13 @@
 #ifndef ExtAudioFileX_H
 #define ExtAudioFileX_H
 
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/ExtAudioFile.h"
 #include "CoreAudio/AudioConverter.h"
+#endif
 #include "cautil.h"
 
 class ExtAudioFileX {

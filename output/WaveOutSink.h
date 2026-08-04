@@ -6,7 +6,12 @@
 #include <memory>
 #include <windows.h>
 #include <mmsystem.h>
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/CoreAudioTypes.h"
+#endif
 #include "ISink.h"
 
 struct PlaybackKeyEvent {

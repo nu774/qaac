@@ -4,7 +4,13 @@
 #include <vector>
 #include <map>
 #include <memory>
+#ifdef __APPLE__
+#include <MacTypes.h>
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/CoreAudioTypes.h"
+#endif
 #include "misc.h"
 
 struct ISource {

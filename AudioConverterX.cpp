@@ -1,7 +1,11 @@
 #include "AudioConverterX.h"
 #include <limits>
 #include <cmath>
+#ifdef __APPLE__
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/AudioCodec.h"
+#endif
 #include "cautil.h"
 
 AudioConverterX::AudioConverterX(const AudioStreamBasicDescription &iasbd,

@@ -47,6 +47,8 @@ inline int lrint(double x)
 #define ftello _ftelli64
 #endif
 
+#define FOURCC(a,b,c,d) (uint32_t)((uint8_t(a)<<24)|(uint8_t(b)<<16)|(uint8_t(c)<<8)|(d))
+
 namespace util {
     template <typename T, size_t size>
     inline size_t sizeof_array(const T (&)[size]) { return size; }

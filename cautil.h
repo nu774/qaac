@@ -8,11 +8,14 @@
 #include <stdexcept>
 #include <stdint.h>
 #include <utf8.h>
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/CoreFoundation.h"
 #include "CoreAudio/CoreAudioTypes.h"
+#endif
 #include "util.h"
-
-#define FOURCC(a,b,c,d) (uint32_t)((uint8_t(a)<<24)|(uint8_t(b)<<16)|(uint8_t(c)<<8)|(d))
 
 typedef std::shared_ptr<const __CFString> CFStringPtr;
 typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;

@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include "CoreAudio/CoreAudioTypes.h"
+
+struct AudioChannelLayout;
 
 namespace chanmap {
     std::string getChannelNames(const std::vector<uint32_t> &channels);

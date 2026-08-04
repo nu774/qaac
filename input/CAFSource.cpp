@@ -1,5 +1,10 @@
 #include "CAFSource.h"
-#include "CoreAudioTypes.h"
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/CoreAudioTypes.h"
+#endif
 #ifdef QAAC
 #include "CoreAudioPacketDecoder.h"
 #else

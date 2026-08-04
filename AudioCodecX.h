@@ -2,7 +2,13 @@
 #define AudioCodecX_H
 
 #include <float.h>
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/AudioCodec.h"
+#include "CoreAudio/AudioComponent.h"
+#endif
 #include "cautil.h"
 
 class AudioCodecX {

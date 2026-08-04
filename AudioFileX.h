@@ -1,8 +1,12 @@
 #ifndef AudioFileX_H
 #define AudioFileX_H
 
+#ifdef __APPLE__
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/AudioFile.h"
 #include "CoreAudio/AudioFormat.h"
+#endif
 #include "strutil.h"
 #include "cautil.h"
 

@@ -1,4 +1,10 @@
 #include "CoreAudioPaddedEncoder.h"
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/AudioFile.h"
+#endif
 extern "C" {
 #include "lpc.h"
 }

@@ -1,7 +1,6 @@
 #ifndef CoreAudioEncoder_H
 #define CoreAudioEncoder_H
 
-#include "CoreAudioToolbox.h"
 #include "AudioConverterXX.h"
 #include "iencoder.h"
 

@@ -7,8 +7,13 @@
 #include <vector>
 #include <string>
 #include <utility>
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
 #include "CoreAudio/CoreAudioTypes.h"
 #include "CoreAudio/AudioFile.h"
+#endif
 #include "IInputStream.h"
 
 class CAFFile {

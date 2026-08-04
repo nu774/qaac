@@ -4,7 +4,11 @@
 #include <map>
 #include "ISink.h"
 #include "platformutil.h"
-#include "AudioFile.h"
+#ifdef __APPLE__
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/AudioFile.h"
+#endif
 
 class CAFSink : public ISink, public ITagStore, public IFinishWriteSink {
     std::shared_ptr<FILE> m_file;

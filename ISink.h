@@ -2,8 +2,9 @@
 #define _ISINK_H
 
 #include <string>
-#include "AudioFile.h"
 #include "misc.h"
+
+struct AudioFilePacketTableInfo;
 
 struct ISink {
     virtual ~ISink() {}

@@ -1,7 +1,12 @@
 #ifndef LPCMPACKETDECODER_H
 #define LPCMPACKETDECODER_H
 
-#include "CoreAudioTypes.h"
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/CoreAudioTypes.h"
+#endif
 #include "PacketDecoder.h"
 
 class LPCMPacketDecoder: public IPacketDecoder {

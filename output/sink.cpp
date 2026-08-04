@@ -2,6 +2,7 @@
 #include "strutil.h"
 #include "sink.h"
 #include "util.h"
+#include "cautil.h"
 #include "bitstream.h"
 #include "metadata.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
