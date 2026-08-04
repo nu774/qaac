@@ -33,6 +33,11 @@ else()
     add_compile_options($<$<CONFIG:Release>:-g>)
 endif()
 
+
+if(NOT WIN32)
+    find_package(Iconv REQUIRED)
+endif()
+
 # ---------------------------------------------------------------------------
 # alac
 # ---------------------------------------------------------------------------
@@ -634,7 +639,9 @@ if(WIN32)
 else()
     find_package(Threads REQUIRED)
     target_link_libraries(refalac PRIVATE ${CMAKE_DL_LIBS} Threads::Threads)
+    target_link_libraries(refalac PRIVATE Iconv::Iconv)
 endif()
+
 if(MSVC)
     target_link_options(refalac PRIVATE
         $<$<CONFIG:Release>:/OPT:REF>
