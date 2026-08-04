@@ -71,6 +71,25 @@ jobs:
         run: cmake -B build -G Ninja .
       - name: Build
         run: cmake --build build
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: install libs
+        run: brew install flac libsndfile opus wavpack libsoxr
+      - name: Configure
+        run: cmake -B build -G Ninja .
+      - name: Build
+        run: cmake --build build
+      - name: Smoke test
+        run: |
+          ./build/refalac --check
+          ./build/qaac --check
+          ./build/qaac --formats
+          head -c 176400 /dev/zero > /tmp/smoke.raw
+          ./build/refalac --raw -o /tmp/smoke_alac.m4a /tmp/smoke.raw
+          ./build/qaac --raw -o /tmp/smoke_aac.m4a /tmp/smoke.raw
   linux-clang-mingw:
     strategy:
       matrix:
