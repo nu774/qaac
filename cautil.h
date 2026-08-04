@@ -73,8 +73,6 @@ namespace cautil {
     }
 #endif
 
-    CFMutableDictionaryRef CreateDictionary(CFIndex capacity);
-
     inline size_t sizeofAudioChannelLayout(const AudioChannelLayout &acl)
     {
         int n = acl.mNumberChannelDescriptions;
