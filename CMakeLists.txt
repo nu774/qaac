@@ -386,7 +386,7 @@ if(WIN32)
     target_sources(libsoundio PRIVATE libsoundio/src/wasapi.c)
     set(SOUNDIO_HAVE_WASAPI true)
 endif()
-if(NOT WIN32)
+if(NOT WIN32 AND NOT APPLE)
     find_package(ALSA)
     if(ALSA_FOUND)
         target_sources(libsoundio PRIVATE libsoundio/src/alsa.c)
@@ -500,11 +500,14 @@ target_include_directories(common PRIVATE
     output
     filters
     include
-    CoreAudio
     ALAC
     uchardet
     include/opus
 )
+if(NOT APPLE)
+    target_include_directories(common PRIVATE CoreAudio)
+endif()
+
 target_compile_definitions(common PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
 if(MSVC)
     target_compile_options(common PRIVATE /wd4018 /wd4244 /wd4267 /wd4838)
@@ -515,7 +518,7 @@ target_link_libraries(common PUBLIC libsoundio)
 # ---------------------------------------------------------------------------
 # qaac
 # ---------------------------------------------------------------------------
-if(WIN32)
+if(WIN32 OR APPLE)
 add_executable(qaac
     input/CAFSource.cpp
     input/CoreAudioPacketDecoder.cpp
@@ -545,32 +548,47 @@ target_include_directories(qaac PRIVATE
     output
     filters
     include
-    CoreAudio
     ALAC
     include/opus
 )
+if(NOT APPLE)
+    target_include_directories(qaac PRIVATE CoreAudio)
+endif()
 target_compile_definitions(qaac PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE QAAC)
 if(MSVC)
     target_compile_options(qaac PRIVATE /wd4018 /wd4091 /wd4244 /wd4267 /wd4838)
 endif()
 target_link_libraries(qaac PRIVATE common mp4v2 taglib)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(CORE_AUDIO_LIBS CoreAudioToolbox64.lib CoreFoundation64.lib)
-    set_target_properties(qaac PROPERTIES OUTPUT_NAME qaac64)
-else()
-    set(CORE_AUDIO_LIBS CoreAudioToolbox.lib CoreFoundation.lib)
-endif()
+if(WIN32)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(CORE_AUDIO_LIBS CoreAudioToolbox64.lib CoreFoundation64.lib)
+        set_target_properties(qaac PROPERTIES OUTPUT_NAME qaac64)
+    else()
+        set(CORE_AUDIO_LIBS CoreAudioToolbox.lib CoreFoundation.lib)
+    endif()
 
-target_link_directories(qaac PRIVATE ${CMAKE_SOURCE_DIR}/implib)
-target_link_libraries(qaac PRIVATE
-    ${CORE_AUDIO_LIBS}
-    delayimp.lib
-    version.lib
-    shlwapi.lib
-    advapi32.lib
-    winmm.lib
-)
+    target_link_directories(qaac PRIVATE ${CMAKE_SOURCE_DIR}/implib)
+    target_link_libraries(qaac PRIVATE
+        ${CORE_AUDIO_LIBS}
+        delayimp.lib
+        version.lib
+        shlwapi.lib
+        advapi32.lib
+        winmm.lib
+    )
+elseif(APPLE)
+    # Real system frameworks, linked directly -- unlike Windows, there's no
+    # separately-installed/delay-loaded CoreAudioToolbox.dll to worry about.
+    target_link_libraries(qaac PRIVATE
+        "-framework AudioToolbox"
+        "-framework CoreFoundation"
+        "-framework CoreServices"
+    )
+    find_package(Threads REQUIRED)
+    target_link_libraries(qaac PRIVATE ${CMAKE_DL_LIBS} Threads::Threads)
+    target_link_libraries(qaac PRIVATE Iconv::Iconv)
+endif()
 if(MSVC)
     target_link_options(qaac PRIVATE
         /DELAYLOAD:CoreAudioToolbox.dll
@@ -582,7 +600,7 @@ if(MSVC)
         $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:Clang>>>:/PROFILE>
         wsetargv.obj
     )
-else()
+elseif(WIN32)
     # Same linker (lld-link) and same flags as the clang-cl branch above, but
     # routed through -Wl, since the plain GNU-style driver -- unlike
     # cl.exe/clang-cl -- doesn't forward bare /flags to the linker itself.
@@ -634,11 +652,13 @@ target_include_directories(refalac PRIVATE
     output
     filters
     include
-    CoreAudio
     ALAC
     include/opus
 )
-target_compile_definitions(refalac PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE REFALAC NO_COREAUDIO)
+if(NOT APPLE)
+    target_include_directories(refalac PRIVATE CoreAudio)
+endif()
+target_compile_definitions(refalac PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE REFALAC)
 if(MSVC)
     target_compile_options(refalac PRIVATE /wd4018 /wd4091 /wd4244 /wd4267 /wd4838)
 endif()
