@@ -48,7 +48,10 @@ add_library(alac STATIC
     ALAC/matrix_dec.c
     ALAC/matrix_enc.c
 )
-target_compile_definitions(alac PRIVATE TARGET_RT_LITTLE_ENDIAN TARGET_OS_WIN32)
+target_compile_definitions(alac PRIVATE TARGET_RT_LITTLE_ENDIAN)
+if(WIN32)
+    target_compile_definitions(alac PRIVATE TARGET_OS_WIN32)
+endif()
 if(MSVC)
     target_compile_definitions(alac PRIVATE inline=_inline)
     target_compile_options(alac PRIVATE /W2 /wd4146 /wd4244 /wd4805)
