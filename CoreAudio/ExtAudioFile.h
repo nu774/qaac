@@ -8,8 +8,8 @@
 extern "C" {
 #endif
 
-struct OpaqueExtAudioFileID;
-typedef struct OpaqueExtAudioFileID *ExtAudioFileRef;
+struct OpaqueExtAudioFile;
+typedef struct OpaqueExtAudioFile *ExtAudioFileRef;
 
 typedef UInt32 ExtAudioFilePropertyID;
 

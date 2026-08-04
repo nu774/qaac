@@ -6,7 +6,7 @@
 #include "cautil.h"
 
 class ExtAudioFileX {
-    std::shared_ptr<OpaqueExtAudioFileID> m_file;
+    std::shared_ptr<OpaqueExtAudioFile> m_file;
 public:
     ExtAudioFileX() {}
     ExtAudioFileX(ExtAudioFileRef file, bool takeOwn)
