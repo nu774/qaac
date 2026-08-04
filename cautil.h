@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <stdint.h>
+#include <utf8.h>
 #include "CoreAudio/CoreFoundation.h"
 #include "CoreAudio/CoreAudioTypes.h"
 #include "util.h"
@@ -47,30 +48,10 @@ public:
 namespace cautil {
     std::string make_coreaudio_error(long code, const char *s);
 
-    inline std::wstring CF2W(CFStringRef str)
-    {
-        CFIndex length = CFStringGetLength(str);
-        if (!length) return L"";
-        std::vector<UniChar> buffer(length);
-        CFRange range = { 0, length };
-        CFStringGetCharacters(str, range, &buffer[0]);
-        return std::wstring(buffer.begin(), buffer.end());
-    }
-    inline CFStringPtr W2CF(const std::wstring &s)
-    {
-        CFStringRef sref = CFStringCreateWithCharacters(0,
-                reinterpret_cast<const UniChar*>(s.c_str()), s.size());
-        return CFStringPtr(sref, CFRelease);
-    }
-#ifdef _WIN32
-    inline std::string CF2US(CFStringRef str)
-    {
-        return strutil::w2us(CF2W(str));
-    }
-    inline CFStringPtr US2CF(const std::string &s)
-    {
-        return W2CF(strutil::us2w(s));
-    }
+#ifdef QAAC
+    std::string CF2US(CFStringRef str);
+
+    CFStringPtr US2CF(const std::string &s);
 #endif
 
     inline size_t sizeofAudioChannelLayout(const AudioChannelLayout &acl)

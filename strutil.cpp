@@ -40,34 +40,6 @@ namespace strutil {
     }
 
 #ifdef _WIN32
-    std::wstring us2w(const std::string &src)
-    {
-        if (src.empty()) return std::wstring();
-        int nc = MultiByteToWideChar(CP_UTF8, 0, src.data(),
-                                     static_cast<int>(src.size()), 0, 0);
-        if (nc <= 0)
-            throw std::runtime_error("us2w: conversion failed");
-        std::wstring dst(nc, L'\0');
-        MultiByteToWideChar(CP_UTF8, 0, src.data(),
-                            static_cast<int>(src.size()), &dst[0], nc);
-        return dst;
-    }
-
-    std::string w2us(const std::wstring &src)
-    {
-        if (src.empty()) return std::string();
-        int nc = WideCharToMultiByte(CP_UTF8, 0, src.data(),
-                                     static_cast<int>(src.size()),
-                                     0, 0, 0, 0);
-        if (nc <= 0)
-            throw std::runtime_error("w2us: conversion failed");
-        std::string dst(nc, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, src.data(),
-                            static_cast<int>(src.size()),
-                            &dst[0], nc, 0, 0);
-        return dst;
-    }
-
     std::string us2m(const std::string &src)
     {
         std::wstring wide = us2w(src);

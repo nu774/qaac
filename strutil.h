@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <iterator>
+#include <utf8.h>
 
 #if defined _MSC_VER
 #ifndef strcasecmp
@@ -85,10 +86,29 @@ namespace strutil {
         return result;
     }
 
-#ifdef _WIN32
-    std::wstring us2w(const std::string &src);
-    std::string w2us(const std::wstring &src);
+    inline std::wstring us2w(const std::string &src)
+    {
+        std::wstring result;
+#if WCHAR_MAX < 0x10000
+        utf8::utf8to16(std::begin(src), std::end(src), std::back_inserter(result));
+#else
+        utf8::utf8to32(std::begin(src), std::end(src), std::back_inserter(result));
+#endif
+        return result;
+    }
 
+    inline std::string w2us(const std::wstring &src)
+    {
+        std::string result;
+#if WCHAR_MAX < 0x10000
+        utf8::utf16to8(std::begin(src), std::end(src), std::back_inserter(result));
+#else
+        utf8::utf32to8(std::begin(src), std::end(src), std::back_inserter(result));
+#endif
+        return result;
+    }
+
+#ifdef _WIN32
     std::string us2m(const std::string &src);
 #endif
 

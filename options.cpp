@@ -7,31 +7,7 @@
 #include <getopt.h>
 #endif
 #include "metadata.h"
-
-static std::vector<uint32_t> decodeUtf8ToCodepoints(const char *s)
-{
-    std::vector<uint32_t> result;
-    const unsigned char *p = reinterpret_cast<const unsigned char*>(s);
-    while (*p) {
-        uint32_t cp;
-        int extra;
-        if (*p < 0x80)             { cp = *p;        extra = 0; }
-        else if ((*p & 0xe0) == 0xc0) { cp = *p & 0x1f; extra = 1; }
-        else if ((*p & 0xf0) == 0xe0) { cp = *p & 0x0f; extra = 2; }
-        else if ((*p & 0xf8) == 0xf0) { cp = *p & 0x07; extra = 3; }
-        else
-            throw std::runtime_error("invalid UTF-8 sequence");
-        ++p;
-        for (int i = 0; i < extra; ++i) {
-            if ((*p & 0xc0) != 0x80)
-                throw std::runtime_error("invalid UTF-8 sequence");
-            cp = (cp << 6) | (*p & 0x3f);
-            ++p;
-        }
-        result.push_back(cp);
-    }
-    return result;
-}
+#include <utf8.h>
 
 static struct option long_options[] = {
 #ifdef QAAC
@@ -749,8 +725,9 @@ bool Options::parse(int &argc, char **&argv)
             char *key = tokens.next();
             char *value = tokens.rest();
             std::vector<uint32_t> keycps;
+            if (!key) key = "";
             try {
-                keycps = decodeUtf8ToCodepoints(key ? key : "");
+                utf8::utf8to32(key, key + strlen(key), std::back_inserter(keycps));
             } catch (const std::exception&) {
                 complain("Invalid --tag option arg.\n");
                 return false;

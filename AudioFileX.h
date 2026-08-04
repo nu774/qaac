@@ -7,12 +7,12 @@
 #include "cautil.h"
 
 namespace afutil {
-    inline uint32_t getTypesForExtension(const wchar_t *fname)
+    inline uint32_t getTypesForExtension(const char *fname)
     {
-        const wchar_t *pos = std::wcsrchr(fname, L'.');
+        const char *pos = std::strchr(fname, '.');
         if (!pos)
             return 0;
-        CFStringPtr cfsp = cautil::W2CF(strutil::wslower(pos + 1));
+        CFStringPtr cfsp = cautil::US2CF(strutil::slower(pos + 1));
         CFStringRef cfsr = cfsp.get();
         UInt32 type = 0;
         UInt32 size = sizeof(type);
@@ -41,16 +41,16 @@ namespace afutil {
                                        0, 0, &size, vec.data()));
         return vec;
     }
-    inline std::wstring getFileTypeName(uint32_t type)
+    inline std::string getFileTypeName(uint32_t type)
     {
         CFStringRef name;
         UInt32 size = sizeof(name);
         CHECKCA(AudioFileGetGlobalInfo(kAudioFileGlobalInfo_FileTypeName,
                                        sizeof(UInt32), &type, &size, &name));
         CFStringPtr _(name, CFRelease);
-        return cautil::CF2W(name);
+        return cautil::CF2US(name);
     }
-    inline std::vector<std::wstring> getExtensionsForType(uint32_t type)
+    inline std::vector<std::string> getExtensionsForType(uint32_t type)
     {
         CFArrayRef aref;
         UInt32 size = sizeof(aref);
@@ -58,11 +58,11 @@ namespace afutil {
                                        sizeof(UInt32), &type, &size, &aref));
         std::shared_ptr<const __CFArray> _(aref, CFRelease);
         CFIndex count = CFArrayGetCount(aref);
-        std::vector<std::wstring> result;
+        std::vector<std::string> result;
         for (CFIndex i = 0; i < count; ++i) {
             CFStringRef value =
                 static_cast<CFStringRef>(CFArrayGetValueAtIndex(aref, i));
-            result.push_back(cautil::CF2W(value));
+            result.push_back(cautil::CF2US(value));
         }
         return result;
     }
@@ -78,7 +78,7 @@ namespace afutil {
         return vec;
     }
     inline
-    std::wstring getASBDFormatName(const AudioStreamBasicDescription &asbd)
+    std::string getASBDFormatName(const AudioStreamBasicDescription &asbd)
     {
         CFStringRef s;
         UInt32 size = sizeof(s);
@@ -86,16 +86,16 @@ namespace afutil {
                                        sizeof(asbd), &asbd,
                                        &size, &s));
         CFStringPtr _(s, CFRelease);
-        std::wstring ws = cautil::CF2W(s);
+        std::string us = cautil::CF2US(s);
         // XXX
         // Workaround for CoreAudio bug. MPEG Layer 1 and 2 is reported as
         // Layer 3
         if (asbd.mFormatID == '.mp1' || asbd.mFormatID == '.mp2') {
-            const wchar_t *p;
-            if ((p = std::wcsstr(ws.c_str(), L"Layer 3")) != 0)
-                ws[p - ws.c_str() + 6] = asbd.mFormatID & 0xff;
+            const char *p;
+            if ((p = std::strstr(us.c_str(), "Layer 3")) != 0)
+                us[p - us.c_str() + 6] = asbd.mFormatID & 0xff;
         }
-        return ws;
+        return us;
     }
     inline CFDictionaryPtr id3TagToDictinary(const void *data, size_t size)
     {

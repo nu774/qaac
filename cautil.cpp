@@ -25,6 +25,28 @@ namespace cautil {
         return ss.str();
     }
 
+#ifdef QAAC
+    std::string CF2US(CFStringRef str)
+    {
+        CFIndex length = CFStringGetLength(str);
+        if (!length) return "";
+        std::vector<UniChar> buffer(length);
+        CFRange range = { 0, length };
+        CFStringGetCharacters(str, range, buffer.data());
+        std::string result;
+        utf8::utf16to8(std::begin(buffer), std::end(buffer), std::back_inserter(result));
+        return result;
+    }
+
+    CFStringPtr US2CF(const std::string &s)
+    {
+        std::vector<UniChar> buffer;
+        utf8::utf8to16(std::begin(s), std::end(s), std::back_inserter(buffer));
+        CFStringRef sref = CFStringCreateWithCharacters(0, buffer.data(), buffer.size());
+        return CFStringPtr(sref, CFRelease);
+    }
+#endif
+
     AudioStreamBasicDescription
         buildASBDForPCM(double sample_rate, unsigned channels_per_frame,
                         unsigned bits_per_channel, unsigned type,
