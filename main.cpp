@@ -57,7 +57,9 @@
 #include "ALACEncoderX.h"
 #endif
 #ifdef QAAC
+#ifdef _WIN32
 #include <delayimp.h>
+#endif
 #include "AudioCodecX.h"
 #include "CoreAudioEncoder.h"
 #include "CoreAudioPaddedEncoder.h"
@@ -927,6 +929,7 @@ void show_available_aac_settings()
     show_available_codec_setttings('aach');
 }
 
+#ifdef _WIN32
 static
 void setup_aach_codec(HMODULE hDll)
 {
@@ -939,6 +942,7 @@ void setup_aach_codec(HMODULE hDll)
                 0, aachFactory);
     }
 }
+#endif
 
 /*
 static
@@ -949,6 +953,7 @@ FARPROC WINAPI DllImportHook(unsigned notify, PDelayLoadInfo pdli)
 }
 */
 
+#ifdef _WIN32
 static
 void set_dll_directories(int verbose)
 {
@@ -984,6 +989,7 @@ void set_dll_directories(int verbose)
     searchPaths = strutil::format(L"%s;%s", dir.c_str(), searchPaths.c_str());
     SetEnvironmentVariableW(L"PATH", searchPaths.c_str());
 }
+#endif
 
 static
 void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
@@ -1618,6 +1624,7 @@ static int app_main(int argc, char **argv)
         std::string encoder_name;
         encoder_name = strutil::format(PROGNAME " %s", get_qaac_version());
 #ifdef QAAC
+#ifdef _WIN32
 //      decltype(__pfnDliNotifyHook2) __pfnDliFailureHook2 = DllImportHook;
         set_dll_directories(opts.verbose);
         HMODULE hDll = LoadLibraryW(L"CoreAudioToolbox.dll");
@@ -1631,6 +1638,10 @@ static int app_main(int argc, char **argv)
             setup_aach_codec(hDll);
             FreeLibrary(hDll);
         }
+#else
+        encoder_name = strutil::format("%s, CoreAudioToolbox (system)",
+                                       encoder_name.c_str());
+#endif
 #endif
         opts.encoder_name = encoder_name;
         if (!opts.print_available_formats)
