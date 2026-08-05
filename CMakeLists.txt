@@ -371,8 +371,8 @@ add_library(uchardet STATIC
 target_compile_definitions(uchardet PRIVATE _CRT_SECURE_NO_DEPRECATE _CRT_NONSTDC_NO_DEPRECATE)
 
 # ---------------------------------------------------------------------------
-# libsoundio (vendored subset: WASAPI + ALSA + dummy backends only -- see
-# libsoundio/README.md for what was left out and why)
+# libsoundio (vendored subset: WASAPI + ALSA + CoreAudio + dummy backends
+# only -- see libsoundio/README.md for what was left out and why)
 # ---------------------------------------------------------------------------
 add_library(libsoundio STATIC
     libsoundio/src/soundio.c
@@ -398,6 +398,16 @@ if(NOT WIN32)
                         "will only have the dummy backend on this platform, "
                         "so --play won't produce audible output")
     endif()
+endif()
+if(APPLE)
+    target_sources(libsoundio PRIVATE libsoundio/src/coreaudio.c)
+    set(SOUNDIO_HAVE_COREAUDIO true)
+    target_link_libraries(libsoundio PUBLIC
+        "-framework CoreAudio"
+        "-framework AudioUnit"
+        "-framework AudioToolbox"
+        "-framework CoreFoundation"
+    )
 endif()
 set(LIBSOUNDIO_VERSION_MAJOR 2)
 set(LIBSOUNDIO_VERSION_MINOR 0)
