@@ -88,6 +88,7 @@ amm-info@iis.fraunhofer.de
 // System includes
 #include <memory>
 #include <cmath>
+#include <cstring>
 #include <type_traits>
 
 // External includes

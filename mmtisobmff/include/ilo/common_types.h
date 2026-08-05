@@ -91,6 +91,7 @@ amm-info@iis.fraunhofer.de
 #pragma once
 
 // System includes
+#include <cstdint>
 #include <vector>
 #include <memory>
 #include <string>
