@@ -12,6 +12,10 @@ private:
         load("libFLAC_dynamic.dll");
         if (!loaded()) load("libFLAC.dll");
         if (!loaded()) load("libFLAC-8.dll");
+#elif defined(__APPLE__)
+        // see WavpackSource.h for why /opt/homebrew/lib needs a direct try
+        if (!load("libFLAC.dylib"))
+            load("/opt/homebrew/lib/libFLAC.dylib");
 #else
         load("libFLAC.so");
         if (!loaded()) load("libFLAC.so.14");

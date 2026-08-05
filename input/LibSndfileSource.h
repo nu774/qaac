@@ -17,6 +17,10 @@ private:
         load("sndfile.dll");
         if (!loaded()) load("libsndfile.dll");
         if (!loaded()) load("libsndfile-1.dll");
+#elif defined(__APPLE__)
+        // see WavpackSource.h for why /opt/homebrew/lib needs a direct try
+        if (!load("libsndfile.dylib"))
+            load("/opt/homebrew/lib/libsndfile.dylib");
 #else
         load("libsndfile.so");
         if (!loaded()) load("libsndfile.so.1");

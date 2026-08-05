@@ -13,6 +13,8 @@ private:
         load("libsoxconvolver64.dll");
 #elif defined(_WIN32)
         load("libsoxconvolver.dll");
+#elif defined(__APPLE__)
+        load("libsoxconvolver.dylib");
 #else
         load("libsoxconvolver.so");
         if (!loaded()) load("libsoxconvolver.so.0");

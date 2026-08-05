@@ -15,6 +15,10 @@ private:
 #ifdef _WIN32
         load("opus.dll");
         if (!loaded()) load("libopus-0.dll");
+#elif defined(__APPLE__)
+        // see WavpackSource.h for why /opt/homebrew/lib needs a direct try
+        if (!load("libopus.dylib"))
+            load("/opt/homebrew/lib/libopus.dylib");
 #else
         load("libopus.so");
         if (!loaded()) load("libopus.so.0");

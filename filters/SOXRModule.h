@@ -11,6 +11,11 @@ private:
 #ifdef _WIN32
         if (!load("libsoxr64.dll"))
             load("libsoxr.dll");
+#elif defined(__APPLE__)
+        // see input/WavpackSource.h for why /opt/homebrew/lib needs a
+        // direct try
+        if (!load("libsoxr.dylib"))
+            load("/opt/homebrew/lib/libsoxr.dylib");
 #else
         if (!load("libsoxr.so"))
             load("libsoxr.so.0");

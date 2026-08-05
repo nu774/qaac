@@ -19,6 +19,15 @@ private:
 #ifdef _WIN32
         if (!load("wavpackdll.dll"))
             load("libwavpack-1.dll");
+#elif defined(__APPLE__)
+        /*
+         * /opt/homebrew/lib (Apple Silicon's Homebrew prefix) isn't on
+         * dyld's default DYLD_FALLBACK_LIBRARY_PATH, unlike /usr/local/lib
+         * (Intel Homebrew, and where a self-built "make install" normally
+         * lands), so a bare leaf name alone won't find it.
+         */
+        if (!load("libwavpack.dylib"))
+            load("/opt/homebrew/lib/libwavpack.dylib");
 #else
         if (!load("libwavpack.so"))
             load("libwavpack.so.1");
