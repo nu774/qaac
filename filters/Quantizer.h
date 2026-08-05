@@ -9,14 +9,14 @@
 
 class Quantizer: public FilterBase {
     typedef rng::LCG RandomEngine;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     RandomEngine m_engine;
     std::vector<uint8_t> m_pivot;
     size_t (Quantizer::*m_convert)(void *buffer, size_t nsamples);
 public:
     Quantizer(const std::shared_ptr<ISource> &source, uint32_t bitdepth,
               bool no_dither, bool is_float=false);
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

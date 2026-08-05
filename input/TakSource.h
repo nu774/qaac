@@ -48,13 +48,13 @@ class TakSource: public ISeekableSource, public ITagParser {
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
     std::vector<uint8_t> m_buffer;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     TakModule &m_module;
 public:
     TakSource(std::shared_ptr<IInputStream> stream);
     ~TakSource() { m_decoder.reset(); }
     uint64_t length() const { return m_length; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

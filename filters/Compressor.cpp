@@ -1,6 +1,7 @@
 #include <numeric>
 #include "Compressor.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 namespace {
     template <typename T>
@@ -31,13 +32,13 @@ Compressor::Compressor(const std::shared_ptr<ISource> &src,
       m_position(0),
       m_statfile(statfp)
 {
-    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
-    m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
+    const ca::AudioStreamBasicDescription &asbd = src->getSampleFormat();
+    m_asbd = ascutil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
                                      32, kAudioFormatFlagIsFloat);
     m_buffer.set_unit(asbd.mChannelsPerFrame);
     if (m_statfile.get()) {
-        AudioStreamBasicDescription asbd =
-            cautil::buildASBDForPCM(m_asbd.mSampleRate, 1,
+        ca::AudioStreamBasicDescription asbd =
+            ascutil::buildASBDForPCM(m_asbd.mSampleRate, 1,
                                     32, kAudioFormatFlagIsFloat);
         m_statsink = std::make_shared<WaveSink>(m_statfile, ~0ULL, asbd);
     }

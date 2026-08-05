@@ -4,7 +4,7 @@
 #include "ISource.h"
 
 class InputFactory {
-    AudioStreamBasicDescription m_raw_format;
+    ca::AudioStreamBasicDescription m_raw_format;
     bool m_is_raw;
     bool m_ignore_length;
     std::map<std::string, std::shared_ptr<ISeekableSource> > m_sources;
@@ -19,7 +19,7 @@ public:
         return self;
     }
     std::shared_ptr<ISeekableSource> open(const std::string &path);
-    void setRawFormat(const AudioStreamBasicDescription &asbd)
+    void setRawFormat(const ca::AudioStreamBasicDescription &asbd)
     {
         m_raw_format = asbd;
         m_is_raw = true;

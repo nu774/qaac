@@ -1,5 +1,6 @@
 #include "CoreAudioResampler.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
                                        int rate,
@@ -11,8 +12,8 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
       m_position(0),
       m_rate(rate)
 {
-    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
-    m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
+    const ca::AudioStreamBasicDescription &asbd = src->getSampleFormat();
+    m_asbd = ascutil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
                                      32, kAudioFormatFlagIsFloat);
     /*
      * XXX:
@@ -27,8 +28,8 @@ CoreAudioResampler::CoreAudioResampler(const std::shared_ptr<ISource> &src,
 
 void CoreAudioResampler::init()
 {
-    const AudioStreamBasicDescription &asbd = source()->getSampleFormat();
-    m_converter = AudioConverterXX(asbd, m_asbd);
+    const ca::AudioStreamBasicDescription &asbd = source()->getSampleFormat();
+    m_converter = AudioConverterXX(cautil::toNative(asbd), cautil::toNative(m_asbd));
     m_converter.setSampleRateConverterQuality(m_quality);
     m_converter.setSampleRateConverterComplexity(m_complexity);
     m_encoder.reset(new CoreAudioEncoder(m_converter));

@@ -8,12 +8,7 @@
 #include <string>
 #include <vector>
 #include <soundio/soundio.h>
-#ifdef __APPLE__
-#include <CoreServices/CoreServices.h>
-#include <AudioToolbox/AudioToolbox.h>
-#else
-#include "CoreAudio/CoreAudioTypes.h"
-#endif
+#include "catypes.h"
 #include "ConsoleInputParser.h"
 #include "PlaybackNotifier.h"
 
@@ -22,7 +17,7 @@ class SoundIoOutDevice {
     std::shared_ptr<struct SoundIoDevice> m_device;
     std::shared_ptr<struct SoundIoRingBuffer> m_ringBuffer;
     std::shared_ptr<struct SoundIoOutStream> m_outstream;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     uint32_t m_chanmask = 0;
     int m_bytesPerFrame = 0;
     std::vector<char> m_pendingWrite;
@@ -50,7 +45,7 @@ public:
         static SoundIoOutDevice self;
         return self;
     }
-    void open(const AudioStreamBasicDescription &asbd, uint32_t chanmask);
+    void open(const ca::AudioStreamBasicDescription &asbd, uint32_t chanmask);
     void pushSamples(const void *data, size_t length, size_t nsamples,
                      const std::string &trackName, int64_t startPosition);
     void close();

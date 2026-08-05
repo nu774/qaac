@@ -40,12 +40,12 @@ class AvisynthSource: public ISeekableSource
     std::vector<uint8_t> m_buffer;
     std::shared_ptr<AVS_ScriptEnvironment> m_script_env;
     std::shared_ptr<AVS_Clip> m_clip;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     AvisynthModule &m_module;
 public:
     AvisynthSource(const std::string &path);
     uint64_t length() const { return m_duration; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

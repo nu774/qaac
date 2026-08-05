@@ -12,6 +12,7 @@ class CoreAudioPacketDecoder: public IPacketDecoder {
     };
     AudioConverterX m_converter;
     AudioStreamBasicDescription m_iasbd, m_oasbd;
+    ca::AudioStreamBasicDescription m_oasbd_ca;
     std::vector<uint8_t> m_magic_cookie;
     std::vector<uint8_t> m_packet_buffer;
     std::vector<uint8_t> m_priming_packet;
@@ -32,9 +33,9 @@ public:
         m_magic_cookie = cookie;
         m_converter.setDecompressionMagicCookie(cookie);
     }
-    const AudioStreamBasicDescription &getSampleFormat()
+    const ca::AudioStreamBasicDescription &getSampleFormat()
     {
-        return m_oasbd;
+        return m_oasbd_ca;
     }
     size_t decode(const std::vector<uint8_t> &packet, std::vector<uint8_t> *samples);
 private:

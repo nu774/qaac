@@ -515,6 +515,7 @@ add_executable(qaac
     filters/CoreAudioResampler.cpp
     AudioConverterX.cpp
     AudioConverterXX.cpp
+    ascutil.cpp
     cautil.cpp
     CoreAudioEncoder.cpp
     CoreAudioPaddedEncoder.cpp
@@ -604,6 +605,7 @@ add_executable(refalac
     input/InputFactory.cpp
     input/MP4Source.cpp
     ALACEncoderX.cpp
+    ascutil.cpp
     cautil.cpp
     main.cpp
     options.cpp

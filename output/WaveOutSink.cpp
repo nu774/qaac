@@ -1,5 +1,6 @@
 #include "WaveOutSink.h"
 #include "util.h"
+#include "cautil.h"
 #include <mmreg.h>
 
 inline void mm_try(MMRESULT expr, const char *msg)
@@ -13,7 +14,7 @@ inline void mm_try(MMRESULT expr, const char *msg)
 } 
 #define TRYMM(expr) (void)(mm_try(expr, #expr))
 
-void WaveOutDevice::open(const AudioStreamBasicDescription &format,
+void WaveOutDevice::open(const ca::AudioStreamBasicDescription &format,
                          uint32_t chanmask)
 {
     if (std::memcmp(&format, &m_asbd, sizeof(format)) == 0

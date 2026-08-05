@@ -70,13 +70,13 @@ class WavpackSource: public ISeekableSource, public ITagParser
     std::map<std::string, std::string> m_tags;
     std::vector<uint8_t> m_pivot;
     size_t (WavpackSource::*m_readSamples)(void *, size_t);
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     WavpackModule &m_module;
 public:
     WavpackSource(std::shared_ptr<IInputStream> stream, const std::string &path);
     ~WavpackSource() { m_wpc.reset(); }
     uint64_t length() const { return m_length; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

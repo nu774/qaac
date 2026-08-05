@@ -7,6 +7,7 @@
 #include <apetag.h>
 #include "taglibhelper.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -105,7 +106,7 @@ TakSource::TakSource(std::shared_ptr<IInputStream> stream)
     }
     uint32_t bits = info.Audio.HasExtension ? info.Audio.ValidBitsPerSample
                                             : info.Audio.SampleBits;
-    m_asbd = cautil::buildASBDForPCM2(info.Audio.SampleRate,
+    m_asbd = ascutil::buildASBDForPCM2(info.Audio.SampleRate,
                                       info.Audio.ChannelNum,
                                       bits, 32,
                                       kAudioFormatFlagIsSignedInteger);

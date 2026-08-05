@@ -7,19 +7,13 @@
 #include <vector>
 #include <string>
 #include <utility>
-#ifdef __APPLE__
-#include <CoreServices/CoreServices.h>
-#include <AudioToolbox/AudioToolbox.h>
-#else
-#include "CoreAudio/CoreAudioTypes.h"
-#include "CoreAudio/AudioFile.h"
-#endif
+#include "catypes.h"
 #include "IInputStream.h"
 
 class CAFFile {
 public:
     struct Format {
-        AudioStreamBasicDescription  asbd;
+        ca::AudioStreamBasicDescription  asbd;
         std::vector<uint32_t> channel_layout;
         Format() { std::memset(&asbd, 0, sizeof asbd); }
     };
@@ -29,8 +23,8 @@ private:
     Format                                            m_primary_format;
     std::vector<Format>                               m_layered_formats;
     std::vector<uint8_t>                              m_magic_cookie;
-    AudioFilePacketTableInfo                          m_packet_info;
-    std::vector<AudioStreamPacketDescription>         m_packet_table;
+    ca::AudioFilePacketTableInfo                       m_packet_info;
+    std::vector<ca::AudioStreamPacketDescription>     m_packet_table;
     int64_t                                           m_data_offset;
     int64_t                                           m_data_size;
     int64_t                                           m_duration;

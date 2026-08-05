@@ -4,11 +4,6 @@
 #include <map>
 #include "ISink.h"
 #include "platformutil.h"
-#ifdef __APPLE__
-#include <AudioToolbox/AudioToolbox.h>
-#else
-#include "CoreAudio/AudioFile.h"
-#endif
 
 class CAFSink : public ISink, public ITagStore, public IFinishWriteSink {
     std::shared_ptr<FILE> m_file;
@@ -20,17 +15,17 @@ class CAFSink : public ISink, public ITagStore, public IFinishWriteSink {
     std::vector<uint8_t > m_magic_cookie;
     std::map<std::string, std::string> m_tags;
     std::vector<uint32_t> m_packet_table;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
     CAFSink(const std::string &filename,
-            const AudioStreamBasicDescription &asbd,
+            const ca::AudioStreamBasicDescription &asbd,
             uint32_t channel_layout,
             const std::vector<uint8_t> &cookie)
     {
         init(platform::openFileOrStd(filename, "wb"), asbd, channel_layout, cookie);
     }
     CAFSink(const std::shared_ptr<FILE> &file,
-            const AudioStreamBasicDescription &asbd,
+            const ca::AudioStreamBasicDescription &asbd,
             uint32_t channel_layout,
             const std::vector<uint8_t> &cookie)
     {
@@ -43,10 +38,10 @@ public:
     }
     void beginWrite();
     void writeSamples(const void *data, size_t length, size_t nsamples);
-    void finishWrite(const AudioFilePacketTableInfo &info);
+    void finishWrite(const ca::AudioFilePacketTableInfo &info);
 private:
     void init(const std::shared_ptr<FILE> &file,
-              const AudioStreamBasicDescription &asbd,
+              const ca::AudioStreamBasicDescription &asbd,
               uint32_t channel_layout,
               const std::vector<uint8_t> &cookie);
     uint32_t packedBytesPerFrame()
@@ -91,7 +86,7 @@ private:
     void ldsc();
     void info();
     void data();
-    void pakt(const AudioFilePacketTableInfo &info);
+    void pakt(const ca::AudioFilePacketTableInfo &info);
 };
 
 #endif

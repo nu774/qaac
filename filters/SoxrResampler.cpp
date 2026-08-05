@@ -1,17 +1,18 @@
 #include "SoxrResampler.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 SoxrResampler::SoxrResampler(const std::shared_ptr<ISource> &src,
                              unsigned rate)
     : FilterBase(src), m_position(0), m_module(SOXRModule::instance())
 {
-    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
+    const ca::AudioStreamBasicDescription &asbd = src->getSampleFormat();
     unsigned bits = 32;
     if (asbd.mBitsPerChannel > 32
         || ((asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
             asbd.mBitsPerChannel > 24))
         bits = 64;
-    m_asbd = cautil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
+    m_asbd = ascutil::buildASBDForPCM(rate, asbd.mChannelsPerFrame,
                                      bits, kAudioFormatFlagIsFloat);
 
     soxr_quality_spec_t qspec;

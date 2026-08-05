@@ -9,10 +9,10 @@ class Normalizer: public FilterBase {
     std::vector<uint8_t> m_fbuffer;
     std::shared_ptr<FILE> m_tmpfile;
     uint64_t m_processed, m_position;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
     Normalizer(const std::shared_ptr<ISource> &src, bool seekable);
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

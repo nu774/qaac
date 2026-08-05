@@ -2,6 +2,7 @@
 #include <vector>
 #include "FilterBase.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 class SoftClipper {
     int m_nchannels;
@@ -22,18 +23,18 @@ class Limiter: public FilterBase {
     SoftClipper m_clipper;
     std::vector<uint8_t> m_ibuffer;
     std::vector<float>   m_fbuffer;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
     Limiter(const std::shared_ptr<ISource> &source)
         : FilterBase(source),
           m_clipper(source->getSampleFormat().mChannelsPerFrame)
     {
-        const AudioStreamBasicDescription &asbd = source->getSampleFormat();
-        m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
+        const ca::AudioStreamBasicDescription &asbd = source->getSampleFormat();
+        m_asbd = ascutil::buildASBDForPCM(asbd.mSampleRate,
                                          asbd.mChannelsPerFrame, 32,
                                          kAudioFormatFlagIsFloat);
     }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

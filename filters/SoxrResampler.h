@@ -10,7 +10,7 @@ class SoxrResampler: public FilterBase {
     uint64_t m_length;
     std::vector<uint8_t > m_pivot, m_buffer;
     std::shared_ptr<soxr> m_resampler;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     SOXRModule &m_module;
 public:
     SoxrResampler(const std::shared_ptr<ISource> &src, unsigned rate);
@@ -19,7 +19,7 @@ public:
     {
         return m_length;
     }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

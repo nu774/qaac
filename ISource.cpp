@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <atomic>
 #include "ISource.h"
+#include "cautil.h"
 
 namespace {
     union uif_t {
@@ -65,7 +66,7 @@ size_t readSamplesFull(ISource *src, void *buffer, size_t nsamples)
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
                           std::vector<float> *floatBuffer, size_t nsamples)
 {
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    const ca::AudioStreamBasicDescription &sf = src->getSampleFormat();
     if (floatBuffer->size() < nsamples * sf.mChannelsPerFrame)
         floatBuffer->resize(nsamples * sf.mChannelsPerFrame);
     return readSamplesAsFloat(src, pivot, &(*floatBuffer)[0], nsamples);
@@ -74,7 +75,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
                           float *floatBuffer, size_t nsamples)
 {
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    const ca::AudioStreamBasicDescription &sf = src->getSampleFormat();
     uint32_t bpc = sf.mBytesPerFrame / sf.mChannelsPerFrame;
 
     if ((sf.mFormatFlags & kAudioFormatFlagIsFloat) && bpc == 4)
@@ -111,7 +112,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
                           std::vector<double> *doubleBuffer, size_t nsamples)
 {
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    const ca::AudioStreamBasicDescription &sf = src->getSampleFormat();
     if (doubleBuffer->size() < nsamples * sf.mChannelsPerFrame)
         doubleBuffer->resize(nsamples * sf.mChannelsPerFrame);
     return readSamplesAsFloat(src, pivot, &(*doubleBuffer)[0], nsamples);
@@ -120,7 +121,7 @@ size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
 size_t readSamplesAsFloat(ISource *src, std::vector<uint8_t> *pivot,
                           double *doubleBuffer, size_t nsamples)
 {
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    const ca::AudioStreamBasicDescription &sf = src->getSampleFormat();
     uint32_t bpc = sf.mBytesPerFrame / sf.mChannelsPerFrame;
 
     if ((sf.mFormatFlags & kAudioFormatFlagIsFloat) && bpc == 8)

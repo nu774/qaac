@@ -264,7 +264,7 @@ void CAFFile::parse_pakt(int64_t size)
 {
     // CAFPacketTableHeader
     int64_t i, mNumberPackets, pos = 0;
-    AudioStreamBasicDescription asbd = format().asbd;
+    ca::AudioStreamBasicDescription asbd = format().asbd;
 
     read64be(&mNumberPackets);
     read64be(&m_packet_info.mNumberValidFrames);
@@ -274,7 +274,7 @@ void CAFFile::parse_pakt(int64_t size)
     uint32_t low = ~0, high = 0;
 
     for (i = 0; i < mNumberPackets; ++i) {
-        AudioStreamPacketDescription aspd = { 0 };
+        ca::AudioStreamPacketDescription aspd = { 0 };
         aspd.mStartOffset  = pos;
         if (!asbd.mBytesPerPacket)
             aspd.mDataByteSize = read_ber_integer(m_stream.get());
@@ -294,7 +294,7 @@ void CAFFile::parse_pakt(int64_t size)
 
 void CAFFile::calc_duration()
 {
-    AudioStreamBasicDescription asbd = format().asbd;
+    ca::AudioStreamBasicDescription asbd = format().asbd;
     if (m_packet_info.mNumberValidFrames)
         m_duration = m_packet_info.mNumberValidFrames * tscale() + .5;
     else if (m_packet_table.size())

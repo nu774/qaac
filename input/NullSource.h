@@ -4,14 +4,14 @@
 #include "ISource.h"
 
 class NullSource: public ISeekableSource {
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     int64_t m_position;
 public:
-    NullSource(const AudioStreamBasicDescription &asbd):
+    NullSource(const ca::AudioStreamBasicDescription &asbd):
         m_asbd(asbd), m_position(0)
     {}
     uint64_t length() const { return -1; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

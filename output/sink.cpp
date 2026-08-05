@@ -3,6 +3,7 @@
 #include "sink.h"
 #include "util.h"
 #include "cautil.h"
+#include "ascutil.h"
 #include "bitstream.h"
 #include "metadata.h"
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -166,7 +167,7 @@ void MP4SinkBase::close()
     }
 }
 
-void MP4SinkBase::finishWrite(const AudioFilePacketTableInfo &info)
+void MP4SinkBase::finishWrite(const ca::AudioFilePacketTableInfo &info)
 {
     m_edit_start = info.mPrimingFrames;
     m_edit_duration = info.mNumberValidFrames;
@@ -396,9 +397,9 @@ MP4Sink::MP4Sink(const std::string &path,
 {
     std::memset(&m_priming_info, 0, sizeof m_priming_info);
     try {
-        AudioStreamBasicDescription asbd;
+        ca::AudioStreamBasicDescription asbd;
         std::vector<uint32_t> channels;
-        cautil::parseASC(config, &asbd, &channels);
+        ascutil::parseASC(config, &asbd, &channels);
         unsigned rate = asbd.mSampleRate;
         if (asbd.mFormatID == 'aach')
             rate /= 2;

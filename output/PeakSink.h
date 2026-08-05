@@ -2,13 +2,14 @@
 #define PEAKSINK_H
 
 #include "ISink.h"
+#include "cautil.h"
 
 class PeakSink: public ISink {
     double m_peak;
     double m_scale;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
-    PeakSink(const AudioStreamBasicDescription &asbd)
+    PeakSink(const ca::AudioStreamBasicDescription &asbd)
         : m_peak(0.0), m_scale(1.0), m_asbd(asbd)
     {
         if (m_asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger)

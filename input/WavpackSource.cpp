@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 #include "WavpackSource.h"
+#include "ascutil.h"
 #include <wavpack.h>
 #include "strutil.h"
 #include "metadata.h"
@@ -129,12 +130,12 @@ WavpackSource::WavpackSource(std::shared_ptr<IInputStream> stream, const std::st
 
     if (!parseWrapper()) {
         bool is_float = m_module.GetMode(wpc) & MODE_FLOAT;
-        uint32_t flags = is_float ? kAudioFormatFlagIsFloat
-                                  : kAudioFormatFlagIsSignedInteger;
+        uint32_t flags = is_float ? ca::kAudioFormatFlagIsFloat
+                                  : ca::kAudioFormatFlagIsSignedInteger;
         uint32_t bits = m_module.GetBitsPerSample(wpc);
         uint32_t obits = (is_float && bits == 16) ? 16 : 32;
 
-        m_asbd = cautil::buildASBDForPCM2(m_module.GetSampleRate(wpc),
+        m_asbd = ascutil::buildASBDForPCM2(m_module.GetSampleRate(wpc),
                                           m_module.GetNumChannels(wpc),
                                           bits, obits, flags);
     }

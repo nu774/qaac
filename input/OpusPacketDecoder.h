@@ -43,13 +43,13 @@ public:
 class OpusPacketDecoder: public IPacketDecoder {
     LibOpusModule &m_module;
     std::shared_ptr<OpusMSDecoder> m_decoder;
-    AudioStreamBasicDescription m_iasbd, m_oasbd;
+    ca::AudioStreamBasicDescription m_iasbd, m_oasbd;
 public:
     OpusPacketDecoder();
     ~OpusPacketDecoder();
     void reset();
-    const AudioStreamBasicDescription &getInputFormat() { return m_iasbd; }
-    const AudioStreamBasicDescription &getSampleFormat() { return m_oasbd; }
+    const ca::AudioStreamBasicDescription &getInputFormat() { return m_iasbd; }
+    const ca::AudioStreamBasicDescription &getSampleFormat() { return m_oasbd; }
     void setMagicCookie(const std::vector<uint8_t> &cookie);
     size_t decode(const std::vector<uint8_t> &packet, std::vector<uint8_t> *samples);
 };

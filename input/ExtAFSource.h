@@ -16,7 +16,8 @@ class ExtAFSource: public ISeekableSource, public ITagParser
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
     std::vector<uint8_t> m_buffer;
-    AudioStreamBasicDescription m_iasbd, m_asbd;
+    AudioStreamBasicDescription m_iasbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
     ExtAFSource(std::shared_ptr<IInputStream> stream);
     ~ExtAFSource()
@@ -25,7 +26,7 @@ public:
         m_eaf.attach(0, false);
     }
     uint64_t length() const { return m_length; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

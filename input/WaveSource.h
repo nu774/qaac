@@ -2,7 +2,7 @@
 #define WaveSource_H
 
 #include "ISource.h"
-#include "cautil.h"
+#include "catypes.h"
 #include "platformutil.h"
 #include "IInputStream.h"
 
@@ -25,11 +25,11 @@ class WaveSource: public ISeekableSource {
     std::shared_ptr<IInputStream> m_stream;
     std::vector<uint32_t> m_chanmap;
     std::vector<uint8_t> m_buffer;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
     WaveSource(std::shared_ptr<IInputStream> m_stream, bool ignorelength = false);
     uint64_t length() const { return m_length; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

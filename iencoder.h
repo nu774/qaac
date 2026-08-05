@@ -3,12 +3,7 @@
 
 #include <memory>
 #include <vector>
-#ifdef __APPLE__
-#include <CoreServices/CoreServices.h>
-#include <AudioToolbox/AudioToolbox.h>
-#else
-#include "CoreAudio/CoreAudioTypes.h"
-#endif
+#include "catypes.h"
 #include "ISource.h"
 #include "ISink.h"
 
@@ -16,10 +11,10 @@ struct IEncoder {
     virtual ~IEncoder() {}
     virtual void setSource(const std::shared_ptr<ISource> &source) = 0;
     virtual void setSink(const std::shared_ptr<ISink> &sink) = 0;
-    virtual uint32_t encodeChunk(UInt32 npackets) = 0;
+    virtual uint32_t encodeChunk(uint32_t npackets) = 0;
     virtual ISource *src() = 0;
-    virtual const AudioStreamBasicDescription &getInputDescription() const = 0;
-    virtual const AudioStreamBasicDescription &getOutputDescription() const = 0;
+    virtual const ca::AudioStreamBasicDescription &getInputDescription() const = 0;
+    virtual const ca::AudioStreamBasicDescription &getOutputDescription() const = 0;
 };
 
 struct IEncoderStat {
@@ -36,14 +31,14 @@ class EncoderStat {
     uint64_t m_frames_written;
     uint64_t m_bytes_written;
     double m_current_bitrate;
-    AudioStreamBasicDescription m_desc;
+    ca::AudioStreamBasicDescription m_desc;
 public:
     EncoderStat()
         : m_samples_written(0),
           m_frames_written(0),
           m_bytes_written(0)
     {}
-    void setBasicDescription(const AudioStreamBasicDescription &desc)
+    void setBasicDescription(const ca::AudioStreamBasicDescription &desc)
     {
         m_desc = desc;
     }

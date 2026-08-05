@@ -4,9 +4,10 @@
 #include <sys/stat.h>
 #include "WaveSource.h"
 #include "WaveSink.h"
+#include "cautil.h"
 
 namespace {
-    inline uint16_t get_wave_format(const AudioStreamBasicDescription &asbd)
+    inline uint16_t get_wave_format(const ca::AudioStreamBasicDescription &asbd)
     {
         return (asbd.mChannelsPerFrame > 2
                 || asbd.mBitsPerChannel > 16
@@ -17,7 +18,7 @@ namespace {
 
 WaveSink::WaveSink(const std::shared_ptr<FILE> &fp,
                    uint64_t duration,
-                   const AudioStreamBasicDescription &asbd,
+                   const ca::AudioStreamBasicDescription &asbd,
                    uint32_t chanmask)
         : m_file(fp), m_closed(false), m_seekable(false), m_fact(false),
           m_chanmask(chanmask), m_bytes_written(0), m_asbd(asbd)

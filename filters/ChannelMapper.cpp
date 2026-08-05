@@ -1,4 +1,9 @@
 #include <cassert>
+#ifdef __APPLE__
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/CoreAudioTypes.h"
+#endif
 #include "ChannelMapper.h"
 #include "util.h"
 #include "chanmap.h"
@@ -8,7 +13,7 @@ ChannelMapper::ChannelMapper(const std::shared_ptr<ISource> &source,
                              uint32_t bitmap, uint32_t layout_tag)
     : FilterBase(source)
 {
-    const AudioStreamBasicDescription &asbd = source->getSampleFormat();
+    const ca::AudioStreamBasicDescription &asbd = source->getSampleFormat();
     assert(chanmap.size() == asbd.mChannelsPerFrame);
     assert(chanmap.size() <= 8);
 

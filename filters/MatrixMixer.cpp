@@ -2,6 +2,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "cautil.h"
+#include "ascutil.h"
 
 static bool validateMatrix(const std::vector<std::vector<misc::complex_t>> &mat,
                            uint32_t *nshifts)
@@ -82,7 +83,7 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
       m_matrix(spec),
       m_module(SoXConvolverModule::instance())
 {
-    const AudioStreamBasicDescription &fmt = source->getSampleFormat();
+    const ca::AudioStreamBasicDescription &fmt = source->getSampleFormat();
     uint32_t shiftMask;
     if (!validateMatrix(m_matrix, &shiftMask))
         throw std::runtime_error("invalid/unsupported matrix spec");
@@ -90,7 +91,7 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
         throw std::runtime_error("unmatch number of channels with matrix");
     if (normalize)
         normalizeMatrix(m_matrix);
-    m_asbd = cautil::buildASBDForPCM(fmt.mSampleRate, spec.size(),
+    m_asbd = ascutil::buildASBDForPCM(fmt.mSampleRate, spec.size(),
                                      32, kAudioFormatFlagIsFloat);
     m_buffer.set_unit(fmt.mChannelsPerFrame);
     for (unsigned i = 0; i < fmt.mChannelsPerFrame; ++i) {
@@ -105,7 +106,7 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
 
 void MatrixMixer::initFilter()
 {
-    const AudioStreamBasicDescription &fmt = source()->getSampleFormat();
+    const ca::AudioStreamBasicDescription &fmt = source()->getSampleFormat();
     size_t numtaps = fmt.mSampleRate / 12;
     if (!(numtaps & 1)) ++numtaps;
     std::vector<double> coefs(numtaps);

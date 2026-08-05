@@ -13,7 +13,7 @@ public:
     const std::shared_ptr<ISource> &sourcePtr() const { return m_src; }
     uint64_t length() const { return m_src->length(); }
     int64_t getPosition() { return m_src->getPosition(); }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_src->getSampleFormat();
     }

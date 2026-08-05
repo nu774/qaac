@@ -1,5 +1,6 @@
 #include "AvisynthSource.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -70,7 +71,7 @@ AvisynthSource::AvisynthSource(const std::string &path)
         throw std::runtime_error("No audio in the clip");
     bool is_float = avs_sample_type(vi) == AVS_SAMPLE_FLOAT;
     int bits = avs_bytes_per_channel_sample(vi) * 8;
-    m_asbd = cautil::buildASBDForPCM2(avs_samples_per_second(vi),
+    m_asbd = ascutil::buildASBDForPCM2(avs_samples_per_second(vi),
                                       avs_audio_channels(vi),
                                       bits, 32,
                                       is_float ? kAudioFormatFlagIsFloat

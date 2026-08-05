@@ -9,6 +9,7 @@
 #include <unistd.h>
 #endif
 #include "ISink.h"
+#include "ascutil.h"
 #include "platformutil.h"
 #include "options.h"
 #include "InputFactory.h"
@@ -182,11 +183,11 @@ public:
 };
 
 static
-AudioStreamBasicDescription get_encoding_ASBD(const ISource *src,
-                                              uint32_t codecid)
+ca::AudioStreamBasicDescription get_encoding_ASBD(const ISource *src,
+                                                   uint32_t codecid)
 {
-    AudioStreamBasicDescription iasbd = src->getSampleFormat();
-    AudioStreamBasicDescription oasbd = { 0 };
+    ca::AudioStreamBasicDescription iasbd = src->getSampleFormat();
+    ca::AudioStreamBasicDescription oasbd = { 0 };
 
     oasbd.mFormatID = codecid;
     oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
@@ -224,7 +225,7 @@ static
 uint32_t get_encoding_channel_layout(ISource *src, const Options &opts,
                                      uint32_t *bitmap)
 {
-    AudioStreamBasicDescription asbd = src->getSampleFormat();
+    ca::AudioStreamBasicDescription asbd = src->getSampleFormat();
     const std::vector<uint32_t> *cs = src->getChannels();
     uint32_t chanmask;
     if (cs) chanmask = chanmap::getChannelMask(*cs);
@@ -249,7 +250,7 @@ uint32_t get_encoding_channel_layout(ISource *src, const Options &opts,
 
 double target_sample_rate(const Options &opts, ISource *src)
 {
-    AudioStreamBasicDescription iasbd = src->getSampleFormat();
+    ca::AudioStreamBasicDescription iasbd = src->getSampleFormat();
     double candidate = opts.rate > 0 ? opts.rate : iasbd.mSampleRate;
 #ifdef QAAC
     if (!opts.isAAC())
@@ -264,7 +265,7 @@ double target_sample_rate(const Options &opts, ISource *src)
         AudioStreamBasicDescription oasbd = { 0 };
         oasbd.mFormatID = opts.output_format;
         oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
-        AudioConverterXX converter(iasbd, oasbd);
+        AudioConverterXX converter(cautil::toNative(iasbd), oasbd);
         converter.setInputChannelLayout(acl);
         converter.setOutputChannelLayout(acl);
         int32_t quality = (opts.quality + 1) << 5;
@@ -344,7 +345,7 @@ void manipulate_channels(std::vector<std::shared_ptr<ISource> > &chain,
     }
 }
 
-std::string pcm_format_str(AudioStreamBasicDescription &asbd)
+std::string pcm_format_str(const ca::AudioStreamBasicDescription &asbd)
 {
     const char *stype[] = { "int", "float" };
     unsigned itype = !!(asbd.mFormatFlags & kAudioFormatFlagIsFloat);
@@ -378,7 +379,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
     unsigned nprocessors = std::thread::hardware_concurrency();
     bool threading = opts.threading && nprocessors > 1;
 
-    AudioStreamBasicDescription sasbd = src->getSampleFormat();
+    ca::AudioStreamBasicDescription sasbd = src->getSampleFormat();
     manipulate_channels(chain, opts);
     // check if channel layout is available for codec
     if (opts.isAAC() || opts.isALAC())
@@ -411,7 +412,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                 LOG("WARNING: --rate requires libsoxr, resampling disabled\n");
 #else
                 LOG("%gHz -> %gHz\n", irate, orate);
-                AudioStreamBasicDescription sf
+                ca::AudioStreamBasicDescription sf
                     = chain.back()->getSampleFormat();
                 if ((sf.mFormatFlags & kAudioFormatFlagIsFloat)
                   && sf.mBitsPerChannel < 32)
@@ -499,7 +500,7 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         }
     }
     if (opts.isAAC()) {
-        AudioStreamBasicDescription sfmt = chain.back()->getSampleFormat();
+        ca::AudioStreamBasicDescription sfmt = chain.back()->getSampleFormat();
         if (!(sfmt.mFormatFlags & kAudioFormatFlagIsFloat) ||
             sfmt.mBitsPerChannel != 32)
             chain.push_back(std::make_shared<Quantizer>(chain.back(), 32,
@@ -647,7 +648,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
     uint32_t chanmask = 0;
     CAFSink *cafsink = 0;
     const std::shared_ptr<ISource> src = chain.back();
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    const ca::AudioStreamBasicDescription &sf = src->getSampleFormat();
     const std::vector<uint32_t> *channels = src->getChannels();
 
     if (channels) {
@@ -700,7 +701,7 @@ void decode_file(const std::vector<std::shared_ptr<ISource> > &chain,
         if (wavsink)
             wavsink->finishWrite();
         else if (cafsink)
-            cafsink->finishWrite(AudioFilePacketTableInfo());
+            cafsink->finishWrite(ca::AudioFilePacketTableInfo());
     } else {
         PeakSink *p = dynamic_cast<PeakSink *>(sink.get());
         LOG("Peak: %g (%gdB)\n", p->peak(), util::scale_to_dB(p->peak()));
@@ -787,7 +788,7 @@ void applyExternalChapterFile(const std::shared_ptr<ISink> &sink,
 
 static
 void finishWriteSink(const std::shared_ptr<ISink> &sink, IEncoder *encoder,
-                     const AudioFilePacketTableInfo &pti, const Options &opts)
+                     const ca::AudioFilePacketTableInfo &pti, const Options &opts)
 {
     IBitrateWriter *bw = dynamic_cast<IBitrateWriter*>(sink.get());
     if (bw) {
@@ -814,9 +815,9 @@ void finishWriteSink(const std::shared_ptr<ISink> &sink, IEncoder *encoder,
 }
 
 static
-AudioStreamBasicDescription prepare_encode_target(
+ca::AudioStreamBasicDescription prepare_encode_target(
         std::vector<std::shared_ptr<ISource> > &chain, const Options &opts,
-        uint32_t *channel_layout, AudioStreamBasicDescription *iasbd)
+        uint32_t *channel_layout, ca::AudioStreamBasicDescription *iasbd)
 {
     *channel_layout = map_to_aac_channels(chain, opts);
     *iasbd = chain.back()->getSampleFormat();
@@ -838,7 +839,7 @@ void run_encode(IEncoder *encoder, const std::shared_ptr<ISink> &sink,
 
 static
 void finish_encode(IEncoder *encoder, const std::shared_ptr<ISink> &sink,
-                   const AudioFilePacketTableInfo &pti, const Options &opts)
+                   const ca::AudioFilePacketTableInfo &pti, const Options &opts)
 {
     applyExternalChapterFile(sink, encoder, opts);
     finishWriteSink(sink, encoder, pti, opts);
@@ -848,13 +849,13 @@ void finish_encode(IEncoder *encoder, const std::shared_ptr<ISink> &sink,
 static
 std::shared_ptr<ISink> open_sink(const std::string &ofilename,
                                  const Options &opts,
-                                 const AudioStreamBasicDescription &asbd,
+                                 const ca::AudioStreamBasicDescription &asbd,
                                  uint32_t channel_layout,
                                  const std::vector<uint8_t> &cookie)
 {
     std::vector<uint8_t> asc;
     if (opts.isAAC())
-        asc = cautil::parseMagicCookieAAC(cookie);
+        asc = ascutil::parseMagicCookieAAC(cookie);
 
     platform::MakeSureDirectoryPathExistsX(ofilename);
     if (opts.isMP4()) {
@@ -888,8 +889,8 @@ void show_available_codec_setttings(UInt32 fmt)
             auto channels = chanmap::getChannels(&acl);
             std::string name = chanmap::getChannelNames(channels);
 
-            AudioStreamBasicDescription iasbd =
-                cautil::buildASBDForPCM(srates[i].mMinimum,
+            ca::AudioStreamBasicDescription iasbd =
+                ascutil::buildASBDForPCM(srates[i].mMinimum,
                                         channels.size(),
                                         32, kAudioFormatFlagIsFloat);
             AudioStreamBasicDescription oasbd = { 0 };
@@ -897,7 +898,7 @@ void show_available_codec_setttings(UInt32 fmt)
             oasbd.mSampleRate = iasbd.mSampleRate;
             oasbd.mChannelsPerFrame = iasbd.mChannelsPerFrame;
 
-            AudioConverterXX converter(iasbd, oasbd);
+            AudioConverterXX converter(cautil::toNative(iasbd), oasbd);
             converter.setInputChannelLayout(acl);
             converter.setOutputChannelLayout(acl);
             converter.setBitRateControlMode(
@@ -988,10 +989,10 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
                  const std::string &ofilename, const Options &opts)
 {
     uint32_t channel_layout;
-    AudioStreamBasicDescription iasbd;
-    AudioStreamBasicDescription oasbd =
+    ca::AudioStreamBasicDescription iasbd;
+    ca::AudioStreamBasicDescription oasbd =
         prepare_encode_target(chain, opts, &channel_layout, &iasbd);
-    AudioConverterXX converter(iasbd, oasbd);
+    AudioConverterXX converter(cautil::toNative(iasbd), cautil::toNative(oasbd));
     AudioChannelLayout acl = { 0 };
     acl.mChannelLayoutTag = channel_layout;
     converter.setInputChannelLayout(acl);
@@ -1029,7 +1030,7 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
 
     run_encode(encoder.get(), sink, ofilename, opts);
 
-    AudioFilePacketTableInfo pti = { 0 };
+    ca::AudioFilePacketTableInfo pti = { 0 };
     if (opts.isAAC())
         pti = encoder->getGaplessInfo();
     finish_encode(encoder.get(), sink, pti, opts);
@@ -1042,8 +1043,8 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
         const std::string &ofilename, const Options &opts)
 {
     uint32_t channel_layout;
-    AudioStreamBasicDescription iasbd;
-    AudioStreamBasicDescription oasbd =
+    ca::AudioStreamBasicDescription iasbd;
+    ca::AudioStreamBasicDescription oasbd =
         prepare_encode_target(chain, opts, &channel_layout, &iasbd);
     ALACEncoderX encoder(iasbd);
     encoder.setFastMode(opts.alac_fast);
@@ -1062,7 +1063,7 @@ void encode_file(std::vector<std::shared_ptr<ISource> > &chain,
     set_tags(chain[0].get(), sink.get(), opts, "Apple Lossless Encoder");
 
     run_encode(&encoder, sink, ofilename, opts);
-    finish_encode(&encoder, sink, AudioFilePacketTableInfo(), opts);
+    finish_encode(&encoder, sink, ca::AudioFilePacketTableInfo(), opts);
 }
 #endif
 
@@ -1106,7 +1107,7 @@ PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
                         bool hasPrevTrack, bool isLastTrack)
 {
     const std::shared_ptr<ISource> src = chain.back();
-    const AudioStreamBasicDescription &sf = src->getSampleFormat();
+    const ca::AudioStreamBasicDescription &sf = src->getSampleFormat();
     const std::vector<uint32_t> *channels = src->getChannels();
     uint32_t chanmask = 0;
 
@@ -1217,7 +1218,7 @@ PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
 const char *get_qaac_version();
 
 static
-AudioStreamBasicDescription getRawFormat(const Options &opts)
+ca::AudioStreamBasicDescription getRawFormat(const Options &opts)
 {
     int bits;
     unsigned char c_type, c_endian = 'L';
@@ -1240,8 +1241,8 @@ AudioStreamBasicDescription getRawFormat(const Options &opts)
     uint32_t type_tab[] = {
         0, kAudioFormatFlagIsSignedInteger, kAudioFormatFlagIsFloat
     };
-    AudioStreamBasicDescription asbd =
-        cautil::buildASBDForPCM(opts.raw_sample_rate, opts.raw_channels,
+    ca::AudioStreamBasicDescription asbd =
+        ascutil::buildASBDForPCM(opts.raw_sample_rate, opts.raw_channels,
                                 bits, type_tab[itype]);
     if (iendian)
         asbd.mFormatFlags |= kAudioFormatFlagIsBigEndian;
@@ -1252,7 +1253,7 @@ static
 std::shared_ptr<ISeekableSource>
 trim_input(std::shared_ptr<ISeekableSource> src, const Options & opts)
 {
-    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
+    const ca::AudioStreamBasicDescription &asbd = src->getSampleFormat();
     double rate = asbd.mSampleRate;
     int64_t start = 0, end = 0, delay = 0;
     if (!opts.start && !opts.end && !opts.delay)

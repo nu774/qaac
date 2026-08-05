@@ -2,12 +2,6 @@
 #define _SINK_H
 
 #include <functional>
-#ifdef __APPLE__
-#include <CoreServices/CoreServices.h>
-#include <AudioToolbox/AudioToolbox.h>
-#else
-#include "CoreAudio/AudioFile.h"
-#endif
 #include "mp4v2wrapper.h"
 #include "ISink.h"
 #include "platformutil.h"
@@ -57,7 +51,7 @@ public:
     {
         m_optimize_cb = optimize_cb;
     }
-    void finishWrite(const AudioFilePacketTableInfo &info);
+    void finishWrite(const ca::AudioFilePacketTableInfo &info);
 protected:
     virtual void writeTags();
 private:
@@ -80,7 +74,7 @@ private:
 };
 
 class MP4Sink: public ISink, public MP4SinkBase {
-    AudioFilePacketTableInfo m_priming_info;
+    ca::AudioFilePacketTableInfo m_priming_info;
     int m_gapless_mode;
 public:
     enum {

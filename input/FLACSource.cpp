@@ -3,6 +3,7 @@
 #include "strutil.h"
 #include "metadata.h"
 #include "cautil.h"
+#include "ascutil.h"
 #include "platformutil.h"
 #include "chanmap.h"
 
@@ -214,7 +215,7 @@ void FLACSource::handleStreamInfo(const FLAC__StreamMetadata_StreamInfo &si)
         return;
     }
     m_length = si.total_samples;
-    m_asbd = cautil::buildASBDForPCM2(si.sample_rate, si.channels,
+    m_asbd = ascutil::buildASBDForPCM2(si.sample_rate, si.channels,
                                       si.bits_per_sample, 32,
                                       kAudioFormatFlagIsSignedInteger);
 }

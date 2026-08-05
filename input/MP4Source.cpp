@@ -2,7 +2,13 @@
 #include "MP4Edits.h"
 #include "metadata.h"
 #include "cautil.h"
+#include "ascutil.h"
 #include "chanmap.h"
+#ifdef __APPLE__
+#include <AudioToolbox/AudioToolbox.h>
+#else
+#include "CoreAudio/CoreAudioTypes.h"
+#endif
 #ifdef QAAC
 #include "CoreAudioPacketDecoder.h"
 #include "MPAHeader.h"
@@ -256,7 +262,7 @@ void MP4Source::setupALAC()
         m_chanmap = chanmap::getChannels(&acl);
 	}
 #ifdef QAAC
-    m_decoder = std::make_shared<CoreAudioPacketDecoder>(m_iasbd);
+    m_decoder = std::make_shared<CoreAudioPacketDecoder>(cautil::toNative(m_iasbd));
 #else
     m_decoder = std::make_shared<ALACPacketDecoder>(m_iasbd);
 #endif
@@ -308,13 +314,13 @@ void MP4Source::setupMPEG4Audio()
             std::copy(p + 12, p + size, std::back_inserter(magic_cookie));
             MP4Free(p);
         }
-        auto asc = cautil::parseMagicCookieAAC(magic_cookie);
-        cautil::parseASC(asc, &m_iasbd, &m_chanmap);
+        auto asc = ascutil::parseMagicCookieAAC(magic_cookie);
+        ascutil::parseASC(asc, &m_iasbd, &m_chanmap);
         if (m_iasbd.mFormatID != 'aac ' &&
             m_iasbd.mFormatID != 'aach' &&
             m_iasbd.mFormatID != 'aacp')
             throw std::runtime_error("Not supported input codec");
-        m_decoder = std::make_shared<CoreAudioPacketDecoder>(m_iasbd);
+        m_decoder = std::make_shared<CoreAudioPacketDecoder>(cautil::toNative(m_iasbd));
         m_decoder->setMagicCookie(magic_cookie);
         m_oasbd = m_decoder->getSampleFormat();
         break;
@@ -333,8 +339,8 @@ void MP4Source::setupMPEG4Audio()
         m_iasbd.mSampleRate       = header.sample_rate();
         m_iasbd.mFormatID         = layer_tab[header.layer];
         m_iasbd.mFramesPerPacket  = header.samples_per_frame();
-        m_iasbd.mChannelsPerFrame = header.is_mono() ? 1 : 2; 
-        m_decoder = std::make_shared<CoreAudioPacketDecoder>(m_iasbd);
+        m_iasbd.mChannelsPerFrame = header.is_mono() ? 1 : 2;
+        m_decoder = std::make_shared<CoreAudioPacketDecoder>(cautil::toNative(m_iasbd));
         m_oasbd = m_decoder->getSampleFormat();
         break;
     }

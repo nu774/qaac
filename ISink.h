@@ -2,9 +2,8 @@
 #define _ISINK_H
 
 #include <string>
+#include "catypes.h"
 #include "misc.h"
-
-struct AudioFilePacketTableInfo;
 
 struct ISink {
     virtual ~ISink() {}
@@ -14,7 +13,7 @@ struct ISink {
 
 struct IFinishWriteSink {
     virtual ~IFinishWriteSink() {}
-    virtual void finishWrite(const AudioFilePacketTableInfo &info) = 0;
+    virtual void finishWrite(const ca::AudioFilePacketTableInfo &info) = 0;
 };
 
 struct ITagStore {

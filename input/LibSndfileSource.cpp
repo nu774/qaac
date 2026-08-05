@@ -6,6 +6,7 @@
 #include "platformutil.h"
 #include "metadata.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 static
 uint32_t convert_chanmap(uint32_t value)
@@ -153,7 +154,7 @@ LibSndfileSource::LibSndfileSource(std::shared_ptr<IInputStream> stream)
     if (p->type == kAudioFormatFlagIsSignedInteger)
         pack_bits = 32;
 
-    m_asbd = cautil::buildASBDForPCM2(info.samplerate, info.channels,
+    m_asbd = ascutil::buildASBDForPCM2(info.samplerate, info.channels,
                                       p->bits, pack_bits,
                                       p->type);
 

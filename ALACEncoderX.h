@@ -6,34 +6,31 @@
 #include <ALACEncoder.h>
 
 class ALACEncoderX: public IEncoder, public IEncoderStat {
-    union ASBD {
-        AudioStreamBasicDescription asbd;
-        AudioFormatDescription afd;
-    };
     std::shared_ptr<ISource> m_src;
     std::shared_ptr<ISink> m_sink;
     std::shared_ptr<ALACEncoder> m_encoder;
     std::vector<uint8_t> m_input_buffer;
     std::vector<uint8_t> m_output_buffer;
-    AudioStreamBasicDescription m_iasbd;
+    ca::AudioStreamBasicDescription m_iasbd;
     AudioFormatDescription m_iafd;
-    ASBD m_odesc;
+    ca::AudioStreamBasicDescription m_oasbd;
+    AudioFormatDescription m_oafd;
     EncoderStat m_stat;
 public:
-    ALACEncoderX(const AudioStreamBasicDescription &desc);
+    ALACEncoderX(const ca::AudioStreamBasicDescription &desc);
     void setFastMode(bool fast) { m_encoder->SetFastMode(fast); }
-    uint32_t encodeChunk(UInt32 npackets);
+    uint32_t encodeChunk(uint32_t npackets);
     std::vector<uint8_t> getMagicCookie();
     void setSource(const std::shared_ptr<ISource> &source) { m_src = source; }
     void setSink(const std::shared_ptr<ISink> &sink) { m_sink = sink; }
     ISource *src() { return m_src.get(); }
-    const AudioStreamBasicDescription &getInputDescription() const
+    const ca::AudioStreamBasicDescription &getInputDescription() const
     {
         return m_iasbd;
     }
-    const AudioStreamBasicDescription &getOutputDescription() const
+    const ca::AudioStreamBasicDescription &getOutputDescription() const
     {
-        return m_odesc.asbd;
+        return m_oasbd;
     }
     uint64_t samplesRead() const { return m_src->getPosition(); }
     uint64_t samplesWritten() const { return m_stat.samplesWritten(); }
@@ -41,21 +38,7 @@ public:
     double currentBitrate() const { return m_stat.currentBitrate(); }
     double overallBitrate() const { return m_stat.overallBitrate(); }
 
-    static bool isAvailableOutputChannelLayout(uint32_t channel_layout_tag)
-    {
-        switch (channel_layout_tag) {
-        case kAudioChannelLayoutTag_Mono:
-        case kAudioChannelLayoutTag_Stereo:
-        case kAudioChannelLayoutTag_AAC_3_0:
-        case kAudioChannelLayoutTag_AAC_4_0:
-        case kAudioChannelLayoutTag_AAC_5_0:
-        case kAudioChannelLayoutTag_AAC_5_1:
-        case kAudioChannelLayoutTag_AAC_6_1:
-        case kAudioChannelLayoutTag_AAC_7_1:
-            return true;
-        }
-        return false;
-    }
+    static bool isAvailableOutputChannelLayout(uint32_t channel_layout_tag);
 };
 
 #endif

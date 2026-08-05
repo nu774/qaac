@@ -24,7 +24,7 @@ public:
     ~OggSource();
 
     uint64_t length() const override { return m_totalSamples; }
-    const AudioStreamBasicDescription &getSampleFormat() const override
+    const ca::AudioStreamBasicDescription &getSampleFormat() const override
     {
         return m_oasbd;
     }
@@ -48,7 +48,7 @@ private:
     size_t m_chainIndex;
 
     std::shared_ptr<IPacketDecoder> m_decoder;
-    AudioStreamBasicDescription m_oasbd;
+    ca::AudioStreamBasicDescription m_oasbd;
     int64_t m_preSkip;
     int64_t m_totalSamples;      // post pre-skip/end-trim, in m_oasbd's sample rate
     unsigned m_headerPacketCount; // header packets after the id header to skip

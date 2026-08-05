@@ -4,19 +4,13 @@
 #include <vector>
 #include <map>
 #include <memory>
-#ifdef __APPLE__
-#include <MacTypes.h>
-#include <CoreServices/CoreServices.h>
-#include <AudioToolbox/AudioToolbox.h>
-#else
-#include "CoreAudio/CoreAudioTypes.h"
-#endif
+#include "catypes.h"
 #include "misc.h"
 
 struct ISource {
     virtual ~ISource() {}
     virtual uint64_t length() const = 0;
-    virtual const AudioStreamBasicDescription &getSampleFormat() const = 0;
+    virtual const ca::AudioStreamBasicDescription &getSampleFormat() const = 0;
     virtual const std::vector<uint32_t> *getChannels() const = 0;
     virtual int64_t getPosition() = 0;
     virtual size_t readSamples(void *buffer, size_t nsamples) = 0;

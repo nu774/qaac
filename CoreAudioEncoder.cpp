@@ -12,9 +12,11 @@ CoreAudioEncoder::CoreAudioEncoder(AudioConverterXX &converter)
     : m_converter(converter),
       m_variable_packet_len(false),
       m_input_desc(converter.getInputStreamDescription()),
-      m_output_desc(converter.getOutputStreamDescription())
+      m_output_desc(converter.getOutputStreamDescription()),
+      m_input_desc_ca(cautil::fromNative(m_input_desc)),
+      m_output_desc_ca(cautil::fromNative(m_output_desc))
 {
-    m_stat.setBasicDescription(m_output_desc);
+    m_stat.setBasicDescription(m_output_desc_ca);
     {
         UInt32 res;
         UInt32 size = sizeof res;
@@ -67,7 +69,7 @@ uint32_t CoreAudioEncoder::encodeChunk(UInt32 npackets)
     return npackets;
 }
 
-AudioFilePacketTableInfo CoreAudioEncoder::getGaplessInfo()
+ca::AudioFilePacketTableInfo CoreAudioEncoder::getGaplessInfo()
 {
     auto pinfo = m_converter.getPrimeInfo();
     AudioFilePacketTableInfo ptinfo = { 0 };
@@ -78,7 +80,7 @@ AudioFilePacketTableInfo CoreAudioEncoder::getGaplessInfo()
         total /= 2;
     ptinfo.mNumberValidFrames =
         total - pinfo.leadingFrames - pinfo.trailingFrames;
-    return ptinfo;
+    return cautil::fromNative(ptinfo);
 }
 
 long CoreAudioEncoder::inputDataProc(UInt32 *npackets, AudioBufferList *abl)

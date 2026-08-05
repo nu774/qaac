@@ -23,7 +23,7 @@ class Compressor: public FilterBase {
     std::vector<uint8_t > m_pivot;
     util::FIFO<float> m_buffer;
     std::deque<std::pair<int64_t, float>> m_window;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     std::shared_ptr<FILE> m_statfile;
     std::shared_ptr<WaveSink> m_statsink;
     std::vector<float> m_statbuf;
@@ -32,7 +32,7 @@ public:
                double threshold, double ratio, double knee_width,
                double attack, double release,
                std::shared_ptr<FILE> statfp);
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

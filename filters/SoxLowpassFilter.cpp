@@ -1,12 +1,13 @@
 #include "SoxLowpassFilter.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 SoxLowpassFilter::SoxLowpassFilter(const std::shared_ptr<ISource> &src,
                                    unsigned Fp)
     : FilterBase(src), m_position(0), m_module(SoXConvolverModule::instance())
 {
-    const AudioStreamBasicDescription &asbd = src->getSampleFormat();
-    m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
+    const ca::AudioStreamBasicDescription &asbd = src->getSampleFormat();
+    m_asbd = ascutil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
                                      32, kAudioFormatFlagIsFloat);
     m_buffer.set_unit(m_asbd.mChannelsPerFrame);
 

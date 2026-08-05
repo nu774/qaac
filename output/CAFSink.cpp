@@ -5,7 +5,7 @@
 #include "platformutil.h"
 
 void CAFSink::init(const std::shared_ptr<FILE> &file,
-                   const AudioStreamBasicDescription &asbd,
+                   const ca::AudioStreamBasicDescription &asbd,
                    uint32_t channel_layout,
                    const std::vector<uint8_t> &cookie)
 {
@@ -54,7 +54,7 @@ void CAFSink::writeSamples(const void *data, size_t length, size_t nsamples)
         m_packet_table.push_back(length);
 }
 
-void CAFSink::finishWrite(const AudioFilePacketTableInfo &info)
+void CAFSink::finishWrite(const ca::AudioFilePacketTableInfo &info)
 {
     if (!m_seekable)
         return;
@@ -89,7 +89,7 @@ void CAFSink::writeASBD(uint32_t format)
     bool downsampled = m_asbd.mFormatID == 'aach' && format == 'aac ';
 
     if (format == 'lpcm')
-        flags = (2 | (m_asbd.mFormatFlags & kAudioFormatFlagIsFloat));
+        flags = (2 | (m_asbd.mFormatFlags & ca::kAudioFormatFlagIsFloat));
 
     writef64(downsampled ? m_asbd.mSampleRate / 2.0 : m_asbd.mSampleRate);
     write32(format);
@@ -114,7 +114,7 @@ void CAFSink::chan()
     write64(12);
 
     if (m_asbd.mFormatID == 'lpcm') {
-        write32(kAudioChannelLayoutTag_UseChannelBitmap);
+        write32(ca::kAudioChannelLayoutTag_UseChannelBitmap);
         write32(m_channel_layout);
     } else {
         write32(m_channel_layout);
@@ -167,7 +167,7 @@ void CAFSink::data()
     m_data_pos = std::ftell(m_file.get());
 }
 
-void CAFSink::pakt(const AudioFilePacketTableInfo &info)
+void CAFSink::pakt(const ca::AudioFilePacketTableInfo &info)
 {
     int64_t pakt_pos = ftello(m_file.get());
     write("pakt", 4);

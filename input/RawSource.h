@@ -10,12 +10,12 @@ class RawSource: public ISeekableSource {
     int64_t m_position;
     std::shared_ptr<IInputStream> m_stream;
     std::vector<uint8_t> m_buffer;
-    AudioStreamBasicDescription m_asbd, m_oasbd;
+    ca::AudioStreamBasicDescription m_asbd, m_oasbd;
 public:
     RawSource(std::shared_ptr<IInputStream> stream,
-              const AudioStreamBasicDescription &asbd);
+              const ca::AudioStreamBasicDescription &asbd);
     uint64_t length() const { return m_length; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_oasbd;
     }

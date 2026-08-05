@@ -9,6 +9,7 @@
 #include "CoreAudio/AudioComponent.h"
 #endif
 #include "cautil.h"
+#include "ascutil.h"
 #include "chanmap.h"
 
 const UInt32 AAC_7_1_Rear_Tag = kAudioChannelLayoutTag_AAC_7_1_B;
@@ -17,9 +18,9 @@ std::vector<uint8_t> AudioConverterXX::getCompressionMagicCookie()
 {
     auto cookie = BaseT::getCompressionMagicCookie();
     if (isOutputAAC() && m_OutputChannelLayoutTag == AAC_7_1_Rear_Tag) {
-        auto asc = cautil::parseMagicCookieAAC(cookie);
-        cautil::insert71RearPCEToASC(&asc);
-        cautil::replaceASCInMagicCookie(&cookie, asc);
+        auto asc = ascutil::parseMagicCookieAAC(cookie);
+        ascutil::insert71RearPCEToASC(&asc);
+        ascutil::replaceASCInMagicCookie(&cookie, asc);
     }
     return cookie;
 }

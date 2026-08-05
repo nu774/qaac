@@ -20,7 +20,7 @@ class MP4Source: public ISeekableSource, public ITagParser,
     std::vector<uint8_t> m_packetBuffer;
     std::vector<uint8_t> m_rawDecodeBuffer;
     util::FIFO<uint8_t>  m_decodeBuffer;
-    AudioStreamBasicDescription m_iasbd, m_oasbd;
+    ca::AudioStreamBasicDescription m_iasbd, m_oasbd;
     int m_currentEdit;
     int64_t m_currentEditEndPosition;
 public:
@@ -29,7 +29,7 @@ public:
     {
         return m_edits.totalDuration();
     }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_oasbd;
     }

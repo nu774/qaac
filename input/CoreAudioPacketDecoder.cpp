@@ -1,5 +1,6 @@
 #include "CoreAudioPacketDecoder.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 CoreAudioPacketDecoder::
 CoreAudioPacketDecoder(const AudioStreamBasicDescription & asbd)
@@ -30,13 +31,14 @@ CoreAudioPacketDecoder(const AudioStreamBasicDescription & asbd)
     default:
         throw std::runtime_error("Not supported input codec");
     }
-    m_oasbd =
-        cautil::buildASBDForPCM2(asbd.mSampleRate,
+    m_oasbd_ca =
+        ascutil::buildASBDForPCM2(asbd.mSampleRate,
                                  asbd.mChannelsPerFrame,
                                  valid_bits,
                                  is_float ? valid_bits : 32,
                                  is_float ? kAudioFormatFlagIsFloat
                                           : kAudioFormatFlagIsSignedInteger);
+    m_oasbd = cautil::toNative(m_oasbd_ca);
     m_converter = AudioConverterX(m_iasbd, m_oasbd);
     AudioConverterPrimeInfo pinfo = { 0 };
     m_converter.setPrimeInfo(pinfo);

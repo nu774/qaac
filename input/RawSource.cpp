@@ -1,9 +1,10 @@
 #include "RawSource.h"
 #include "platformutil.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 RawSource::RawSource(std::shared_ptr<IInputStream> stream,
-                     const AudioStreamBasicDescription &asbd)
+                     const ca::AudioStreamBasicDescription &asbd)
     : m_position(0), m_stream(stream), m_asbd(asbd)
 {
     int64_t file_size = m_stream->size();
@@ -12,7 +13,7 @@ RawSource::RawSource(std::shared_ptr<IInputStream> stream,
     else
         m_length = ~0ULL;
     bool isfloat = asbd.mFormatFlags & kAudioFormatFlagIsFloat;
-    m_oasbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
+    m_oasbd = ascutil::buildASBDForPCM2(asbd.mSampleRate,
                                        asbd.mChannelsPerFrame,
                                        asbd.mBitsPerChannel,
                                        isfloat ? asbd.mBitsPerChannel : 32,

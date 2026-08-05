@@ -1,5 +1,6 @@
 #include "ExtAFSource.h"
 #include "cautil.h"
+#include "ascutil.h"
 #include "chanmap.h"
 #include "strutil.h"
 #include "metadata.h"
@@ -65,7 +66,7 @@ ExtAFSource::ExtAFSource(std::shared_ptr<IInputStream> stream)
     if (m_iasbd.mFormatID == 'lpcm') {
         bool isfloat = m_iasbd.mFormatFlags & kAudioFormatFlagIsFloat;
         uint32_t bits = m_iasbd.mBytesPerFrame / m_iasbd.mChannelsPerFrame * 8;
-        m_asbd = cautil::buildASBDForPCM2(m_iasbd.mSampleRate,
+        m_asbd = ascutil::buildASBDForPCM2(m_iasbd.mSampleRate,
                                           m_iasbd.mChannelsPerFrame,
                                           m_iasbd.mBitsPerChannel,
                                           isfloat ? bits : 32,
@@ -78,16 +79,16 @@ ExtAFSource::ExtAFSource(std::shared_ptr<IInputStream> stream)
             unsigned index = (m_iasbd.mFormatFlags - 1) & 0x3;
             bits_per_channel = tab[index];
         }
-        m_asbd = cautil::buildASBDForPCM2(m_iasbd.mSampleRate,
+        m_asbd = ascutil::buildASBDForPCM2(m_iasbd.mSampleRate,
                                           m_iasbd.mChannelsPerFrame,
                                           bits_per_channel, 32,
                                           kAudioFormatFlagIsSignedInteger);
     } else {
-        m_asbd = cautil::buildASBDForPCM2(m_iasbd.mSampleRate,
+        m_asbd = ascutil::buildASBDForPCM2(m_iasbd.mSampleRate,
                                           m_iasbd.mChannelsPerFrame, 32, 32,
                                           kAudioFormatFlagIsFloat);
     }
-    m_eaf.setClientDataFormat(m_asbd);
+    m_eaf.setClientDataFormat(cautil::toNative(m_asbd));
 
     try {
         auto acl = m_af.getChannelLayout();
@@ -99,9 +100,9 @@ ExtAFSource::ExtAFSource(std::shared_ptr<IInputStream> stream)
             m_iasbd.mFormatID == 'aacp')
         {
             auto kuki = m_af.getMagicCookieData();
-            auto asc = cautil::parseMagicCookieAAC(kuki);
-            AudioStreamBasicDescription tmp;
-            cautil::parseASC(asc, &tmp, &m_chanmap);
+            auto asc = ascutil::parseMagicCookieAAC(kuki);
+            ca::AudioStreamBasicDescription tmp;
+            ascutil::parseASC(asc, &tmp, &m_chanmap);
         } else if (m_iasbd.mFormatID == 'alac') {
             AudioChannelLayout acl = { 0 };
             acl.mChannelLayoutTag = chanmap::getALACChannelLayoutTag(m_iasbd.mChannelsPerFrame);

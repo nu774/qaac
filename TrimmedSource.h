@@ -23,7 +23,7 @@ public:
     }
 
     uint64_t length() const { return m_duration; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_src->getSampleFormat();
     }

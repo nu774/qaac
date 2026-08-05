@@ -5,6 +5,7 @@
 #include "Normalizer.h"
 #include "platformutil.h"
 #include "cautil.h"
+#include "ascutil.h"
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -15,14 +16,14 @@ Normalizer::Normalizer(const std::shared_ptr<ISource> &src, bool seekable)
       m_processed(0),
       m_position(0)
 {
-    const AudioStreamBasicDescription &asbd = source()->getSampleFormat();
+    const ca::AudioStreamBasicDescription &asbd = source()->getSampleFormat();
     unsigned bits = 32;
     if (asbd.mBitsPerChannel > 32
         || ((asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
             asbd.mBitsPerChannel > 24))
         bits = 64;
 
-    m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
+    m_asbd = ascutil::buildASBDForPCM(asbd.mSampleRate,
                                      asbd.mChannelsPerFrame,
                                      bits, kAudioFormatFlagIsFloat);
     if (!seekable) {

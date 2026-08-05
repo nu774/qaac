@@ -13,6 +13,7 @@
 #include "FLACPacketDecoder.h"
 #include "LPCMPacketDecoder.h"
 #include "cautil.h"
+#include "ascutil.h"
 #include "chanmap.h"
 
 CAFSource::CAFSource(std::shared_ptr<IInputStream> stream)
@@ -110,8 +111,8 @@ void CAFSource::setupLPCM()
 {
     auto &&asbd = m_file->format().asbd;
     m_decoder = std::make_shared<LPCMPacketDecoder>();
-    std::vector<uint8_t> cookie(sizeof(AudioStreamBasicDescription));
-    std::memcpy(cookie.data(), &asbd, sizeof(AudioStreamBasicDescription));
+    std::vector<uint8_t> cookie(sizeof(ca::AudioStreamBasicDescription));
+    std::memcpy(cookie.data(), &asbd, sizeof(ca::AudioStreamBasicDescription));
     m_decoder->setMagicCookie(cookie);
     m_oasbd = m_decoder->getSampleFormat();
     if (asbd.mBytesPerPacket > 0) {
@@ -127,7 +128,7 @@ void CAFSource::setupALAC()
     auto &&asbd = m_file->format().asbd;
 
 #ifdef QAAC
-    m_decoder = std::make_shared<CoreAudioPacketDecoder>(asbd);
+    m_decoder = std::make_shared<CoreAudioPacketDecoder>(cautil::toNative(asbd));
     m_decoder->setMagicCookie(cookie);
 #else
     m_decoder = std::make_shared<ALACPacketDecoder>(asbd);
@@ -156,7 +157,8 @@ void CAFSource::setupFLAC()
 #ifdef QAAC
 void CAFSource::setupMPEG1Audio()
 {
-    m_decoder = std::make_shared<CoreAudioPacketDecoder>(m_file->format().asbd);
+    m_decoder = std::make_shared<CoreAudioPacketDecoder>(
+            cautil::toNative(m_file->format().asbd));
     m_oasbd = m_decoder->getSampleFormat();
 }
 
@@ -164,13 +166,14 @@ void CAFSource::setupMPEG4Audio()
 {
     std::vector<std::uint8_t> cookie;
     m_file->get_magic_cookie(&cookie);
-    m_decoder = std::make_shared<CoreAudioPacketDecoder>(m_file->format().asbd);
+    m_decoder = std::make_shared<CoreAudioPacketDecoder>(
+            cautil::toNative(m_file->format().asbd));
     m_decoder->setMagicCookie(cookie);
     m_oasbd = m_decoder->getSampleFormat();
     if (m_chanmap.empty()) {
-        auto asc = cautil::parseMagicCookieAAC(cookie);
-        AudioStreamBasicDescription tmp;
-        cautil::parseASC(asc, &tmp, &m_chanmap);
+        auto asc = ascutil::parseMagicCookieAAC(cookie);
+        ca::AudioStreamBasicDescription tmp;
+        ascutil::parseASC(asc, &tmp, &m_chanmap);
     }
 }
 #endif

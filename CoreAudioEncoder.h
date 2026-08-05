@@ -14,6 +14,7 @@ class CoreAudioEncoder: public IEncoder, public IEncoderStat {
     std::vector<uint8_t> m_input_buffer, m_output_buffer;
     std::vector<AudioStreamPacketDescription> m_packet_desc;
     AudioStreamBasicDescription m_input_desc, m_output_desc;
+    ca::AudioStreamBasicDescription m_input_desc_ca, m_output_desc_ca;
     EncoderStat m_stat;
 public:
     CoreAudioEncoder(AudioConverterXX &converter);
@@ -21,16 +22,16 @@ public:
     void setSource(const std::shared_ptr<ISource> &source) { m_src = source; }
     void setSink(const std::shared_ptr<ISink> &sink) { m_sink = sink; }
     uint32_t encodeChunk(UInt32 npackets);
-    virtual AudioFilePacketTableInfo getGaplessInfo();
+    virtual ca::AudioFilePacketTableInfo getGaplessInfo();
     AudioConverterXX &getConverter() { return m_converter; }
     ISource *src() { return m_src.get(); }
-    const AudioStreamBasicDescription &getInputDescription() const
+    const ca::AudioStreamBasicDescription &getInputDescription() const
     {
-        return m_input_desc;
+        return m_input_desc_ca;
     }
-    const AudioStreamBasicDescription &getOutputDescription() const
+    const ca::AudioStreamBasicDescription &getOutputDescription() const
     {
-        return m_output_desc;
+        return m_output_desc_ca;
     }
     uint64_t samplesRead() const { return m_src->getPosition(); }
     uint64_t samplesWritten() const { return m_stat.samplesWritten(); }

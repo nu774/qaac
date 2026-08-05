@@ -1,6 +1,7 @@
 #include <functional>
 #include "FLACPacketDecoder.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 namespace {
     template <typename T> void try__(T expr, const char *msg)
@@ -107,7 +108,7 @@ void FLACPacketDecoder::metadataCallback(const FLAC__StreamMetadata *metadata)
         if (si.max_blocksize == si.min_blocksize)
             m_iasbd.mFramesPerPacket = si.max_blocksize;
         m_iasbd.mChannelsPerFrame = si.channels;
-        m_oasbd = cautil::buildASBDForPCM2(si.sample_rate,
+        m_oasbd = ascutil::buildASBDForPCM2(si.sample_rate,
                                            si.channels,
                                            si.bits_per_sample,
                                            32,

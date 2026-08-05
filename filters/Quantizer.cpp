@@ -1,5 +1,6 @@
 #include <climits>
 #include "Quantizer.h"
+#include "ascutil.h"
 
 template <typename T>
 inline T clip(T x, T min, T max)
@@ -41,8 +42,8 @@ Quantizer::Quantizer(const std::shared_ptr<ISource> &source,
                      uint32_t bitdepth, bool no_dither, bool is_float)
     : FilterBase(source)
 {
-    const AudioStreamBasicDescription &asbd = source->getSampleFormat();
-    m_asbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
+    const ca::AudioStreamBasicDescription &asbd = source->getSampleFormat();
+    m_asbd = ascutil::buildASBDForPCM2(asbd.mSampleRate,
                                       asbd.mChannelsPerFrame,
                                       bitdepth, 32,
                                       is_float ? kAudioFormatFlagIsFloat

@@ -3,27 +3,28 @@
 
 #include <cmath>
 #include "FilterBase.h"
+#include "ascutil.h"
 
 class Scaler: public FilterBase {
     double m_scale;
     std::vector<uint8_t> m_ibuffer;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
     Scaler(const std::shared_ptr<ISource> &source, double scale)
         : FilterBase(source), m_scale(scale)
     {
-        const AudioStreamBasicDescription &asbd = source->getSampleFormat();
+        const ca::AudioStreamBasicDescription &asbd = source->getSampleFormat();
         unsigned bits = 32;
         if (asbd.mBitsPerChannel > 32
             || ((asbd.mFormatFlags & kAudioFormatFlagIsSignedInteger) &&
                 asbd.mBitsPerChannel > 24))
             bits = 64;
 
-        m_asbd = cautil::buildASBDForPCM(asbd.mSampleRate,
+        m_asbd = ascutil::buildASBDForPCM(asbd.mSampleRate,
                                          asbd.mChannelsPerFrame,
                                          bits, kAudioFormatFlagIsFloat);
     }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

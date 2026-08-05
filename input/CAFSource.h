@@ -20,7 +20,7 @@ class CAFSource: public ISeekableSource, public ITagParser
     std::vector<uint8_t> m_packetBuffer;
     std::vector<uint8_t> m_rawDecodeBuffer;
     util::FIFO<uint8_t>  m_decodeBuffer;
-    AudioStreamBasicDescription m_oasbd;
+    ca::AudioStreamBasicDescription m_oasbd;
 public:
     CAFSource(std::shared_ptr<IInputStream> stream);
     uint64_t length() const
@@ -28,7 +28,7 @@ public:
         auto len = m_file->duration();
         return len < 0 ? ~0uLL : len;
     }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_oasbd;
     }

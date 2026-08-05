@@ -17,12 +17,13 @@
 #endif
 #include "strutil.h"
 #include "logging.h"
+#include "cautil.h"
 
 namespace {
 
 const int kEscTimeoutMs = 30;
 
-enum SoundIoFormat mapFormat(const AudioStreamBasicDescription &asbd,
+enum SoundIoFormat mapFormat(const ca::AudioStreamBasicDescription &asbd,
                              unsigned containerBytes)
 {
     bool isFloat = !!(asbd.mFormatFlags & kAudioFormatFlagIsFloat);
@@ -49,7 +50,7 @@ enum SoundIoFormat mapFormat(const AudioStreamBasicDescription &asbd,
 
 } // namespace
 
-void SoundIoOutDevice::open(const AudioStreamBasicDescription &asbd,
+void SoundIoOutDevice::open(const ca::AudioStreamBasicDescription &asbd,
                             uint32_t chanmask)
 {
     if (m_outstream && !std::memcmp(&asbd, &m_asbd, sizeof asbd)

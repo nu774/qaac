@@ -18,13 +18,13 @@ class MatrixMixer: public FilterBase {
     std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
     util::FIFO<float> m_buffer;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     SoXConvolverModule &m_module;
 public:
     MatrixMixer(const std::shared_ptr<ISource> &source,
                 const std::vector<std::vector<complex_t> > &spec,
                 bool normalize=true);
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

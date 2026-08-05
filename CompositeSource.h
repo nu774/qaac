@@ -13,7 +13,7 @@ class CompositeSource: public ISeekableSource, public ITagParser,
     std::vector<source_t> m_sources;
     std::map<std::string, std::string> m_tags;
     std::vector<misc::chapter_t> m_chapters;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
     CompositeSource() : m_cur_file(0), m_position(0), m_length(0) {}
 
@@ -21,7 +21,7 @@ public:
     {
         return first()->getChannels();
     }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

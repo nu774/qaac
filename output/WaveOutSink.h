@@ -4,14 +4,11 @@
 #include <stdint.h>
 #include <vector>
 #include <memory>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <mmsystem.h>
-#ifdef __APPLE__
-#include <CoreServices/CoreServices.h>
-#include <AudioToolbox/AudioToolbox.h>
-#else
-#include "CoreAudio/CoreAudioTypes.h"
-#endif
 #include "ISink.h"
 
 struct PlaybackKeyEvent {
@@ -26,7 +23,7 @@ class WaveOutDevice {
     WAVEHDR m_packets[NUMBUFFERS];
     std::vector<char> m_buffers[NUMBUFFERS];
     std::vector<char> m_ibuffer;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     uint32_t m_chanmask;
     HANDLE m_stdin;
     bool m_isatty;
@@ -38,7 +35,7 @@ public:
         static WaveOutDevice self;
         return self;
     }
-    void open(const AudioStreamBasicDescription &asbd, uint32_t chanmask);
+    void open(const ca::AudioStreamBasicDescription &asbd, uint32_t chanmask);
     void writeSamples(const void *data, size_t length, size_t nsamples);
     void close();
 
@@ -81,7 +78,7 @@ private:
 class WaveOutSink: public ISink {
     WaveOutDevice& m_device;
 public:
-    WaveOutSink(const AudioStreamBasicDescription &format, uint32_t chanmask)
+    WaveOutSink(const ca::AudioStreamBasicDescription &format, uint32_t chanmask)
         : m_device(WaveOutDevice::instance())
     {
         m_device.open(format, chanmask);

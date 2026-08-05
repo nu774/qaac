@@ -22,9 +22,9 @@ CoreAudioPaddedEncoder::CoreAudioPaddedEncoder(AudioConverterXX &converter,
     else
         m_write = &CoreAudioPaddedEncoder::writeSamplesHE;
 }
-AudioFilePacketTableInfo CoreAudioPaddedEncoder::getGaplessInfo()
+ca::AudioFilePacketTableInfo CoreAudioPaddedEncoder::getGaplessInfo()
 {
-    AudioFilePacketTableInfo pinfo = CoreAudioEncoder::getGaplessInfo();
+    ca::AudioFilePacketTableInfo pinfo = CoreAudioEncoder::getGaplessInfo();
     if (getOutputDescription().mFormatID == 'aach') {
         unsigned fpp = getOutputDescription().mFramesPerPacket / 2;
         pinfo.mNumberValidFrames -= fpp;

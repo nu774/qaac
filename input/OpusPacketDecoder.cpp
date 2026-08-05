@@ -1,5 +1,6 @@
 #include "OpusPacketDecoder.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
@@ -104,7 +105,7 @@ void OpusPacketDecoder::setMagicCookie(const std::vector<uint8_t> &cookie)
         m_iasbd.mFormatID = util::fourcc("opus");
         m_iasbd.mSampleRate = 48000;
         m_iasbd.mChannelsPerFrame = channel_count;
-        m_oasbd = cautil::buildASBDForPCM2(48000, channel_count, 32, 32, kAudioFormatFlagIsFloat);
+        m_oasbd = ascutil::buildASBDForPCM2(48000, channel_count, 32, 32, kAudioFormatFlagIsFloat);
     }
 }
 

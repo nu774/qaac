@@ -1,8 +1,9 @@
 #include "ALACPacketDecoder.h"
 #include <ALACBitUtilities.h>
 #include "cautil.h"
+#include "ascutil.h"
 
-ALACPacketDecoder::ALACPacketDecoder(const AudioStreamBasicDescription &asbd)
+ALACPacketDecoder::ALACPacketDecoder(const ca::AudioStreamBasicDescription &asbd)
     : m_iasbd(asbd)
 {
     int valid_bits;
@@ -13,7 +14,7 @@ ALACPacketDecoder::ALACPacketDecoder(const AudioStreamBasicDescription &asbd)
     case 3: valid_bits = 24; break;
     case 4: valid_bits = 32; break;
     }
-    m_oasbd = cautil::buildASBDForPCM2(asbd.mSampleRate,
+    m_oasbd = ascutil::buildASBDForPCM2(asbd.mSampleRate,
                                        asbd.mChannelsPerFrame, valid_bits, 32,
                                        kAudioFormatFlagIsSignedInteger);
     m_decoder = std::make_shared<ALACDecoder>();

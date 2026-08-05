@@ -14,10 +14,10 @@ class WaveSink : public ISink {
     uint32_t m_chanmask;
     uint32_t m_data_pos;
     uint64_t m_bytes_written;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
 public:
     WaveSink(const std::shared_ptr<FILE> &fp, uint64_t duration,
-             const AudioStreamBasicDescription &format,
+             const ca::AudioStreamBasicDescription &format,
              uint32_t chanmask=0);
     ~WaveSink() { try { finishWrite(); } catch (...) {} }
     void writeSamples(const void *data, size_t length, size_t nsamples);

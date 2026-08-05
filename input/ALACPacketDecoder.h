@@ -6,13 +6,13 @@
 #include "PacketDecoder.h"
 
 class ALACPacketDecoder: public IPacketDecoder {
-    AudioStreamBasicDescription m_iasbd, m_oasbd;
+    ca::AudioStreamBasicDescription m_iasbd, m_oasbd;
     std::shared_ptr<ALACDecoder> m_decoder;
     std::vector<uint8_t> m_raw_decode_buffer;
 public:
-    ALACPacketDecoder(const AudioStreamBasicDescription &asbd);
+    ALACPacketDecoder(const ca::AudioStreamBasicDescription &asbd);
     void reset() {}
-    const AudioStreamBasicDescription &getSampleFormat()
+    const ca::AudioStreamBasicDescription &getSampleFormat()
     {
         return m_oasbd;
     }

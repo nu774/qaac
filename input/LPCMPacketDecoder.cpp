@@ -1,5 +1,6 @@
 #include "LPCMPacketDecoder.h"
 #include "cautil.h"
+#include "ascutil.h"
 
 LPCMPacketDecoder::LPCMPacketDecoder()
 {
@@ -11,11 +12,11 @@ void LPCMPacketDecoder::setMagicCookie(const std::vector<uint8_t> &cookie)
 {
     std::memcpy(&m_iasbd, cookie.data(), cookie.size());
     if (m_iasbd.mFormatFlags & kAudioFormatFlagIsFloat) {
-        m_oasbd = cautil::buildASBDForPCM2(m_iasbd.mSampleRate, m_iasbd.mChannelsPerFrame,
+        m_oasbd = ascutil::buildASBDForPCM2(m_iasbd.mSampleRate, m_iasbd.mChannelsPerFrame,
             m_iasbd.mBitsPerChannel, m_iasbd.mBitsPerChannel,
             kAudioFormatFlagIsFloat);
     } else {
-        m_oasbd = cautil::buildASBDForPCM2(m_iasbd.mSampleRate, m_iasbd.mChannelsPerFrame,
+        m_oasbd = ascutil::buildASBDForPCM2(m_iasbd.mSampleRate, m_iasbd.mChannelsPerFrame,
             m_iasbd.mBitsPerChannel, 32,
             kAudioFormatFlagIsSignedInteger);
     }

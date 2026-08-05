@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include "WaveSource.h"
+#include "ascutil.h"
 #include "util.h"
 #include "platformutil.h"
 #include "chanmap.h"
@@ -210,8 +211,8 @@ void WaveSource::fmt(size_t size)
     if (isfloat && wValidBitsPerSample > 32) bits = 64;
     else if (isfloat && wValidBitsPerSample <= 16) bits = 16;
 
-    m_asbd = cautil::buildASBDForPCM2(nSamplesPerSec, nChannels,
+    m_asbd = ascutil::buildASBDForPCM2(nSamplesPerSec, nChannels,
                                       wValidBitsPerSample, bits,
-                                      isfloat ? kAudioFormatFlagIsFloat
-                                        : kAudioFormatFlagIsSignedInteger);
+                                      isfloat ? ca::kAudioFormatFlagIsFloat
+                                        : ca::kAudioFormatFlagIsSignedInteger);
 }

@@ -56,13 +56,13 @@ class LibSndfileSource: public ISeekableSource, public ITagParser
     std::vector<uint32_t> m_chanmap;
     std::map<std::string, std::string> m_tags;
     LibSndfileModule &m_module;
-    AudioStreamBasicDescription m_asbd;
+    ca::AudioStreamBasicDescription m_asbd;
     sf_count_t (*m_readf)(SNDFILE *, void *, sf_count_t);
 public:
     LibSndfileSource(std::shared_ptr<IInputStream> stream);
     ~LibSndfileSource() { m_handle.reset(); }
     uint64_t length() const { return m_length; }
-    const AudioStreamBasicDescription &getSampleFormat() const
+    const ca::AudioStreamBasicDescription &getSampleFormat() const
     {
         return m_asbd;
     }

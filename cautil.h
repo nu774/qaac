@@ -14,8 +14,10 @@
 #else
 #include "CoreAudio/CoreFoundation.h"
 #include "CoreAudio/CoreAudioTypes.h"
+#include "CoreAudio/AudioFile.h"
 #endif
 #include "util.h"
+#include "catypes.h"
 
 typedef std::shared_ptr<const __CFString> CFStringPtr;
 typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;
@@ -51,6 +53,65 @@ public:
 namespace cautil {
     std::string make_coreaudio_error(long code, const char *s);
 
+    static_assert(sizeof(ca::AudioStreamBasicDescription) ==
+                  sizeof(AudioStreamBasicDescription),
+                  "ca::AudioStreamBasicDescription layout mismatch");
+    static_assert(sizeof(ca::AudioFilePacketTableInfo) ==
+                  sizeof(AudioFilePacketTableInfo),
+                  "ca::AudioFilePacketTableInfo layout mismatch");
+    static_assert(sizeof(ca::AudioStreamPacketDescription) ==
+                  sizeof(AudioStreamPacketDescription),
+                  "ca::AudioStreamPacketDescription layout mismatch");
+
+    inline AudioStreamBasicDescription
+    toNative(const ca::AudioStreamBasicDescription &x)
+    {
+        AudioStreamBasicDescription y;
+        y.mSampleRate = x.mSampleRate;
+        y.mFormatID = x.mFormatID;
+        y.mFormatFlags = x.mFormatFlags;
+        y.mBytesPerPacket = x.mBytesPerPacket;
+        y.mFramesPerPacket = x.mFramesPerPacket;
+        y.mBytesPerFrame = x.mBytesPerFrame;
+        y.mChannelsPerFrame = x.mChannelsPerFrame;
+        y.mBitsPerChannel = x.mBitsPerChannel;
+        y.mReserved = x.mReserved;
+        return y;
+    }
+    inline ca::AudioStreamBasicDescription
+    fromNative(const AudioStreamBasicDescription &x)
+    {
+        ca::AudioStreamBasicDescription y;
+        y.mSampleRate = x.mSampleRate;
+        y.mFormatID = x.mFormatID;
+        y.mFormatFlags = x.mFormatFlags;
+        y.mBytesPerPacket = x.mBytesPerPacket;
+        y.mFramesPerPacket = x.mFramesPerPacket;
+        y.mBytesPerFrame = x.mBytesPerFrame;
+        y.mChannelsPerFrame = x.mChannelsPerFrame;
+        y.mBitsPerChannel = x.mBitsPerChannel;
+        y.mReserved = x.mReserved;
+        return y;
+    }
+    inline AudioFilePacketTableInfo
+    toNative(const ca::AudioFilePacketTableInfo &x)
+    {
+        AudioFilePacketTableInfo y;
+        y.mNumberValidFrames = x.mNumberValidFrames;
+        y.mPrimingFrames = x.mPrimingFrames;
+        y.mRemainderFrames = x.mRemainderFrames;
+        return y;
+    }
+    inline ca::AudioFilePacketTableInfo
+    fromNative(const AudioFilePacketTableInfo &x)
+    {
+        ca::AudioFilePacketTableInfo y;
+        y.mNumberValidFrames = x.mNumberValidFrames;
+        y.mPrimingFrames = x.mPrimingFrames;
+        y.mRemainderFrames = x.mRemainderFrames;
+        return y;
+    }
+
 #ifdef QAAC
     std::string CF2US(CFStringRef str);
 
@@ -73,28 +134,6 @@ namespace cautil {
         }
         return acl->mChannelLayoutTag & 0xffff;
     }
-    AudioStreamBasicDescription
-        buildASBDForPCM(double sample_rate, unsigned channels,
-                        unsigned bits, unsigned type_flags,
-                        unsigned alignment=0);
-
-    AudioStreamBasicDescription
-        buildASBDForPCM2(double sample_rate, unsigned channels,
-                         unsigned valid_bits, unsigned pack_bits,
-                         unsigned type_flags,
-                         unsigned alignment=kAudioFormatFlagIsAlignedHigh);
-
-    std::vector<uint8_t>
-        parseMagicCookieAAC(const std::vector<uint8_t> &cookie);
-
-    void replaceASCInMagicCookie(std::vector<uint8_t> *cookie,
-                                 const std::vector<uint8_t> &data);
-
-    void parseASC(const std::vector<uint8_t> &asc,
-                  AudioStreamBasicDescription *asbd,
-                  std::vector<uint32_t> *channels);
-
-    void insert71RearPCEToASC(std::vector<uint8_t> *asc);
 }
 
 #endif
