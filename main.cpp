@@ -1090,7 +1090,8 @@ void process_file(const std::shared_ptr<ISeekableSource> &src,
 enum class PlaybackOutcome { Completed, PrevFile, PrevFileTail, Quit };
 
 enum class PlaybackCommand {
-    None, SeekBack, SeekForward, SeekHome, NextTrack, PrevOrRestart, Quit
+    None, SeekBack, SeekForward, SeekHome, NextTrack, PrevOrRestart, Quit,
+    TogglePause
 };
 
 static
@@ -1104,6 +1105,7 @@ PlaybackCommand translatePlaybackKey(PlaybackKey key)
     case PlaybackKey::PageDown: return PlaybackCommand::NextTrack;
     case PlaybackKey::PageUp:   return PlaybackCommand::PrevOrRestart;
     case PlaybackKey::Quit:     return PlaybackCommand::Quit;
+    case PlaybackKey::Pause:    return PlaybackCommand::TogglePause;
     default:                    return PlaybackCommand::None;
     }
 }
@@ -1187,6 +1189,9 @@ PlaybackOutcome play_file(const std::vector<std::shared_ptr<ISource> > &chain,
                     break;
                 case PlaybackCommand::Quit:
                     outcome = PlaybackOutcome::Quit;
+                    break;
+                case PlaybackCommand::TogglePause:
+                    LOG(soundio.togglePause() ? "\n[Paused]\n" : "\n[Resumed]\n");
                     break;
                 case PlaybackCommand::None:
                     break;
