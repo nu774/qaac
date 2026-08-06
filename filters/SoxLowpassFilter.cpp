@@ -1,10 +1,11 @@
 #include "SoxLowpassFilter.h"
+#include "KaiserLpf.h"
 #include "cautil.h"
 #include "ascutil.h"
 
 SoxLowpassFilter::SoxLowpassFilter(const std::shared_ptr<ISource> &src,
                                    unsigned Fp)
-    : FilterBase(src), m_position(0), m_module(SoXConvolverModule::instance())
+    : FilterBase(src), m_position(0)
 {
     const ca::AudioStreamBasicDescription &asbd = src->getSampleFormat();
     m_asbd = ascutil::buildASBDForPCM(asbd.mSampleRate, asbd.mChannelsPerFrame,
@@ -15,21 +16,16 @@ SoxLowpassFilter::SoxLowpassFilter(const std::shared_ptr<ISource> &src,
     double Fs = Fp + asbd.mSampleRate * 0.0125;
     if (Fp == 0 || Fs > Fn)
         throw std::runtime_error("SoxLowpassFilter: invalid target rate");
-    int num_taps = 0;
-    double *coefs = m_module.design_lpf(Fp, Fs, Fn, 120.0, &num_taps, 0, -1);
-    if (!coefs)
-        throw std::runtime_error("lsx_design_lpf()");
-    std::shared_ptr<double> __delete_lator__(coefs, m_module.free);
+    std::vector<double> coefs = KaiserLpf::design(Fp, Fs, Fn, 120.0);
 
-    lsx_convolver_t *convolver =
-        m_module.create(asbd.mChannelsPerFrame, coefs, num_taps, num_taps >> 1);
-    if (!convolver)
-        throw std::runtime_error("lsx_convolver_create()");
-    m_convolver = std::shared_ptr<lsx_convolver_t>(convolver, m_module.close);
+    for (uint32_t i = 0; i < asbd.mChannelsPerFrame; ++i)
+        m_convolvers.push_back(std::unique_ptr<StreamingConvolver>(
+            new StreamingConvolver(coefs, coefs.size() >> 1)));
 }
 
 size_t SoxLowpassFilter::readSamples(void *buffer, size_t nsamples)
 {
+    uint32_t nchannels = m_asbd.mChannelsPerFrame;
     size_t ilen = 0, olen = 0;
     do {
         if (m_buffer.count() == 0) {
@@ -40,8 +36,14 @@ size_t SoxLowpassFilter::readSamples(void *buffer, size_t nsamples)
         }
         ilen = m_buffer.count();
         olen = nsamples;
-        m_module.process(m_convolver.get(), m_buffer.read_ptr(),
-                         static_cast<float *>(buffer), &ilen, &olen);
+        for (uint32_t ch = 0; ch < nchannels; ++ch) {
+            size_t ilen_ch = ilen, olen_ch = nsamples;
+            m_convolvers[ch]->process(m_buffer.read_ptr() + ch,
+                                      static_cast<float *>(buffer) + ch,
+                                      nchannels, nchannels,
+                                      &ilen_ch, &olen_ch);
+            olen = olen_ch;
+        }
         m_buffer.advance(ilen);
     } while (ilen != 0 && olen == 0);
 

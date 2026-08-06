@@ -460,7 +460,6 @@ add_library(common STATIC
     filters/Normalizer.cpp
     filters/PipedReader.cpp
     filters/Quantizer.cpp
-    filters/SoXConvolverModule.cpp
     filters/SoxLowpassFilter.cpp
     filters/SOXRModule.cpp
     filters/SoxrResampler.cpp

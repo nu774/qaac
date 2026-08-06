@@ -80,8 +80,7 @@ MatrixMixer::MatrixMixer(const std::shared_ptr<ISource> &source,
                          bool normalize)
     : FilterBase(source),
       m_position(0),
-      m_matrix(spec),
-      m_module(SoXConvolverModule::instance())
+      m_matrix(spec)
 {
     const ca::AudioStreamBasicDescription &fmt = source->getSampleFormat();
     uint32_t shiftMask;
@@ -117,14 +116,9 @@ void MatrixMixer::initFilter()
          ii != coefs.end(); ++ii)
         *ii /= filter_gain;
 
-    for (unsigned i = 0; i < m_shift_channels.size(); ++i) {
-        lsx_convolver_t *f =
-            m_module.create(1, &coefs[0], coefs.size(), coefs.size()>>1);
-        if (!f)
-            throw std::runtime_error("failed to init hilbert transformer");
-        std::shared_ptr<lsx_convolver_t> filterp(f, m_module.close);
-        m_filter.push_back(filterp);
-    }
+    for (unsigned i = 0; i < m_shift_channels.size(); ++i)
+        m_filter.push_back(std::unique_ptr<StreamingConvolver>(
+            new StreamingConvolver(coefs, coefs.size() >> 1)));
 }
 
 size_t MatrixMixer::readSamples(void *buffer, size_t nsamples)
@@ -186,8 +180,7 @@ size_t MatrixMixer::phaseShift(size_t nsamples)
             olen = nsamples;
             float *ip = bp + n;
             float *op = &m_fbuffer[n];
-            m_module.process_ni(m_filter[i].get(), &ip, &op,
-                                ichannels, ichannels, &ilen, &olen);
+            m_filter[i]->process(ip, op, ichannels, ichannels, &ilen, &olen);
         }
         m_buffer.advance(ilen);
     } while (ilen != 0 && olen == 0);

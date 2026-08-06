@@ -3,8 +3,9 @@
 
 #include <complex>
 #include <deque>
+#include <memory>
 #include "FilterBase.h"
-#include "SoXConvolverModule.h"
+#include "StreamingConvolver.h"
 #include "misc.h"
 #include "util.h"
 
@@ -12,14 +13,13 @@ class MatrixMixer: public FilterBase {
     typedef misc::complex_t complex_t;
     int64_t m_position;
     std::vector<std::vector<complex_t> > m_matrix;
-    std::vector<std::shared_ptr<lsx_convolver_t> > m_filter;
+    std::vector<std::unique_ptr<StreamingConvolver> > m_filter;
     std::vector<unsigned> m_shift_channels, m_pass_channels;
     std::deque<float> m_syncque;
     std::vector<uint8_t> m_ibuffer;
     std::vector<float> m_fbuffer;
     util::FIFO<float> m_buffer;
     ca::AudioStreamBasicDescription m_asbd;
-    SoXConvolverModule &m_module;
 public:
     MatrixMixer(const std::shared_ptr<ISource> &source,
                 const std::vector<std::vector<complex_t> > &spec,

@@ -304,24 +304,20 @@ void manipulate_channels(std::vector<std::shared_ptr<ISource> > &chain,
     }
     // remix
     if (opts.remix_preset || opts.remix_file) {
-        if (!SoXConvolverModule::instance().loaded())
-            LOG("WARNING: mixer requires libsoxconvolver. Mixing disabled\n");
-        else {
-            std::vector<std::vector<misc::complex_t> > matrix;
-            if (opts.remix_file)
-                matrix = misc::loadRemixerMatrixFromFile(opts.remix_file);
-            else
-                matrix = misc::loadRemixerMatrixFromPreset(opts.remix_preset);
-            if (opts.verbose > 1 || opts.logfilename) {
-                LOG("Matrix mixer: %uch -> %uch\n",
-                    static_cast<uint32_t>(matrix[0].size()),
-                    static_cast<uint32_t>(matrix.size()));
-            }
-            std::shared_ptr<ISource>
-                mixer(new MatrixMixer(chain.back(),
-                                      matrix, !opts.no_matrix_normalize));
-            chain.push_back(mixer);
+        std::vector<std::vector<misc::complex_t> > matrix;
+        if (opts.remix_file)
+            matrix = misc::loadRemixerMatrixFromFile(opts.remix_file);
+        else
+            matrix = misc::loadRemixerMatrixFromPreset(opts.remix_preset);
+        if (opts.verbose > 1 || opts.logfilename) {
+            LOG("Matrix mixer: %uch -> %uch\n",
+                static_cast<uint32_t>(matrix[0].size()),
+                static_cast<uint32_t>(matrix.size()));
         }
+        std::shared_ptr<ISource>
+            mixer(new MatrixMixer(chain.back(),
+                                  matrix, !opts.no_matrix_normalize));
+        chain.push_back(mixer);
     }
 
     uint32_t nchannels = chain.back()->getSampleFormat().mChannelsPerFrame;
@@ -389,15 +385,11 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         get_encoding_channel_layout(chain.back().get(), opts, nullptr);
 
     if (opts.lowpass > 0) {
-        if (!SoXConvolverModule::instance().loaded())
-            LOG("WARNING: --lowpass requires libsoxconvolver. LPF disabled\n");
-        else {
-            if (opts.verbose > 1 || opts.logfilename)
-                LOG("Applying LPF: %dHz\n", opts.lowpass);
-            std::shared_ptr<SoxLowpassFilter>
-                f(new SoxLowpassFilter(chain.back(), opts.lowpass));
-            chain.push_back(f);
-        }
+        if (opts.verbose > 1 || opts.logfilename)
+            LOG("Applying LPF: %dHz\n", opts.lowpass);
+        std::shared_ptr<SoxLowpassFilter>
+            f(new SoxLowpassFilter(chain.back(), opts.lowpass));
+        chain.push_back(f);
     }
     {
         double irate = chain.back()->getSampleFormat().mSampleRate;
@@ -1653,9 +1645,6 @@ static int app_main(int argc, char **argv)
             LOG("%s\n", opts.encoder_name.c_str());
 
         if (opts.check_only) {
-            if (SoXConvolverModule::instance().loaded())
-                LOG("libsoxconvolver %s\n",
-                    SoXConvolverModule::instance().version());
             if (SOXRModule::instance().loaded())
                 LOG("%s\n", SOXRModule::instance().version());
             if (LibSndfileModule::instance().loaded())
