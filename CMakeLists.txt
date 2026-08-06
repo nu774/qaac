@@ -463,6 +463,7 @@ add_library(common STATIC
     filters/SoxLowpassFilter.cpp
     filters/SOXRModule.cpp
     filters/SoxrResampler.cpp
+    fft4g/fft4g_float.c
     output/CAFSink.cpp
     output/sink.cpp
     output/WaveSink.cpp
@@ -503,6 +504,7 @@ target_include_directories(common PRIVATE
     ALAC
     uchardet
     include/opus
+    fft4g
 )
 if(NOT APPLE)
     target_include_directories(common PRIVATE CoreAudio)
