@@ -172,28 +172,12 @@ namespace ascutil {
         cookie->swap(configs);
     }
 
-    void parseASC(const std::vector<uint8_t> &asc,
-                  ca::AudioStreamBasicDescription *asbd,
-                  std::vector<uint32_t> *channels)
-    {
-        BitStream bs(asc.data(), asc.size());
-        uint8_t aot = bs.get(5);
-        if (aot != 2 && aot != 5 && aot != 29)
-            throw std::runtime_error("Unsupported AudioSpecificConfig");
-        static const unsigned sftab[] = {
+    namespace {
+        const unsigned sftab[16] = {
             96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050,
             16000, 12000, 11025, 8000, 7350, 0, 0, 0
         };
-        uint32_t sample_rate    = sftab[bs.get(4)];
-        uint8_t  chan_config    = bs.get(4);
-        if (aot == 5 || aot == 29) {
-            sample_rate = sftab[bs.get(4)];
-            bs.advance(5); // AOT
-        }
-        // GASpecificConfig
-        bs.advance(1); // frameLengthFlag
-        if (bs.get(1)) bs.advance(14); // dependsOnCoreCoder
-        bs.advance(1); // extensionFlag
+
         const char *ch_layout_tab[16] = {
             0,
             "\x03",
@@ -211,14 +195,42 @@ namespace ascutil {
             0,
             "\x03\x01\x02\x0A\x0B\x04\x0D\x0F",
         };
-        if (chan_config) {
-            const char *lp = ch_layout_tab[chan_config];
-            if (lp) {
-                std::vector<uint32_t> v;
-                while (*lp) v.push_back(*lp++);
-                channels->swap(v);
+
+        struct ASCHeader {
+            uint8_t  aot;
+            uint32_t sf_index;
+            uint32_t sample_rate;
+            uint8_t  chan_config;
+        };
+
+        ASCHeader readASCHeader(BitStream &src, BitStream *dst,
+                                uint8_t newChanConfig)
+        {
+            auto copy = [&](uint32_t nbits) -> uint32_t {
+                return dst ? dst->copy(src, nbits) : src.get(nbits);
+            };
+            ASCHeader h;
+            h.aot = copy(5);
+            if (h.aot != 2 && h.aot != 5 && h.aot != 29)
+                throw std::runtime_error("Unsupported AudioSpecificConfig");
+            h.sf_index = copy(4);
+            h.sample_rate = sftab[h.sf_index];
+            h.chan_config = src.get(4);
+            if (dst) dst->put(newChanConfig, 4);
+            if (h.aot == 5 || h.aot == 29) {
+                h.sf_index = copy(4);
+                h.sample_rate = sftab[h.sf_index];
+                copy(5); // core AOT
             }
-        } else { // PCE
+            copy(1); // frameLengthFlag
+            if (copy(1))
+                copy(14); // dependsOnCoreCoder
+            copy(1); // extensionFlag
+            return h;
+        }
+
+        std::vector<uint32_t> parsePCE(BitStream &bs)
+        {
             bs.advance(10); // element_instance_tag, object_type, sf_index
             uint8_t nfront  = bs.get(4);
             uint8_t nside   = bs.get(4);
@@ -259,49 +271,132 @@ namespace ascutil {
                 bs.advance(4);
             for (uint8_t i = 0; i < ncc; ++i)
                 bs.advance(5);
-            {
-                std::vector<uint32_t> v;
-                if (nfront_channels & 1) {
-                    v.push_back(3);
-                    --nfront_channels;
-                }
-                if (nfront_channels > 3) {
-                    v.push_back(7);
-                    v.push_back(8);
-                    nfront_channels -= 2;
-                }
-                if (nfront_channels > 1) {
-                    v.push_back(1);
-                    v.push_back(2);
-                    nfront_channels -= 2;
-                }
-                nside_channels += nback_channels;
-                if (nside_channels > 1) {
-                    v.push_back(10);
-                    v.push_back(11);
-                    nside_channels -= 2;
-                }
-                if (nside_channels > 1) {
-                    v.push_back(5);
-                    v.push_back(6);
-                    nside_channels -= 2;
-                }
-                if (nside_channels & 1) {
-                    v.push_back(9);
-                    --nside_channels;
-                }
-                if (nlfe) {
-                    v.push_back(4);
-                    --nlfe;
-                }
-                if (nfront_channels || nside_channels || nlfe)
-                    throw std::runtime_error("Unsupported channel layout");
-                channels->swap(v);
+            std::vector<uint32_t> v;
+            if (nfront_channels & 1) {
+                v.push_back(3);
+                --nfront_channels;
             }
+            if (nfront_channels > 3) {
+                v.push_back(7);
+                v.push_back(8);
+                nfront_channels -= 2;
+            }
+            if (nfront_channels > 1) {
+                v.push_back(1);
+                v.push_back(2);
+                nfront_channels -= 2;
+            }
+            nside_channels += nback_channels;
+            if (nside_channels > 1) {
+                v.push_back(10);
+                v.push_back(11);
+                nside_channels -= 2;
+            }
+            if (nside_channels > 1) {
+                v.push_back(5);
+                v.push_back(6);
+                nside_channels -= 2;
+            }
+            if (nside_channels & 1) {
+                v.push_back(9);
+                --nside_channels;
+            }
+            if (nlfe) {
+                v.push_back(4);
+                --nlfe;
+            }
+            if (nfront_channels || nside_channels || nlfe)
+                throw std::runtime_error("Unsupported channel layout");
             // byte align
             bs.advance((8 - (bs.position() & 7)) & 7);
             uint8_t comment_len = bs.get(1);
             bs.advance(8 * comment_len);
+            return v;
+        }
+
+        struct PCEShape {
+            uint32_t tag;
+            std::vector<bool> front, side, back;
+            uint8_t nlfe;
+        };
+
+        const PCEShape *findPCEShape(uint32_t tag)
+        {
+            static const PCEShape kShapes[] = {
+                { ca::kAudioChannelLayoutTag_AAC_6_1,
+                  {false, true}, {}, {true, false}, 1 },
+                { ca::kAudioChannelLayoutTag_AAC_7_1_B,
+                  {false, true}, {}, {true, true}, 1 },
+            };
+            for (auto &shape: kShapes)
+                if (shape.tag == tag)
+                    return &shape;
+            return nullptr;
+        }
+
+        void writePCEElements(BitStream &bs, const std::vector<bool> &elems,
+                              unsigned *sceTag, unsigned *cpeTag)
+        {
+            for (bool isCpe: elems) {
+                bs.put(isCpe ? 1 : 0, 1);
+                bs.put(isCpe ? (*cpeTag)++ : (*sceTag)++, 4);
+            }
+        }
+
+        void writePCE(BitStream &bs, uint32_t sf_index, uint32_t layoutTag)
+        {
+            const PCEShape *shape = findPCEShape(layoutTag);
+            if (!shape)
+                return;
+
+            bs.put(0, 4); /* element_instance_tag */
+            bs.put(1, 2); /* profile: LC */
+            bs.put(sf_index, 4);
+            bs.put(shape->front.size(), 4);
+            bs.put(shape->side.size(), 4);
+            bs.put(shape->back.size(), 4);
+            bs.put(shape->nlfe, 2);
+            bs.put(0, 3); /* num_assoc_data_elements */
+            bs.put(0, 4); /* num_valid_cc_elements   */
+            bs.put(0, 3); /* mono_mixdown, stereo_mixdown, matrix_mixdown */
+
+            unsigned sceTag = 0, cpeTag = 0;
+            writePCEElements(bs, shape->front, &sceTag, &cpeTag);
+            writePCEElements(bs, shape->side, &sceTag, &cpeTag);
+            writePCEElements(bs, shape->back, &sceTag, &cpeTag);
+            for (uint8_t i = 0; i < shape->nlfe; ++i)
+                bs.put(0, 4); /* lfe_element_tag_select */
+            bs.byteAlign();
+            bs.put(0, 8); /* comment_field_bytes */
+        }
+
+        void copyRemainingBits(BitStream &src, BitStream &dst,
+                               size_t srcTotalBits)
+        {
+            while (src.position() < srcTotalBits)
+                dst.copy(src, 1);
+        }
+    }
+
+    void parseASC(const std::vector<uint8_t> &asc,
+                  ca::AudioStreamBasicDescription *asbd,
+                  std::vector<uint32_t> *channels)
+    {
+        BitStream bs(asc.data(), asc.size());
+        ASCHeader h = readASCHeader(bs, nullptr, 0);
+        uint8_t aot = h.aot;
+        uint32_t sample_rate = h.sample_rate;
+
+        if (h.chan_config) {
+            const char *lp = ch_layout_tab[h.chan_config];
+            if (lp) {
+                std::vector<uint32_t> v;
+                while (*lp) v.push_back(*lp++);
+                channels->swap(v);
+            }
+        } else {
+            auto v = parsePCE(bs);
+            channels->swap(v);
         }
         if (asc.size() * 8 - bs.position() >= 16) {
             if (bs.get(11) == 0x2b7) {
@@ -330,49 +425,20 @@ namespace ascutil {
         asbd->mChannelsPerFrame = channels->size();
     }
 
-    void insert71RearPCEToASC(std::vector<uint8_t> *asc)
+    void insertPCEToASC(std::vector<uint8_t> *asc, uint32_t layoutTag)
     {
-        BitStream ibs(asc->data(), asc->size());
-        BitStream bs;
-        bs.copy(ibs, 5);  /* obj_type */
-        uint32_t sf_index = bs.copy(ibs, 4);
-        ibs.get(4);   /* channel_config */
-        bs.put(0, 4);
-        bs.copy(ibs, 3);
+        if (!findPCEShape(layoutTag))
+            return;
 
-        bs.put(0, 4); /* element_instance_tag */
-        bs.put(1, 2); /* profile: LC */
-        bs.put(sf_index, 4);
-        bs.put(2, 4); /* num_front_channel_elements */
-        bs.put(0, 4); /* num_side_channel_elements  */
-        bs.put(2, 4); /* num_back_channel_elements  */
-        bs.put(1, 2); /* num_lfe_channel_elements   */
-        bs.put(0, 3); /* num_assoc_data_elements    */
-        bs.put(0, 4); /* num_valid_cc_elements      */
-        bs.put(0, 3); /* mono_mixdown, stereo_mixdown, matrix_mixdown */
+        BitStream rbs(asc->data(), asc->size());
+        BitStream obs;
+        ASCHeader h = readASCHeader(rbs, &obs, 0);
+        writePCE(obs, h.sf_index, layoutTag);
+        copyRemainingBits(rbs, obs, asc->size() * 8);
 
-        /* C */
-        bs.put(0, 1); /* front_element_is_cpe */
-        bs.put(0, 4); /* front_element_tag_select */
-        /* L+R */
-        bs.put(1, 1); /* front_element_is_cpe */
-        bs.put(0, 4); /* front_element_tag_select */
-        /* Ls+Rs */
-        bs.put(1, 1); /* back_element_is_cpe */
-        bs.put(1, 4); /* back_element_tag_select */
-        /* Rls+Rrs */
-        bs.put(1, 1); /* back_element_is_cpe */
-        bs.put(2, 4); /* back_element_tag_select */
-        /* LFE */
-        bs.put(0, 4); /* lfe_elementtag_select */
-        bs.byteAlign();
-        bs.put(0, 8); /* comment_field_bytes*/
-
-        size_t len = bs.position() / 8;
-        std::vector<uint8_t> result(asc->size() - 2 + len);
-        std::memcpy(result.data(), bs.data(), len);
-        if (asc->size() > 2)
-            std::memcpy(&result[len], asc->data() + 2, asc->size() - 2);
+        size_t len = (obs.position() + 7) / 8;
+        std::vector<uint8_t> result(len);
+        std::memcpy(result.data(), obs.data(), len);
         asc->swap(result);
     }
 }

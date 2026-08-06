@@ -54,6 +54,8 @@ const uint32_t kAudioFormatFlagIsSignedInteger = 1u << 2;
 const uint32_t kAudioFormatFlagIsPacked = 1u << 3;
 const uint32_t kAudioFormatFlagIsAlignedHigh = 1u << 4;
 const uint32_t kAudioChannelLayoutTag_UseChannelBitmap = (1u << 16) | 0;
+const uint32_t kAudioChannelLayoutTag_AAC_6_1 = (142u << 16) | 7;
+const uint32_t kAudioChannelLayoutTag_AAC_7_1_B = (183u << 16) | 8;
 
 } // namespace ca
 

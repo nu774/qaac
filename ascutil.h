@@ -27,7 +27,9 @@ namespace ascutil {
                   ca::AudioStreamBasicDescription *asbd,
                   std::vector<uint32_t> *channels);
 
-    void insert71RearPCEToASC(std::vector<uint8_t> *asc);
+    void insertPCEToASC(std::vector<uint8_t> *asc, uint32_t layoutTag);
+
+    bool fixupAACChannelConfigForDecode(std::vector<uint8_t> *asc);
 }
 
 #endif

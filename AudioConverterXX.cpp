@@ -19,7 +19,7 @@ std::vector<uint8_t> AudioConverterXX::getCompressionMagicCookie()
     auto cookie = BaseT::getCompressionMagicCookie();
     if (isOutputAAC() && m_OutputChannelLayoutTag == AAC_7_1_Rear_Tag) {
         auto asc = ascutil::parseMagicCookieAAC(cookie);
-        ascutil::insert71RearPCEToASC(&asc);
+        ascutil::insertPCEToASC(&asc, AAC_7_1_Rear_Tag);
         ascutil::replaceASCInMagicCookie(&cookie, asc);
     }
     return cookie;
