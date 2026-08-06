@@ -454,6 +454,7 @@ add_library(common STATIC
     input/WavpackSource.cpp
     filters/ChannelMapper.cpp
     filters/Compressor.cpp
+    filters/KaiserLpf.cpp
     filters/Limiter.cpp
     filters/MatrixMixer.cpp
     filters/Normalizer.cpp
