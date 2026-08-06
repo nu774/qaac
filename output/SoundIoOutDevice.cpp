@@ -239,6 +239,7 @@ void SoundIoOutDevice::close()
     std::memset(&m_asbd, 0, sizeof m_asbd);
     m_chanmask = 0;
     m_bytesPerFrame = 0;
+    m_paused = false;
 }
 
 void SoundIoOutDevice::drain()
@@ -340,9 +341,12 @@ void SoundIoOutDevice::handleConsoleInput()
     case VK_NEXT:   key = PlaybackKey::PageDown; break;
     case VK_ESCAPE:
     case 'Q':       key = PlaybackKey::Quit; break;
+    case VK_SPACE:
+    case 'P':       key = PlaybackKey::Pause; break;
     default:        return; // not a key we care about
     }
-    resetBufferedAudio();
+    if (key != PlaybackKey::Pause)
+        resetBufferedAudio();
     m_hasPendingKeyEvent = true;
     m_pendingKeyEvent = PlaybackKeyEvent(key);
 }
@@ -356,7 +360,7 @@ void SoundIoOutDevice::handleConsoleInput()
     for (ssize_t i = 0; i < n; ++i) {
         PlaybackKeyEvent ev = m_parser.feed(buf[i]);
         if (ev.key != PlaybackKey::None) {
-            if (!m_hasPendingKeyEvent)
+            if (!m_hasPendingKeyEvent && ev.key != PlaybackKey::Pause)
                 resetBufferedAudio();
             m_hasPendingKeyEvent = true;
             m_pendingKeyEvent = ev;

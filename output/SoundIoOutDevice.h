@@ -27,6 +27,7 @@ class SoundIoOutDevice {
     PlaybackKeyEvent m_pendingKeyEvent;
     int64_t m_queuedFramesAtLastKeyEvent = 0;
     std::atomic<bool> m_discardPending{false};
+    bool m_paused = false;
 
     struct ChunkInfo {
         std::string trackName;
@@ -65,6 +66,13 @@ public:
     }
     bool getAudiblePosition(std::string *trackName, int64_t *position) const;
     bool checkTrackChange(std::string *trackName);
+    bool isPaused() const { return m_paused; }
+    bool togglePause()
+    {
+        m_paused = !m_paused;
+        soundio_outstream_pause(m_outstream.get(), m_paused);
+        return m_paused;
+    }
 
 private:
     SoundIoOutDevice() = default;
