@@ -2,7 +2,7 @@
 #define CONSOLEINPUTPARSER_H
 
 enum class PlaybackKey {
-    None, Left, Right, Home, End, PageUp, PageDown, Quit
+    None, Left, Right, Home, End, PageUp, PageDown, Quit, Pause
 };
 
 struct PlaybackKeyEvent {

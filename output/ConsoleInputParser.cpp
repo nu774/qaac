@@ -6,6 +6,7 @@ PlaybackKeyEvent ConsoleInputParser::feed(unsigned char c)
     case State::Idle:
         if (c == 0x1b) { m_state = State::Esc; return {}; }
         if (c == 'q' || c == 'Q') return { PlaybackKey::Quit };
+        if (c == 'p' || c == 'P' || c == ' ') return { PlaybackKey::Pause };
         return {};
     case State::Esc:
         if (c == '[') { m_state = State::EscBracket; return {}; }
