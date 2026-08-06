@@ -464,6 +464,7 @@ add_library(common STATIC
     filters/SoxLowpassFilter.cpp
     filters/SOXRModule.cpp
     filters/SoxrResampler.cpp
+    filters/StreamingConvolver.cpp
     fft4g/fft4g_float.c
     output/CAFSink.cpp
     output/sink.cpp
