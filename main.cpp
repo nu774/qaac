@@ -7,6 +7,9 @@
 #include <sys/mman.h>
 #include <termios.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#endif
 #endif
 #include "ISink.h"
 #include "ascutil.h"
@@ -934,6 +937,16 @@ void setup_aach_codec(HMODULE hDll)
                 0, aachFactory);
     }
 }
+#elif defined(__APPLE__)
+static
+std::string get_macos_version()
+{
+    char buf[64] = {0};
+    size_t size = sizeof buf - 1;
+    if (sysctlbyname("kern.osproductversion", buf, &size, nullptr, 0) != 0)
+        return "unknown";
+    return buf;
+}
 #endif
 
 /*
@@ -1636,8 +1649,9 @@ static int app_main(int argc, char **argv)
             FreeLibrary(hDll);
         }
 #else
-        encoder_name = strutil::format("%s, CoreAudioToolbox (system)",
-                                       encoder_name.c_str());
+        encoder_name = strutil::format("%s, macOS AudioToolbox %s",
+                                       encoder_name.c_str(),
+                                       get_macos_version().c_str());
 #endif
 #endif
         opts.encoder_name = encoder_name;
