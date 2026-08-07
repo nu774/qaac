@@ -89,9 +89,9 @@ namespace TagLib
 #elif defined(TAGLIB_ATOMIC_WIN)
     void ref() { InterlockedIncrement(&refCount); }
     bool deref() { return ! InterlockedDecrement(&refCount); }
-    long count() { return refCount; }
+    LONG count() { return refCount; }
   private:
-    volatile long refCount;
+    volatile LONG refCount;
 #elif defined(TAGLIB_ATOMIC_GCC)
     void ref() { __sync_add_and_fetch(&refCount, 1); }
     bool deref() { return ! __sync_sub_and_fetch(&refCount, 1); }
