@@ -285,10 +285,6 @@ inline void print_log(const line_type& line, const char* Component, const char* 
     // Just return.
     return;
   }
-  if (CLogger::instance().isSystemLogEnabled()) {
-    print_log_system(line, Component, Category);
-    return;
-  }
   CLogger::instance().log(line.data());
 }
 
