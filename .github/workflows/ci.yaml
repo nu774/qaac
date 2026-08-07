@@ -77,7 +77,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: install libs
-        run: brew install flac libsndfile opus wavpack libsoxr
+        run: brew install flac libsndfile opus wavpack libsoxr ffmpeg
       - name: Configure
         run: cmake -B build -G Ninja .
       - name: Build
@@ -90,6 +90,10 @@ jobs:
           head -c 176400 /dev/zero > /tmp/smoke.raw
           ./build/refalac --raw -o /tmp/smoke_alac.m4a /tmp/smoke.raw
           ./build/qaac --raw -o /tmp/smoke_aac.m4a /tmp/smoke.raw
+      - name: Show encoding application tag
+        run: |
+          ffprobe -hide_banner /tmp/smoke_alac.m4a
+          ffprobe -hide_banner /tmp/smoke_aac.m4a
   linux-clang-mingw:
     strategy:
       matrix:
