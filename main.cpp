@@ -16,7 +16,7 @@
 #include "platformutil.h"
 #include "options.h"
 #include "InputFactory.h"
-#include "sink.h"
+#include "ADTSSink.h"
 #include "WaveSink.h"
 #include "CAFSink.h"
 #include "SoundIoOutDevice.h"

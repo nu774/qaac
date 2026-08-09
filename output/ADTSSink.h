@@ -1,5 +1,5 @@
-#ifndef _SINK_H
-#define _SINK_H
+#ifndef _ADTSSINK_H
+#define _ADTSSINK_H
 
 #include "ISink.h"
 #include "platformutil.h"

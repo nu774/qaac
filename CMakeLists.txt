@@ -492,7 +492,7 @@ add_library(common STATIC
     output/MMTISOBMFFAACSink.cpp
     output/MMTISOBMFFALACSink.cpp
     output/MMTISOBMFFSinkBase.cpp
-    output/sink.cpp
+    output/ADTSSink.cpp
     output/WaveSink.cpp
     bitstream.cpp
     chanmap.cpp

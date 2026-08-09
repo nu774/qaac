@@ -1,5 +1,5 @@
 #include <algorithm>
-#include "sink.h"
+#include "ADTSSink.h"
 #include "bitstream.h"
 
 static
