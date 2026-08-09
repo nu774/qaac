@@ -52,6 +52,8 @@ private:
     int64_t m_preSkip;
     int64_t m_totalSamples;      // post pre-skip/end-trim, in m_oasbd's sample rate
     unsigned m_headerPacketCount; // header packets after the id header to skip
+                                  // (Opus/Vorbis only -- see restartAt())
+    bool m_scanForLastMetadataBlock; // FLAC only: see restartAt()
     unsigned m_prerollPackets;    // extra decode-and-discard margin after a seek
 
     ogg_sync_state m_oy;

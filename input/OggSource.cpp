@@ -99,13 +99,11 @@ namespace {
      * 0x7F "FLAC" major minor n_header_packets(2) "fLaC" <same blocks>,
      * a 13-byte preamble followed by exactly that.
      */
-    std::vector<uint8_t> oggFlacHeaderToCookie(const std::vector<uint8_t> &packet,
-                                               uint16_t *headerPacketCount)
+    std::vector<uint8_t> oggFlacHeaderToCookie(const std::vector<uint8_t> &packet)
     {
         if (packet.size() < 13 || packet[0] != 0x7f
                 || std::memcmp(packet.data() + 1, "FLAC", 4))
             throw std::runtime_error("Malformed Ogg FLAC id header packet");
-        *headerPacketCount = (packet[7] << 8) | packet[8];
         std::vector<uint8_t> cookie(packet.begin() + 13, packet.end());
         /*
          * In the Ogg mapping, STREAMINFO's "last metadata block" flag is
@@ -153,7 +151,8 @@ OggSource::OggSource(std::shared_ptr<IInputStream> stream,
                      size_t chainIndex)
     : m_stream(stream), m_index(index), m_chainIndex(chainIndex),
       m_preSkip(0), m_totalSamples(0), m_headerPacketCount(0),
-      m_prerollPackets(0), m_streamInited(false), m_eos(false), m_position(0)
+      m_scanForLastMetadataBlock(false), m_prerollPackets(0),
+      m_streamInited(false), m_eos(false), m_position(0)
 {
     memset(&m_oy, 0, sizeof m_oy);
     memset(&m_os, 0, sizeof m_os);
@@ -170,13 +169,12 @@ OggSource::OggSource(std::shared_ptr<IInputStream> stream,
         m_headerPacketCount = 1; // OpusTags, always exactly one (RFC 7845)
         m_prerollPackets = 4;    // matches MP4Source::getMaxFrameDependency() for opus
     } else if (c.codec == "flac") {
-        uint16_t headerPackets;
-        auto cookie = oggFlacHeaderToCookie(c.id_header_packet, &headerPackets);
+        auto cookie = oggFlacHeaderToCookie(c.id_header_packet);
         auto decoder = std::make_shared<FLACPacketDecoder>();
         decoder->setMagicCookie(cookie);
         m_decoder = decoder;
         m_preSkip = 0;
-        m_headerPacketCount = headerPackets;
+        m_scanForLastMetadataBlock = true;
         m_prerollPackets = 0; // FLAC frames are independently decodable
     } else if (c.codec == "vorbis") {
         auto cookie = vorbisHeadersToCookie(c);
@@ -220,8 +218,17 @@ void OggSource::restartAt(int64_t byteOffset)
     if (byteOffset == chain().first_page_offset) {
         std::vector<uint8_t> dummy;
         readPacket(&dummy); // id header
-        for (unsigned i = 0; i < m_headerPacketCount; ++i)
-            readPacket(&dummy); // comment header (+ extra FLAC metadata packets)
+        if (m_scanForLastMetadataBlock) {
+            bool last = false;
+            while (!last) {
+                if (!readPacket(&dummy))
+                    break;
+                last = !dummy.empty() && (dummy[0] & 0x80);
+            }
+        } else {
+            for (unsigned i = 0; i < m_headerPacketCount; ++i)
+                readPacket(&dummy); // Opus/Vorbis: fixed header packet count
+        }
     }
 }
 
