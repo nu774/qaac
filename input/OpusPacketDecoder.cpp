@@ -87,8 +87,7 @@ void OpusPacketDecoder::setMagicCookie(const std::vector<uint8_t> &cookie)
             OpusDecoder *dec = nullptr;
             err = m_module.multistream_decoder_ctl(decoder, OPUS_MULTISTREAM_GET_DECODER_STATE(i, &dec));
             if (err) throw std::runtime_error(m_module.strerror(err));
-            err = m_module.decoder_ctl(dec, OPUS_SET_COMPLEXITY(10));
-            if (err) throw std::runtime_error(m_module.strerror(err));
+            m_module.decoder_ctl(dec, OPUS_SET_COMPLEXITY(10));
         }
         m_decoder = std::shared_ptr<OpusMSDecoder>(decoder, m_module.multistream_decoder_destroy);
         m_iasbd.mFormatID = util::fourcc("opus");
