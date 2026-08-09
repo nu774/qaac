@@ -38,6 +38,10 @@ This is a header file of libsoxr (https://sourceforge.net/projects/soxr/).
 include/opus:
 These are header files of Opus (https://opus-codec.org/).
 
+include/vorbis/codec.h:
+This is a header file of libvorbis (https://xiph.org/vorbis/),
+distributed under a BSD-style license.
+
 Files under uchardet:
 These are part of uchardet (https://gitlab.freedesktop.org/uchardet/uchardet/),
 derived from Mozilla's universal charset detector code, distributed under
@@ -62,3 +66,8 @@ General purpose FFT package by Takuya Ooura
 (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html).
 "You may use, copy, modify and distribute this code for any purpose
 (include commercial use) and without fee."
+
+Files under mmtisobmff:
+These are part of the Fraunhofer FDK MPEG-H Software's ISOBMFF library
+(mmtisobmff), Copyright (c) 2016-2023 Fraunhofer-Gesellschaft, distributed
+under the Fraunhofer FDK MPEG-H Software License.
