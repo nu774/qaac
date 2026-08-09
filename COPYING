@@ -32,16 +32,30 @@ include/tak_deco_lib.h:
 This is a header file of TAK (http://www.thbeck.de/Tak/Tak.html),
 version 2.2.0
 
-include/libsoxrate.h:
-This is a header file of libsoxrate.
-Minimized DLL version made out of sox 14.3.2 (rate effect only).
-
 include/soxr.h:
 This is a header file of libsoxr (https://sourceforge.net/projects/soxr/).
+
+include/opus:
+These are header files of Opus (https://opus-codec.org/).
+
+Files under uchardet:
+These are part of uchardet (https://gitlab.freedesktop.org/uchardet/uchardet/),
+derived from Mozilla's universal charset detector code, distributed under
+MPL 1.1/GPL 2.0/LGPL 2.1.
+
+Files under ogg:
+These are part of libogg (https://xiph.org/ogg/).
 
 include/vorbis/codec.h:
 This is a header file of libvorbis (https://xiph.org/vorbis/),
 distributed under a BSD-style license.
+
+Files under libsoundio:
+This is libsoundio (http://libsound.io/), Copyright (c) 2015 Andrew Kelley,
+distributed under the MIT license.
+
+include/utf8, include/utf8.h:
+These are part of utfcpp (https://github.com/nemtrif/utfcpp).
 
 fft4g/fft4g.c:
 General purpose FFT package by Takuya Ooura
