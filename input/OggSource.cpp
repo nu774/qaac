@@ -167,7 +167,7 @@ OggSource::OggSource(std::shared_ptr<IInputStream> stream,
         m_decoder = decoder;
         m_preSkip = preSkip;
         m_headerPacketCount = 1; // OpusTags, always exactly one (RFC 7845)
-        m_prerollPackets = 4;    // matches MP4Source::getMaxFrameDependency() for opus
+        m_prerollPackets = 4;    // matches MMTISOBMFFSource::getMaxFrameDependency() for opus
     } else if (c.codec == "flac") {
         auto cookie = oggFlacHeaderToCookie(c.id_header_packet);
         auto decoder = std::make_shared<FLACPacketDecoder>();

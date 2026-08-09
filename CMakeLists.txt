@@ -93,127 +93,6 @@ add_library(ogg STATIC
 target_include_directories(ogg PUBLIC ogg/include ${CMAKE_CURRENT_BINARY_DIR}/ogg_config)
 
 # ---------------------------------------------------------------------------
-# mp4v2
-# ---------------------------------------------------------------------------
-add_library(mp4v2 STATIC
-    mp4v2/src/3gp.cpp
-    mp4v2/src/atom_ac3.cpp
-    mp4v2/src/atom_amr.cpp
-    mp4v2/src/atom_avc1.cpp
-    mp4v2/src/atom_avcC.cpp
-    mp4v2/src/atom_chpl.cpp
-    mp4v2/src/atom_colr.cpp
-    mp4v2/src/atom_d263.cpp
-    mp4v2/src/atom_dac3.cpp
-    mp4v2/src/atom_damr.cpp
-    mp4v2/src/atom_dref.cpp
-    mp4v2/src/atom_elst.cpp
-    mp4v2/src/atom_enca.cpp
-    mp4v2/src/atom_encv.cpp
-    mp4v2/src/atom_free.cpp
-    mp4v2/src/atom_ftab.cpp
-    mp4v2/src/atom_ftyp.cpp
-    mp4v2/src/atom_gmin.cpp
-    mp4v2/src/atom_hdlr.cpp
-    mp4v2/src/atom_hinf.cpp
-    mp4v2/src/atom_hnti.cpp
-    mp4v2/src/atom_href.cpp
-    mp4v2/src/atom_mdat.cpp
-    mp4v2/src/atom_mdhd.cpp
-    mp4v2/src/atom_meta.cpp
-    mp4v2/src/atom_mp4s.cpp
-    mp4v2/src/atom_mp4v.cpp
-    mp4v2/src/atom_mvhd.cpp
-    mp4v2/src/atom_nmhd.cpp
-    mp4v2/src/atom_ohdr.cpp
-    mp4v2/src/atom_pasp.cpp
-    mp4v2/src/atom_root.cpp
-    mp4v2/src/atom_rtp.cpp
-    mp4v2/src/atom_s263.cpp
-    mp4v2/src/atom_sdp.cpp
-    mp4v2/src/atom_sdtp.cpp
-    mp4v2/src/atom_smi.cpp
-    mp4v2/src/atom_sound.cpp
-    mp4v2/src/atom_standard.cpp
-    mp4v2/src/atom_stbl.cpp
-    mp4v2/src/atom_stdp.cpp
-    mp4v2/src/atom_stsc.cpp
-    mp4v2/src/atom_stsd.cpp
-    mp4v2/src/atom_stsz.cpp
-    mp4v2/src/atom_stz2.cpp
-    mp4v2/src/atom_text.cpp
-    mp4v2/src/atom_tfhd.cpp
-    mp4v2/src/atom_tkhd.cpp
-    mp4v2/src/atom_treftype.cpp
-    mp4v2/src/atom_trun.cpp
-    mp4v2/src/atom_tx3g.cpp
-    mp4v2/src/atom_udta.cpp
-    mp4v2/src/atom_url.cpp
-    mp4v2/src/atom_urn.cpp
-    mp4v2/src/atom_uuid.cpp
-    mp4v2/src/atom_video.cpp
-    mp4v2/src/atom_vmhd.cpp
-    mp4v2/src/cmeta.cpp
-    mp4v2/src/log.cpp
-    mp4v2/src/mp4.cpp
-    mp4v2/src/qtff/coding.cpp
-    mp4v2/src/qtff/ColorParameterBox.cpp
-    mp4v2/src/itmf/CoverArtBox.cpp
-    mp4v2/src/descriptors.cpp
-    mp4v2/libplatform/sys/error.cpp
-    mp4v2/src/exception.cpp
-    mp4v2/libplatform/io/File.cpp
-    mp4v2/libplatform/io/FileSystem.cpp
-    mp4v2/src/itmf/generic.cpp
-    mp4v2/src/isma.cpp
-    mp4v2/src/mp4atom.cpp
-    mp4v2/src/mp4container.cpp
-    mp4v2/src/mp4descriptor.cpp
-    mp4v2/src/mp4file.cpp
-    mp4v2/src/mp4file_io.cpp
-    mp4v2/src/mp4info.cpp
-    mp4v2/src/mp4property.cpp
-    mp4v2/src/mp4track.cpp
-    mp4v2/src/mp4util.cpp
-    mp4v2/src/ocidescriptors.cpp
-    mp4v2/src/odcommands.cpp
-    mp4v2/libplatform/prog/option.cpp
-    mp4v2/src/qtff/PictureAspectRatioBox.cpp
-    mp4v2/src/qosqualifiers.cpp
-    mp4v2/src/rtphint.cpp
-    mp4v2/src/itmf/Tags.cpp
-    mp4v2/src/text.cpp
-    mp4v2/libplatform/time/time.cpp
-    mp4v2/src/itmf/type.cpp
-    mp4v2/src/bmff/typebmff.cpp
-)
-if(WIN32)
-    target_sources(mp4v2 PRIVATE mp4v2/libplatform/platform_win32.cpp)
-    target_sources(mp4v2 PRIVATE
-        mp4v2/libplatform/io/File_win32.cpp
-        mp4v2/libplatform/io/FileSystem_win32.cpp
-        mp4v2/libplatform/number/random_win32.cpp
-        mp4v2/libplatform/time/time_win32.cpp
-    )
-else()
-    target_sources(mp4v2 PRIVATE
-        mp4v2/libplatform/io/File_posix.cpp
-        mp4v2/libplatform/io/FileSystem_posix.cpp
-        mp4v2/libplatform/number/random_posix.cpp
-        mp4v2/libplatform/time/time_posix.cpp
-    )
-endif()
-target_include_directories(mp4v2 PUBLIC mp4v2 mp4v2/include)
-target_compile_definitions(mp4v2 PUBLIC MP4V2_USE_STATIC_LIB MP4V2_NO_STDINT_DEFS)
-target_compile_definitions(mp4v2 PRIVATE _CRT_SECURE_NO_DEPRECATE)
-if(MSVC)
-    target_compile_options(mp4v2 PRIVATE /wd4018 /wd4267)
-endif()
-if(MSVC AND MSVC_VERSION LESS 1900)
-    target_compile_definitions(mp4v2 PRIVATE snprintf=_snprintf)
-endif()
-
-# ---------------------------------------------------------------------------
 # taglib
 # ---------------------------------------------------------------------------
 add_library(taglib STATIC
@@ -622,7 +501,6 @@ add_library(common STATIC
     ISource.cpp
     metadata.cpp
     misc.cpp
-    mp4v2wrapper.cpp
     Subprocess.cpp
     strutil.cpp
     util.cpp
@@ -662,7 +540,7 @@ target_compile_definitions(common PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_N
 if(MSVC)
     target_compile_options(common PRIVATE /wd4018 /wd4244 /wd4267 /wd4838)
 endif()
-target_link_libraries(common PUBLIC mp4v2 taglib uchardet ogg mmtisobmff)
+target_link_libraries(common PUBLIC taglib uchardet ogg mmtisobmff)
 target_link_libraries(common PUBLIC libsoundio)
 
 # ---------------------------------------------------------------------------
@@ -674,7 +552,6 @@ add_executable(qaac
     input/CoreAudioPacketDecoder.cpp
     input/ExtAFSource.cpp
     input/MMTISOBMFFSource.cpp
-    input/MP4Source.cpp
     input/MPAHeader.cpp
     input/InputFactory.cpp
     filters/CoreAudioResampler.cpp
@@ -709,7 +586,7 @@ target_compile_definitions(qaac PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_
 if(MSVC)
     target_compile_options(qaac PRIVATE /wd4018 /wd4091 /wd4244 /wd4267 /wd4838)
 endif()
-target_link_libraries(qaac PRIVATE common mp4v2 taglib mmtisobmff)
+target_link_libraries(qaac PRIVATE common taglib mmtisobmff)
 
 if(WIN32)
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -784,7 +661,6 @@ add_executable(refalac
     input/ALACPacketDecoder.cpp
     input/InputFactory.cpp
     input/MMTISOBMFFSource.cpp
-    input/MP4Source.cpp
     ALACEncoderX.cpp
     ascutil.cpp
     cautil.cpp
@@ -814,7 +690,7 @@ target_compile_definitions(refalac PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_
 if(MSVC)
     target_compile_options(refalac PRIVATE /wd4018 /wd4091 /wd4244 /wd4267 /wd4838)
 endif()
-target_link_libraries(refalac PRIVATE alac common mp4v2 taglib mmtisobmff)
+target_link_libraries(refalac PRIVATE alac common taglib mmtisobmff)
 if(WIN32)
     target_link_libraries(refalac PRIVATE
         shlwapi.lib

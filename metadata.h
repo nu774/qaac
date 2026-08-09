@@ -2,7 +2,7 @@
 #define METADATA_H
 
 #include <iterator>
-#include "mp4v2wrapper.h"
+#include "util.h"
 #include "misc.h"
 #include "IInputStream.h"
 
@@ -96,8 +96,6 @@ namespace M4A {
     void convertToM4ATags(const std::map<std::string, std::string> &src,
                           std::map<uint32_t, std::string> *shortTags,
                           std::map<std::string, std::string> *longTags);
-
-    std::map<std::string, std::string> fetchTags(MP4FileX &file);
 
     int getImageFileType(const void *data, size_t size);
 

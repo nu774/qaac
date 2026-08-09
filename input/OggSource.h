@@ -12,7 +12,7 @@
 /*
  * One logical Ogg bitstream (chain) from an Opus- or FLAC-in-Ogg file,
  * decoded via the codec's IPacketDecoder -- the same abstraction
- * MP4Source uses for ISOBMFF-contained Opus/FLAC. Several OggSource
+ * MMTISOBMFFSource uses for ISOBMFF-contained Opus/FLAC. Several OggSource
  * instances (one per chain) can share the same underlying stream and
  * OggIndex; each owns its own libogg demux state.
  */

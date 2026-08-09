@@ -15,7 +15,6 @@
 #include "platformutil.h"
 #endif
 #include "strutil.h"
-#include "mp4v2wrapper.h"
 #include "cuesheet.h"
 #include "taglibhelper.h"
 
@@ -496,76 +495,6 @@ namespace M4A {
                                 const fcc2name_t &b) -> bool
                              { return a.fcc < b.fcc; });
         return entry < end && entry->fcc == search.fcc ? entry->name : 0;
-    }
-
-    std::string parseValue(uint32_t fcc, const MP4ItmfData &data)
-    {
-        uint8_t *value = data.value;
-
-        if (fcc == Tag::kGenreID3) {
-            unsigned v = (value[0] << 8) | value[1];
-            if (v > 0 && v < 255) {
-                auto x = static_cast<mp4v2::impl::itmf::GenreType>(v);
-                return mp4v2::impl::itmf::enumGenreType.toString(x);
-            }
-        } else if (fcc == Tag::kDisk || fcc == Tag::kTrack) {
-            unsigned index = (value[2] << 8) | value[3];
-            unsigned total = (value[4] << 8) | value[5];
-            return strutil::format("%u/%u", index, total);
-        } else if (data.typeCode == MP4_ITMF_BT_INTEGER) {
-            if (data.valueSize == 8) {
-                uint32_t high, low;
-                high = (value[0]<<24)|(value[1]<<16)|(value[2]<<8)|value[3];
-                low  = (value[4]<<24)|(value[5]<<16)|(value[6]<<8)|value[7];
-                uint64_t value = (static_cast<uint64_t>(high) << 32) | low;
-                return strutil::format("%lld", value);
-            }
-            int v;
-            if (data.valueSize == 1)
-                v = value[0];
-            else if (data.valueSize == 2)
-                v = (value[0] << 8) | value[1];
-            else if (data.valueSize == 4)
-                v = (value[0]<<24)|(value[1]<<16)|(value[2]<<8)|value[3];
-            else
-                return "";
-            return strutil::format("%d", v);
-        } else {
-            char *vp = reinterpret_cast<char*>(value);
-            return std::string(vp, vp + data.valueSize);
-        }
-        return "";
-    }
-
-    std::map<std::string, std::string> fetchTags(MP4FileX &file)
-    {
-        std::map<std::string, std::string> result;
-        try {
-            auto iL = mp4v2::impl::itmf::genericGetItems(file);
-            if (!iL) return result;
-            std::shared_ptr<MP4ItmfItemList>
-                _(iL, mp4v2::impl::itmf::genericItemListFree);
-            for (size_t i = 0; i < iL->size; ++i) {
-                auto item = iL->elements[i];
-                uint32_t fcc = util::fourcc(item.code);
-                auto data = item.dataList.elements[0];
-                if (!data.value || !data.valueSize)
-                    continue;
-                auto v = parseValue(fcc, data);
-                if (v.empty())
-                    continue;
-                if (fcc == '----')
-                    result.insert(std::make_pair(std::string(item.name), v));
-                else {
-                    const char *name = getTagNameFromFourCC(fcc);
-                    if (name)
-                        result.insert(std::make_pair(std::string(name), v));
-                }
-            }
-        } catch (mp4v2::impl::Exception *e) {
-            handle_mp4error(e);
-        }
-        return result;
     }
 
     int getImageFileType(const void *data, size_t size)

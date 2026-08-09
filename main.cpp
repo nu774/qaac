@@ -796,20 +796,6 @@ void finishWriteSink(const std::shared_ptr<ISink> &sink, IEncoder *encoder,
         IEncoderStat *stat = dynamic_cast<IEncoderStat *>(encoder);
         bw->writeBitrates(stat->overallBitrate() * 1000.0 + .5);
     }
-    MP4SinkBase *mp4sink = dynamic_cast<MP4SinkBase*>(sink.get());
-    if (mp4sink) {
-        PeriodicDisplay disp(100, opts.verbose);
-        auto optimize_cb = [disp](uint64_t i, uint64_t total) mutable {
-            if (total) {
-                int percent = 100.0 * i / total + .5;
-                disp.put(strutil::format("\rOptimizing...%d%%", percent));
-            } else {
-                disp.put("\rOptimizing...done\n");
-                disp.flush();
-            }
-        };
-        mp4sink->setOptimizeCallback(optimize_cb);
-    }
     IFinishWriteSink *fsink = dynamic_cast<IFinishWriteSink*>(sink.get());
     if (fsink)
         fsink->finishWrite(pti);
@@ -1456,8 +1442,7 @@ void load_metadata_files(Options *opts)
             std::shared_ptr<char> dataPtr(data,
                 [size](char *p) { munmap(p, size); });
 #endif
-            auto type = mp4v2::impl::itmf::computeBasicType(data, size);
-            if (type == mp4v2::impl::itmf::BT_IMPLICIT)
+            if (!M4A::getImageFileType(data, size))
                 throw std::runtime_error("Unknown artwork image type");
             std::vector<char> vec(data, data + size);
 #ifdef _WIN32
@@ -1695,9 +1680,6 @@ static int app_main(int argc, char **argv)
             return 0;
         }
 #endif
-        mp4v2::impl::log.setVerbosity(MP4_LOG_NONE);
-        //mp4v2::impl::log.setVerbosity(MP4_LOG_VERBOSE4);
-
         load_metadata_files(&opts);
         if (opts.tmpdir) {
 #ifdef _WIN32

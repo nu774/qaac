@@ -11,7 +11,6 @@
 #endif
 #include "WaveSource.h"
 #include "WavpackSource.h"
-#include "MP4Source.h"
 #ifdef _WIN32
 #include "AvisynthSource.h"
 #endif
@@ -53,7 +52,6 @@ std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
 
     TRY_MAKE_SHARED(WaveSource, stream, m_ignore_length);
     TRY_MAKE_SHARED(MMTISOBMFFSource, stream);
-    TRY_MAKE_SHARED(MP4Source, stream);
     TRY_MAKE_SHARED(CAFSource, stream);
 #ifdef QAAC
     TRY_MAKE_SHARED(ExtAFSource, stream);
