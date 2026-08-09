@@ -40,7 +40,7 @@ private:
     const OggChainInfo &chain() const { return (*m_index)[m_chainIndex]; }
     void fetchTags();
     void restartAt(int64_t byteOffset);
-    bool readPacket(std::vector<uint8_t> *buffer);
+    bool readPacket(std::vector<uint8_t> *buffer, int64_t *granulepos = 0);
     void fillDecodeBuffer();
 
     std::shared_ptr<IInputStream> m_stream;

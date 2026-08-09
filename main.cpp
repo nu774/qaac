@@ -49,6 +49,7 @@
 #include "AvisynthSource.h"
 #endif
 #include "OpusPacketDecoder.h"
+#include "VorbisPacketDecoder.h"
 #include "OggIndex.h"
 #include "OggSource.h"
 #include "SeekableInputStream.h"
@@ -1305,7 +1306,7 @@ void load_cue_tracks(const Options &opts, std::streambuf *sb, bool is_embedded,
 }
 
 static
-bool looksLikeOggOpusOrFlac(const std::shared_ptr<IInputStream> &stream)
+bool looksLikeOggOpusFlacOrVorbis(const std::shared_ptr<IInputStream> &stream)
 {
     unsigned char buf[64] = { 0 };
     stream->seek(0, SEEK_SET);
@@ -1317,7 +1318,9 @@ bool looksLikeOggOpusOrFlac(const std::shared_ptr<IInputStream> &stream)
         return false; // unusually large page header; not worth special-casing
     return !std::memcmp(buf + packetOffset, "OpusHead", 8)
         || (buf[packetOffset] == 0x7f
-            && !std::memcmp(buf + packetOffset + 1, "FLAC", 4));
+            && !std::memcmp(buf + packetOffset + 1, "FLAC", 4))
+        || (buf[packetOffset] == 0x01
+            && !std::memcmp(buf + packetOffset + 1, "vorbis", 6));
 }
 
 static
@@ -1336,7 +1339,8 @@ void load_ogg_tracks(const char *ifilename, const Options &opts,
 
     for (size_t i = 0; i < index->size(); ++i) {
         const OggChainInfo &chain = (*index)[i];
-        if (chain.codec != "opus" && chain.codec != "flac") {
+        if (chain.codec != "opus" && chain.codec != "flac"
+                && chain.codec != "vorbis") {
             LOG("WARNING: %s: chain %d has unsupported codec (%s), skipped\n",
                 strutil::basename(basename), (int)i + 1, chain.codec.c_str());
             continue;
@@ -1377,7 +1381,7 @@ void load_track(const char *ifilename, const Options &opts,
     }
 
     auto oggStream = std::make_shared<SeekableInputStream>(ifilename);
-    if (looksLikeOggOpusOrFlac(oggStream)) {
+    if (looksLikeOggOpusFlacOrVorbis(oggStream)) {
         load_ogg_tracks(ifilename, opts, oggStream, tracks);
         return;
     }
@@ -1657,6 +1661,8 @@ static int app_main(int argc, char **argv)
 #endif
             if (LibOpusModule::instance().loaded())
                 LOG("%s\n", LibOpusModule::instance().get_version_string());
+            if (VorbisModule::instance().loaded())
+                LOG("%s\n", VorbisModule::instance().version_string());
             return 0;
         }
 #ifdef QAAC

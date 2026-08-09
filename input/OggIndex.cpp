@@ -82,18 +82,34 @@ void OggIndex::build(const std::shared_ptr<IInputStream> &stream)
             auto sit = pending.find(serial);
             if (sit != pending.end()) {
                 /*
-                 * Only feed pages into the stream demuxer until the id
-                 * header packet (always the sole packet of the BOS page
-                 * for the mappings we care about) comes out. Once we
-                 * have it, drop the stream state immediately -- if we
-                 * kept feeding every page for the whole file, libogg
-                 * would keep buffering packet data we never drain.
+                 * Feed pages into the stream demuxer until we have every
+                 * header packet we need: just the id header packet for
+                 * the mappings we care about, except Vorbis, which needs
+                 * its comment and setup packets too (see
+                 * OggChainInfo::setup_header_packet). Once we have them
+                 * all, drop the stream state immediately -- if we kept
+                 * feeding every page for the whole file, libogg would
+                 * keep buffering packet data we never drain.
                  */
                 ogg_stream_pagein(&sit->second, &og);
                 ogg_packet op;
-                if (ogg_stream_packetout(&sit->second, &op) > 0) {
-                    chain.id_header_packet.assign(op.packet, op.packet + op.bytes);
-                    chain.codec = identifyCodec(chain.id_header_packet);
+                while (ogg_stream_packetout(&sit->second, &op) > 0) {
+                    if (chain.id_header_packet.empty()) {
+                        chain.id_header_packet.assign(op.packet, op.packet + op.bytes);
+                        chain.codec = identifyCodec(chain.id_header_packet);
+                    } else if (chain.codec == "vorbis" &&
+                               chain.comment_header_packet.empty()) {
+                        chain.comment_header_packet.assign(op.packet, op.packet + op.bytes);
+                    } else if (chain.codec == "vorbis" &&
+                               chain.setup_header_packet.empty()) {
+                        chain.setup_header_packet.assign(op.packet, op.packet + op.bytes);
+                    } else {
+                        break;
+                    }
+                }
+                bool done = !chain.id_header_packet.empty() &&
+                    (chain.codec != "vorbis" || !chain.setup_header_packet.empty());
+                if (done) {
                     ogg_stream_clear(&sit->second);
                     pending.erase(sit);
                 }

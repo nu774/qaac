@@ -4,11 +4,13 @@
 #include <stdexcept>
 #include "OpusPacketDecoder.h"
 #include "FLACPacketDecoder.h"
+#include "VorbisPacketDecoder.h"
 #include "taglibhelper.h"
 #include "strutil.h"
 #include "metadata.h"
 #include <opusfile.h>
 #include <oggflacfile.h>
+#include <vorbisfile.h>
 
 namespace {
     class WindowedInputStream: public IInputStream {
@@ -118,6 +120,32 @@ namespace {
             cookie[0] |= 0x80;
         return cookie;
     }
+
+    /*
+     * VorbisPacketDecoder::setMagicCookie() needs all three Vorbis header
+     * packets (id, comment, setup) to call vorbis_synthesis_headerin() --
+     * unlike Opus/FLAC's single-header cookies, since the setup packet
+     * carries the codebooks that decoding depends on. Concatenate them as
+     * three [4-byte BE length][data] blocks, in order.
+     */
+    std::vector<uint8_t> vorbisHeadersToCookie(const OggChainInfo &chain)
+    {
+        std::vector<uint8_t> cookie;
+        const std::vector<uint8_t> *packets[3] = {
+            &chain.id_header_packet,
+            &chain.comment_header_packet,
+            &chain.setup_header_packet,
+        };
+        for (auto *packet: packets) {
+            uint32_t len = static_cast<uint32_t>(packet->size());
+            cookie.push_back((len >> 24) & 0xff);
+            cookie.push_back((len >> 16) & 0xff);
+            cookie.push_back((len >> 8) & 0xff);
+            cookie.push_back(len & 0xff);
+            cookie.insert(cookie.end(), packet->begin(), packet->end());
+        }
+        return cookie;
+    }
 }
 
 OggSource::OggSource(std::shared_ptr<IInputStream> stream,
@@ -125,8 +153,7 @@ OggSource::OggSource(std::shared_ptr<IInputStream> stream,
                      size_t chainIndex)
     : m_stream(stream), m_index(index), m_chainIndex(chainIndex),
       m_preSkip(0), m_totalSamples(0), m_headerPacketCount(0),
-      m_prerollPackets(0), m_streamInited(false), m_eos(false),
-      m_position(0)
+      m_prerollPackets(0), m_streamInited(false), m_eos(false), m_position(0)
 {
     memset(&m_oy, 0, sizeof m_oy);
     memset(&m_os, 0, sizeof m_os);
@@ -151,6 +178,14 @@ OggSource::OggSource(std::shared_ptr<IInputStream> stream,
         m_preSkip = 0;
         m_headerPacketCount = headerPackets;
         m_prerollPackets = 0; // FLAC frames are independently decodable
+    } else if (c.codec == "vorbis") {
+        auto cookie = vorbisHeadersToCookie(c);
+        auto decoder = std::make_shared<VorbisPacketDecoder>();
+        decoder->setMagicCookie(cookie);
+        m_decoder = decoder;
+        m_preSkip = 0;
+        m_headerPacketCount = 2; // comment + setup, already folded into the cookie above
+        m_prerollPackets = 1; // see the granule resync in seekTo()'s warm-up loop
     } else {
         throw std::runtime_error("Unsupported Ogg codec: " + c.codec);
     }
@@ -190,13 +225,15 @@ void OggSource::restartAt(int64_t byteOffset)
     }
 }
 
-bool OggSource::readPacket(std::vector<uint8_t> *buffer)
+bool OggSource::readPacket(std::vector<uint8_t> *buffer, int64_t *granulepos)
 {
     ogg_packet op;
     for (;;) {
         int rc = ogg_stream_packetout(&m_os, &op);
         if (rc == 1) {
             buffer->assign(op.packet, op.packet + op.bytes);
+            if (granulepos)
+                *granulepos = op.granulepos;
             return true;
         }
         if (rc < 0)
@@ -267,21 +304,15 @@ void OggSource::seekTo(int64_t count)
     if (count > m_totalSamples) count = m_totalSamples;
     int64_t rawTarget = count + m_preSkip;
 
+    int64_t seekOffset = chain().first_page_offset;
+    int64_t baseline = 0;
     const auto &pages = chain().page_index;
     auto it = std::upper_bound(pages.begin(), pages.end(), rawTarget,
         [](int64_t target, const std::pair<int64_t, int64_t> &p) {
             return target < p.first;
         });
-
-    int64_t seekOffset = chain().first_page_offset;
-    int64_t baseline = 0;
     if (it != pages.begin()) {
         auto chosen = it - 1; // last page whose granule <= rawTarget
-        /*
-         * Opus needs a few packets of decoder warm-up after a hard
-         * reset; back up one more page so we don't hand the decoder a
-         * cold start right at the target.
-         */
         if (m_prerollPackets > 0 && chosen != pages.begin())
             --chosen;
         seekOffset = chosen->second;
@@ -294,13 +325,22 @@ void OggSource::seekTo(int64_t count)
 
     int64_t rawPos = baseline;
     while (rawPos < rawTarget) {
-        if (!readPacket(&m_packetBuffer))
+        int64_t granulepos;
+        if (!readPacket(&m_packetBuffer, &granulepos))
             break;
         int n = m_decoder->decode(m_packetBuffer, &m_rawDecodeBuffer);
-        if (n <= 0)
+        if (n <= 0) {
+            if (granulepos != -1)
+                rawPos = granulepos;
             continue;
-        if (rawPos + n > rawTarget) {
-            int64_t skip = rawTarget - rawPos;
+        }
+        int64_t posBefore = rawPos, posAfter = rawPos + n;
+        if (granulepos != -1) {
+            posAfter = granulepos;
+            posBefore = granulepos - n;
+        }
+        if (posAfter > rawTarget) {
+            int64_t skip = std::max<int64_t>(0, rawTarget - posBefore);
             int64_t keep = n - skip;
             m_decodeBuffer.reserve(keep);
             std::memcpy(m_decodeBuffer.write_ptr(),
@@ -310,7 +350,7 @@ void OggSource::seekTo(int64_t count)
             m_decodeBuffer.commit(keep);
             rawPos = rawTarget;
         } else {
-            rawPos += n;
+            rawPos = posAfter;
         }
     }
     m_position = count;
@@ -319,7 +359,7 @@ void OggSource::seekTo(int64_t count)
 void OggSource::fetchTags()
 {
     const std::string &codec = chain().codec;
-    if (codec != "opus" && codec != "flac")
+    if (codec != "opus" && codec != "flac" && codec != "vorbis")
         return;
 
     int64_t start = chain().first_page_offset;
@@ -333,8 +373,10 @@ void OggSource::fetchTags()
     std::shared_ptr<TagLib::Ogg::File> file;
     if (codec == "opus")
         file = std::make_shared<TagLib::Ogg::Opus::File>(&reader, false);
-    else
+    else if (codec == "flac")
         file = std::make_shared<TagLib::Ogg::FLAC::File>(&reader, false);
+    else
+        file = std::make_shared<TagLib::Ogg::Vorbis::File>(&reader, false);
 
     auto tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file->tag());
     if (!tag)

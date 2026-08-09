@@ -439,6 +439,7 @@ add_library(common STATIC
     input/OggSource.cpp
     input/OpusPacketDecoder.cpp
     input/RawSource.cpp
+    input/VorbisPacketDecoder.cpp
     input/WaveSource.cpp
     input/WavpackSource.cpp
     filters/ChannelMapper.cpp

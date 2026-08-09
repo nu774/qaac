@@ -1,21 +1,10 @@
 #include "OpusPacketDecoder.h"
 #include "cautil.h"
 #include "ascutil.h"
+#include "VorbisChannelLayout.h"
 
 #define CHECK(expr) do { if (!(expr)) throw std::runtime_error("!?"); } \
     while (0)
-
-// cf. https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-810004.3.9
-const uint8_t vorbis_channel_layout[8][8] = {
-    { 0 },
-    { 0, 1 },
-    { 0, 2, 1 },
-    { 0, 1, 2, 3 },
-    { 0, 2, 1, 3, 4 },
-    { 0, 2, 1, 5, 3, 4 },
-    { 0, 2, 1, 6, 5, 3, 4 },
-    { 0, 2, 1, 7, 5, 6, 3, 4 },
-};
 
 bool LibOpusModule::load(const std::string &path)
 {

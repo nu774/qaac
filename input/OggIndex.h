@@ -20,6 +20,13 @@ struct OggChainInfo {
     int64_t total_samples = 0;             // raw granule position of the chain's last page
     std::vector<uint8_t> id_header_packet; // first packet: codec identification header
 
+    // Vorbis only: the comment and setup header packets (2nd and 3rd
+    // packets). Unlike Opus/FLAC, decoding Vorbis needs all three header
+    // packets fed to vorbis_synthesis_headerin() before any audio packet
+    // can be decoded -- the setup packet carries the codebooks.
+    std::vector<uint8_t> comment_header_packet;
+    std::vector<uint8_t> setup_header_packet;
+
     // Byte offset of every page belonging to this chain, in file order,
     // paired with that page's granule position. Used to seek: binary
     // search for the last page at/before a target granule, jump the

@@ -38,3 +38,7 @@ Minimized DLL version made out of sox 14.3.2 (rate effect only).
 
 include/soxr.h:
 This is a header file of libsoxr (https://sourceforge.net/projects/soxr/).
+
+include/vorbis/codec.h:
+This is a header file of libvorbis (https://xiph.org/vorbis/),
+distributed under a BSD-style license.
