@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 3.16)
 # CMP0091 lets CMAKE_MSVC_RUNTIME_LIBRARY control /MT vs /MD (see below).
 cmake_policy(SET CMP0091 NEW)
 
+if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET AND
+   (CMAKE_HOST_APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS deployment target" FORCE)
+endif()
+
 project(qaac LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 11)
