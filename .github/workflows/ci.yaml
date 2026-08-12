@@ -101,6 +101,64 @@ jobs:
         run: |
           ffprobe -hide_banner /tmp/smoke_alac.m4a
           ffprobe -hide_banner /tmp/smoke_aac.m4a
+      - name: Set up Python
+        if: matrix.arch == 'arm64'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install regression test deps
+        if: matrix.arch == 'arm64'
+        run: pip install numpy
+      # arm64-only: the x86_64 (macos-26-intel) runner is much slower and
+      # this test doesn't need architecture coverage to be meaningful.
+      - name: AAC-LC/HE gapless + fidelity regression test
+        if: matrix.arch == 'arm64'
+        run: |
+          set -e
+          python3 test/regtest.py gen --sr 44100 --duration 2.0 --out /tmp/regtest_orig.wav
+          # decode with qaac itself, not ffmpeg: ffmpeg's own MP4/AAC
+          # gapless (edit list) handling is known incomplete -- see
+          # test/regtest.py's module docstring for specifics.
+          for container in mp4 caf; do
+            cflag=""; ext="m4a"
+            [ "$container" = "caf" ] && cflag="--caf" && ext="caf"
+            for mode in lc he; do
+              flag=""
+              [ "$mode" = "he" ] && flag="--he"
+              encoded=/tmp/regtest_${container}_${mode}.${ext}
+              decoded=/tmp/regtest_${container}_${mode}_dec.wav
+              ./build/qaac $flag $cflag --gapless-mode 2 -o "$encoded" /tmp/regtest_orig.wav
+              ./build/qaac -D --bits-per-sample 16 -o "$decoded" "$encoded"
+              python3 test/regtest.py check --mode $mode \
+                --orig /tmp/regtest_orig.wav \
+                --decoded "$decoded"
+            done
+          done
+      - name: HE-AAC trailing-padding edge case regression test
+        if: matrix.arch == 'arm64'
+        run: |
+          set -e
+          # HE-AAC's SBR decoder delay (481 core-rate samples) means the
+          # encoder's trailing padding must always be >= 481 core-rate
+          # samples for a correct gapless roundtrip; CoreAudioToolbox's
+          # encoder doesn't guarantee that on its own (CoreAudioPaddedEncoder
+          # covers the gap). Sweep content lengths that land exactly on and
+          # around that threshold, including the theoretical worst case
+          # (0 samples of natural padding) -- see
+          # samples_for_he_tail_padding()'s docstring in test/regtest.py.
+          for container in mp4 caf; do
+            cflag=""; ext="m4a"
+            [ "$container" = "caf" ] && cflag="--caf" && ext="caf"
+            for padding in 0 1 480 481 482; do
+              orig=/tmp/regtest_pad_${padding}.wav
+              python3 test/regtest.py gen --sr 44100 --he-tail-padding $padding --out "$orig"
+              encoded=/tmp/regtest_pad_${container}_${padding}.${ext}
+              decoded=/tmp/regtest_pad_${container}_${padding}_dec.wav
+              ./build/qaac --he $cflag --gapless-mode 2 -o "$encoded" "$orig"
+              ./build/qaac -D --bits-per-sample 16 -o "$decoded" "$encoded"
+              python3 test/regtest.py check --mode he --orig "$orig" --decoded "$decoded"
+            done
+          done
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
