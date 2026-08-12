@@ -9,13 +9,14 @@ void MMTISOBMFFSinkBase::writeSamples(const void *data, size_t length, size_t ns
     mmt::isobmff::CSample sample(length);
     sample.rawData.resize(length);
     std::memcpy(sample.rawData.data(), data, length);
-    sample.duration = nsamples;
+    uint32_t duration = nsamples / m_sampleDurationDivisor;
+    sample.duration = duration;
     if (m_gaplessMode & MODE_EDTS) {
         sample.sampleGroupInfo =
             mmt::isobmff::SSampleGroupInfo(mmt::isobmff::SampleGroupType::roll, -1, 0);
     }
     m_trackWriter->addSample(sample);
-    m_totalDuration += nsamples;
+    m_totalDuration += duration;
 }
 
 void MMTISOBMFFSinkBase::finishWrite(const ca::AudioFilePacketTableInfo &info)

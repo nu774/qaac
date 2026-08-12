@@ -12,15 +12,20 @@ MMTISOBMFFAACSink::MMTISOBMFFAACSink(const std::string &path, const std::vector<
     ca::AudioStreamBasicDescription asbd;
     std::vector<uint32_t> channels;
     ascutil::parseASC(asc, &asbd, &channels);
+    uint32_t mediaRate = asbd.mSampleRate;
+    if (asbd.mFormatID != 'aac ') {
+        mediaRate /= 2;
+        m_sampleDurationDivisor = 2;
+    }
 
     mmt::isobmff::CIsobmffFileWriter::SOutputConfig outputConfig;
     outputConfig.outputUri = path;
     m_movieConfig.majorBrand = ilo::toFcc("M4A ");
     m_movieConfig.compatibleBrands = { ilo::toFcc("mp42"), ilo::toFcc("isom") };
-    m_movieConfig.movieTimeScale = asbd.mSampleRate;
+    m_movieConfig.movieTimeScale = mediaRate;
 
     mmt::isobmff::SMp4aTrackConfig trackConfig;
-    trackConfig.mediaTimescale = asbd.mSampleRate;
+    trackConfig.mediaTimescale = mediaRate;
     trackConfig.channelCount = asbd.mChannelsPerFrame;
     trackConfig.sampleRate = asbd.mSampleRate;
     auto esds_begin = esds.begin();

@@ -43,6 +43,7 @@ protected:
     std::vector<misc::chapter_t> m_chapters;
     uint32_t m_gaplessMode = 0;
     uint64_t m_totalDuration = 0;
+    uint32_t m_sampleDurationDivisor = 1;
 private:
     MMTISOBMFFSinkBase(const MMTISOBMFFSinkBase &);
     MMTISOBMFFSinkBase& operator=(const MMTISOBMFFSinkBase &);
