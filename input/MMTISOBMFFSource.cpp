@@ -193,6 +193,7 @@ void MMTISOBMFFSource::seekTo(int64_t count)
         m_nextPacket = m_trackInfo.sampleCount;
         return;
     }
+    m_decodeBuffer.reset();
     m_decoder->reset();
     int64_t offsetInEdit;
     m_currentEdit = m_edits.editForPosition(count, &offsetInEdit);
