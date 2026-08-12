@@ -1,4 +1,4 @@
 const char *get_qaac_version()
 {
-    return "3.00";
+    return "3.01";
 }
