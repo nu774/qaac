@@ -18,7 +18,8 @@
 #include "SeekableInputStream.h"
 #include "MMTISOBMFFSource.h"
 
-std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
+std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path,
+        std::shared_ptr<IInputStream> stream)
 {
     std::map<std::string, std::shared_ptr<ISeekableSource> >::iterator
         pos = m_sources.find(path);
@@ -26,7 +27,10 @@ std::shared_ptr<ISeekableSource> InputFactory::open(const std::string &path)
         return pos->second;
 
     const char *ext = strutil::file_extension(path);
-    std::shared_ptr<IInputStream> stream = std::make_shared<SeekableInputStream>(path);
+    if (stream)
+        stream->seek(0, SEEK_SET);
+    else
+        stream = std::make_shared<SeekableInputStream>(path);
     if (m_is_raw) {
         std::shared_ptr<RawSource> src =
             std::make_shared<RawSource>(stream, m_raw_format);

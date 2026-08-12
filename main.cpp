@@ -1392,7 +1392,7 @@ void load_track(const char *ifilename, const Options &opts,
     }
 
     std::string ofilename(ifilename);
-    auto src = InputFactory::instance().open(ifilename);
+    auto src = InputFactory::instance().open(ifilename, oggStream);
     auto parser = dynamic_cast<ITagParser*>(src.get());
     if (parser) {
         auto meta = parser->getTags();

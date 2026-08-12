@@ -2,6 +2,7 @@
 #define INPUTFACTORY_H
 
 #include "ISource.h"
+#include "IInputStream.h"
 
 class InputFactory {
     ca::AudioStreamBasicDescription m_raw_format;
@@ -18,7 +19,8 @@ public:
         static InputFactory self;
         return self;
     }
-    std::shared_ptr<ISeekableSource> open(const std::string &path);
+    std::shared_ptr<ISeekableSource> open(const std::string &path,
+            std::shared_ptr<IInputStream> stream = nullptr);
     void setRawFormat(const ca::AudioStreamBasicDescription &asbd)
     {
         m_raw_format = asbd;
