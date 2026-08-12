@@ -45,7 +45,8 @@ SeekableInputStream::SeekableInputStream(const std::string &path)
 
 SeekableInputStream::~SeekableInputStream()
 {
-    close(m_fd);
+    if (m_fd != 0)
+        close(m_fd);
 }
 
 int SeekableInputStream::read(void *buf, unsigned size)
