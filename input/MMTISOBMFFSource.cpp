@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 #include <mmtisobmff/reader/input.h>
 #include "MMTISOBMFFSource.h"
 #include "IInputStream.h"
@@ -85,6 +86,13 @@ MMTISOBMFFSource::MMTISOBMFFSource(std::shared_ptr<IInputStream> stream)
 {
     memset(&m_iasbd, 0, sizeof(m_iasbd));
     memset(&m_oasbd, 0, sizeof(m_oasbd));
+    {
+        util::FilePositionSaver _(stream);
+        stream->seek(0, SEEK_SET);
+        char buf[8];
+        if (stream->read(buf, 8) != 8 || std::memcmp(&buf[4], "ftyp", 4))
+            throw std::runtime_error("Not an MP4 file");
+    }
     auto input = ilo::make_unique<InputStreamInput>(stream);
     m_movieReader = ilo::make_unique<mmt::isobmff::CIsobmffReader>(std::move(input));
     m_movieInfo = m_movieReader->movieInfo();
