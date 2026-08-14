@@ -121,8 +121,9 @@ class CBoxReader : public IBoxReader {
   BoxSizeType readBoxInto(ilo::ByteBuffer& buffer);
   bool isEos();
 
- private:
+  //! reads only the basic box header (size + type), without the payload
   BoxSizeType readBoxHeaderFields(ilo::ByteBuffer& buffer) const;
+  //! reads the box payload following a header already read via readBoxHeaderFields()
   BoxSizeType readBoxRemainder(ilo::ByteBuffer& buffer, const BoxSizeType& boxSizeType) const;
 
  private:

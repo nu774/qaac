@@ -92,18 +92,38 @@ amm-info@iis.fraunhofer.de
 #include "boxtree.h"
 #include "service/servicesingleton.h"
 #include "service/boxreader.h"
+#include "service/boxregistry.h"
 #include "box/mdatbox.h"
 
 namespace mmt {
 namespace isobmff {
+//! Non-mdat top-level boxes of unregistered (unknown) type larger than this are assumed to be
+//! garbage resulting from parsing non-ISOBMFF input (or a corrupted file) rather than a
+//! legitimate box, and abort the tree parse rather than buffering them into memory.
+const uint64_t kMaxUnknownTopLevelBoxSize = 10 * 1024 * 1024;
+
 //! function to build a tree from a isobmff input (file, memory, etc.)
 inline void parseTree(BoxTree& tree, std::unique_ptr<IIsobmffInput>& input) {
   auto nodefactory = CServiceLocatorSingleton::instance().lock()->getService<INodeFactory>().lock();
+  auto registry = CServiceLocatorSingleton::instance().lock()->getService<IBoxRegistry>().lock();
 
   CBoxReader boxreader(input, true);
   while (!boxreader.isEos()) {
     ilo::ByteBuffer buffer;
-    auto boxSizeAndType = boxreader.readBoxInto(buffer);
+    auto boxSizeAndType = boxreader.readBoxHeaderFields(buffer);
+    if (boxSizeAndType.type != ilo::toFcc("mdat")) {
+      bool knownType = true;
+      try {
+        registry->entry(boxSizeAndType.type);
+      } catch (const std::exception&) {
+        knownType = false;
+      }
+      if (!knownType &&
+          boxSizeAndType.size - boxSizeAndType.headerLengthInBytes > kMaxUnknownTopLevelBoxSize) {
+        break;
+      }
+    }
+    boxSizeAndType = boxreader.readBoxRemainder(buffer, boxSizeAndType);
     if (boxSizeAndType.type == ilo::toFcc("mdat")) {
       box::CMediaDataBox::SMdatBoxWriteConfig config;
       config.type = boxSizeAndType.type;
