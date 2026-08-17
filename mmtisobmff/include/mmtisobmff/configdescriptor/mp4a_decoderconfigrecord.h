@@ -227,6 +227,8 @@ class CMp4aDecoderConfigRecord {
    */
   uint64_t size() const;
 
+  void patchBitrates(uint32_t maxBitrate, uint32_t avgBitrate);
+
   /*!
    * @brief A key/value attribute list containing name and value as strings.
    *

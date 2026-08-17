@@ -109,6 +109,8 @@ class CDecoderConfigurationBaseBox : public IDecoderConfigurationProvider {
 
   const ilo::ByteBuffer& decoderConfiguration() const override { return m_decoderConfiguration; }
 
+  void setDecoderConfiguration(const ilo::ByteBuffer& configRecord);
+
  private:
   ilo::ByteBuffer m_decoderConfiguration;
 };

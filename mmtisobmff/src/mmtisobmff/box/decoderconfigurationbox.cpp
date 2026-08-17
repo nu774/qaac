@@ -115,6 +115,14 @@ CDecoderConfigurationBaseBox::CDecoderConfigurationBaseBox(
   m_decoderConfiguration = writeConfig.decoderConfigRecord;
 }
 
+void CDecoderConfigurationBaseBox::setDecoderConfiguration(const ilo::ByteBuffer& configRecord) {
+  ILO_ASSERT_WITH(configRecord.size() == m_decoderConfiguration.size(), std::invalid_argument,
+                  "setDecoderConfiguration: new decoder configuration record must have the same "
+                  "size as the current one (%zu != %zu)",
+                  configRecord.size(), m_decoderConfiguration.size());
+  m_decoderConfiguration = configRecord;
+}
+
 CDecoderConfigurationBox::CDecoderConfigurationBox(ilo::ByteBuffer::const_iterator& begin,
                                                    const ilo::ByteBuffer::const_iterator& end)
     : CBox(begin, end), CDecoderConfigurationBaseBox(begin, end) {

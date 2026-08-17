@@ -355,6 +355,10 @@ class CMp4aTrackWriter : public CTrackWriter {
   CMp4aTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPimpl,
                    const SMp4aTrackConfig& config);
   virtual ~CMp4aTrackWriter() override;
+  void updateBitrates(uint32_t maxBitrate, uint32_t avgBitrate);
+
+ private:
+  std::unique_ptr<config::CMp4aDecoderConfigRecord> m_decoderConfigRecord;
 };
 
 /* ######---AVC Track Writer---###### */

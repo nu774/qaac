@@ -102,6 +102,19 @@ using namespace ilo;
 namespace mmt {
 namespace isobmff {
 namespace config {
+namespace {
+void skipDescriptorHeader(ilo::ByteBuffer::const_iterator& pos,
+                          const ilo::ByteBuffer::const_iterator& end) {
+  readUint8(pos, end);  // tag
+  uint8_t tmpByte = readUint8(pos, end);
+  uint8_t nextByte = (tmpByte & 0x80) >> 7;
+  while (nextByte) {
+    tmpByte = readUint8(pos, end);
+    nextByte = (tmpByte & 0x80) >> 7;
+  }
+}
+}  // namespace
+
 CMp4aDecoderConfigRecord::CMp4aDecoderConfigRecord(ilo::ByteBuffer::const_iterator& begin,
                                                    const ilo::ByteBuffer::const_iterator& end)
     : m_objectTypeIndication(0), m_streamType(0), m_upStream(0) {
@@ -215,6 +228,40 @@ uint64_t CMp4aDecoderConfigRecord::write(ilo::ByteBuffer& buffer,
   position += m_esdsByteBlob.size();
 
   return m_esdsByteBlob.size();
+}
+
+void CMp4aDecoderConfigRecord::patchBitrates(uint32_t maxBitrate, uint32_t avgBitrate) {
+  ilo::ByteBuffer::const_iterator pos = m_esdsByteBlob.cbegin();
+  const ilo::ByteBuffer::const_iterator end = m_esdsByteBlob.cend();
+
+  skipDescriptorHeader(pos, end);  // ES_Descriptor header -> pos at ES_ID
+
+  readUint16(pos, end);  // ES_ID
+  uint8_t flags = readUint8(pos, end);
+  if (flags & 0x80) readUint16(pos, end);  // dependsOn_ES_ID
+  if (flags & 0x40) {
+    uint8_t urlLength = readUint8(pos, end);
+    if (urlLength) readUint8Array(pos, end, urlLength);
+  }
+  if (flags & 0x20) readUint16(pos, end);  // OCR_ES_Id
+
+  skipDescriptorHeader(pos, end);  // DecoderConfigDescriptor header -> pos at objectTypeIndication
+
+  readUint8(pos, end);   // objectTypeIndication
+  readUint8(pos, end);   // streamType/upStream/reserved
+  readUint24(pos, end);  // bufferSizeDB
+
+  ILO_ASSERT_WITH(static_cast<uint64_t>(end - pos) >= 8, std::out_of_range,
+                  "esds too small to contain maxBitrate/avgBitrate fields");
+
+  ilo::ByteBuffer::iterator writePos =
+      m_esdsByteBlob.begin() + std::distance(m_esdsByteBlob.cbegin(), pos);
+  const ilo::ByteBuffer::iterator writeEnd = m_esdsByteBlob.end();
+  writeUint32(writePos, writeEnd, maxBitrate);
+  writeUint32(writePos, writeEnd, avgBitrate);
+
+  m_config.maxBitrate = maxBitrate;
+  m_config.avgBitrate = avgBitrate;
 }
 }  // namespace config
 }  // namespace isobmff

@@ -125,6 +125,7 @@ amm-info@iis.fraunhofer.de
 #include "box/sampleentry.h"
 #include "box/containerbox.h"
 #include "box/stsdbox.h"
+#include "box/decoderconfigurationfullbox.h"
 
 namespace mmt {
 namespace isobmff {
@@ -337,6 +338,7 @@ CMp4aTrackWriter::CMp4aTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPi
       ilo::make_unique<config::CMp4aDecoderConfigRecord>(*config.configRecord);
 
   CMp4aTreeEnhancer{stsdBoxElement, mp4aEnhancerConfig};
+  m_decoderConfigRecord = std::move(mp4aEnhancerConfig.decoderConfig);
 
   auto wPimpl = writerPimpl.lock();
 
@@ -348,6 +350,45 @@ CMp4aTrackWriter::CMp4aTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPi
 }
 
 CMp4aTrackWriter::~CMp4aTrackWriter() = default;
+
+void CMp4aTrackWriter::updateBitrates(uint32_t maxBitrate, uint32_t avgBitrate) {
+  auto wPimpl = m_pimpl->wP.lock();
+  ILO_ASSERT(wPimpl != nullptr, "writer has not been initialized");
+  ILO_ASSERT(m_decoderConfigRecord != nullptr, "configRecord is mandatory for mp4a");
+
+  auto moovBoxElements = findAllElementsWithFourccAndBoxType<box::CContainerBox>(
+      *(wPimpl->m_tree), ilo::toFcc("moov"));
+  ILO_ASSERT(moovBoxElements.size() == 1, "one and only one moov box should be present");
+  BoxElement& moovBoxElement = const_cast<BoxElement&>(moovBoxElements[0].get());
+
+  auto trakBoxElements = findAllElementsWithFourccAndBoxType<box::CContainerBox>(
+      moovBoxElement, ilo::toFcc("trak"));
+
+  BoxElement* trakBoxElement = nullptr;
+  for (auto trakBoxElementRef : trakBoxElements) {
+    BoxElement& trak = const_cast<BoxElement&>(trakBoxElementRef.get());
+    auto tkhdBoxElements =
+        findAllElementsWithFourccAndBoxType<box::CTrackHeaderBox>(trak, ilo::toFcc("tkhd"));
+    ILO_ASSERT(tkhdBoxElements.size() == 1,
+               "one and only one tkhd box should be present for each trak");
+    auto tkhdBox = std::dynamic_pointer_cast<box::CTrackHeaderBox>(
+        const_cast<BoxElement&>(tkhdBoxElements[0].get()).item);
+    if (tkhdBox->trackID() == m_pimpl->m_trackId) {
+      trakBoxElement = &trak;
+      break;
+    }
+  }
+  ILO_ASSERT(trakBoxElement != nullptr, "could not find own trak box");
+
+  auto esdsBoxElements = findAllElementsWithFourccAndBoxType<box::CDecoderConfigurationFullBox>(
+      *trakBoxElement, ilo::toFcc("esds"));
+  ILO_ASSERT(esdsBoxElements.size() == 1, "one and only one esds box should be present for mp4a");
+  auto esdsBox = std::dynamic_pointer_cast<box::CDecoderConfigurationFullBox>(
+      const_cast<BoxElement&>(esdsBoxElements[0].get()).item);
+
+  m_decoderConfigRecord->patchBitrates(maxBitrate, avgBitrate);
+  esdsBox->setDecoderConfiguration(m_decoderConfigRecord->esdsByteBlob());
+}
 
 /* ######---Avc Track Writer---###### */
 CAvcTrackWriter::CAvcTrackWriter(std::weak_ptr<CIsobmffWriter::Pimpl> writerPimpl,
