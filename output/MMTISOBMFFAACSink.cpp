@@ -35,3 +35,37 @@ MMTISOBMFFAACSink::MMTISOBMFFAACSink(const std::string &path, const std::vector<
     m_movieWriter = ilo::make_unique<mmt::isobmff::CIsobmffFileWriter>(outputConfig, m_movieConfig);
     m_trackWriter = m_movieWriter->trackWriter<mmt::isobmff::CMp4aTrackWriter>(trackConfig);
 }
+
+void MMTISOBMFFAACSink::writeSamples(const void *data, size_t length, size_t nsamples)
+{
+    MMTISOBMFFSinkBase::writeSamples(data, length, nsamples);
+
+    uint32_t duration = static_cast<uint32_t>(nsamples / m_sampleDurationDivisor);
+    m_recentSamples.push_back({ static_cast<uint32_t>(length), duration });
+    m_recentSize += length;
+    m_recentDuration += duration;
+    updateMaxBitrate(false);
+}
+
+void MMTISOBMFFAACSink::updateMaxBitrate(bool finalize)
+{
+    while (!m_recentSamples.empty() &&
+           m_recentDuration - m_recentSamples.front().duration >= m_mediaTimescale) {
+        m_recentSize -= m_recentSamples.front().size;
+        m_recentDuration -= m_recentSamples.front().duration;
+        m_recentSamples.pop_front();
+    }
+    if (!m_recentDuration || (!finalize && m_recentDuration < m_mediaTimescale))
+        return;
+    uint32_t bitrate = static_cast<uint32_t>(
+        m_recentSize * 8.0 * m_mediaTimescale / m_recentDuration + .5);
+    if (bitrate > m_maxBitrate)
+        m_maxBitrate = bitrate;
+}
+
+void MMTISOBMFFAACSink::writeBitrates(int avgBitrate)
+{
+    updateMaxBitrate(true);
+    auto *trackWriter = static_cast<mmt::isobmff::CMp4aTrackWriter *>(m_trackWriter.get());
+    trackWriter->updateBitrates(m_maxBitrate, static_cast<uint32_t>(avgBitrate));
+}
