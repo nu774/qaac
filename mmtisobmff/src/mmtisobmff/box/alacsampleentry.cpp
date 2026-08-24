@@ -100,6 +100,14 @@ namespace mmt {
 namespace isobmff {
 namespace box {
 
+CAudioSampleEntry::SAudioSampleEntryWriteConfig fitSampleRate(
+    CAlacSampleEntry::SAlacSampleEntryWriteConfig config) {
+  while (config.sampleRate & 0xffff0000u) {
+    config.sampleRate >>= 1;
+  }
+  return config;
+}
+
 CAlacSampleEntry::CAlacSampleEntry(ilo::ByteBuffer::const_iterator& begin,
                                    const ilo::ByteBuffer::const_iterator& end)
     : CAudioSampleEntry(begin, end) {
@@ -107,7 +115,7 @@ CAlacSampleEntry::CAlacSampleEntry(ilo::ByteBuffer::const_iterator& begin,
 }
 
 CAlacSampleEntry::CAlacSampleEntry(const SAlacSampleEntryWriteConfig& config)
-    : CAudioSampleEntry(config) {
+    : CAudioSampleEntry(fitSampleRate(config)) {
   sanityCheck();
   updateSize(0);
 }
