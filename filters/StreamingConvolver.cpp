@@ -139,14 +139,16 @@ void StreamingConvolver::process(const float *ibuf, float *obuf,
     size_t want = *olen;
     size_t have = m_output.count();
     size_t n = (std::min)(want, have);
-    const float *src = m_output.read_ptr();
-    if (ostride == 1) {
-        std::memcpy(obuf, src, n * sizeof(float));
-    } else {
-        for (size_t i = 0; i < n; ++i)
-            obuf[i * ostride] = src[i];
+    if (n > 0) {
+        const float *src = m_output.read_ptr();
+        if (ostride == 1) {
+            std::memcpy(obuf, src, n * sizeof(float));
+        } else {
+            for (size_t i = 0; i < n; ++i)
+                obuf[i * ostride] = src[i];
+        }
+        m_output.advance(n);
     }
-    m_output.advance(n);
     m_totalDelivered += n;
     *olen = n;
 }
