@@ -46,6 +46,7 @@ struct Options {
         is_raw(false), is_adts(false), is_caf(false),
         save_stat(false), nice(false), native_chanmapper(false),
         ignore_length(false), no_optimize(false), native_resampler(false),
+        builtin_resampler(false),
         check_only(false), normalize(false),
         print_available_formats(false), alac_fast(false), threading(false),
         concat(false), no_matrix_normalize(false), no_dither(false),
@@ -110,7 +111,8 @@ struct Options {
             *logfilename, *remix_preset, *remix_file, *tmpdir,
             *start, *end, *delay;
     bool is_raw, is_adts, is_caf, save_stat, nice, native_chanmapper,
-         ignore_length, no_optimize, native_resampler, check_only,
+         ignore_length, no_optimize, native_resampler, builtin_resampler,
+         check_only,
          normalize, print_available_formats, alac_fast, threading,
          concat, no_matrix_normalize, no_dither, filename_from_tag,
          sort_args, no_smart_padding, limiter, copy_artwork;

@@ -25,6 +25,7 @@ static struct option long_options[] = {
 #ifdef REFALAC
     { "fast", no_argument, 0, 'afst' },
 #endif
+    { "builtin-resampler", no_argument, 0, 'bltn' },
     { "check", no_argument, 0, 'chck' },
     { "alac", no_argument, 0, 'A' },
     { "decode", no_argument, 0, 'D' },
@@ -323,6 +324,15 @@ void usage()
 "                         --native-resampler=norm,96\n"
 "\n"
 #endif
+"--builtin-resampler    Force use of the built-in Kaiser-windowed polyphase\n"
+"                       sample rate converter instead of libsoxr. Used\n"
+"                       automatically when libsoxr is not available"
+#ifdef QAAC
+" (in\n"
+"                       place of --native-resampler)"
+#endif
+".\n"
+"\n"
 "Tagging options:\n"
 " (same value is set to all files, so use with care for multiple files)\n"
 "--title <string>\n"
@@ -489,6 +499,8 @@ bool Options::parse(int &argc, char **&argv)
                 }
             }
         }
+        else if (ch == 'bltn')
+            this->builtin_resampler = true;
         else if (ch == 'N')
             this->normalize = true;
         else if (ch == 's')

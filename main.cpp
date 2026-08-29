@@ -27,6 +27,9 @@
 #include "CompositeSource.h"
 #include "NullSource.h"
 #include "SoxrResampler.h"
+#include "PolyphaseResampler.h"
+#include "HalfbandDecimator.h"
+#include "HalfbandInterpolator.h"
 #include "SoxLowpassFilter.h"
 #include "Normalizer.h"
 #include "MatrixMixer.h"
@@ -401,17 +404,16 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
         double irate = chain.back()->getSampleFormat().mSampleRate;
         double orate = target_sample_rate(opts, chain.back().get());
         if (orate != irate) {
-            if (!opts.native_resampler && SOXRModule::instance().loaded()) {
-                LOG("%gHz -> %gHz\n", irate, orate);
-                std::shared_ptr<SoxrResampler>
-                    resampler(new SoxrResampler(chain.back(), orate));
-                if (opts.verbose > 1 || opts.logfilename)
-                    LOG("Using libsoxr SRC: %s\n", resampler->engine());
-                chain.push_back(resampler);
-            } else {
+            bool useNative = opts.native_resampler;
 #ifndef QAAC
-                LOG("WARNING: --rate requires libsoxr, resampling disabled\n");
-#else
+            if (useNative) {
+                LOG("WARNING: --native-resampler is not available in this "
+                   "build, falling back to --builtin-resampler\n");
+                useNative = false;
+            }
+#endif
+            if (useNative) {
+#ifdef QAAC
                 LOG("%gHz -> %gHz\n", irate, orate);
                 ca::AudioStreamBasicDescription sf
                     = chain.back()->getSampleFormat();
@@ -440,6 +442,41 @@ void build_filter_chain_sub(std::shared_ptr<ISeekableSource> src,
                         p->getQuality());
                 }
 #endif
+            } else if (!opts.builtin_resampler
+                     && SOXRModule::instance().loaded()) {
+                LOG("%gHz -> %gHz\n", irate, orate);
+                std::shared_ptr<SoxrResampler>
+                    resampler(new SoxrResampler(chain.back(), orate));
+                if (opts.verbose > 1 || opts.logfilename)
+                    LOG("Using libsoxr SRC: %s\n", resampler->engine());
+                chain.push_back(resampler);
+            } else {
+                LOG("%gHz -> %gHz\n", irate, orate);
+                double curRate = chain.back()->getSampleFormat().mSampleRate;
+                while (curRate >= orate * 2.0
+                     && std::fmod(curRate, 2.0) == 0.0) {
+                    std::shared_ptr<HalfbandDecimator>
+                        dec(new HalfbandDecimator(chain.back()));
+                    chain.push_back(dec);
+                    curRate = chain.back()->getSampleFormat().mSampleRate;
+                    if (opts.verbose > 1 || opts.logfilename)
+                        LOG("Halfband decimate -> %gHz\n", curRate);
+                }
+                while (curRate * 2.0 <= orate) {
+                    std::shared_ptr<HalfbandInterpolator>
+                        interp(new HalfbandInterpolator(chain.back()));
+                    chain.push_back(interp);
+                    curRate = chain.back()->getSampleFormat().mSampleRate;
+                    if (opts.verbose > 1 || opts.logfilename)
+                        LOG("Halfband interpolate -> %gHz\n", curRate);
+                }
+                if (curRate != orate) {
+                    std::shared_ptr<PolyphaseResampler>
+                        resampler(new PolyphaseResampler(chain.back(), orate));
+                    chain.push_back(resampler);
+                    if (opts.verbose > 1 || opts.logfilename)
+                        LOG("Using built-in polyphase SRC\n");
+                }
             }
         }
     }
