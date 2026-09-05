@@ -166,6 +166,7 @@ namespace TextBasedTag {
 
 namespace ID3 {
     const char *known_keys[][2] = {
+        { "COMM", "comments"                    },
         { "TALB", "album"                       },
         { "TBPM", "tempo"                       },
         { "TCMP", "iTunes:cpil"                 },
@@ -177,7 +178,7 @@ namespace ID3 {
         { "TEXT", "lyricist"                    },
         { "TIT1", "GROUPING"                    },
         { "TIT2", "title"                       },
-        { "TIT3", "SUBTITLE"                    },
+        { "TIT3", "DESCRIPTION"                    },
         { "TKEY", "key signature"               },
         { "TLAN", "LANGUAGE"                    },
         { "TMED", "MEDIA TYPE"                  },
@@ -200,6 +201,8 @@ namespace ID3 {
         { "TSOT", "TITLESORT"                   },
         { "TSRC", "ISRC"                        },
         { "TSST", "SET SUBTITLE"                },
+        { "TYER", "year"                        },
+        { "USLT", "LYRICS"                      },
     };
     std::map<std::string, std::string> fetchID3v2Tags(TagLib::ID3v2::Tag *tag)
     {
