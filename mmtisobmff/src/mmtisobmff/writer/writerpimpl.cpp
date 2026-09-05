@@ -169,6 +169,7 @@ void CIsobmffWriter::Pimpl::fillTrakEnhancersConfigs(STrakEnhancersConfig& confi
                                                      const MetaSampleVec& sampleMetaDataVec,
                                                      const uint32_t& trackId) {
   uint32_t stscSamplesPerChunk = 0;
+  uint64_t chunkElapsedDuration = 0;
   box::CDecodingTimeToSampleBox::SSttsEntry sttsEntry;
 
   ILO_ASSERT_WITH(sampleMetaDataVec.size() != 0, std::invalid_argument,
@@ -191,6 +192,13 @@ void CIsobmffWriter::Pimpl::fillTrakEnhancersConfigs(STrakEnhancersConfig& confi
 
   for (size_t i = 0; i < sampleMetaDataVec.size(); ++i) {
     if (sampleMetaDataVec[i].trackId == trackId) {
+      if (stscSamplesPerChunk > 0 && m_chunkSize > 0 && sampleMetaDataVec[i].timeScale > 0 &&
+          chunkElapsedDuration * 1000 >= m_chunkSize * sampleMetaDataVec[i].timeScale) {
+        updateStscBox(config.trakSampleEnhancerConfig, stscSamplesPerChunk, largeOffsets);
+        stscSamplesPerChunk = 0;
+        chunkElapsedDuration = 0;
+      }
+
       updateSampleGroupsConfig(config.sampleGroupsConfig, sampleMetaDataVec[i]);
 
       // -----------------------------STSZ-----------------------------
@@ -204,6 +212,7 @@ void CIsobmffWriter::Pimpl::fillTrakEnhancersConfigs(STrakEnhancersConfig& confi
 
       // --------------------------STCO/CO64---------------------------
       stscSamplesPerChunk++;
+      chunkElapsedDuration += sampleMetaDataVec[i].duration;
 
       // Set chunk offset in stco or co64 box. Done only at the beginning of each chunk
       if (stscSamplesPerChunk == 1) {
@@ -242,6 +251,7 @@ void CIsobmffWriter::Pimpl::fillTrakEnhancersConfigs(STrakEnhancersConfig& confi
       // -----------------------------STSC-----------------------------
       updateStscBox(config.trakSampleEnhancerConfig, stscSamplesPerChunk, largeOffsets);
       stscSamplesPerChunk = 0;
+      chunkElapsedDuration = 0;
     }
   }
   // At the end we need to create an stts entry and a stco/co64 entry with the information of the
